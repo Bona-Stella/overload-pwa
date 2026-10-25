@@ -14,11 +14,11 @@
   </p>
 
   <img src="https://img.shields.io/badge/React-19.3.1-61DAFB?style=flat-square&amp;logo=react&amp;logoColor=black" alt="React">
-  <img src="https://img.shields.io/badge/TypeScript-7.0.2-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/TypeScript-6.0.3-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Vite-8.3.5-646CFF?style=flat-square&amp;logo=vite&amp;logoColor=white" alt="Vite">
-  <img src="https://img.shields.io/badge/Tailwind_CSS-4.3-06B6D4?style=flat-square&amp;logo=tailwindcss&amp;logoColor=white" alt="Tailwind CSS">
-  <img src="https://img.shields.io/badge/PWA-Enabled_Planned-5A0FC8?style=flat-square&amp;logo=pwa&amp;logoColor=white" alt="PWA Planned">
-  <img src="https://img.shields.io/badge/Status-Planning-6B7280?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-Planned-06B6D4?style=flat-square&amp;logo=tailwindcss&amp;logoColor=white" alt="Tailwind CSS Planned">
+  <img src="https://img.shields.io/badge/PWA-Planned-5A0FC8?style=flat-square&amp;logo=pwa&amp;logoColor=white" alt="PWA Planned">
+  <img src="https://img.shields.io/badge/Status-Initial_Setup-6B7280?style=flat-square" alt="Status">
 </div>
 
 ---
@@ -40,7 +40,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> 🚧 현재 초기 설계 단계입니다. 아래 기능, 화면, 기술 구성은 개발 목표이며 구현 과정에서 변경될 수 있습니다.
+> 🚧 현재 React·TypeScript·Vite 초기 프로젝트와 ESLint가 구성되어 있으며 기본 카운터 화면을 표시합니다. 업무 화면·API 연동·인증·PWA는 아직 구현되지 않았습니다. 아래 주요 기능은 개발 목표입니다.
 
 ---
 
@@ -110,21 +110,21 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 
 | Category | Technology | Version |
 |:---|:---|:---|
-| Language | TypeScript | 7.0.2 |
+| Language | TypeScript | 6.0.3 |
 | UI Library | React | 19.3.1 |
 | Build Tool | Vite | 8.3.5 |
-| PWA | vite-plugin-pwa | 2.0.0 |
+| PWA | vite-plugin-pwa | 도입 예정 |
 
-### UI & Styling
+### UI & Styling (도입 예정)
 
 | Category | Technology | Description |
 |:---|:---|:---|
-| Styling | Tailwind CSS 4.3 | 유틸리티 기반 스타일링 |
+| Styling | Tailwind CSS | 유틸리티 기반 스타일링 |
 | UI Components | shadcn/ui | 재사용 가능한 UI 컴포넌트 |
 | Icons | Lucide React | UI 아이콘 |
 | Charts | Recharts | 운동 기록 및 통계 시각화 |
 
-### State Management & Networking
+### State Management & Networking (도입 예정)
 
 | Category | Technology | Description |
 |:---|:---|:---|
@@ -134,7 +134,7 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 | HTTP Client | Axios | REST API 통신 |
 | Local Database | Dexie.js | IndexedDB 기반 로컬 데이터 관리 |
 
-### Testing & Deployment
+### Testing & Deployment (도입 예정)
 
 | Category | Technology | Description |
 |:---|:---|:---|
@@ -143,7 +143,7 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 | E2E Test | Playwright | 브라우저 테스트 |
 | Hosting | Cloudflare Pages | 정적 웹 애플리케이션 배포 |
 
-> 위 기술 구성은 초기 권장 스택입니다. React, TypeScript, Vite를 우선 적용하고 나머지는 개발 단계에 따라 도입할 예정입니다. 라이브러리의 실제 설치 버전은 호환성 검증 후 확정합니다.
+> React, TypeScript, Vite 및 ESLint만 현재 구성되어 있습니다. 버전 표는 `package-lock.json` 기준이며, 나머지 도구는 개발 단계에 따라 도입할 예정입니다. 스타일은 현재 일반 CSS를 사용합니다.
 
 ---
 
@@ -302,61 +302,47 @@ Network Available?
 
 | Repository | Description |
 |:---|:---|
-| `overload-app` | React 기반 PWA 프론트엔드 |
+| `overload-pwa` | React 프론트엔드 저장소 (npm 패키지명: `overload-app`, PWA 도입 예정) |
 | `overload-server` | Spring Boot 기반 REST API 서버 |
 
 ---
 
 ## 📁 프로젝트 구조
 
-기능별로 코드를 관리하는 구조를 고려하고 있습니다.
+Git 저장소 루트가 npm·Vite 프로젝트 루트입니다. 현재 구조는 다음과 같습니다.
 
 ```text
-overload-app/
-│
+overload-pwa/
+├── AGENTS.md
+├── docs/
+│   ├── engineering/frontend.md
+│   └── reference/bootstrap/
+│       ├── frontend.gitignore.txt
+│       └── vite-template.md
 ├── public/
-│   ├── icons/
-│   └── favicon.ico
-│
+│   ├── favicon.svg
+│   └── icons.svg
 ├── src/
-│   ├── app/
-│   │   ├── router/
-│   │   └── providers/
-│   │
 │   ├── assets/
-│   │
-│   ├── components/
-│   │   ├── ui/
-│   │   └── common/
-│   │
-│   ├── features/
-│   │   ├── auth/
-│   │   ├── home/
-│   │   ├── workout/
-│   │   ├── routine/
-│   │   ├── history/
-│   │   └── statistics/
-│   │
-│   ├── hooks/
-│   ├── services/
-│   │   └── api/
-│   ├── stores/
-│   ├── types/
-│   ├── utils/
-│   │
+│   ├── App.css
 │   ├── App.tsx
+│   ├── index.css
 │   └── main.tsx
-│
+├── eslint.config.js
 ├── index.html
 ├── package.json
 ├── package-lock.json
 ├── tsconfig.json
+├── tsconfig.app.json
+├── tsconfig.node.json
 ├── vite.config.ts
 ├── .gitignore
 └── README.md
 ```
 
-### 디렉터리 역할
+기존 하위 `overload-app/dist/`는 이전 빌드 결과 보존용이며 현재 실행 경로가 아닙니다. 기존 `node_modules/`는 저장소 루트로 이동해 재사용합니다. npm 패키지명 `overload-app`은 유지합니다.
+
+### 향후 디렉터리 역할
 
 | Directory | Description |
 |:---|:---|
@@ -370,13 +356,13 @@ overload-app/
 | `types` | TypeScript 타입 정의 |
 | `utils` | 공통 유틸리티 함수 |
 
-> 프로젝트 구조는 초기 설계안으로 실제 구현 과정에서 변경될 수 있습니다.
+> 위 역할 표는 향후 설계안입니다. `features`, `services`, 라우터와 Store 등은 아직 생성하지 않았습니다.
 
 ---
 
 ## 🔗 Backend API 연동
 
-`overload-app`은 `overload-server`에서 제공하는 REST API를 통해 데이터를 조회하고 관리합니다.
+`overload-app`은 향후 `overload-server`의 REST API와 연동할 예정입니다. 현재 HTTP Client, 개발 프록시, API 요청·응답 타입 및 호출 코드는 없습니다.
 
 ### API Base URL
 
@@ -401,7 +387,7 @@ overload-app/
 
 ### 환경변수 구성 예시
 
-프로젝트 루트에 `.env.local` 파일을 생성합니다.
+API Client 도입 이후 사용할 환경변수 예시입니다. 현재 코드는 이 환경변수를 읽지 않으며, 환경 파일도 포함하지 않습니다.
 
 ```env
 VITE_API_BASE_URL=http://localhost:8080/api/v1
@@ -415,29 +401,31 @@ VITE_API_BASE_URL=http://localhost:8080/api/v1
 
 ## 🚀 로컬 실행
 
-> 아래 명령어는 React 및 Vite 프로젝트 초기 구성이 완료된 이후 사용할 수 있습니다.
+> 아래 명령어는 `package.json`이 있는 Git 저장소 루트에서 실행합니다.
 
 ### Requirements
 
-- Node.js (현재 Vite와 호환되는 LTS 버전 권장)
+- Node.js 24 LTS 권장 (로컬 확인 버전: 24.13.0)
 - npm
 - Git
 
 ### Clone Repository
 
 ```bash
-git clone https://github.com/<username>/overload-app.git
+git clone https://github.com/Bona-Stella/overload-pwa.git
 
-cd overload-app
+cd overload-pwa
 ```
 
-`<username>`은 실제 GitHub 사용자명으로 변경합니다.
+저장소 이름은 `overload-pwa`, npm 패키지 이름은 `overload-app`입니다.
 
 ### Install Dependencies
 
 ```bash
-npm install
+npm ci
 ```
+
+위 설치 명령은 새로 Clone한 환경을 위한 것입니다. 구조 이동 시에는 기존 `node_modules/`를 재사용하며 재설치하지 않습니다.
 
 ### Run Development Server
 
@@ -448,8 +436,10 @@ npm run dev
 기본 개발 서버 주소:
 
 ```text
-http://localhost:5173
+http://127.0.0.1:3000
 ```
+
+개발 서버는 `127.0.0.1`에만 바인딩하며 `strictPort: true`이므로 3000번 포트가 사용 중이면 실행에 실패합니다. 현재 설정으로는 다른 기기의 iPhone에서 직접 접속할 수 없습니다.
 
 ### Production Build
 
@@ -458,6 +448,14 @@ npm run build
 ```
 
 빌드 결과물은 기본적으로 `dist/` 디렉터리에 생성됩니다.
+
+### 정적 검사
+
+```bash
+npm run lint
+```
+
+빌드 명령에는 TypeScript 검사(`tsc -b`)가 포함됩니다. 별도의 `test`, `typecheck` 스크립트와 단위·컴포넌트·E2E 테스트는 아직 없습니다.
 
 ### Preview Build
 
@@ -515,7 +513,7 @@ Local Development
 
 ### Phase 1. 프로젝트 기반 구축
 
-- [ ] React + TypeScript + Vite 프로젝트 생성
+- [x] React + TypeScript + Vite 프로젝트 생성
 - [ ] Tailwind CSS 설정
 - [ ] 기본 레이아웃 및 테마 구성
 - [ ] React Router 설정
