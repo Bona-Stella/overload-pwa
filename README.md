@@ -40,7 +40,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> 🚧 현재 React·TypeScript·Vite 초기 프로젝트와 ESLint가 구성되어 있으며 기본 카운터 화면을 표시합니다. 업무 화면·API 연동·인증·PWA는 아직 구현되지 않았습니다. 아래 주요 기능은 개발 목표입니다.
+> 🚧 현재 React·TypeScript·Vite와 ESLint가 구성되어 있으며, Spring Boot Health API를 호출해 서버 연결 확인 중·연결 성공·연결 실패 상태를 표시합니다. 업무 화면·인증·PWA는 아직 구현되지 않았습니다. 아래 주요 기능은 개발 목표입니다.
 
 ---
 
@@ -324,11 +324,13 @@ overload-pwa/
 │   └── icons.svg
 ├── src/
 │   ├── assets/
+│   ├── features/health/api.ts
 │   ├── App.css
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
 ├── eslint.config.js
+├── tests/health-api.test.mjs
 ├── index.html
 ├── package.json
 ├── package-lock.json
@@ -356,13 +358,15 @@ overload-pwa/
 | `types` | TypeScript 타입 정의 |
 | `utils` | 공통 유틸리티 함수 |
 
-> 위 역할 표는 향후 설계안입니다. `features`, `services`, 라우터와 Store 등은 아직 생성하지 않았습니다.
+> 위 역할 표는 향후 설계안입니다. 현재 `features/health`에 Health API 호출 코드가 있으며, 공통 `services`, 라우터와 Store 등은 아직 생성하지 않았습니다.
 
 ---
 
 ## 🔗 Backend API 연동
 
-`overload-app`은 향후 `overload-server`의 REST API와 연동할 예정입니다. 현재 HTTP Client, 개발 프록시, API 요청·응답 타입 및 호출 코드는 없습니다.
+`overload-app`은 `fetch`로 기존 `overload-server`의 `GET /api/v1/health`를 호출합니다. HTTP 200과 JSON의 `status: "UP"`를 확인한 경우에만 연결 성공으로 표시합니다. HTTP 오류, 네트워크 오류, 잘못된 응답 및 5초 시간 초과는 연결 실패로 표시하며, **다시 확인** 버튼으로 재시도할 수 있습니다. 확인 중에는 버튼을 비활성화하고, 화면이 해제되면 진행 중인 요청을 취소합니다. 응답은 캐시하지 않습니다.
+
+이 검사는 애플리케이션의 HTTP 응답 여부만 확인하며 데이터베이스와 외부 서비스 상태를 보장하지 않습니다.
 
 ### API Base URL
 
@@ -370,7 +374,7 @@ overload-pwa/
 /api/v1
 ```
 
-### 주요 API
+### 주요 API (개발 예정)
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
@@ -385,17 +389,30 @@ overload-pwa/
 
 > API 경로는 초기 설계 예시입니다. 실제 API 명세는 백엔드 구현에 맞춰 변경될 수 있습니다.
 
-### 환경변수 구성 예시
+### 개발 환경 Proxy
 
-API Client 도입 이후 사용할 환경변수 예시입니다. 현재 코드는 이 환경변수를 읽지 않으며, 환경 파일도 포함하지 않습니다.
+브라우저는 Vite와 같은 Origin의 상대 경로 `/api/v1/health`로 요청합니다. `vite.config.ts`의 개발 프록시가 `/api` 경로를 그대로 `http://127.0.0.1:8080`의 Spring Boot에 전달합니다. 개발 연동을 위해 백엔드 CORS 설정을 추가하지 않습니다.
 
-```env
-VITE_API_BASE_URL=http://localhost:8080/api/v1
+```text
+React → http://127.0.0.1:3000/api/v1/health
+      → Vite Proxy → http://127.0.0.1:8080/api/v1/health
 ```
 
-환경변수를 기반으로 개발 환경과 운영 환경의 API 주소를 분리할 예정입니다.
+이 프록시는 Vite 개발 서버에만 적용됩니다. 운영 배포 시 `/api`를 백엔드로 전달하는 별도 구성이 필요하며 이번 작업에서는 배포하지 않습니다. 현재 API 관련 환경변수는 사용하지 않습니다.
 
-> `VITE_` 접두사가 붙은 환경변수는 브라우저에 노출될 수 있으므로 비밀번호, API 비밀키 등의 민감 정보는 저장하지 않습니다.
+### 로컬 통합 확인 (Windows)
+
+1. `overload-server` 루트의 PowerShell에서 JDK를 현재 프로세스에만 지정하고 서버를 실행합니다.
+
+   ```powershell
+   $env:JAVA_HOME = 'C:\Users\Home\.jdks\temurin-25.0.4.1'
+   .\gradlew.bat --offline bootRun --args="--server.address=127.0.0.1 --server.port=8080"
+   ```
+
+2. 다른 터미널에서 `overload-pwa` 루트의 `npm run dev`를 실행하고 `http://127.0.0.1:3000`을 엽니다.
+3. 화면에서 **서버 연결 성공**, **UP**를 확인합니다. `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 프록시 응답의 HTTP 200과 `{"status":"UP"}`도 확인할 수 있습니다.
+4. 백엔드를 `Ctrl+C`로 종료한 뒤 **다시 확인**을 눌러 연결 실패를 확인합니다. 백엔드 재실행 후 같은 버튼으로 연결 성공 복구를 확인합니다.
+5. 검증 후 각 서버 터미널에서 `Ctrl+C`로 종료합니다.
 
 ---
 
@@ -453,9 +470,11 @@ npm run build
 
 ```bash
 npm run lint
+node node_modules/typescript/bin/tsc -b
+npm test
 ```
 
-빌드 명령에는 TypeScript 검사(`tsc -b`)가 포함됩니다. 별도의 `test`, `typecheck` 스크립트와 단위·컴포넌트·E2E 테스트는 아직 없습니다.
+빌드 명령에도 TypeScript 검사(`tsc -b`)가 포함됩니다. `npm test`는 Node.js 24의 내장 테스트 러너와 TypeScript 실행 지원으로 Health API 경계 테스트 11개를 실행합니다. 정상 응답, HTTP 오류, 잘못된 JSON·상태, 네트워크 실패, 취소, 응답 헤더·본문 시간 초과를 검증하며 추가 테스트 라이브러리는 사용하지 않습니다. 별도의 `typecheck` 스크립트와 React 컴포넌트·자동 E2E 테스트는 아직 없습니다.
 
 ### Preview Build
 
