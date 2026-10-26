@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task 004 isolated storage QA</title>
+<aside aria-label="QA 저장소 제어">
+  <button id="fail">QA 쓰기 실패</button>
+  <button id="allow">QA 쓰기 허용</button>
+  <button id="read">QA 저장값 확인</button>
+  <pre id="snapshot"></pre>
+</aside>
+<div id="root"></div>
+<script type="module">
+  import React from 'react'
+  import { createRoot } from 'react-dom/client'
+  import App from '../../src/App.tsx'
+  import '../../src/index.css'
+  import { createInitialState, startWorkout, beginWorking, editReps, completeSet } from '../../src/features/workout/model.ts'
+  import { STORAGE_KEY } from '../../src/features/workout/storage.ts'
+
+  // This fixture intentionally writes synthetic data, only at its dedicated test origin.
+  if (location.origin !== 'http://127.0.0.1:3016') throw new Error('Use the dedicated QA origin http://127.0.0.1:3016 only.')
+  const scenario = new URLSearchParams(location.search).get('scenario') ?? 'failure'
+  if (!['failure', 'corrupt', 'version'].includes(scenario)) throw new Error('Unknown QA scenario')
+  const marker = localStorage.getItem('task004.fixture')
+  if (!marker && localStorage.getItem(STORAGE_KEY) !== null) throw new Error('Unrecognized existing data: refusing to overwrite it.')
+  if (marker !== scenario) {
+    const now = Date.now()
+    let state = beginWorking(startWorkout(createInitialState(), 'push', now - 65000))
+    const exercise = state.active.exercises[0]
+    state = editReps(state, exercise.id, exercise.sets[0].id, '8')
+    state = completeSet(state, exercise.id, exercise.sets[0].id, now - 10000)
+    state = editReps(state, exercise.id, exercise.sets[1].id, '9')
+    const raw = scenario === 'corrupt' ? '{broken' : JSON.stringify(scenario === 'version' ? { ...state, version: 2 } : state)
+    localStorage.setItem(STORAGE_KEY, raw)
+    localStorage.setItem('task004.fixture', scenario)
+  }
+  const originalRaw = localStorage.getItem(STORAGE_KEY)
+  const nativeSetItem = Storage.prototype.setItem
+  let failing = scenario === 'failure'
+  let failedWrites = 0
+  Storage.prototype.setItem = function (key, value) {
+    if (this === localStorage && key === STORAGE_KEY && failing) {
+      failedWrites++
+      throw new DOMException('Task 004 synthetic quota failure', 'QuotaExceededError')
+    }
+    return nativeSetItem.call(this, key, value)
+  }
+  document.querySelector('#fail').onclick = () => { failing = true; read() }
+  document.querySelector('#allow').onclick = () => { failing = false; read() }
+  function read() {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    let stored
+    try { stored = JSON.parse(raw) } catch { stored = raw }
+    const active = stored?.active
+    const summary = stored && typeof stored === 'object' ? { version: stored.version, active: active ? { startedAt: active.startedAt, phase: active.phase, currentExerciseId: active.currentExerciseId, timer: active.timer, exercises: active.exercises.map(e => ({ id: e.id, sets: e.sets.map(s => ({ reps: s.reps, actual: s.actual })) })) } : null, historyCount: stored.history.length } : stored
+    document.querySelector('#snapshot').textContent = JSON.stringify({ now: Date.now(), visibility: document.visibilityState, scenario, failing, failedWrites, rawUnchanged: raw === originalRaw, stored: summary }, null, 2)
+  }
+  document.querySelector('#read').onclick = read
+  read()
+  createRoot(document.querySelector('#root')).render(React.createElement(React.StrictMode, null, React.createElement(App)))
+</script>
+</html>

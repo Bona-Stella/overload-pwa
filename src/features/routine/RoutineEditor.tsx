@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { WeightInput } from '../../components/WeightInput'
 import { DAYS, WEEKDAY_ORDER, moveItem, newId, validateRoutine } from '../workout/model'
 import type { Routine, RoutineExercise, WorkoutState } from '../workout/types'
 import { ExercisePicker } from './ExercisePicker'
@@ -6,11 +7,12 @@ import { ExercisePicker } from './ExercisePicker'
 type DraftExercise = { id: string; exerciseId: string; setCount: string; minReps: string; maxReps: string; initialWeight: string }
 const numeric = (value: string) => value.trim() === '' ? NaN : Number(value)
 
-export function RoutineEditor({ state, routine, onSave, onCancel, onCreate }: { state: WorkoutState; routine: Routine; onSave: (routine: Routine, days: number[]) => void; onCancel: () => void; onCreate: (name: string) => string }) {
+export function RoutineEditor({ state, routine, onSave, onCancel, onCreate }: { state: WorkoutState; routine: Routine; onSave: (routine: Routine, days: number[], progressWeights: Record<string, number>) => void; onCancel: () => void; onCreate: (name: string) => string }) {
   const [name, setName] = useState(routine.name)
   const [days, setDays] = useState<number[]>(Object.entries(state.schedule).filter(([, id]) => id === routine.id).map(([day]) => Number(day)))
   const [exercises, setExercises] = useState<DraftExercise[]>(routine.exercises.map(e => ({ ...e, setCount: String(e.setCount), minReps: String(e.minReps), maxReps: String(e.maxReps), initialWeight: String(e.initialWeight) })))
   const [picker, setPicker] = useState(false)
+  const [progressWeights, setProgressWeights] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   function change(id: string, field: keyof Pick<RoutineExercise, 'setCount' | 'minReps' | 'maxReps' | 'initialWeight'>, value: string) {
     setExercises(current => current.map(e => e.id === id ? { ...e, [field]: value } : e))
@@ -18,8 +20,18 @@ export function RoutineEditor({ state, routine, onSave, onCancel, onCreate }: { 
   function save() {
     const result: Routine = { id: routine.id, name, exercises: exercises.map(e => ({ ...e, setCount: numeric(e.setCount), minReps: numeric(e.minReps), maxReps: numeric(e.maxReps), initialWeight: numeric(e.initialWeight) })) }
     const issue = validateRoutine(result)
+    const changes = Object.fromEntries(exercises.filter(e => progressWeights[e.id] !== undefined).map(e => [e.id, numeric(progressWeights[e.id])]))
     if (issue) setError(issue)
-    else onSave(result, days)
+    else if (Object.values(changes).some(value => !Number.isFinite(value) || value < 0)) setError('진행 중량은 0 이상의 숫자로 입력해 주세요.')
+    else onSave(result, days, changes)
+  }
+  function toggleProgress(id: string) {
+    setProgressWeights(current => {
+      const next = { ...current }
+      if (next[id] !== undefined) delete next[id]
+      else next[id] = String(state.progress[id])
+      return next
+    })
   }
   return <form onSubmit={event => { event.preventDefault(); save() }} noValidate>
     <div className="section-heading"><div><p className="eyebrow">ROUTINE EDITOR</p><h1>{routine.name ? '루틴 편집' : '새 루틴'}</h1></div><button type="button" className="quiet" onClick={onCancel}>취소</button></div>
@@ -30,9 +42,11 @@ export function RoutineEditor({ state, routine, onSave, onCancel, onCreate }: { 
     {exercises.map((e, i) => <section className="card stack" key={e.id}>
       <div className="section-heading"><h2><span className="index">{String(i + 1).padStart(2, '0')}</span>{state.definitions.find(d => d.id === e.exerciseId)?.name}</h2></div>
       <div className="form-grid">{([['setCount', '본세트 수'], ['minReps', '최소 횟수'], ['maxReps', '최대 횟수']] as const).map(([field, title]) => <label key={field}>{title}<input inputMode="numeric" value={e[field]} onChange={event => change(e.id, field, event.target.value)} /></label>)}
-        {state.progress[e.id] === undefined && <label>최초 중량 (kg)<input inputMode="decimal" value={e.initialWeight} onChange={event => change(e.id, 'initialWeight', event.target.value)} /></label>}
+        {state.progress[e.id] === undefined && <WeightInput label="최초 중량 (kg)" value={e.initialWeight} onChange={value => change(e.id, 'initialWeight', value)} />}
       </div>
-      {state.progress[e.id] !== undefined && <div className="notice"><p>현재 진행 중량: <strong>{state.progress[e.id]} kg</strong></p><p className="small muted">승인된 중량입니다. 변경하려면 운동 화면의 중량 변경에서 오늘만 변경 / 진행 중량 변경을 확인해 주세요.</p></div>}
+      {state.progress[e.id] !== undefined && <div className="notice stack"><div className="section-heading"><p>현재 진행 중량: <strong>{state.progress[e.id]} kg</strong></p><button type="button" className="outline" aria-label={`${i + 1}번 종목 진행 중량 ${progressWeights[e.id] === undefined ? '변경' : '변경 취소'}`} onClick={() => toggleProgress(e.id)}>{progressWeights[e.id] === undefined ? '변경' : '변경 취소'}</button></div>
+        {progressWeights[e.id] !== undefined && <WeightInput label={`${i + 1}번 종목 새 진행 중량 (kg)`} value={progressWeights[e.id]} onChange={value => setProgressWeights({ ...progressWeights, [e.id]: value })} />}
+        <p className="small muted">루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다.</p></div>}
       <div className="row"><button type="button" className="quiet" aria-label={`${i + 1}번 종목 위로`} disabled={i === 0} onClick={() => setExercises(moveItem(exercises, i, -1))}>↑ 위로</button><button type="button" className="quiet" aria-label={`${i + 1}번 종목 아래로`} disabled={i === exercises.length - 1} onClick={() => setExercises(moveItem(exercises, i, 1))}>↓ 아래로</button><button type="button" className="danger quiet" onClick={() => setExercises(exercises.filter(item => item.id !== e.id))}>제거</button></div>
     </section>)}
     <button type="button" className="outline full" onClick={() => setPicker(!picker)}>{picker ? '종목 선택 닫기' : '＋ 운동 종목 추가'}</button>

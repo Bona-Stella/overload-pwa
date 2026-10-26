@@ -1,0 +1,534 @@
+{
+  "date": "2026-10-26",
+  "environment": "desktop Chromium LAN HTTP isolated preview port 3034",
+  "checks": [
+    {
+      "name": "unsaved weight draft",
+      "actions": "취소\n루틴 저장",
+      "client": 360,
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "루틴 이름",
+          "value": "PUSH DAY"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "1번 종목 새 진행 중량 (kg)",
+          "value": "62.5"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        }
+      ],
+      "progress": [
+        "현재 진행 중량: 60 kg\n\n변경 취소\n1번 종목 새 진행 중량 (kg)\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다.",
+        "현재 진행 중량: 20 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다.",
+        "현재 진행 중량: 15 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다."
+      ],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "routine cancel keeps 60kg",
+      "actions": "취소\n루틴 저장",
+      "client": 360,
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "루틴 이름",
+          "value": "PUSH DAY"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        }
+      ],
+      "progress": [
+        "현재 진행 중량: 60 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다.",
+        "현재 진행 중량: 20 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다.",
+        "현재 진행 중량: 15 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다."
+      ],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "approved 62.5 at rest",
+      "client": 360,
+      "height": 812,
+      "home": "01\n바벨 벤치프레스\n3세트 · 6–10회\n62.5 kg\n02\n인클라인 덤벨 프레스\n3세트 · 6–10회\n20 kg\n03\n덤벨 숄더 프레스\n3세트 · 6–10회\n15 kg",
+      "inputs": [],
+      "progress": [],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "approved 62.5 reload",
+      "client": 360,
+      "height": 812,
+      "home": "01\n바벨 벤치프레스\n3세트 · 6–10회\n62.5 kg\n02\n인클라인 덤벨 프레스\n3세트 · 6–10회\n20 kg\n03\n덤벨 숄더 프레스\n3세트 · 6–10회\n15 kg",
+      "inputs": [],
+      "progress": [],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "start 60 benchmark source workout",
+      "actions": "1세트 완료",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "progress": [],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:00\n휴식 없음\n—",
+      "weight": "진행 중량 · 잠금\n\n60 kg\n\n승인 중량 60 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "qualifying full session all 9 completed",
+      "actions": "증량 가능 · 15kg\n다음 운동에서 중량 증가를 고려해 보세요.\n\n운동 종료 및 요약",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n덤벨 숄더 프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "label": "2세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "label": "3세트 이번 반복 횟수회",
+          "value": "10"
+        }
+      ],
+      "progress": [
+        "모든 종목 완료 · 기록을 확인하고 운동 종료를 눌러 저장해 주세요.",
+        "목표 달성! 중량 증가를 고려해 보세요.\n중량은 직접 확인하기 전까지 유지됩니다."
+      ],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:35\n모든 종목 완료\n—",
+      "weight": "진행 중량 · 잠금\n\n15 kg\n\n승인 중량 15 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "next session benchmark reminder without approval",
+      "actions": "1세트 완료",
+      "advice": "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": "10"
+        }
+      ],
+      "progress": [
+        "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경"
+      ],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:00\n휴식 없음\n—",
+      "weight": "진행 중량 · 잠금\n\n60 kg\n\n승인 중량 60 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "reminder action canceled without changing 60",
+      "actions": "1세트 완료",
+      "advice": "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": "10"
+        }
+      ],
+      "progress": [
+        "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경"
+      ],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:26\n휴식 없음\n—",
+      "weight": "진행 중량 · 잠금\n\n60 kg\n\n승인 중량 60 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "today-only 50 retains approved 60 evidence",
+      "actions": "1세트 완료",
+      "advice": "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "progress": [
+        "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경"
+      ],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:27\n휴식 없음\n—",
+      "weight": "오늘만 중량\n\n50 kg\n\n승인 중량 60 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "active snapshot before routine approval",
+      "actions": "휴식 종료\n＋30초",
+      "advice": "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": "10"
+        }
+      ],
+      "progress": [
+        "현재 기준 기록에서 증량 조건 달성\n\n승인 60kg · 10/10/10회\n\n지금 변경"
+      ],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:28\n남은 휴식\n00:02:00",
+      "weight": "진행 중량 · 잠금\n\n60 kg\n\n승인 중량 60 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "home approved 62.5 while session remains active",
+      "client": 360,
+      "height": 812,
+      "home": "01\n바벨 벤치프레스\n3세트 · 6–10회\n62.5 kg\n02\n인클라인 덤벨 프레스\n3세트 · 6–10회\n20 kg\n03\n덤벨 숄더 프레스\n3세트 · 6–10회\n15 kg",
+      "inputs": [],
+      "progress": [],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "active snapshot preserved after routine approval",
+      "actions": "휴식 종료\n＋30초",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": "10"
+        }
+      ],
+      "progress": [],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:30\n남은 휴식\n00:01:58",
+      "weight": "진행 중량 · 잠금\n\n60 kg\n\n승인 중량 60 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "active snapshot preserved after reload",
+      "actions": "휴식 종료\n＋30초",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": "10"
+        }
+      ],
+      "progress": [],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:31\n남은 휴식\n00:01:57",
+      "weight": "진행 중량 · 잠금\n\n60 kg\n\n승인 중량 60 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "next new session uses approved 62.5 without old reminder",
+      "actions": "1세트 완료",
+      "client": 360,
+      "heading": "FOCUS ON THIS SET\n\n바벨 벤치프레스\n\n목표 6–10회 × 3본세트",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "progress": [],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:00\n휴식 없음\n—",
+      "weight": "진행 중량 · 잠금\n\n62.5 kg\n\n승인 중량 62.5 kg\n\n중량 변경",
+      "width": 375
+    },
+    {
+      "name": "workout approval reflected in routine manager 65",
+      "actions": "취소\n루틴 저장",
+      "client": 360,
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "label": "루틴 이름",
+          "value": "PUSH DAY"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "label": "최대 횟수",
+          "value": "10"
+        }
+      ],
+      "progress": [
+        "현재 진행 중량: 65 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다.",
+        "현재 진행 중량: 20 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다.",
+        "현재 진행 중량: 15 kg\n\n변경\n\n루틴 저장을 눌러 새 중량을 승인합니다. 진행 중인 운동은 유지하고 다음 새 운동부터 적용합니다."
+      ],
+      "scroll": 360,
+      "width": 375
+    }
+  ],
+  "logs": [],
+  "limits": [
+    "Actual iPhone Safari keyboard and Safe Area not tested.",
+    "Cross-routine placement and benchmark exclusions also covered by automated domain/storage tests."
+  ],
+  "history": [
+    "2026-10-26\nPUSH DAY\n완료 1/9 본세트 · 600 kg · 00:01:06\n↗",
+    "2026-10-26\nPUSH DAY\n완료 9/9 본세트 · 2,850 kg · 00:00:36\n↗"
+  ],
+  "layout": {
+    "viewport": {
+      "width": 375,
+      "height": 812
+    },
+    "reminder": {
+      "top": 553.96875,
+      "bottom": 625.96875,
+      "height": 72
+    },
+    "fixedCtaTop": 731,
+    "completionButtonEnabled": true
+  }
+}

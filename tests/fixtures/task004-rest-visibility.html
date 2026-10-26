@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task 004 rest visibility QA</title>
+<aside id="qa" style="position:fixed;top:88px;right:0;z-index:50;max-width:280px;background:#111b26;border:1px solid #657488;font-size:11px"><details><summary>QA 휴식 시계</summary><div id="clock-buttons"></div><button id="read">QA 저장값 확인</button><button id="motion">QA 일반 모션 CSS</button><button id="restore-motion">QA 모션 복원</button><button id="safe">QA Safe Area 34px</button><button id="hide">QA 패널 숨기기</button><pre id="snapshot" style="max-height:90px;overflow:auto;white-space:pre-wrap"></pre></details></aside>
+<div id="root"></div>
+<script type="module">
+  import React from 'react'
+  import { createRoot } from 'react-dom/client'
+  import App from '../../src/App.tsx'
+  import '../../src/index.css'
+  import { createInitialState } from '../../src/features/workout/model.ts'
+  import { STORAGE_KEY } from '../../src/features/workout/storage.ts'
+  if (location.origin !== 'http://127.0.0.1:3050') throw new Error('Dedicated test origin 127.0.0.1:3050 only.')
+  if (!localStorage.getItem('task004.visibility.fixture')) {
+    if (localStorage.getItem(STORAGE_KEY) !== null) throw new Error('Refusing to replace unrecognized existing data.')
+    const state = createInitialState()
+    state.routines = [{ ...state.routines[0], name: 'Task004 휴식 안내 시험', exercises: [state.routines[0].exercises[0], { ...state.routines[0].exercises[1], setCount: 1 }] }]
+    state.schedule = Object.fromEntries(Array.from({ length: 7 }, (_, day) => [day, 'push']))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem('task004.visibility.fixture', 'owned-test-data')
+  }
+  const nativeNow = Date.now.bind(Date)
+  const restored = sessionStorage.getItem('visibility-qa-now')
+  let frozenNow = restored === null ? null : Number(restored)
+  Date.now = () => frozenNow ?? nativeNow()
+  let writes = 0
+  const nativeWrite = Storage.prototype.setItem
+  Storage.prototype.setItem = function (key, value) {
+    if (this === localStorage && key === STORAGE_KEY) writes++
+    return nativeWrite.call(this, key, value)
+  }
+  const read = () => JSON.parse(localStorage.getItem(STORAGE_KEY))
+  const snapshot = () => { document.querySelector('#snapshot').textContent = JSON.stringify({ writes, state: read(), raw: localStorage.getItem(STORAGE_KEY), now: Date.now() }) }
+  for (const seconds of [11, 10, 6, 5, 1, 0, -1]) {
+    const button = document.createElement('button')
+    button.textContent = `QA ${seconds}초`
+    button.onclick = () => {
+      const timer = read().active?.timer
+      if (timer?.kind !== 'rest') throw new Error('Ordinary rest required.')
+      frozenNow = timer.endAt - seconds * 1000
+      sessionStorage.setItem('visibility-qa-now', String(frozenNow))
+      document.dispatchEvent(new Event('visibilitychange'))
+      snapshot()
+    }
+    document.querySelector('#clock-buttons').append(button)
+  }
+  // Test-only CSS media override: expose the real default animation in a browser that prefers reduced motion.
+  const motionRules = () => [...document.styleSheets].flatMap(sheet => [...sheet.cssRules]).filter(rule => rule instanceof CSSMediaRule && rule.cssText.includes('.rest-urgent strong'))
+  document.querySelector('#motion').onclick = () => { for (const rule of motionRules()) rule.media.mediaText = 'not all' }
+  document.querySelector('#restore-motion').onclick = () => { for (const rule of motionRules()) rule.media.mediaText = '(prefers-reduced-motion: reduce)' }
+  document.querySelector('#safe').onclick = () => {
+    const style = document.createElement('style')
+    style.textContent = '.workout-actions { padding-bottom:48px; } .workout-content { padding-bottom:234px; }'
+    document.head.append(style)
+  }
+  document.querySelector('#hide').onclick = () => { document.querySelector('#qa').hidden = true }
+  document.querySelector('#read').onclick = snapshot
+  // QA time controls must not steal focus from the actual product input being inspected.
+  document.querySelector('#qa').addEventListener('pointerdown', event => { if (event.target.closest('button,summary')) event.preventDefault() })
+  createRoot(document.getElementById('root')).render(React.createElement(App))
+  snapshot()
+</script>
+</html>

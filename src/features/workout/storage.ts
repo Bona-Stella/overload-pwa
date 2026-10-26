@@ -35,11 +35,16 @@ function session(v: unknown, finished: boolean) {
   return (timer.kind === 'rest' && number(timer.endAt)) || (timer.kind === 'transition' && number(timer.since))
 }
 
+function progressChange(v: unknown) {
+  return record(v) && text(v.id) && !!v.id && integer(v.occurredAt) && !Number.isNaN(new Date(v.occurredAt).getTime()) && text(v.routineId) && !!v.routineId && text(v.placementId) && !!v.placementId && text(v.routineName) && text(v.exerciseName) && number(v.previousApprovedWeight) && number(v.nextApprovedWeight) && v.previousApprovedWeight !== v.nextApprovedWeight && ['routine_editor', 'workout'].includes(String(v.source)) && (v.relatedSessionId === undefined || (v.source === 'workout' && text(v.relatedSessionId) && !!v.relatedSessionId))
+}
+
 export function isWorkoutState(v: unknown): v is WorkoutState {
   if (!record(v) || v.version !== 1 || !list(v.definitions, d => record(d) && text(d.id) && text(d.name)) || !list(v.routines, r => record(r) && text(r.id) && text(r.name) && list(r.exercises, routineExercise) && (r.exercises as unknown[]).length > 0 && unique(r.exercises as unknown[]))) return false
   const definitions = v.definitions as { id: string }[]
   const routines = v.routines as { id: string; exercises: { exerciseId: string; id: string }[] }[]
   if (!unique(definitions) || !unique(routines) || !unique(routines.flatMap(r => r.exercises)) || routines.some(r => r.exercises.some(e => !definitions.some(d => d.id === e.exerciseId)))) return false
+  if (v.progressChanges !== undefined && (!list(v.progressChanges, progressChange) || !unique(v.progressChanges))) return false
   return record(v.schedule) && Object.entries(v.schedule).every(([day, id]) => /^[0-6]$/.test(day) && routines.some(r => r.id === id)) && dictionary(v.progress, number) && dictionary(v.memos, text) && dictionary(v.benchmarks, b => record(b) && text(b.sessionId) && list(b.reps, integer)) && record(v.restSettings) && positive(v.restSettings.low) && positive(v.restSettings.medium) && positive(v.restSettings.high) && (v.active === null || session(v.active, false)) && list(v.history, h => session(h, true))
 }
 
@@ -57,4 +62,14 @@ export function loadWorkout(storage: StorageAdapter): { state: WorkoutState; err
 
 export function saveWorkout(storage: StorageAdapter, state: WorkoutState) {
   storage.setItem(STORAGE_KEY, JSON.stringify(state))
+}
+
+export function persistWorkoutUpdate(storage: StorageAdapter, previous: WorkoutState, next: WorkoutState) {
+  try {
+    saveWorkout(storage, next)
+    return { state: next, persisted: true, approvalRejected: false }
+  } catch {
+    const approvalRejected = (next.progressChanges?.length ?? 0) > (previous.progressChanges?.length ?? 0)
+    return { state: approvalRejected ? previous : next, persisted: false, approvalRejected }
+  }
 }

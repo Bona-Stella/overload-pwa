@@ -1,0 +1,362 @@
+{
+  "date": "2026-10-26",
+  "browser": "desktop Chromium LAN HTTP port 3044",
+  "checks": [
+    {
+      "name": "initial weight +2.5 draft",
+      "actions": "취소\n루틴 저장",
+      "client": 360,
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 360,
+      "weights": [
+        {
+          "focused": false,
+          "label": "최초 중량 (kg)kg",
+          "value": "62.5"
+        }
+      ],
+      "width": 375
+    },
+    {
+      "name": "initial weight +5 draft",
+      "actions": "취소\n루틴 저장",
+      "client": 360,
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 360,
+      "weights": [
+        {
+          "focused": false,
+          "label": "최초 중량 (kg)kg",
+          "value": "65"
+        }
+      ],
+      "width": 375
+    },
+    {
+      "name": "initial weight -2.5 draft",
+      "actions": "취소\n루틴 저장",
+      "client": 360,
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 360,
+      "weights": [
+        {
+          "focused": false,
+          "label": "최초 중량 (kg)kg",
+          "value": "62.5"
+        }
+      ],
+      "width": 375
+    },
+    {
+      "name": "initial creation is not an approval change",
+      "client": 375,
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 375,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "historical increase at 60kg",
+      "client": 360,
+      "eventCount": 0,
+      "height": 812,
+      "historical": "이 운동의 중량 검토 결과\n\n당시 수행·승인 중량·계획에 따른 결과이며 현재 권고와 다릅니다.\n\n바벨 벤치프레스\n당시 증량 가능\n\n승인 60kg · 10/10/10회 · 목표 6–10회",
+      "scroll": 360,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "current increase before approval",
+      "client": 375,
+      "current": "현재 중량 조정 검토\n\n현재 승인 중량과 비교 가능한 기록입니다. 변경은 직접 승인해 주세요.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험 · 승인 60kg\n\n기준 기록: 증량 가능 · 10/10/10회\n\n최근 비교 가능 기록: 2026-10-26 · 10/10/10회",
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 375,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "editor draft 62.5 not yet saved",
+      "actions": "취소\n루틴 저장",
+      "client": 360,
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 360,
+      "weights": [
+        {
+          "focused": false,
+          "label": "1번 종목 새 진행 중량 (kg)kg",
+          "value": "62.5"
+        }
+      ],
+      "width": 375
+    },
+    {
+      "name": "canceled editor has no event",
+      "client": 375,
+      "current": "현재 중량 조정 검토\n\n현재 승인 중량과 비교 가능한 기록입니다. 변경은 직접 승인해 주세요.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험 · 승인 60kg\n\n기준 기록: 증량 가능 · 10/10/10회\n\n최근 비교 가능 기록: 2026-10-26 · 10/10/10회",
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 375,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "one editor increase event and no stale current review",
+      "client": 375,
+      "eventCount": 1,
+      "events": "진행 중량 변경 내역\n\n실제로 승인·저장한 변경입니다. 특정 운동의 결과였다고 추정하지 않습니다.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n60 → 62.5kg\n\n증량 완료 +2.5kg\n\n2026. 10. 26. 오후 11:44:28 · 루틴에서 승인",
+      "height": 812,
+      "scroll": 375,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "historical 60kg judgment unchanged after approval",
+      "client": 360,
+      "eventCount": 0,
+      "height": 812,
+      "historical": "이 운동의 중량 검토 결과\n\n당시 수행·승인 중량·계획에 따른 결과이며 현재 권고와 다릅니다.\n\n바벨 벤치프레스\n당시 증량 가능\n\n승인 60kg · 10/10/10회 · 목표 6–10회",
+      "scroll": 360,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "second event reduction minus five",
+      "client": 360,
+      "eventCount": 2,
+      "events": "진행 중량 변경 내역\n\n실제로 승인·저장한 변경입니다. 특정 운동의 결과였다고 추정하지 않습니다.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n62.5 → 57.5kg\n\n감량 완료 −5kg\n\n2026. 10. 26. 오후 11:44:30 · 루틴에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n60 → 62.5kg\n\n증량 완료 +2.5kg\n\n2026. 10. 26. 오후 11:44:28 · 루틴에서 승인",
+      "height": 812,
+      "scroll": 360,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "workout progress draft 62.5",
+      "actions": "1세트 완료",
+      "client": 360,
+      "eventCount": 0,
+      "height": 812,
+      "scroll": 360,
+      "weight": "진행 중량 · 잠금\n\n57.5 kg\n\n승인 중량 57.5 kg\n\n중량 변경",
+      "weights": [
+        {
+          "focused": false,
+          "label": "변경 중량 (kg)kg",
+          "value": "62.5"
+        }
+      ],
+      "width": 375
+    },
+    {
+      "name": "workout approval records exactly one event",
+      "client": 360,
+      "eventCount": 3,
+      "events": "진행 중량 변경 내역\n\n실제로 승인·저장한 변경입니다. 특정 운동의 결과였다고 추정하지 않습니다.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n57.5 → 62.5kg\n\n증량 완료 +5kg\n\n2026. 10. 26. 오후 11:45:03 · 운동 화면에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n62.5 → 57.5kg\n\n감량 완료 −5kg\n\n2026. 10. 26. 오후 11:44:30 · 루틴에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n60 → 62.5kg\n\n증량 완료 +2.5kg\n\n2026. 10. 26. 오후 11:44:28 · 루틴에서 승인",
+      "height": 812,
+      "scroll": 360,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "today-only and canceled draft leave event count three",
+      "client": 360,
+      "eventCount": 3,
+      "events": "진행 중량 변경 내역\n\n실제로 승인·저장한 변경입니다. 특정 운동의 결과였다고 추정하지 않습니다.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n57.5 → 62.5kg\n\n증량 완료 +5kg\n\n2026. 10. 26. 오후 11:45:03 · 운동 화면에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n62.5 → 57.5kg\n\n감량 완료 −5kg\n\n2026. 10. 26. 오후 11:44:30 · 루틴에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n60 → 62.5kg\n\n증량 완료 +2.5kg\n\n2026. 10. 26. 오후 11:44:28 · 루틴에서 승인",
+      "height": 812,
+      "scroll": 360,
+      "weights": [],
+      "width": 375
+    },
+    {
+      "name": "arbitrary decimal 61.3 +2.5 =63.8",
+      "actions": "1세트 완료",
+      "client": 415,
+      "eventCount": 0,
+      "height": 932,
+      "scroll": 415,
+      "weight": "오늘만 중량\n\n65 kg\n\n승인 중량 62.5 kg\n\n중량 변경",
+      "weights": [
+        {
+          "focused": false,
+          "label": "변경 중량 (kg)kg",
+          "value": "63.8"
+        }
+      ],
+      "width": 430
+    },
+    {
+      "name": "same approved value causes no fourth event",
+      "client": 415,
+      "eventCount": 3,
+      "events": "진행 중량 변경 내역\n\n실제로 승인·저장한 변경입니다. 특정 운동의 결과였다고 추정하지 않습니다.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n57.5 → 62.5kg\n\n증량 완료 +5kg\n\n2026. 10. 26. 오후 11:45:03 · 운동 화면에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n62.5 → 57.5kg\n\n감량 완료 −5kg\n\n2026. 10. 26. 오후 11:44:30 · 루틴에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n60 → 62.5kg\n\n증량 완료 +2.5kg\n\n2026. 10. 26. 오후 11:44:28 · 루틴에서 승인",
+      "height": 932,
+      "scroll": 415,
+      "weights": [],
+      "width": 430
+    },
+    {
+      "name": "historical reduction review at normal 60kg",
+      "client": 415,
+      "eventCount": 0,
+      "height": 932,
+      "historical": "이 운동의 중량 검토 결과\n\n당시 수행·승인 중량·계획에 따른 결과이며 현재 권고와 다릅니다.\n\n바벨 벤치프레스\n당시 감량 검토\n\n승인 60kg · 5/8/8회 · 목표 6–10회",
+      "scroll": 415,
+      "weights": [],
+      "width": 430
+    },
+    {
+      "name": "benchmark increase and weaker latest record coexist",
+      "client": 415,
+      "current": "현재 중량 조정 검토\n\n현재 승인 중량과 비교 가능한 기록입니다. 변경은 직접 승인해 주세요.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험 · 승인 60kg\n\n기준 기록: 증량 가능 · 10/10/10회\n\n최근 비교 가능 기록: 2026-10-26 · 5/8/8회 · 감량 검토",
+      "eventCount": 4,
+      "events": "진행 중량 변경 내역\n\n실제로 승인·저장한 변경입니다. 특정 운동의 결과였다고 추정하지 않습니다.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n62.5 → 60kg\n\n감량 완료 −2.5kg\n\n2026. 10. 26. 오후 11:47:10 · 운동 화면에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n57.5 → 62.5kg\n\n증량 완료 +5kg\n\n2026. 10. 26. 오후 11:45:03 · 운동 화면에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n62.5 → 57.5kg\n\n감량 완료 −5kg\n\n2026. 10. 26. 오후 11:44:30 · 루틴에서 승인\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험\n\n60 → 62.5kg\n\n증량 완료 +2.5kg\n\n2026. 10. 26. 오후 11:44:28 · 루틴에서 승인",
+      "height": 932,
+      "scroll": 415,
+      "weights": [],
+      "width": 430
+    },
+    {
+      "name": "home other placement has no leaked review",
+      "client": 415,
+      "eventCount": 0,
+      "height": 932,
+      "scroll": 415,
+      "weights": [],
+      "width": 430
+    },
+    {
+      "name": "home selected placement reuses current review",
+      "client": 415,
+      "current": "현재 중량 조정 검토\n\n현재 승인 중량과 비교 가능한 기록입니다. 변경은 직접 승인해 주세요.\n\n바벨 벤치프레스\n\nTask004 중량 이력 시험 · 승인 60kg\n\n기준 기록: 증량 가능 · 10/10/10회\n\n최근 비교 가능 기록: 2026-10-26 · 5/8/8회 · 감량 검토",
+      "eventCount": 0,
+      "height": 932,
+      "scroll": 415,
+      "weights": [],
+      "width": 430
+    }
+  ],
+  "weightLayouts": [
+    {
+      "buttons": [
+        {
+          "height": 52,
+          "width": 52
+        },
+        {
+          "height": 52,
+          "width": 52
+        }
+      ],
+      "dialog": {
+        "client": 320,
+        "scroll": 320
+      },
+      "focus": "변경 중량 (kg)",
+      "height": 812,
+      "input": {
+        "bottom": 356.34375,
+        "height": 52,
+        "left": 101,
+        "right": 259,
+        "top": 304.34375,
+        "width": 158,
+        "x": 101,
+        "y": 304.34375
+      },
+      "inputMode": "decimal",
+      "width": 375
+    },
+    {
+      "buttons": [
+        {
+          "height": 52,
+          "width": 52
+        },
+        {
+          "height": 52,
+          "width": 52
+        }
+      ],
+      "dialog": {
+        "client": 335,
+        "scroll": 335
+      },
+      "focus": "변경 중량 (kg)",
+      "height": 844,
+      "input": {
+        "bottom": 372.34375,
+        "height": 52,
+        "left": 101,
+        "right": 274,
+        "top": 320.34375,
+        "width": 173,
+        "x": 101,
+        "y": 320.34375
+      },
+      "inputMode": "decimal",
+      "width": 390
+    },
+    {
+      "buttons": [
+        {
+          "height": 52,
+          "width": 52
+        },
+        {
+          "height": 52,
+          "width": 52
+        }
+      ],
+      "dialog": {
+        "client": 375,
+        "scroll": 375
+      },
+      "focus": "변경 중량 (kg)",
+      "height": 932,
+      "input": {
+        "bottom": 416.34375,
+        "height": 52,
+        "left": 101,
+        "right": 314,
+        "top": 364.34375,
+        "width": 213,
+        "x": 101,
+        "y": 364.34375
+      },
+      "inputMode": "decimal",
+      "width": 430
+    }
+  ],
+  "historyLayouts": [
+    {
+      "client": 360,
+      "eventCount": 4,
+      "height": 812,
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "client": 375,
+      "eventCount": 4,
+      "height": 844,
+      "scroll": 375,
+      "width": 390
+    },
+    {
+      "client": 415,
+      "eventCount": 4,
+      "height": 932,
+      "scroll": 415,
+      "width": 430
+    }
+  ],
+  "logs": [],
+  "limits": [
+    "Actual iPhone Safari keyboard, Safe Area and background behavior not verified."
+  ]
+}

@@ -1,10 +1,19 @@
-import type { Routine, RoutineExercise, WorkoutExercise, WorkoutSession, WorkoutState, WorkoutTimer } from './types.ts'
+import type { Benchmark, ProgressChange, Routine, RoutineExercise, WorkoutExercise, WorkoutSession, WorkoutState, WorkoutTimer } from './types.ts'
+import { validReps } from './reps.ts'
 
 export const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 export const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 // Demonstration defaults only; these are editable in Settings, not training prescriptions.
 export const DEFAULT_REST_SETTINGS = { low: 180, medium: 120, high: 90 }
-export const newId = () => crypto.randomUUID()
+export function newId() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  // LAN HTTP previews lack randomUUID; getRandomValues still provides UUID v4 entropy.
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
 export const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
 export function createInitialState(): WorkoutState {
@@ -42,13 +51,18 @@ export function scheduleConflicts(state: WorkoutState, routineId: string, days: 
   return days.filter(day => state.schedule[day] && state.schedule[day] !== routineId)
 }
 
-export function saveRoutine(state: WorkoutState, routine: Routine, days: number[], replace = false): WorkoutState {
+export function saveRoutine(state: WorkoutState, routine: Routine, days: number[], replace = false, progressWeights: Record<string, number> = {}, now = Date.now()): WorkoutState {
   const error = validateRoutine(routine)
   if (error) throw new Error(error)
   if (days.some(d => !Number.isInteger(d) || d < 0 || d > 6)) throw new Error('올바른 요일을 선택해 주세요.')
   if (routine.exercises.some(e => !state.definitions.some(d => d.id === e.exerciseId))) throw new Error('운동 종목을 확인해 주세요.')
   if (routine.exercises.some(e => state.routines.some(r => r.id !== routine.id && r.exercises.some(other => other.id === e.id)))) throw new Error('다른 루틴의 종목 배치 식별자를 사용할 수 없습니다.')
   if (!replace && scheduleConflicts(state, routine.id, days).length) throw new Error('기존 요일 일정을 교체할지 확인해 주세요.')
+  const previousRoutine = state.routines.find(r => r.id === routine.id)
+  for (const [id, weight] of Object.entries(progressWeights)) {
+    if (!previousRoutine?.exercises.some(e => e.id === id) || !routine.exercises.some(e => e.id === id)) throw new Error('진행 중량을 변경할 기존 루틴 종목을 확인해 주세요.')
+    if (!Number.isFinite(weight) || weight < 0) throw new Error('진행 중량은 0 이상의 숫자로 입력해 주세요.')
+  }
   const next = structuredClone(state)
   const index = next.routines.findIndex(r => r.id === routine.id)
   const saved = { ...structuredClone(routine), name: routine.name.trim() }
@@ -57,6 +71,13 @@ export function saveRoutine(state: WorkoutState, routine: Routine, days: number[
   for (const day of Object.keys(next.schedule)) if (next.schedule[day] === routine.id) delete next.schedule[day]
   for (const day of days) next.schedule[day] = routine.id
   for (const e of routine.exercises) if (next.progress[e.id] === undefined) next.progress[e.id] = e.initialWeight
+  for (const [id, weight] of Object.entries(progressWeights)) {
+    const previous = previousRoutine?.exercises.find(e => e.id === id)
+    if (!previous) continue
+    const previousWeight = state.progress[id] ?? previous.initialWeight
+    next.progress[id] = weight
+    if (previousWeight !== weight) next.progressChanges = [{ id: newId(), occurredAt: now, routineId: routine.id, placementId: id, routineName: saved.name, exerciseName: state.definitions.find(d => d.id === previous.exerciseId)?.name ?? '운동 종목', previousApprovedWeight: previousWeight, nextApprovedWeight: weight, source: 'routine_editor' }, ...(next.progressChanges ?? [])]
+  }
   return next
 }
 
@@ -70,6 +91,14 @@ export function selectRoutine(state: WorkoutState, date: Date, override?: string
 
 export function benchmarkKey(routineId: string, e: RoutineExercise, weight: number) {
   return JSON.stringify([routineId, e.id, e.exerciseId, e.setCount, e.minReps, e.maxReps, weight])
+}
+
+export function increaseBenchmark(state: WorkoutState, routineId: string, exercise: WorkoutExercise | RoutineExercise): Benchmark | null {
+  const approvedWeight = state.progress[exercise.id] ?? ('approvedWeight' in exercise ? exercise.approvedWeight : exercise.initialWeight)
+  if ('sets' in exercise && (exercise.structureModified || exercise.sets.length !== exercise.setCount || approvedWeight !== exercise.approvedWeight)) return null
+  // Read the comparable whole-session benchmark, never combine individual history sets.
+  const benchmark = state.benchmarks[benchmarkKey(routineId, exercise, approvedWeight)]
+  return benchmark?.reps.length === exercise.setCount && benchmark.reps.every(reps => reps >= exercise.maxReps) ? benchmark : null
 }
 
 export function createWorkoutExercise(state: WorkoutState, routineId: string, e: RoutineExercise): WorkoutExercise {
@@ -146,8 +175,8 @@ export function completeSet(state: WorkoutState, exerciseId: string, setId: stri
     const exercise = session.exercises.find(e => e.id === exerciseId)
     const set = exercise?.sets.find(s => s.id === setId)
     if (!exercise || !set || set.actual) return
-    const reps = Number(set.reps)
-    if (!set.reps.trim() || !Number.isSafeInteger(reps) || reps < 0) throw new Error('실제 반복 횟수를 0 이상의 정수로 입력해 주세요.')
+    const reps = validReps(set.reps)
+    if (reps === null) throw new Error('실제 반복 횟수를 1 이상의 정수로 입력해 주세요.')
     if (!Number.isFinite(exercise.weight * reps)) throw new Error('중량과 횟수가 너무 큽니다. 입력을 확인해 주세요.')
     set.actual = { weight: exercise.weight, reps, completedAt: now, temporaryWeight: exercise.temporaryWeight }
     if (isExerciseComplete(exercise)) {
@@ -182,8 +211,10 @@ export function navigateExercise(state: WorkoutState, id: string) {
   })
 }
 
-export function changeWeight(state: WorkoutState, exerciseId: string, weight: number, mode: 'today' | 'progress'): WorkoutState {
+export function changeWeight(state: WorkoutState, exerciseId: string, weight: number, mode: 'today' | 'progress', now = Date.now()): WorkoutState {
   if (!Number.isFinite(weight) || weight < 0) throw new Error('중량은 0 이상의 숫자로 입력해 주세요.')
+  const source = state.active?.exercises.find(e => e.id === exerciseId)
+  if (!source || !state.active) throw new Error('중량을 변경할 진행 중인 종목을 확인해 주세요.')
   const next = editActive(state, session => {
     const e = session.exercises.find(e => e.id === exerciseId)
     if (!e) return
@@ -194,7 +225,10 @@ export function changeWeight(state: WorkoutState, exerciseId: string, weight: nu
     e.benchmark = benchmark ? [...benchmark] : null
     e.sets.forEach((set, i) => { if (!set.actual) set.reps = benchmark?.[i] === undefined ? '' : String(benchmark[i]) })
   })
-  return mode === 'progress' ? { ...next, progress: { ...next.progress, [exerciseId]: weight } } : next
+  if (mode === 'today') return next
+  const previousWeight = state.progress[exerciseId] ?? source.approvedWeight
+  const event: ProgressChange | null = previousWeight === weight ? null : { id: newId(), occurredAt: now, routineId: state.active.routineId, placementId: exerciseId, routineName: state.active.routineName, exerciseName: source.name, previousApprovedWeight: previousWeight, nextApprovedWeight: weight, source: 'workout', relatedSessionId: state.active.id }
+  return { ...next, progress: { ...next.progress, [exerciseId]: weight }, ...(event ? { progressChanges: [event, ...(state.progressChanges ?? [])] } : {}) }
 }
 
 export function addSessionSet(state: WorkoutState, exerciseId: string) {
@@ -266,6 +300,28 @@ export function completionCounts(session: WorkoutSession) {
   const counts = session.exercises.map(e => session.phase !== 'finished' ? e.sets.length : e.plannedSetCount ?? (e.structureModified ? null : e.setCount))
   const total = counts.every(count => count !== null) ? counts.reduce<number>((sum, count) => sum + (count ?? 0), 0) : null
   return { completed, total, allComplete: total !== null && total > 0 && completed === total }
+}
+
+export function historicalWeightReview(session: WorkoutSession, exercise: WorkoutExercise): { kind: 'unavailable'; reason: string } | { kind: 'increase' | 'decrease' | 'maintain'; weight: number; reps: number[] } {
+  if (session.phase !== 'finished' || !completionCounts(session).allComplete) return { kind: 'unavailable' as const, reason: '전체 계획 미완료 또는 당시 계획 수 미확인' }
+  if (exercise.structureModified || exercise.sets.length !== exercise.setCount) return { kind: 'unavailable' as const, reason: '세션에서 본세트 구성을 변경한 기록' }
+  if (exercise.temporaryWeight || !exercise.sets.every(s => s.actual && !s.actual.temporaryWeight && s.actual.weight === exercise.approvedWeight)) return { kind: 'unavailable' as const, reason: '일시 중량 또는 혼합 중량 기록' }
+  return { kind: recommendation(exercise) ?? 'maintain', weight: exercise.approvedWeight, reps: exercise.sets.map(s => s.actual?.reps ?? 0) }
+}
+
+export function currentWeightReviews(state: WorkoutState, onlyRoutineId?: string) {
+  return state.routines.filter(r => onlyRoutineId === undefined || r.id === onlyRoutineId).flatMap(routine => routine.exercises.flatMap(exercise => {
+    const weight = state.progress[exercise.id] ?? exercise.initialWeight
+    const benchmark = increaseBenchmark(state, routine.id, exercise)
+    const key = benchmarkKey(routine.id, exercise, weight)
+    const latest = state.history.filter(s => s.routineId === routine.id).flatMap(session => session.exercises.flatMap(e => {
+      if (e.id !== exercise.id || benchmarkKey(session.routineId, e, e.approvedWeight) !== key) return []
+      const review = historicalWeightReview(session, e)
+      return review.kind === 'unavailable' ? [] : [{ sessionId: session.id, endedAt: session.endedAt ?? session.startedAt, date: session.date, review }]
+    })).sort((a, b) => b.endedAt - a.endedAt)[0]
+    if (!benchmark && latest?.review.kind !== 'decrease') return []
+    return [{ routineId: routine.id, placementId: exercise.id, routineName: routine.name, exerciseName: state.definitions.find(d => d.id === exercise.exerciseId)?.name ?? '운동 종목', weight, benchmark, latest }]
+  }))
 }
 
 export function finishWorkout(state: WorkoutState, now: number, confirmIncomplete = false): WorkoutState {

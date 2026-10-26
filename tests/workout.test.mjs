@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import * as m from '../src/features/workout/model.ts'
-import { isWorkoutState, loadWorkout, saveWorkout, STORAGE_KEY } from '../src/features/workout/storage.ts'
+import { isWorkoutState, loadWorkout, persistWorkoutUpdate, saveWorkout, STORAGE_KEY } from '../src/features/workout/storage.ts'
 
 const NOW = new Date(2026, 9, 26, 12, 0).getTime()
 function initial() {
@@ -21,6 +21,29 @@ function complete(state, reps, now = NOW + 1000, exerciseId = state.active.exerc
 }
 function performed(state, reps) { return m.finishWorkout(complete(working(state), reps), NOW + 60000) }
 function memory() { const values = new Map(); return { values, getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value) } }
+
+test('ID generation uses the native UUID API when available', t => {
+  const expected = 'f043ea6b-904d-4c3b-9dc1-1db79af4779a'
+  t.mock.method(crypto, 'randomUUID', () => expected)
+  assert.equal(m.newId(), expected)
+})
+
+test('LAN HTTP without randomUUID can create and restore workouts with unique UUID v4 IDs', () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'crypto')
+  const getRandomValues = crypto.getRandomValues.bind(crypto)
+  Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { getRandomValues } })
+  try {
+    const ids = Array.from({ length: 256 }, () => m.newId())
+    assert.equal(new Set(ids).size, ids.length)
+    for (const id of ids) assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    const state = working()
+    const storage = memory()
+    saveWorkout(storage, state)
+    assert.deepEqual(loadWorkout(storage).state, state)
+    assert.equal(loadWorkout(storage).blocked, false)
+    assert.equal(new Set([state.active.id, ...state.active.exercises[0].sets.map(s => s.id)]).size, 4)
+  } finally { Object.defineProperty(globalThis, 'crypto', descriptor) }
+})
 
 test('selects the current weekday or manual override without creating a workout; rest day remains empty', () => {
   const state = m.createInitialState()
@@ -215,14 +238,14 @@ test('partial completion requires confirmation and summary includes only complet
   assert.equal(m.summary(state.active, NOW).sets, 1)
 })
 
-test('invalid repetitions are rejected, blanks remain distinct from zero, and completing twice is idempotent', () => {
+test('invalid repetitions including zero are rejected and completing twice is idempotent', () => {
   let state = working()
   const e = state.active.exercises[0]
-  for (const value of ['', ' ', '-1', '1.5', 'Infinity', 'hello']) {
+  for (const value of ['', ' ', '0', '-1', '1.5', 'Infinity', 'hello', '9007199254740992']) {
     const draft = m.editReps(state, e.id, e.sets[0].id, value)
     assert.throws(() => m.completeSet(draft, e.id, e.sets[0].id, NOW), /반복/)
   }
-  state = complete(state, [0])
+  state = complete(state, [1])
   const completedAt = state.active.exercises[0].sets[0].actual.completedAt
   state = m.completeSet(state, e.id, e.sets[0].id, NOW + 99999)
   assert.equal(state.active.exercises[0].sets[0].actual.completedAt, completedAt)
@@ -548,4 +571,269 @@ test('weekday display order keeps Sunday ID zero and all saved mappings unchange
   assert.equal(state.schedule[1], 'push')
   assert.equal(state.schedule[4], 'push')
   assert.equal(m.selectRoutine(state, new Date(2026, 10, 1)).id, 'push')
+})
+
+test('routine save approves a decimal progress weight for one placement without overwriting original or history', () => {
+  let state = performed(initial(), [10, 10, 10])
+  const other = { id: 'other', name: 'Other bench', exercises: [{ ...state.routines[0].exercises[0], id: 'other-bench', initialWeight: 70 }] }
+  state = m.saveRoutine(state, other, [])
+  const before = structuredClone(state)
+  const saved = m.saveRoutine(state, state.routines[0], [1], false, { 'push-bench': 62.5 })
+  assert.equal(saved.progress['push-bench'], 62.5)
+  assert.equal(saved.progress['other-bench'], 70)
+  assert.equal(saved.routines[0].exercises[0].initialWeight, 60)
+  assert.deepEqual(saved.routines, before.routines)
+  assert.deepEqual(saved.benchmarks, before.benchmarks)
+  assert.deepEqual(saved.history, before.history)
+  assert.deepEqual(state, before)
+  const storage = memory()
+  saveWorkout(storage, saved)
+  const restored = loadWorkout(storage)
+  assert.equal(restored.blocked, false)
+  assert.equal(restored.state.version, 1)
+  assert.equal(working(restored.state).active.exercises[0].weight, 62.5)
+})
+
+test('invalid progress approvals reject the complete routine save without partial writes or foreign placements', () => {
+  const state = m.createInitialState()
+  const before = structuredClone(state)
+  const edited = { ...state.routines[0], name: 'Pending name' }
+  for (const value of [-1, NaN, Infinity, '62.5']) assert.throws(() => m.saveRoutine(state, edited, [1, 4], false, { 'push-bench': value }))
+  for (const id of ['pull-lat', 'unknown']) assert.throws(() => m.saveRoutine(state, edited, [1, 4], false, { [id]: 62.5 }))
+  const removed = { ...edited, exercises: edited.exercises.slice(1) }
+  assert.throws(() => m.saveRoutine(state, removed, [1, 4], false, { 'push-bench': 62.5 }))
+  assert.deepEqual(state, before)
+  assert.equal(m.saveRoutine(state, edited, [1, 4], false, { 'push-bench': 0 }).progress['push-bench'], 0)
+})
+
+test('routine progress approval during a session preserves completed snapshots, drafts and timer until the next start', () => {
+  let state = complete(working(), [10])
+  const e = state.active.exercises[0]
+  state = m.editReps(state, e.id, e.sets[1].id, '9')
+  const active = structuredClone(state.active)
+  state = m.saveRoutine(state, state.routines[0], [1], false, { [e.id]: 62.5 })
+  assert.deepEqual(state.active, active)
+  const storage = memory()
+  saveWorkout(storage, state)
+  state = loadWorkout(storage).state
+  assert.deepEqual(state.active, active)
+  state = m.finishWorkout(state, NOW + 60000, true)
+  assert.equal(state.history[0].exercises[0].sets[0].actual.weight, 60)
+  assert.deepEqual(m.completionCounts(state.history[0]), { completed: 1, total: 3, allComplete: false })
+  const next = working(state)
+  assert.equal(next.active.exercises[0].weight, 62.5)
+  assert.equal(next.active.exercises[0].approvedWeight, 62.5)
+  assert.equal(next.active.exercises[0].sets[0].reps, '')
+})
+
+const pendingIncrease = state => m.increaseBenchmark(state, state.active.routineId, state.active.exercises[0])
+
+test('a qualifying whole-session benchmark reminds later sessions until approved weight changes, with v1 round trip', () => {
+  let state = performed(initial(), [10, 10, 10])
+  const achievedId = state.history[0].id
+  state = performed(state, [9, 8, 7])
+  const records = structuredClone(state.history)
+  state = working(state)
+  assert.deepEqual(pendingIncrease(state), { sessionId: achievedId, reps: [10, 10, 10] })
+  const before = structuredClone(state)
+  pendingIncrease(state)
+  assert.deepEqual(state, before)
+  const storage = memory()
+  saveWorkout(storage, state)
+  state = loadWorkout(storage).state
+  assert.equal(loadWorkout(storage).blocked, false)
+  assert.equal(pendingIncrease(state).sessionId, achievedId)
+  state = m.saveRoutine(state, state.routines[0], [1], false, { 'push-bench': 62.5 })
+  assert.equal(pendingIncrease(state), null)
+  assert.equal(state.active.exercises[0].weight, 60)
+  assert.deepEqual(state.history, records)
+  state = working(m.finishWorkout(state, NOW + 61000, true))
+  assert.equal(state.active.exercises[0].approvedWeight, 62.5)
+  assert.equal(pendingIncrease(state), null)
+  assert.ok(Object.values(state.benchmarks).some(b => b.sessionId === achievedId))
+})
+
+test('benchmark reminders never merge session maxima, downgrade a better benchmark, or cross placements and configurations', () => {
+  let state = performed(initial(), [10, 9, 7])
+  state = performed(state, [10, 8, 6])
+  state = working(state)
+  assert.deepEqual(state.active.exercises[0].benchmark, [10, 9, 7])
+  assert.equal(pendingIncrease(state), null)
+  let separate = performed(initial(), [10, 11, 9])
+  separate = performed(separate, [9, 10, 11])
+  assert.equal(pendingIncrease(working(separate)), null)
+  const qualified = performed(initial(), [10, 10, 10])
+  for (const config of [{ setCount: 2 }, { minReps: 7 }, { maxReps: 11 }, { id: 'new-placement' }]) {
+    const routine = { ...qualified.routines[0], exercises: [{ ...qualified.routines[0].exercises[0], ...config }] }
+    assert.equal(pendingIncrease(working(m.saveRoutine(qualified, routine, [1]))), null)
+  }
+  const other = { id: 'other', name: 'Same exercise', exercises: [{ ...qualified.routines[0].exercises[0], id: 'other-bench' }] }
+  const withOther = m.saveRoutine(qualified, other, [])
+  const otherSession = m.beginWorking(m.startWorkout(withOther, 'other', NOW))
+  assert.equal(pendingIncrease(otherSession), null)
+  const shortBenchmark = working(qualified)
+  shortBenchmark.benchmarks[m.benchmarkKey('push', shortBenchmark.active.exercises[0], 60)].reps = [10, 10]
+  assert.equal(pendingIncrease(shortBenchmark), null)
+})
+
+test('temporary, mixed, partial and session-modified results cannot create benchmark reminders', () => {
+  const scenarios = [
+    () => complete(m.changeWeight(working(), 'push-bench', 60, 'today'), [10, 10, 10]),
+    () => complete(m.changeWeight(complete(working(), [10]), 'push-bench', 62.5, 'progress'), [10, 10, 10]),
+    () => complete(working(), [10, 10]),
+    () => complete(m.addSessionSet(working(), 'push-bench'), [10, 10, 10, 10]),
+    () => complete(working(m.createInitialState()), [10, 10, 10]),
+  ]
+  for (const scenario of scenarios) {
+    const finished = m.finishWorkout(scenario(), NOW + 60000, true)
+    assert.equal(pendingIncrease(working(finished)), null)
+    assert.equal(finished.history.length, 1)
+  }
+  let state = working(performed(initial(), [10, 10, 10]))
+  state = m.addSessionSet(state, 'push-bench')
+  assert.equal(pendingIncrease(state), null)
+})
+
+test('a prior approved benchmark never approves a temporary weight and uses the new weight after explicit approval', () => {
+  let state = working(performed(initial(), [10, 10, 10]))
+  state = m.changeWeight(state, 'push-bench', 50, 'today')
+  assert.deepEqual(pendingIncrease(state).reps, [10, 10, 10])
+  assert.equal(state.active.exercises[0].weight, 50)
+  assert.equal(state.progress['push-bench'], 60)
+  state = m.changeWeight(state, 'push-bench', 62.5, 'progress')
+  assert.equal(pendingIncrease(state), null)
+  assert.equal(state.progress['push-bench'], 62.5)
+  assert.equal(state.history[0].exercises[0].sets[0].actual.weight, 60)
+  state = m.finishWorkout(complete(state, [10, 10, 10]), NOW + 60000)
+  state = working(state)
+  assert.deepEqual(pendingIncrease(state).reps, [10, 10, 10])
+  assert.equal(state.active.exercises[0].approvedWeight, 62.5)
+  assert.equal(pendingIncrease(state).sessionId, state.history[0].id)
+})
+
+test('approval events snapshot one placement, names, time and source without inferring a triggering session', () => {
+  const state = working()
+  const before = structuredClone(state.active)
+  let next = m.saveRoutine(state, { ...state.routines[0], name: 'Renamed PUSH' }, [1], false, { 'push-bench': 62.5 }, NOW)
+  const event = next.progressChanges[0]
+  assert.equal(event.previousApprovedWeight, 60)
+  assert.equal(event.nextApprovedWeight, 62.5)
+  assert.equal(event.placementId, 'push-bench')
+  assert.equal(event.routineId, 'push')
+  assert.equal(event.routineName, 'Renamed PUSH')
+  assert.equal(event.exerciseName, '바벨 벤치프레스')
+  assert.equal(event.source, 'routine_editor')
+  assert.equal(event.occurredAt, NOW)
+  assert.equal(event.relatedSessionId, undefined)
+  assert.deepEqual(next.active, before)
+  next = m.changeWeight(next, 'push-bench', 57.5, 'progress', NOW + 1000)
+  assert.equal(next.progressChanges.length, 2)
+  assert.equal(next.progressChanges[0].previousApprovedWeight, 62.5)
+  assert.equal(next.progressChanges[0].nextApprovedWeight, 57.5)
+  assert.equal(next.progressChanges[0].source, 'workout')
+  assert.equal(next.progressChanges[0].relatedSessionId, before.id)
+  next = m.deleteRoutine(next, 'push')
+  assert.equal(next.progressChanges[1].routineName, 'Renamed PUSH')
+  assert.equal(isWorkoutState(next), true)
+})
+
+test('same value, initial weight, invalid approval and today-only changes create no approval event', () => {
+  const state = initial()
+  assert.equal(m.saveRoutine(state, state.routines[0], [1], false, { 'push-bench': 60 }).progressChanges, undefined)
+  assert.equal(m.saveRoutine(state, { ...state.routines[0], id: 'new', exercises: [{ ...state.routines[0].exercises[0], id: 'new-bench' }] }, []).progressChanges, undefined)
+  assert.equal(m.changeWeight(working(), 'push-bench', 62.5, 'today').progressChanges, undefined)
+  assert.throws(() => m.changeWeight(working(), 'unknown', 62.5, 'progress'))
+  assert.throws(() => m.saveRoutine(state, state.routines[0], [1], false, { 'push-bench': -1 }))
+  assert.equal(state.progressChanges, undefined)
+})
+
+test('failed atomic approvals leave progress and events unchanged; reconfirmation writes exactly one event', () => {
+  const storage = memory()
+  const before = initial()
+  saveWorkout(storage, before)
+  const raw = storage.getItem(STORAGE_KEY)
+  const failed = { getItem: storage.getItem, setItem: () => { throw new Error('quota') } }
+  const candidate = m.saveRoutine(before, before.routines[0], [1], false, { 'push-bench': 62.5 }, NOW)
+  const rejected = persistWorkoutUpdate(failed, before, candidate)
+  assert.equal(rejected.approvalRejected, true)
+  assert.equal(rejected.state, before)
+  assert.equal(storage.getItem(STORAGE_KEY), raw)
+  const check = persistWorkoutUpdate(storage, rejected.state, rejected.state)
+  assert.equal(check.state.progressChanges, undefined)
+  const confirmed = persistWorkoutUpdate(storage, check.state, m.saveRoutine(check.state, check.state.routines[0], [1], false, { 'push-bench': 62.5 }, NOW + 1))
+  assert.equal(confirmed.persisted, true)
+  assert.equal(confirmed.state.progressChanges.length, 1)
+  const repeated = m.saveRoutine(confirmed.state, confirmed.state.routines[0], [1], false, { 'push-bench': 62.5 }, NOW + 2)
+  assert.equal(repeated.progressChanges.length, 1)
+  assert.equal(loadWorkout(storage).state.progressChanges.length, 1)
+  const active = working()
+  const workoutRejected = persistWorkoutUpdate(failed, active, m.changeWeight(active, 'push-bench', 62.5, 'progress', NOW))
+  assert.equal(workoutRejected.state, active)
+  const draft = m.editReps(active, 'push-bench', active.active.exercises[0].sets[0].id, '9')
+  const draftFailed = persistWorkoutUpdate(failed, active, draft)
+  assert.equal(draftFailed.approvalRejected, false)
+  assert.equal(draftFailed.state.active.exercises[0].sets[0].reps, '9')
+})
+
+test('v1 optional event history loads without normalization or inferred events and rejects malformed event fields', () => {
+  const storage = memory()
+  const old = performed(initial(), [10, 10, 10])
+  assert.equal(old.progressChanges, undefined)
+  saveWorkout(storage, old)
+  const raw = storage.getItem(STORAGE_KEY)
+  assert.deepEqual(loadWorkout(storage).state, old)
+  assert.equal(storage.getItem(STORAGE_KEY), raw)
+  const state = m.saveRoutine(old, old.routines[0], [1], false, { 'push-bench': 62.5 }, NOW)
+  saveWorkout(storage, state)
+  assert.deepEqual(loadWorkout(storage).state, state)
+  for (const invalid of [null, {}, { ...state.progressChanges[0], source: 'automatic' }, { ...state.progressChanges[0], occurredAt: 1e308 }, { ...state.progressChanges[0], nextApprovedWeight: -1 }, { ...state.progressChanges[0], nextApprovedWeight: 60 }, { ...state.progressChanges[0], relatedSessionId: 'guessed' }]) {
+    const broken = { ...state, progressChanges: [invalid] }
+    const brokenRaw = JSON.stringify(broken)
+    storage.setItem(STORAGE_KEY, brokenRaw)
+    assert.equal(loadWorkout(storage).blocked, true)
+    assert.equal(storage.getItem(STORAGE_KEY), brokenRaw)
+  }
+  assert.equal(isWorkoutState({ ...state, progressChanges: [state.progressChanges[0], state.progressChanges[0]] }), false)
+})
+
+test('historical judgments remain tied to frozen performance after later progress approvals', () => {
+  const old = performed(initial(), [10, 10, 10])
+  const session = structuredClone(old.history[0])
+  const review = m.historicalWeightReview(session, session.exercises[0])
+  assert.deepEqual(review, { kind: 'increase', weight: 60, reps: [10, 10, 10] })
+  const current = m.saveRoutine(old, old.routines[0], [1], false, { 'push-bench': 62.5 }, NOW + 70000)
+  assert.deepEqual(current.history[0], session)
+  assert.deepEqual(m.historicalWeightReview(current.history[0], current.history[0].exercises[0]), review)
+  assert.equal(m.currentWeightReviews(current).length, 0)
+  const maintained = performed(initial(), [8, 9, 8]).history[0]
+  assert.equal(m.historicalWeightReview(maintained, maintained.exercises[0]).kind, 'maintain')
+})
+
+test('current review explains both strong benchmark and weaker latest comparable exercise without automatic adjustment', () => {
+  const best = performed(initial(), [10, 10, 10])
+  const weak = performed(best, [5, 8, 7])
+  weak.history[0].endedAt += 1000
+  const review = m.currentWeightReviews(weak)[0]
+  assert.deepEqual(review.benchmark.reps, [10, 10, 10])
+  assert.equal(review.latest.review.kind, 'decrease')
+  assert.deepEqual(review.latest.review.reps, [5, 8, 7])
+  assert.equal(weak.progress['push-bench'], 60)
+  assert.equal(weak.progressChanges, undefined)
+  assert.equal(m.currentWeightReviews(weak, 'pull').length, 0)
+  const changed = { ...weak.routines[0], exercises: [{ ...weak.routines[0].exercises[0], maxReps: 12 }] }
+  assert.equal(m.currentWeightReviews(m.saveRoutine(weak, changed, [1])).length, 0)
+})
+
+test('partial, temporary, mixed or modified snapshots never become a global reduction review', () => {
+  const cases = [
+    complete(working(), [3]),
+    complete(m.changeWeight(working(), 'push-bench', 50, 'today'), [3, 3, 3]),
+    complete(m.changeWeight(complete(working(), [3]), 'push-bench', 62.5, 'progress'), [3, 3, 3]),
+    complete(m.addSessionSet(working(), 'push-bench'), [3, 3, 3, 3]),
+  ]
+  for (const state of cases) {
+    const finished = m.finishWorkout(state, NOW + 60000, true)
+    assert.equal(m.historicalWeightReview(finished.history[0], finished.history[0].exercises[0]).kind, 'unavailable')
+    assert.equal(m.currentWeightReviews(finished).length, 0)
+  }
 })

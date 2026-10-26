@@ -1,0 +1,4131 @@
+{
+  "date": "2026-10-27",
+  "browser": "Chromium CUA, actual App in isolated fixture at127.0.0.1:3050",
+  "clock": "fixture UI drives existing Date.now/visibility update; no product timer engine change",
+  "rawBaseline": "ordinary rest after second-set draft7, before explicit +30; false after explicit actions is expected; extended clock exact equality is checked separately",
+  "motion": "browser reduced=true; fixture temporarily disables only the reduced-motion CSS override to observe real default CSS, then restores it; OS settings unchanged",
+  "checks": [
+    {
+      "name": "warmup has no bottom warning",
+      "ui": {
+        "animation": null,
+        "buttonRects": [],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "BODY",
+        "header": "전체 운동 시간\n00:00:00\n준비 중\n—",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "inputs": [],
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "scroll": 360,
+        "scrollY": 0
+      },
+      "writes": 1,
+      "rawSameAsClockBaseline": null,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "warmup",
+        "current": "push-bench",
+        "timer": null,
+        "completed": 0
+      }
+    },
+    {
+      "name": "ordinary rest before warning",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "BODY",
+        "footer": "휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 76.59375,
+          "left": 0,
+          "right": 360,
+          "top": 735.40625,
+          "width": 360,
+          "x": 0,
+          "y": 735.40625
+        },
+        "header": "전체 운동 시간\n00:00:02\n남은 휴식\n00:02:00",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "inputs": [
+          {
+            "disabled": true,
+            "rect": {
+              "bottom": 428.125,
+              "height": 44,
+              "left": 153,
+              "right": 205,
+              "top": 384.125,
+              "width": 52,
+              "x": 153,
+              "y": 384.125
+            },
+            "value": "10"
+          },
+          {
+            "disabled": false,
+            "rect": {
+              "bottom": 501.125,
+              "height": 44,
+              "left": 153,
+              "right": 205,
+              "top": 457.125,
+              "width": 52,
+              "x": 153,
+              "y": 457.125
+            },
+            "value": ""
+          },
+          {
+            "disabled": false,
+            "rect": {
+              "bottom": 574.125,
+              "height": 44,
+              "left": 153,
+              "right": 205,
+              "top": 530.125,
+              "width": 52,
+              "x": 153,
+              "y": 530.125
+            },
+            "value": ""
+          }
+        ],
+        "memoRect": {
+          "bottom": 873.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 681.71875,
+          "width": 320,
+          "x": 20,
+          "y": 681.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 304
+      },
+      "writes": 4,
+      "rawSameAsClockBaseline": null,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "middle scroll with numeric input focus at11",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 76.59375,
+          "left": 0,
+          "right": 360,
+          "top": 735.40625,
+          "width": 360,
+          "x": 0,
+          "y": 735.40625
+        },
+        "header": "전체 운동 시간\n00:01:50\n남은 휴식\n00:00:11",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "middle input focus remaining 10",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n10초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "middle input focus remaining 6",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n6초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "다음 세트 준비\n6초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:01:55\n남은 휴식\n00:00:06",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "middle input focus remaining 5",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "middle input focus remaining 1",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n1초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "다음 세트 준비\n1초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:02:00\n남은 휴식\n00:00:01",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "middle input focus remaining 0",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 52,
+            "left": 20,
+            "right": 340,
+            "text": "2세트 완료",
+            "top": 746,
+            "width": 320,
+            "x": 20,
+            "y": 746
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "2세트 완료",
+        "footerRect": {
+          "bottom": 812,
+          "height": 81,
+          "left": 0,
+          "right": 360,
+          "top": 731,
+          "width": 360,
+          "x": 0,
+          "y": 731
+        },
+        "header": "전체 운동 시간\n00:02:01\n휴식 완료\n—",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "middle input focus remaining -1",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 52,
+            "left": 20,
+            "right": 340,
+            "text": "2세트 완료",
+            "top": 746,
+            "width": 320,
+            "x": 20,
+            "y": 746
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "2세트 완료",
+        "footerRect": {
+          "bottom": 812,
+          "height": 81,
+          "left": 0,
+          "right": 360,
+          "top": 731,
+          "width": 360,
+          "x": 0,
+          "y": 731
+        },
+        "header": "전체 운동 시간\n00:02:02\n휴식 완료\n—",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "lower scroll at11",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "TEXTAREA",
+        "focusRect": {
+          "bottom": 545.5,
+          "height": 98.78125,
+          "left": 42,
+          "right": 318,
+          "top": 446.71875,
+          "width": 276,
+          "x": 42,
+          "y": 446.71875
+        },
+        "footer": "휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 76.59375,
+          "left": 0,
+          "right": 360,
+          "top": 735.40625,
+          "width": 360,
+          "x": 0,
+          "y": 735.40625
+        },
+        "header": "전체 운동 시간\n00:01:50\n남은 휴식\n00:00:11",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 587.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 395.71875,
+          "width": 320,
+          "x": 20,
+          "y": 395.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 590
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "lower scroll remaining 10",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n10초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "TEXTAREA",
+        "focusRect": {
+          "bottom": 545.5,
+          "height": 98.78125,
+          "left": 42,
+          "right": 318,
+          "top": 446.71875,
+          "width": 276,
+          "x": 42,
+          "y": 446.71875
+        },
+        "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 587.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 395.71875,
+          "width": 320,
+          "x": 20,
+          "y": 395.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 590
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "lower scroll remaining 5",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "TEXTAREA",
+        "focusRect": {
+          "bottom": 545.5,
+          "height": 98.78125,
+          "left": 42,
+          "right": 318,
+          "top": 446.71875,
+          "width": 276,
+          "x": 42,
+          "y": 446.71875
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 587.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 395.71875,
+          "width": 320,
+          "x": 20,
+          "y": 395.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 590
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "layout 375 remaining 10",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n10초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "layout 375 remaining 5",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "layout 390 remaining 10",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 830,
+            "height": 47.59375,
+            "left": 20,
+            "right": 183,
+            "text": "휴식 종료",
+            "top": 782.40625,
+            "width": 163,
+            "x": 20,
+            "y": 782.40625
+          },
+          {
+            "bottom": 830,
+            "height": 47.59375,
+            "left": 192,
+            "right": 355,
+            "text": "＋30초",
+            "top": 782.40625,
+            "width": 163,
+            "x": 192,
+            "y": 782.40625
+          }
+        ],
+        "card": "다음 세트 준비\n10초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 772.40625,
+          "height": 72,
+          "left": 20,
+          "right": 355,
+          "top": 700.40625,
+          "width": 335,
+          "x": 20,
+          "y": 700.40625
+        },
+        "client": 375,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 444.484375,
+          "height": 44,
+          "left": 177.625,
+          "right": 234.984375,
+          "top": 400.484375,
+          "width": 57.359375,
+          "x": 177.625,
+          "y": 400.484375
+        },
+        "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 844,
+          "height": 158.59375,
+          "left": 0,
+          "right": 375,
+          "top": 685.40625,
+          "width": 375,
+          "x": 0,
+          "y": 685.40625
+        },
+        "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 375,
+          "top": 0,
+          "width": 375,
+          "x": 0,
+          "y": 0
+        },
+        "height": 844,
+        "memoRect": {
+          "bottom": 816.828125,
+          "height": 191.75,
+          "left": 20,
+          "right": 355,
+          "top": 625.078125,
+          "width": 335,
+          "x": 20,
+          "y": 625.078125
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 830,
+          "height": 47.59375,
+          "left": 20,
+          "right": 355,
+          "top": 782.40625,
+          "width": 335,
+          "x": 20,
+          "y": 782.40625
+        },
+        "scroll": 375,
+        "scrollY": 344
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "layout 390 remaining 5",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 830,
+            "height": 47.59375,
+            "left": 20,
+            "right": 183,
+            "text": "휴식 종료",
+            "top": 782.40625,
+            "width": 163,
+            "x": 20,
+            "y": 782.40625
+          },
+          {
+            "bottom": 830,
+            "height": 47.59375,
+            "left": 192,
+            "right": 355,
+            "text": "＋30초",
+            "top": 782.40625,
+            "width": 163,
+            "x": 192,
+            "y": 782.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 772.40625,
+          "height": 72,
+          "left": 20,
+          "right": 355,
+          "top": 700.40625,
+          "width": 335,
+          "x": 20,
+          "y": 700.40625
+        },
+        "client": 375,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 444.484375,
+          "height": 44,
+          "left": 177.625,
+          "right": 234.984375,
+          "top": 400.484375,
+          "width": 57.359375,
+          "x": 177.625,
+          "y": 400.484375
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 844,
+          "height": 158.59375,
+          "left": 0,
+          "right": 375,
+          "top": 685.40625,
+          "width": 375,
+          "x": 0,
+          "y": 685.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 375,
+          "top": 0,
+          "width": 375,
+          "x": 0,
+          "y": 0
+        },
+        "height": 844,
+        "memoRect": {
+          "bottom": 816.828125,
+          "height": 191.75,
+          "left": 20,
+          "right": 355,
+          "top": 625.078125,
+          "width": 335,
+          "x": 20,
+          "y": 625.078125
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 830,
+          "height": 47.59375,
+          "left": 20,
+          "right": 355,
+          "top": 782.40625,
+          "width": 335,
+          "x": 20,
+          "y": 782.40625
+        },
+        "scroll": 375,
+        "scrollY": 344
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "layout 430 remaining 10",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": "다음 세트 준비\n10초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 860.40625,
+          "height": 72,
+          "left": 20,
+          "right": 395,
+          "top": 788.40625,
+          "width": 375,
+          "x": 20,
+          "y": 788.40625
+        },
+        "client": 415,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 488.046875,
+          "height": 44,
+          "left": 188.828125,
+          "right": 274.984375,
+          "top": 444.046875,
+          "width": 86.15625,
+          "x": 188.828125,
+          "y": 444.046875
+        },
+        "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 158.59375,
+          "left": 0,
+          "right": 415,
+          "top": 773.40625,
+          "width": 415,
+          "x": 0,
+          "y": 773.40625
+        },
+        "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 860.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 668.640625,
+          "width": 375,
+          "x": 20,
+          "y": 668.640625
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 281
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "layout 430 remaining 5",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 860.40625,
+          "height": 72,
+          "left": 20,
+          "right": 395,
+          "top": 788.40625,
+          "width": 375,
+          "x": 20,
+          "y": 788.40625
+        },
+        "client": 415,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 488.046875,
+          "height": 44,
+          "left": 188.828125,
+          "right": 274.984375,
+          "top": 444.046875,
+          "width": 86.15625,
+          "x": 188.828125,
+          "y": 444.046875
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 158.59375,
+          "left": 0,
+          "right": 415,
+          "top": 773.40625,
+          "width": 415,
+          "x": 0,
+          "y": 773.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 860.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 668.640625,
+          "width": 375,
+          "x": 20,
+          "y": 668.640625
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 281
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "test-only reduced override disabled: real default pulse CSS active",
+      "ui": {
+        "animation": "rest-ready",
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 860.40625,
+          "height": 72,
+          "left": 20,
+          "right": 395,
+          "top": 788.40625,
+          "width": 375,
+          "x": 20,
+          "y": 788.40625
+        },
+        "client": 415,
+        "duration": "1.6s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 488.046875,
+          "height": 44,
+          "left": 188.828125,
+          "right": 274.984375,
+          "top": 444.046875,
+          "width": 86.15625,
+          "x": 188.828125,
+          "y": 444.046875
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 158.59375,
+          "left": 0,
+          "right": 415,
+          "top": 773.40625,
+          "width": 415,
+          "x": 0,
+          "y": 773.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 860.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 668.640625,
+          "width": 375,
+          "x": 20,
+          "y": 668.640625
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 281
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "reduced motion restored: static preparation card",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 860.40625,
+          "height": 72,
+          "left": 20,
+          "right": 395,
+          "top": 788.40625,
+          "width": 375,
+          "x": 20,
+          "y": 788.40625
+        },
+        "client": 415,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 488.046875,
+          "height": 44,
+          "left": 188.828125,
+          "right": 274.984375,
+          "top": 444.046875,
+          "width": 86.15625,
+          "x": 188.828125,
+          "y": 444.046875
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 158.59375,
+          "left": 0,
+          "right": 415,
+          "top": 773.40625,
+          "width": 415,
+          "x": 0,
+          "y": 773.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 860.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 668.640625,
+          "width": 375,
+          "x": 20,
+          "y": 668.640625
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 281
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": true,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030076886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "+30 from5 to35 hides lower card",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 415,
+        "duration": null,
+        "focus": "BUTTON",
+        "focusRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 212,
+          "right": 395,
+          "top": 870.40625,
+          "width": 183,
+          "x": 212,
+          "y": 870.40625
+        },
+        "footer": "휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 76.59375,
+          "left": 0,
+          "right": 415,
+          "top": 855.40625,
+          "width": 415,
+          "x": 0,
+          "y": 855.40625
+        },
+        "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:35",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 860.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 668.640625,
+          "width": 375,
+          "x": 20,
+          "y": 668.640625
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 281
+      },
+      "writes": 6,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030106886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "extended rest reenters10 and card returns",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": "다음 세트 준비\n10초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 860.40625,
+          "height": 72,
+          "left": 20,
+          "right": 395,
+          "top": 788.40625,
+          "width": 375,
+          "x": 20,
+          "y": 788.40625
+        },
+        "client": 415,
+        "duration": "0s",
+        "focus": "BUTTON",
+        "focusRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 212,
+          "right": 395,
+          "top": 870.40625,
+          "width": 183,
+          "x": 212,
+          "y": 870.40625
+        },
+        "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 158.59375,
+          "left": 0,
+          "right": 415,
+          "top": 773.40625,
+          "width": 415,
+          "x": 0,
+          "y": 773.40625
+        },
+        "header": "전체 운동 시간\n00:02:21\n남은 휴식\n00:00:10",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 860.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 668.640625,
+          "width": 375,
+          "x": 20,
+          "y": 668.640625
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 281
+      },
+      "writes": 6,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030106886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "reload and resume at5 use original extended deadline without writes",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 860.40625,
+          "height": 72,
+          "left": 20,
+          "right": 395,
+          "top": 788.40625,
+          "width": 375,
+          "x": 20,
+          "y": 788.40625
+        },
+        "client": 415,
+        "duration": "0s",
+        "focus": "BODY",
+        "focusRect": {
+          "bottom": 1366.390625,
+          "height": 1366.390625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 158.59375,
+          "left": 0,
+          "right": 415,
+          "top": 773.40625,
+          "width": 415,
+          "x": 0,
+          "y": 773.40625
+        },
+        "header": "전체 운동 시간\n00:02:26\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 1141.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 949.640625,
+          "width": 375,
+          "x": 20,
+          "y": 949.640625
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 0
+      },
+      "writes": 0,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030106886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "home history roundtrip restores same5 second card",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 20,
+            "right": 203,
+            "text": "휴식 종료",
+            "top": 870.40625,
+            "width": 183,
+            "x": 20,
+            "y": 870.40625
+          },
+          {
+            "bottom": 918,
+            "height": 47.59375,
+            "left": 212,
+            "right": 395,
+            "text": "＋30초",
+            "top": 870.40625,
+            "width": 183,
+            "x": 212,
+            "y": 870.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 860.40625,
+          "height": 72,
+          "left": 20,
+          "right": 395,
+          "top": 788.40625,
+          "width": 375,
+          "x": 20,
+          "y": 788.40625
+        },
+        "client": 415,
+        "duration": "0s",
+        "focus": "BODY",
+        "focusRect": {
+          "bottom": 1366.390625,
+          "height": 1366.390625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 932,
+          "height": 158.59375,
+          "left": 0,
+          "right": 415,
+          "top": 773.40625,
+          "width": 415,
+          "x": 0,
+          "y": 773.40625
+        },
+        "header": "전체 운동 시간\n00:02:26\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "height": 932,
+        "memoRect": {
+          "bottom": 1141.390625,
+          "height": 191.75,
+          "left": 20,
+          "right": 395,
+          "top": 949.640625,
+          "width": 375,
+          "x": 20,
+          "y": 949.640625
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 395,
+          "top": 870.40625,
+          "width": 375,
+          "x": 20,
+          "y": 870.40625
+        },
+        "scroll": 415,
+        "scrollY": 0
+      },
+      "writes": 0,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030106886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "extended deadline clock-only changes preserve exact core JSON",
+      "rawUnchanged": true
+    },
+    {
+      "name": "375 with simulated34px bottom Safe Area and input focus",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 764,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 716.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 716.40625
+          },
+          {
+            "bottom": 764,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 716.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 716.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 706.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 634.40625,
+          "width": 320,
+          "x": 20,
+          "y": 634.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "2세트 이번 반복 횟수",
+        "focusRect": {
+          "bottom": 428.125,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 384.125,
+          "width": 52,
+          "x": 153,
+          "y": 384.125
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 192.59375,
+          "left": 0,
+          "right": 360,
+          "top": 619.40625,
+          "width": 360,
+          "x": 0,
+          "y": 619.40625
+        },
+        "header": "전체 운동 시간\n00:02:26\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 800.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 608.71875,
+          "width": 320,
+          "x": 20,
+          "y": 608.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "234px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 764,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 716.40625,
+          "width": 320,
+          "x": 20,
+          "y": 716.40625
+        },
+        "scroll": 360,
+        "scrollY": 377
+      },
+      "writes": 0,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030106886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "375 safe area simulation last memo remains above fixed footer",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 764,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 716.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 716.40625
+          },
+          {
+            "bottom": 764,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 716.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 716.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 706.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 634.40625,
+          "width": 320,
+          "x": 20,
+          "y": 634.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "TEXTAREA",
+        "focusRect": {
+          "bottom": 511.5,
+          "height": 98.78125,
+          "left": 42,
+          "right": 318,
+          "top": 412.71875,
+          "width": 276,
+          "x": 42,
+          "y": 412.71875
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 192.59375,
+          "left": 0,
+          "right": 360,
+          "top": 619.40625,
+          "width": 360,
+          "x": 0,
+          "y": 619.40625
+        },
+        "header": "전체 운동 시간\n00:02:26\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 553.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 361.71875,
+          "width": 320,
+          "x": 20,
+          "y": 361.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "234px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 764,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 716.40625,
+          "width": 320,
+          "x": 20,
+          "y": 716.40625
+        },
+        "scroll": 360,
+        "scrollY": 624
+      },
+      "writes": 0,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030106886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "375 final production CSS lower scroll at5",
+      "ui": {
+        "animation": "none",
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 20,
+            "right": 175.5,
+            "text": "휴식 종료",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 20,
+            "y": 750.40625
+          },
+          {
+            "bottom": 798,
+            "height": 47.59375,
+            "left": 184.5,
+            "right": 340,
+            "text": "＋30초",
+            "top": 750.40625,
+            "width": 155.5,
+            "x": 184.5,
+            "y": 750.40625
+          }
+        ],
+        "card": "다음 세트 준비\n5초",
+        "cardBackground": "rgb(60, 42, 23)",
+        "cardColor": "rgb(255, 221, 163)",
+        "cardRect": {
+          "bottom": 740.40625,
+          "height": 72,
+          "left": 20,
+          "right": 340,
+          "top": 668.40625,
+          "width": 320,
+          "x": 20,
+          "y": 668.40625
+        },
+        "client": 360,
+        "duration": "0s",
+        "focus": "TEXTAREA",
+        "focusRect": {
+          "bottom": 545.5,
+          "height": 98.78125,
+          "left": 42,
+          "right": 318,
+          "top": 446.71875,
+          "width": 276,
+          "x": 42,
+          "y": 446.71875
+        },
+        "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+        "footerRect": {
+          "bottom": 812,
+          "height": 158.59375,
+          "left": 0,
+          "right": 360,
+          "top": 653.40625,
+          "width": 360,
+          "x": 0,
+          "y": 653.40625
+        },
+        "header": "전체 운동 시간\n00:02:26\n남은 휴식\n00:00:05",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 587.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 395.71875,
+          "width": 320,
+          "x": 20,
+          "y": 395.71875
+        },
+        "numberFont": "32px",
+        "paddingBottom": "200px",
+        "reduced": true,
+        "rowRect": {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 340,
+          "top": 750.40625,
+          "width": 320,
+          "x": 20,
+          "y": 750.40625
+        },
+        "scroll": 360,
+        "scrollY": 590
+      },
+      "writes": 0,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "rest",
+          "exerciseId": "push-bench",
+          "setId": "48d53b7b-db9e-4401-99b7-5e3baf905377",
+          "endAt": 1793030106886
+        },
+        "completed": 1
+      }
+    },
+    {
+      "name": "manual rest end immediately hides lower card",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 52,
+            "left": 20,
+            "right": 340,
+            "text": "2세트 완료",
+            "top": 746,
+            "width": 320,
+            "x": 20,
+            "y": 746
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "BODY",
+        "focusRect": {
+          "bottom": 1402.46875,
+          "height": 1402.46875,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "footer": "2세트 완료",
+        "footerRect": {
+          "bottom": 812,
+          "height": 81,
+          "left": 0,
+          "right": 360,
+          "top": 731,
+          "width": 360,
+          "x": 0,
+          "y": 731
+        },
+        "header": "전체 운동 시간\n00:02:26\n휴식 없음\n—",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 1177.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 985.71875,
+          "width": 320,
+          "x": 20,
+          "y": 985.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "scroll": 360,
+        "scrollY": 0
+      },
+      "writes": 1,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": null,
+        "completed": 1
+      }
+    },
+    {
+      "name": "last set transition has no bottom rest card",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 52,
+            "left": 20,
+            "right": 340,
+            "text": "다음 종목으로",
+            "top": 746,
+            "width": 320,
+            "x": 20,
+            "y": 746
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "BODY",
+        "focusRect": {
+          "bottom": 1402.46875,
+          "height": 1402.46875,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "footer": "이 종목의 본세트를 모두 완료했어요.\n\n다음 종목으로",
+        "footerRect": {
+          "bottom": 812,
+          "height": 111.46875,
+          "left": 0,
+          "right": 360,
+          "top": 700.53125,
+          "width": 360,
+          "x": 0,
+          "y": 700.53125
+        },
+        "header": "전체 운동 시간\n00:02:26\n이전 종목 완료 후\n00:00:00",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 1177.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 985.71875,
+          "width": 320,
+          "x": 20,
+          "y": 985.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "scroll": 360,
+        "scrollY": 0
+      },
+      "writes": 5,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-bench",
+        "timer": {
+          "kind": "transition",
+          "exerciseId": "push-bench",
+          "setId": "d5ae49ef-9a48-401c-981e-83ee001e520c",
+          "since": 1793030101886
+        },
+        "completed": 3
+      }
+    },
+    {
+      "name": "next exercise transition elapsed state also hides rest card",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 52,
+            "left": 20,
+            "right": 340,
+            "text": "1세트 완료",
+            "top": 746,
+            "width": 320,
+            "x": 20,
+            "y": 746
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "BODY",
+        "focusRect": {
+          "bottom": 1256.46875,
+          "height": 1256.46875,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "footer": "1세트 완료",
+        "footerRect": {
+          "bottom": 812,
+          "height": 81,
+          "left": 0,
+          "right": 360,
+          "top": 731,
+          "width": 360,
+          "x": 0,
+          "y": 731
+        },
+        "header": "전체 운동 시간\n00:02:26\n이전 종목 완료 후\n00:00:00",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 1031.46875,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 839.71875,
+          "width": 320,
+          "x": 20,
+          "y": 839.71875
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "scroll": 360,
+        "scrollY": 0
+      },
+      "writes": 6,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-incline",
+        "timer": {
+          "kind": "transition",
+          "exerciseId": "push-bench",
+          "setId": "d5ae49ef-9a48-401c-981e-83ee001e520c",
+          "since": 1793030101886
+        },
+        "completed": 3
+      }
+    },
+    {
+      "name": "all complete awaits manual finish without rest card",
+      "ui": {
+        "animation": null,
+        "buttonRects": [
+          {
+            "bottom": 798,
+            "height": 52,
+            "left": 20,
+            "right": 340,
+            "text": "운동 종료 및 요약",
+            "top": 746,
+            "width": 320,
+            "x": 20,
+            "y": 746
+          }
+        ],
+        "card": null,
+        "cardBackground": null,
+        "cardColor": null,
+        "client": 360,
+        "duration": null,
+        "focus": "BODY",
+        "focusRect": {
+          "bottom": 1426.84375,
+          "height": 1426.84375,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "footer": "증량 가능 · 20kg\n다음 운동에서 중량 증가를 고려해 보세요.\n\n운동 종료 및 요약",
+        "footerRect": {
+          "bottom": 812,
+          "height": 128.90625,
+          "left": 0,
+          "right": 360,
+          "top": 683.09375,
+          "width": 360,
+          "x": 0,
+          "y": 683.09375
+        },
+        "header": "전체 운동 시간\n00:02:26\n모든 종목 완료\n—",
+        "headerRect": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "height": 812,
+        "memoRect": {
+          "bottom": 1201.84375,
+          "height": 191.75,
+          "left": 20,
+          "right": 340,
+          "top": 1010.09375,
+          "width": 320,
+          "x": 20,
+          "y": 1010.09375
+        },
+        "numberFont": null,
+        "paddingBottom": "200px",
+        "reduced": true,
+        "scroll": 360,
+        "scrollY": 0
+      },
+      "writes": 8,
+      "rawSameAsClockBaseline": false,
+      "protectedUnchanged": true,
+      "active": {
+        "phase": "working",
+        "current": "push-incline",
+        "timer": null,
+        "completed": 4
+      }
+    }
+  ],
+  "layouts": [
+    {
+      "width": 375,
+      "height": 812,
+      "seconds": 10,
+      "animation": "none",
+      "buttonRects": [
+        {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 175.5,
+          "text": "휴식 종료",
+          "top": 750.40625,
+          "width": 155.5,
+          "x": 20,
+          "y": 750.40625
+        },
+        {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 184.5,
+          "right": 340,
+          "text": "＋30초",
+          "top": 750.40625,
+          "width": 155.5,
+          "x": 184.5,
+          "y": 750.40625
+        }
+      ],
+      "card": "다음 세트 준비\n10초",
+      "cardBackground": "rgb(60, 42, 23)",
+      "cardColor": "rgb(255, 221, 163)",
+      "cardRect": {
+        "bottom": 740.40625,
+        "height": 72,
+        "left": 20,
+        "right": 340,
+        "top": 668.40625,
+        "width": 320,
+        "x": 20,
+        "y": 668.40625
+      },
+      "client": 360,
+      "duration": "0s",
+      "focus": "2세트 이번 반복 횟수",
+      "focusRect": {
+        "bottom": 428.125,
+        "height": 44,
+        "left": 153,
+        "right": 205,
+        "top": 384.125,
+        "width": 52,
+        "x": 153,
+        "y": 384.125
+      },
+      "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+      "footerRect": {
+        "bottom": 812,
+        "height": 158.59375,
+        "left": 0,
+        "right": 360,
+        "top": 653.40625,
+        "width": 360,
+        "x": 0,
+        "y": 653.40625
+      },
+      "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+      "headerRect": {
+        "bottom": 80.765625,
+        "height": 80.765625,
+        "left": 0,
+        "right": 360,
+        "top": 0,
+        "width": 360,
+        "x": 0,
+        "y": 0
+      },
+      "memoRect": {
+        "bottom": 800.46875,
+        "height": 191.75,
+        "left": 20,
+        "right": 340,
+        "top": 608.71875,
+        "width": 320,
+        "x": 20,
+        "y": 608.71875
+      },
+      "numberFont": "32px",
+      "paddingBottom": "200px",
+      "reduced": true,
+      "rowRect": {
+        "bottom": 798,
+        "height": 47.59375,
+        "left": 20,
+        "right": 340,
+        "top": 750.40625,
+        "width": 320,
+        "x": 20,
+        "y": 750.40625
+      },
+      "scroll": 360,
+      "scrollY": 377
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "seconds": 5,
+      "animation": "none",
+      "buttonRects": [
+        {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 20,
+          "right": 175.5,
+          "text": "휴식 종료",
+          "top": 750.40625,
+          "width": 155.5,
+          "x": 20,
+          "y": 750.40625
+        },
+        {
+          "bottom": 798,
+          "height": 47.59375,
+          "left": 184.5,
+          "right": 340,
+          "text": "＋30초",
+          "top": 750.40625,
+          "width": 155.5,
+          "x": 184.5,
+          "y": 750.40625
+        }
+      ],
+      "card": "다음 세트 준비\n5초",
+      "cardBackground": "rgb(60, 42, 23)",
+      "cardColor": "rgb(255, 221, 163)",
+      "cardRect": {
+        "bottom": 740.40625,
+        "height": 72,
+        "left": 20,
+        "right": 340,
+        "top": 668.40625,
+        "width": 320,
+        "x": 20,
+        "y": 668.40625
+      },
+      "client": 360,
+      "duration": "0s",
+      "focus": "2세트 이번 반복 횟수",
+      "focusRect": {
+        "bottom": 428.125,
+        "height": 44,
+        "left": 153,
+        "right": 205,
+        "top": 384.125,
+        "width": 52,
+        "x": 153,
+        "y": 384.125
+      },
+      "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+      "footerRect": {
+        "bottom": 812,
+        "height": 158.59375,
+        "left": 0,
+        "right": 360,
+        "top": 653.40625,
+        "width": 360,
+        "x": 0,
+        "y": 653.40625
+      },
+      "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+      "headerRect": {
+        "bottom": 80.765625,
+        "height": 80.765625,
+        "left": 0,
+        "right": 360,
+        "top": 0,
+        "width": 360,
+        "x": 0,
+        "y": 0
+      },
+      "memoRect": {
+        "bottom": 800.46875,
+        "height": 191.75,
+        "left": 20,
+        "right": 340,
+        "top": 608.71875,
+        "width": 320,
+        "x": 20,
+        "y": 608.71875
+      },
+      "numberFont": "32px",
+      "paddingBottom": "200px",
+      "reduced": true,
+      "rowRect": {
+        "bottom": 798,
+        "height": 47.59375,
+        "left": 20,
+        "right": 340,
+        "top": 750.40625,
+        "width": 320,
+        "x": 20,
+        "y": 750.40625
+      },
+      "scroll": 360,
+      "scrollY": 377
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "seconds": 10,
+      "animation": "none",
+      "buttonRects": [
+        {
+          "bottom": 830,
+          "height": 47.59375,
+          "left": 20,
+          "right": 183,
+          "text": "휴식 종료",
+          "top": 782.40625,
+          "width": 163,
+          "x": 20,
+          "y": 782.40625
+        },
+        {
+          "bottom": 830,
+          "height": 47.59375,
+          "left": 192,
+          "right": 355,
+          "text": "＋30초",
+          "top": 782.40625,
+          "width": 163,
+          "x": 192,
+          "y": 782.40625
+        }
+      ],
+      "card": "다음 세트 준비\n10초",
+      "cardBackground": "rgb(60, 42, 23)",
+      "cardColor": "rgb(255, 221, 163)",
+      "cardRect": {
+        "bottom": 772.40625,
+        "height": 72,
+        "left": 20,
+        "right": 355,
+        "top": 700.40625,
+        "width": 335,
+        "x": 20,
+        "y": 700.40625
+      },
+      "client": 375,
+      "duration": "0s",
+      "focus": "2세트 이번 반복 횟수",
+      "focusRect": {
+        "bottom": 444.484375,
+        "height": 44,
+        "left": 177.625,
+        "right": 234.984375,
+        "top": 400.484375,
+        "width": 57.359375,
+        "x": 177.625,
+        "y": 400.484375
+      },
+      "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+      "footerRect": {
+        "bottom": 844,
+        "height": 158.59375,
+        "left": 0,
+        "right": 375,
+        "top": 685.40625,
+        "width": 375,
+        "x": 0,
+        "y": 685.40625
+      },
+      "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+      "headerRect": {
+        "bottom": 80.765625,
+        "height": 80.765625,
+        "left": 0,
+        "right": 375,
+        "top": 0,
+        "width": 375,
+        "x": 0,
+        "y": 0
+      },
+      "memoRect": {
+        "bottom": 816.828125,
+        "height": 191.75,
+        "left": 20,
+        "right": 355,
+        "top": 625.078125,
+        "width": 335,
+        "x": 20,
+        "y": 625.078125
+      },
+      "numberFont": "32px",
+      "paddingBottom": "200px",
+      "reduced": true,
+      "rowRect": {
+        "bottom": 830,
+        "height": 47.59375,
+        "left": 20,
+        "right": 355,
+        "top": 782.40625,
+        "width": 335,
+        "x": 20,
+        "y": 782.40625
+      },
+      "scroll": 375,
+      "scrollY": 344
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "seconds": 5,
+      "animation": "none",
+      "buttonRects": [
+        {
+          "bottom": 830,
+          "height": 47.59375,
+          "left": 20,
+          "right": 183,
+          "text": "휴식 종료",
+          "top": 782.40625,
+          "width": 163,
+          "x": 20,
+          "y": 782.40625
+        },
+        {
+          "bottom": 830,
+          "height": 47.59375,
+          "left": 192,
+          "right": 355,
+          "text": "＋30초",
+          "top": 782.40625,
+          "width": 163,
+          "x": 192,
+          "y": 782.40625
+        }
+      ],
+      "card": "다음 세트 준비\n5초",
+      "cardBackground": "rgb(60, 42, 23)",
+      "cardColor": "rgb(255, 221, 163)",
+      "cardRect": {
+        "bottom": 772.40625,
+        "height": 72,
+        "left": 20,
+        "right": 355,
+        "top": 700.40625,
+        "width": 335,
+        "x": 20,
+        "y": 700.40625
+      },
+      "client": 375,
+      "duration": "0s",
+      "focus": "2세트 이번 반복 횟수",
+      "focusRect": {
+        "bottom": 444.484375,
+        "height": 44,
+        "left": 177.625,
+        "right": 234.984375,
+        "top": 400.484375,
+        "width": 57.359375,
+        "x": 177.625,
+        "y": 400.484375
+      },
+      "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+      "footerRect": {
+        "bottom": 844,
+        "height": 158.59375,
+        "left": 0,
+        "right": 375,
+        "top": 685.40625,
+        "width": 375,
+        "x": 0,
+        "y": 685.40625
+      },
+      "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+      "headerRect": {
+        "bottom": 80.765625,
+        "height": 80.765625,
+        "left": 0,
+        "right": 375,
+        "top": 0,
+        "width": 375,
+        "x": 0,
+        "y": 0
+      },
+      "memoRect": {
+        "bottom": 816.828125,
+        "height": 191.75,
+        "left": 20,
+        "right": 355,
+        "top": 625.078125,
+        "width": 335,
+        "x": 20,
+        "y": 625.078125
+      },
+      "numberFont": "32px",
+      "paddingBottom": "200px",
+      "reduced": true,
+      "rowRect": {
+        "bottom": 830,
+        "height": 47.59375,
+        "left": 20,
+        "right": 355,
+        "top": 782.40625,
+        "width": 335,
+        "x": 20,
+        "y": 782.40625
+      },
+      "scroll": 375,
+      "scrollY": 344
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "seconds": 10,
+      "animation": "none",
+      "buttonRects": [
+        {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 203,
+          "text": "휴식 종료",
+          "top": 870.40625,
+          "width": 183,
+          "x": 20,
+          "y": 870.40625
+        },
+        {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 212,
+          "right": 395,
+          "text": "＋30초",
+          "top": 870.40625,
+          "width": 183,
+          "x": 212,
+          "y": 870.40625
+        }
+      ],
+      "card": "다음 세트 준비\n10초",
+      "cardBackground": "rgb(60, 42, 23)",
+      "cardColor": "rgb(255, 221, 163)",
+      "cardRect": {
+        "bottom": 860.40625,
+        "height": 72,
+        "left": 20,
+        "right": 395,
+        "top": 788.40625,
+        "width": 375,
+        "x": 20,
+        "y": 788.40625
+      },
+      "client": 415,
+      "duration": "0s",
+      "focus": "2세트 이번 반복 횟수",
+      "focusRect": {
+        "bottom": 488.046875,
+        "height": 44,
+        "left": 188.828125,
+        "right": 274.984375,
+        "top": 444.046875,
+        "width": 86.15625,
+        "x": 188.828125,
+        "y": 444.046875
+      },
+      "footer": "다음 세트 준비\n10초\n휴식 종료\n＋30초",
+      "footerRect": {
+        "bottom": 932,
+        "height": 158.59375,
+        "left": 0,
+        "right": 415,
+        "top": 773.40625,
+        "width": 415,
+        "x": 0,
+        "y": 773.40625
+      },
+      "header": "전체 운동 시간\n00:01:51\n남은 휴식\n00:00:10",
+      "headerRect": {
+        "bottom": 80.765625,
+        "height": 80.765625,
+        "left": 0,
+        "right": 415,
+        "top": 0,
+        "width": 415,
+        "x": 0,
+        "y": 0
+      },
+      "memoRect": {
+        "bottom": 860.390625,
+        "height": 191.75,
+        "left": 20,
+        "right": 395,
+        "top": 668.640625,
+        "width": 375,
+        "x": 20,
+        "y": 668.640625
+      },
+      "numberFont": "32px",
+      "paddingBottom": "200px",
+      "reduced": true,
+      "rowRect": {
+        "bottom": 918,
+        "height": 47.59375,
+        "left": 20,
+        "right": 395,
+        "top": 870.40625,
+        "width": 375,
+        "x": 20,
+        "y": 870.40625
+      },
+      "scroll": 415,
+      "scrollY": 281
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "seconds": 5,
+      "animation": "none",
+      "buttonRects": [
+        {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 20,
+          "right": 203,
+          "text": "휴식 종료",
+          "top": 870.40625,
+          "width": 183,
+          "x": 20,
+          "y": 870.40625
+        },
+        {
+          "bottom": 918,
+          "height": 47.59375,
+          "left": 212,
+          "right": 395,
+          "text": "＋30초",
+          "top": 870.40625,
+          "width": 183,
+          "x": 212,
+          "y": 870.40625
+        }
+      ],
+      "card": "다음 세트 준비\n5초",
+      "cardBackground": "rgb(60, 42, 23)",
+      "cardColor": "rgb(255, 221, 163)",
+      "cardRect": {
+        "bottom": 860.40625,
+        "height": 72,
+        "left": 20,
+        "right": 395,
+        "top": 788.40625,
+        "width": 375,
+        "x": 20,
+        "y": 788.40625
+      },
+      "client": 415,
+      "duration": "0s",
+      "focus": "2세트 이번 반복 횟수",
+      "focusRect": {
+        "bottom": 488.046875,
+        "height": 44,
+        "left": 188.828125,
+        "right": 274.984375,
+        "top": 444.046875,
+        "width": 86.15625,
+        "x": 188.828125,
+        "y": 444.046875
+      },
+      "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+      "footerRect": {
+        "bottom": 932,
+        "height": 158.59375,
+        "left": 0,
+        "right": 415,
+        "top": 773.40625,
+        "width": 415,
+        "x": 0,
+        "y": 773.40625
+      },
+      "header": "전체 운동 시간\n00:01:56\n남은 휴식\n00:00:05",
+      "headerRect": {
+        "bottom": 80.765625,
+        "height": 80.765625,
+        "left": 0,
+        "right": 415,
+        "top": 0,
+        "width": 415,
+        "x": 0,
+        "y": 0
+      },
+      "memoRect": {
+        "bottom": 860.390625,
+        "height": 191.75,
+        "left": 20,
+        "right": 395,
+        "top": 668.640625,
+        "width": 375,
+        "x": 20,
+        "y": 668.640625
+      },
+      "numberFont": "32px",
+      "paddingBottom": "200px",
+      "reduced": true,
+      "rowRect": {
+        "bottom": 918,
+        "height": 47.59375,
+        "left": 20,
+        "right": 395,
+        "top": 870.40625,
+        "width": 375,
+        "x": 20,
+        "y": 870.40625
+      },
+      "scroll": 415,
+      "scrollY": 281
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "simulatedSafeArea": 34,
+      "animation": "none",
+      "buttonRects": [
+        {
+          "bottom": 764,
+          "height": 47.59375,
+          "left": 20,
+          "right": 175.5,
+          "text": "휴식 종료",
+          "top": 716.40625,
+          "width": 155.5,
+          "x": 20,
+          "y": 716.40625
+        },
+        {
+          "bottom": 764,
+          "height": 47.59375,
+          "left": 184.5,
+          "right": 340,
+          "text": "＋30초",
+          "top": 716.40625,
+          "width": 155.5,
+          "x": 184.5,
+          "y": 716.40625
+        }
+      ],
+      "card": "다음 세트 준비\n5초",
+      "cardBackground": "rgb(60, 42, 23)",
+      "cardColor": "rgb(255, 221, 163)",
+      "cardRect": {
+        "bottom": 706.40625,
+        "height": 72,
+        "left": 20,
+        "right": 340,
+        "top": 634.40625,
+        "width": 320,
+        "x": 20,
+        "y": 634.40625
+      },
+      "client": 360,
+      "duration": "0s",
+      "focus": "2세트 이번 반복 횟수",
+      "focusRect": {
+        "bottom": 428.125,
+        "height": 44,
+        "left": 153,
+        "right": 205,
+        "top": 384.125,
+        "width": 52,
+        "x": 153,
+        "y": 384.125
+      },
+      "footer": "다음 세트 준비\n5초\n휴식 종료\n＋30초",
+      "footerRect": {
+        "bottom": 812,
+        "height": 192.59375,
+        "left": 0,
+        "right": 360,
+        "top": 619.40625,
+        "width": 360,
+        "x": 0,
+        "y": 619.40625
+      },
+      "header": "전체 운동 시간\n00:02:26\n남은 휴식\n00:00:05",
+      "headerRect": {
+        "bottom": 80.765625,
+        "height": 80.765625,
+        "left": 0,
+        "right": 360,
+        "top": 0,
+        "width": 360,
+        "x": 0,
+        "y": 0
+      },
+      "memoRect": {
+        "bottom": 800.46875,
+        "height": 191.75,
+        "left": 20,
+        "right": 340,
+        "top": 608.71875,
+        "width": 320,
+        "x": 20,
+        "y": 608.71875
+      },
+      "numberFont": "32px",
+      "paddingBottom": "234px",
+      "reduced": true,
+      "rowRect": {
+        "bottom": 764,
+        "height": 47.59375,
+        "left": 20,
+        "right": 340,
+        "top": 716.40625,
+        "width": 320,
+        "x": 20,
+        "y": 716.40625
+      },
+      "scroll": 360,
+      "scrollY": 377
+    }
+  ],
+  "motionSamples": [
+    {
+      "animation": "rest-ready",
+      "background": "rgba(111, 74, 31, 0.48)",
+      "duration": "1.6s",
+      "playState": "running",
+      "timing": "ease-in-out"
+    },
+    {
+      "animation": "rest-ready",
+      "background": "rgba(113, 75, 31, 0.482)",
+      "duration": "1.6s",
+      "playState": "running",
+      "timing": "ease-in-out"
+    }
+  ],
+  "logs": []
+}

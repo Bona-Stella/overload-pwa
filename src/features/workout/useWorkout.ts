@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { loadWorkout, saveWorkout, STORAGE_KEY } from './storage.ts'
+import { loadWorkout, persistWorkoutUpdate, STORAGE_KEY } from './storage.ts'
 import { createInitialState } from './model.ts'
 import type { WorkoutState } from './types.ts'
 
@@ -11,6 +11,7 @@ export function useWorkout() {
   const [state, setState] = useState(initial.state)
   const [error, setError] = useState(initial.error)
   const [blocked, setBlocked] = useState(initial.blocked)
+  const [approvalRejected, setApprovalRejected] = useState(false)
   const current = useRef(state)
 
   useEffect(() => {
@@ -31,11 +32,12 @@ export function useWorkout() {
   function update(transform: (previous: WorkoutState) => WorkoutState): boolean {
     if (blocked) return false
     const next = transform(current.current)
-    current.current = next
-    setState(next)
-    try { saveWorkout(window.localStorage, next); setError(null) }
-    catch { setError('로컬 저장에 실패했습니다. 현재 입력은 이 화면에 유지됩니다. 저장 공간을 확인하고 다시 저장해 주세요. 새로고침하면 저장되지 않은 입력이 사라질 수 있습니다.') }
-    return true
+    const result = persistWorkoutUpdate({ getItem: key => window.localStorage.getItem(key), setItem: (key, value) => window.localStorage.setItem(key, value) }, current.current, next)
+    current.current = result.state
+    setState(result.state)
+    setApprovalRejected(result.approvalRejected)
+    setError(result.persisted ? null : result.approvalRejected ? '중량 승인을 저장하지 못해 변경을 반영하지 않았습니다. 입력값은 유지됩니다. 저장소를 확인한 뒤 다시 승인하거나 루틴 저장을 눌러 주세요.' : '로컬 저장에 실패했습니다. 현재 입력은 이 화면에 유지됩니다. 저장 공간을 확인하고 다시 저장해 주세요. 새로고침하면 저장되지 않은 입력이 사라질 수 있습니다.')
+    return !result.approvalRejected
   }
-  return { state, update, error, blocked, retry: () => update(s => s) }
+  return { state, update, error, blocked, retry: () => update(s => s), retryLabel: approvalRejected ? '저장소 재확인' : '다시 저장' }
 }

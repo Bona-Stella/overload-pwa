@@ -28,6 +28,12 @@ registerHooks({
 const { WorkoutScreen } = await import('../src/features/workout/WorkoutScreen.tsx')
 const { SessionDetail } = await import('../src/features/history/SessionDetail.tsx')
 const { RoutineEditor } = await import('../src/features/routine/RoutineEditor.tsx')
+const { RoutineSelectionBadge } = await import('../src/features/routine/RoutineSelectionBadge.tsx')
+const { ResumeWorkoutCard } = await import('../src/features/workout/ResumeWorkoutCard.tsx')
+const { SettingsScreen } = await import('../src/features/settings/SettingsScreen.tsx')
+const { CurrentWeightReview, ProgressChangeHistory } = await import('../src/features/history/ProgressionHistory.tsx')
+const { WeightInput } = await import('../src/components/WeightInput.tsx')
+const { RepsInput } = await import('../src/components/RepsInput.tsx')
 const { default: App } = await import('../src/App.tsx')
 const m = await import('../src/features/workout/model.ts')
 const NOW = new Date(2026, 9, 26, 12).getTime()
@@ -113,13 +119,16 @@ test('finishing only the first exercise shows 3/9 and does not claim the full ro
   assert.doesNotMatch(markup, /WORKOUT COMPLETE|전체 루틴 완료/)
 })
 
-test('existing routine editor shows read-only progress weight and Monday-first days', () => {
+test('existing routine editor offers explicit progress editing separately from original weight and keeps Monday-first days', () => {
   const state = m.createInitialState()
   const markup = html(RoutineEditor, { state, routine: state.routines[0], onSave: noop, onCancel: noop, onCreate: () => '' })
   assert.match(markup, /루틴 저장/)
   assert.match(markup, /취소/)
   assert.match(markup, /현재 진행 중량/)
   assert.match(markup, /60 kg/)
+  assert.match(markup, /1번 종목 진행 중량 변경/)
+  assert.match(markup, /루틴 저장을 눌러 새 중량을 승인/)
+  assert.match(markup, /진행 중인 운동은 유지하고 다음 새 운동부터 적용/)
   assert.doesNotMatch(markup, /최초 중량/)
   assert.match(markup, /aria-pressed="true"/)
   assert.deepEqual([...markup.matchAll(/aria-pressed="(?:true|false)"[^>]*>(.)<\/button>/g)].map(match => match[1]), ['월', '화', '수', '목', '금', '토', '일'])
@@ -201,7 +210,7 @@ test('active home leads with resume before greeting and disables new workout cre
   } finally { globalThis.window = previous }
 })
 
-test('home renders three navigation tabs and allows starting without sending a Health request', t => {
+test('home has no global header, renders four navigation tabs and does not request Health', t => {
   t.mock.method(globalThis, 'fetch', () => { throw new Error('Home must not request the API') })
   const previous = globalThis.window
   globalThis.window = { localStorage: { getItem: () => null } }
@@ -211,7 +220,313 @@ test('home renders three navigation tabs and allows starting without sending a H
     assert.match(markup, /오늘만 다른 루틴 선택/)
     assert.match(markup, /운동 시작/)
     assert.match(markup, /MOCK PROTOTYPE/)
+    assert.doesNotMatch(markup, /app-header|brand-mark|Overload 홈/)
+    const navigation = markup.slice(markup.indexOf('<nav class="tab-bar"'))
+    assert.equal([...navigation.matchAll(/<button(?:\s|>)/g)].length, 4)
+    assert.ok(navigation.indexOf('>홈<') < navigation.indexOf('>루틴<'))
+    assert.ok(navigation.indexOf('>루틴<') < navigation.indexOf('>기록<'))
+    assert.ok(navigation.indexOf('>기록<') < navigation.indexOf('>설정<'))
+    assert.equal([...navigation.matchAll(/aria-current="page"/g)].length, 1)
     assert.doesNotMatch(markup, /서버 연결 확인 중/)
     assert.equal(globalThis.fetch.mock.calls.length, 0)
   } finally { globalThis.window = previous }
+})
+
+test('routine badge follows selected and scheduled IDs, including return to default and rest days', () => {
+  const state = m.createInitialState()
+  const schedule = structuredClone(state.schedule)
+  const monday = new Date(2026, 9, 26)
+  const defaultId = m.selectRoutine(state, monday)?.id
+  const labels = ['push', 'pull', 'push', ''].map(id => html(RoutineSelectionBadge, { selectedId: m.selectRoutine(state, monday, id)?.id, defaultId }))
+  assert.match(labels[0], /요일 기본 루틴/)
+  assert.match(labels[1], /오늘만 선택/)
+  assert.match(labels[2], /요일 기본 루틴/)
+  assert.match(labels[3], /REST DAY/)
+  const sundayDefault = m.selectRoutine(state, new Date(2026, 10, 1))?.id
+  assert.match(html(RoutineSelectionBadge, { defaultId: sundayDefault }), /REST DAY/)
+  assert.match(html(RoutineSelectionBadge, { selectedId: 'pull', defaultId: sundayDefault }), /오늘만 선택/)
+  assert.deepEqual(state.schedule, schedule)
+})
+
+test('settings menu exposes only implemented sections and waits to mount Health', t => {
+  t.mock.method(globalThis, 'fetch', () => { throw new Error('Menu must not request Health') })
+  const markup = html(SettingsScreen, { settings: m.DEFAULT_REST_SETTINGS, onSave: noop })
+  assert.match(markup, /설정 메뉴/)
+  assert.match(markup, /휴식시간/)
+  assert.match(markup, /로컬 저장 안내/)
+  assert.match(markup, /서버 연결 진단/)
+  assert.doesNotMatch(markup, /로그아웃|디로딩|서버 연결 확인 중/)
+  assert.equal(globalThis.fetch.mock.calls.length, 0)
+})
+
+const resume = (state, now = NOW + 60000) => html(ResumeWorkoutCard, { session: state.active, now, onResume: noop })
+const actions = state => html(WorkoutScreen, props(state)).split('<div class="bottom-actions workout-actions">')[1]
+function completeExercise(state, reps = ['10', '10', '10'], exerciseId = state.active.currentExerciseId) {
+  const e = state.active.exercises.find(e => e.id === exerciseId)
+  for (const [i, set] of e.sets.entries()) {
+    state = m.editReps(state, e.id, set.id, reps[i])
+    state = m.completeSet(state, e.id, set.id, NOW + 59000)
+  }
+  return state
+}
+
+test('resume card distinguishes warmup and working while preserving elapsed time and completion', () => {
+  const state = m.startWorkout(m.createInitialState(), 'push', NOW)
+  assert.match(resume(state), /준비운동 중/)
+  assert.match(resume(state), /0세트 완료 · 전체 00:01:00/)
+  assert.doesNotMatch(resume(state), /남은 휴식|완료 후 경과/)
+  assert.match(resume(m.beginWorking(state)), /운동 중/)
+})
+
+test('resume derives rest by its deadline, including manual navigation and expiry without writing', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  const e = state.active.exercises[0]
+  state = m.editReps(state, e.id, e.sets[0].id, '10')
+  state = m.completeSet(state, e.id, e.sets[0].id, NOW + 1000)
+  state = m.navigateExercise(state, state.active.exercises[1].id)
+  const before = JSON.stringify(state)
+  assert.match(resume(state), /휴식 중/)
+  assert.match(resume(state), /남은 휴식 00:01:01/)
+  assert.match(resume(state, NOW + 70000), /남은 휴식 00:00:51/)
+  const expired = resume(state, NOW + 130000)
+  assert.match(expired, /운동 중/)
+  assert.doesNotMatch(expired, /휴식 중|남은 휴식/)
+  assert.equal(JSON.stringify(state), before)
+})
+
+test('resume shares transition and legacy timer resolution and prioritizes explicit finish waiting', () => {
+  let state = completeExercise(m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW)))
+  const e = state.active.exercises[0]
+  assert.match(resume(state), /종목 전환 중/)
+  assert.match(resume(state), /완료 후 경과 00:00:01/)
+  state = m.navigateExercise(state, state.active.exercises[1].id)
+  assert.match(resume(state), /완료 후 경과 00:00:01/)
+  state.active.timer = { kind: 'rest', exerciseId: e.id, setId: e.sets[2].id, endAt: NOW + 200000 }
+  const before = JSON.stringify(state)
+  assert.match(resume(state), /종목 전환 중/)
+  assert.doesNotMatch(resume(state), /남은 휴식/)
+  assert.equal(JSON.stringify(state), before)
+  const undone = m.undoSet(state, e.id, e.sets[0].id)
+  assert.doesNotMatch(resume(undone), /종목 전환 중|완료 후 경과/)
+  for (const next of state.active.exercises.slice(1)) state = completeExercise(state, undefined, next.id)
+  assert.match(resume(state), /운동 종료 대기/)
+  assert.doesNotMatch(resume(state), /종목 전환 중|휴식 중|완료 후 경과/)
+  assert.equal(state.history.length, 0)
+})
+
+test('eligible increase appears in fixed actions before next or finish, never during intermediate sets', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  const e = state.active.exercises[0]
+  for (const set of e.sets) {
+    state = m.editReps(state, e.id, set.id, '10')
+    state = m.completeSet(state, e.id, set.id, NOW + 59000)
+    if (set.id !== e.sets.at(-1).id) assert.doesNotMatch(actions(state), /증량 가능/)
+  }
+  const next = actions(state)
+  assert.match(next, /증량 가능 · 60kg/)
+  assert.ok(next.indexOf('증량 가능') < next.indexOf('다음 종목으로'))
+  assert.equal(state.progress[e.id], 60)
+  for (const next of state.active.exercises.slice(1)) {
+    state = m.navigateExercise(state, next.id)
+    state = completeExercise(state)
+  }
+  const final = actions(state)
+  assert.match(final, /증량 가능/)
+  assert.ok(final.indexOf('증량 가능') < final.indexOf('운동 종료 및 요약'))
+  assert.equal(state.history.length, 0)
+})
+
+test('increase banner disappears on undo or missed target and returns only after qualifying re-completion', () => {
+  let state = completeExercise(m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW)))
+  const e = state.active.exercises[0]
+  const set = e.sets[2]
+  state = m.undoSet(state, e.id, set.id)
+  assert.doesNotMatch(actions(state), /증량 가능/)
+  state = m.editReps(state, e.id, set.id, '9')
+  state = m.completeSet(state, e.id, set.id, NOW + 59000)
+  assert.doesNotMatch(actions(state), /증량 가능/)
+  state = m.undoSet(state, e.id, set.id)
+  state = m.editReps(state, e.id, set.id, '10')
+  state = m.completeSet(state, e.id, set.id, NOW + 59000)
+  assert.match(actions(state), /증량 가능/)
+})
+
+test('temporary, mixed-weight and expanded session sets cannot falsely show fixed increase advice', () => {
+  const start = () => m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  const temporary = completeExercise(m.changeWeight(start(), 'push-bench', 60, 'today'))
+  assert.doesNotMatch(actions(temporary), /증량 가능/)
+  let mixed = start()
+  const first = mixed.active.exercises[0].sets[0]
+  mixed = m.editReps(mixed, 'push-bench', first.id, '10')
+  mixed = m.completeSet(mixed, 'push-bench', first.id, NOW + 1000)
+  mixed = completeExercise(m.changeWeight(mixed, 'push-bench', 62.5, 'progress'))
+  assert.doesNotMatch(actions(mixed), /증량 가능/)
+  const expanded = completeExercise(m.addSessionSet(start(), 'push-bench'), ['10', '10', '10', '10'])
+  assert.doesNotMatch(actions(expanded), /증량 가능/)
+})
+
+function withAchievedBenchmark() {
+  let state = m.createInitialState()
+  state.routines = [{ ...state.routines[0], exercises: [state.routines[0].exercises[0]] }]
+  state.schedule = { 1: 'push' }
+  state = completeExercise(m.beginWorking(m.startWorkout(state, 'push', NOW)))
+  state = m.finishWorkout(state, NOW + 60000)
+  return m.beginWorking(m.startWorkout(state, 'push', NOW + 70000))
+}
+
+test('next workout shows a nonblocking approved benchmark reminder with an explicit change action, without claiming last workout', () => {
+  const state = withAchievedBenchmark()
+  const before = structuredClone(state)
+  const markup = html(WorkoutScreen, props(state))
+  assert.match(markup, /기준 기록 증량 안내/)
+  assert.match(markup, /현재 기준 기록에서 증량 조건 달성/)
+  assert.match(markup, /승인 60kg · 10\/10\/10회/)
+  assert.match(markup, /지금 변경<\/button>/)
+  assert.match(markup, /1세트 완료<\/button>/)
+  assert.doesNotMatch(markup, /지난 운동에서|<dialog/)
+  assert.deepEqual(state, before)
+})
+
+test('benchmark reminder keeps approved evidence separate from today-only weight and disappears at a new approved weight', () => {
+  let state = m.changeWeight(withAchievedBenchmark(), 'push-bench', 50, 'today')
+  let markup = html(WorkoutScreen, props(state))
+  assert.match(markup, /오늘만 중량/)
+  assert.match(markup, /승인 60kg · 10\/10\/10회/)
+  assert.equal(state.progress['push-bench'], 60)
+  assert.equal(state.active.exercises[0].weight, 50)
+  state = m.changeWeight(state, 'push-bench', 62.5, 'progress')
+  markup = html(WorkoutScreen, props(state))
+  assert.doesNotMatch(markup, /기준 기록 증량 안내|지금 변경/)
+  assert.match(markup, /62\.5/)
+})
+
+test('shared weight control exposes direct decimal input and non-submit step buttons with zero and invalid boundaries', () => {
+  const markup = html(WeightInput, { label: '중량', value: '61.3', onChange: noop })
+  assert.match(markup, /inputMode="decimal"/i)
+  assert.match(markup, /중량 직접 입력/)
+  assert.match(markup, /<input aria-label="중량"/)
+  assert.match(markup, /value="61\.3"/)
+  assert.match(markup, /type="button"[^>]*aria-label="중량 2.5kg 감소"/)
+  assert.match(markup, /중량 2.5kg 증가/)
+  assert.match(markup, /−2\.5/)
+  assert.match(markup, /\+2\.5/)
+  const zero = html(WeightInput, { label: '중량', value: '0', onChange: noop })
+  assert.match(zero, /aria-label="중량 2.5kg 감소" disabled=""/)
+  const blank = html(WeightInput, { label: '중량', value: '', onChange: noop })
+  assert.equal([...blank.matchAll(/ disabled=""/g)].length, 2)
+})
+
+test('history distinguishes then, current and explicit adjustment events while hiding empty sections', () => {
+  let state = withAchievedBenchmark()
+  const historic = state.history[0]
+  const then = html(SessionDetail, { session: historic, saved: true })
+  assert.match(then, /이 운동의 중량 검토 결과/)
+  assert.match(then, /당시 증량 가능/)
+  assert.match(then, /승인 60kg · 10\/10\/10회/)
+  assert.match(html(CurrentWeightReview, { state }), /기준 기록: 증량 가능/)
+  assert.equal(html(ProgressChangeHistory, { state }), '')
+  state = m.saveRoutine(state, state.routines[0], [1], false, { 'push-bench': 62.5 }, NOW)
+  assert.equal(html(CurrentWeightReview, { state }), '')
+  const events = html(ProgressChangeHistory, { state })
+  assert.match(events, /진행 중량 변경 내역/)
+  assert.match(events, /60 → 62.5kg/)
+  assert.match(events, /증량 완료 \+2.5kg/)
+  assert.match(events, /datetime=/i)
+  assert.equal(html(SessionDetail, { session: state.history[0], saved: true }), then)
+  state = m.saveRoutine(state, state.routines[0], [1], false, { 'push-bench': 57.5 }, NOW + 1000)
+  assert.match(html(ProgressChangeHistory, { state }), /감량 완료 −5kg/)
+})
+
+test('per-set reps control provides named numeric direct input, draft-only step buttons and disabled completed values', () => {
+  const render = (value, disabled = false) => html(RepsInput, { ordinal: 2, value, disabled, onChange: noop })
+  const markup = render('11')
+  assert.match(markup, /type="text" inputMode="numeric" aria-label="2세트 이번 반복 횟수"/)
+  assert.match(markup, /type="button"[^>]*aria-label="2세트 1회 감소"/)
+  assert.match(markup, /2세트 1회 증가/)
+  assert.match(markup, /value="11"/)
+  assert.doesNotMatch(markup, /disabled/)
+  assert.match(render('1'), /aria-label="2세트 1회 감소" disabled=""/)
+  assert.match(render(String(Number.MAX_SAFE_INTEGER)), /aria-label="2세트 1회 증가" disabled=""/)
+  for (const value of ['', '.', '0', '-1', '1.5', '9007199254740992']) assert.equal([...render(value).matchAll(/ disabled=""/g)].length, 2)
+  assert.equal([...render('11', true).matchAll(/ disabled=""/g)].length, 3)
+})
+
+test('rest readiness follows the saved deadline at 11, 10, 6, 5, 1 and zero seconds without changing data', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  const e = state.active.exercises[0]
+  state = m.editReps(state, e.id, e.sets[0].id, '11')
+  state = m.completeSet(state, e.id, e.sets[0].id, NOW)
+  const endAt = state.active.timer.endAt
+  const raw = JSON.stringify(state)
+  for (const seconds of [11, 10, 6, 5, 1, 0, -1]) {
+    const markup = html(WorkoutScreen, { ...props(state), now: endAt - seconds * 1000 })
+    if (seconds > 0 && seconds <= 10) assert.match(markup, /rest-warning[\s\S]*다음 세트 준비/)
+    else assert.doesNotMatch(markup, /rest-warning|다음 세트 준비/)
+    if (seconds > 0 && seconds <= 5) assert.match(markup, /rest-urgent/)
+    else assert.doesNotMatch(markup, /rest-urgent/)
+    if (seconds <= 0) assert.match(markup, /휴식 완료/)
+    assert.equal(JSON.stringify(state), raw)
+  }
+  assert.match(html(WorkoutScreen, { ...props(state), now: endAt - 10001 }), /00:00:11/)
+  const restored = JSON.parse(raw)
+  assert.match(html(WorkoutScreen, { ...props(restored), now: endAt - 5000 }), /rest-urgent/)
+  assert.doesNotMatch(html(WorkoutScreen, { ...props(m.adjustRest(state, 30, endAt - 5000)), now: endAt - 5000 }), /rest-warning|rest-urgent|다음 세트 준비/)
+  assert.doesNotMatch(html(WorkoutScreen, { ...props(m.adjustRest(state, null, endAt - 5000)), now: endAt - 5000 }), /rest-warning|rest-urgent|다음 세트 준비/)
+})
+
+test('rest warning never appears on transition elapsed time or all-complete screens', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  for (const e of state.active.exercises) {
+    for (const set of e.sets) {
+      state = m.editReps(state, e.id, set.id, '10')
+      state = m.completeSet(state, e.id, set.id, NOW)
+    }
+    const markup = html(WorkoutScreen, { ...props(state), now: NOW + 5000 })
+    assert.doesNotMatch(markup, /rest-warning|rest-urgent|다음 세트 준비/)
+  }
+  assert.match(html(WorkoutScreen, props(state)), /모든 종목 완료/)
+})
+
+test('bottom readiness card shares rounded time with the header and precedes both rest actions at every boundary', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  const e = state.active.exercises[0]
+  state = m.completeSet(m.editReps(state, e.id, e.sets[0].id, '10'), e.id, e.sets[0].id, NOW)
+  const deadline = state.active.timer.endAt
+  const unchanged = JSON.stringify(state)
+  for (const remaining of [11000, 10001, 10000, 6000, 5001, 5000, 1000, 1, 0, -1000]) {
+    const markup = html(WorkoutScreen, { ...props(state), now: deadline - remaining })
+    const footer = markup.slice(markup.indexOf('class="bottom-actions workout-actions"'))
+    const seconds = Math.ceil(remaining / 1000)
+    if (remaining > 0 && seconds <= 10) {
+      assert.match(footer, /aria-label="휴식 종료 준비"/)
+      assert.match(footer, new RegExp(`다음 세트 준비</span><strong>${seconds}<small>초</small>`))
+      assert.match(markup.split('</header>')[0], new RegExp(`00:00:${String(seconds).padStart(2, '0')}`))
+      assert.match(footer, /휴식 종료 준비[\s\S]*<\/aside><div class="row full"><button[^>]*>휴식 종료<\/button><button[^>]*>＋30초/)
+      assert.equal([...markup.matchAll(/다음 세트 준비/g)].length, 1)
+      assert.equal(footer.includes('rest-urgent'), seconds <= 5)
+    } else assert.doesNotMatch(footer, /rest-preparation-card|휴식 종료 준비/)
+    assert.equal(JSON.stringify(state), unchanged)
+  }
+  const now = deadline - 5000
+  const extended = m.adjustRest(state, 30, now)
+  assert.doesNotMatch(html(WorkoutScreen, { ...props(extended), now }), /rest-preparation-card/)
+  assert.match(html(WorkoutScreen, { ...props(extended), now: extended.active.timer.endAt - 10000 }), /rest-preparation-card/)
+  assert.doesNotMatch(html(WorkoutScreen, { ...props(m.adjustRest(state, null, now)), now }), /rest-preparation-card/)
+})
+
+test('bottom readiness card stays absent in warmup, idle, other-exercise rest, transition and finish waiting', () => {
+  let state = m.startWorkout(m.createInitialState(), 'push', NOW)
+  assert.doesNotMatch(html(WorkoutScreen, props(state)), /rest-preparation-card/)
+  state = m.beginWorking(state)
+  assert.doesNotMatch(html(WorkoutScreen, props(state)), /rest-preparation-card/)
+  const e = state.active.exercises[0]
+  state = m.completeSet(m.editReps(state, e.id, e.sets[0].id, '10'), e.id, e.sets[0].id, NOW)
+  assert.doesNotMatch(html(WorkoutScreen, { ...props(m.navigateExercise(state, state.active.exercises[1].id)), now: state.active.timer.endAt - 5000 }), /rest-preparation-card/)
+  for (const exercise of state.active.exercises) {
+    for (const set of exercise.sets) {
+      state = m.editReps(state, exercise.id, set.id, '10')
+      state = m.completeSet(state, exercise.id, set.id, NOW)
+    }
+    assert.doesNotMatch(html(WorkoutScreen, { ...props(state), now: NOW + 5000 }), /rest-preparation-card/)
+  }
 })

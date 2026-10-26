@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task 004 approval persistence QA</title>
+<aside aria-label="QA 저장소 제어"><button id="fail">QA 쓰기 실패</button><button id="allow">QA 쓰기 허용</button><button id="read">QA 저장값 확인</button><pre id="snapshot" style="max-height:120px;overflow:auto;white-space:pre-wrap;font-size:12px"></pre></aside>
+<div id="root"></div>
+<script type="module">
+  import React from 'react'
+  import { createRoot } from 'react-dom/client'
+  import App from '../../src/App.tsx'
+  import '../../src/index.css'
+  import { createInitialState } from '../../src/features/workout/model.ts'
+  import { STORAGE_KEY } from '../../src/features/workout/storage.ts'
+  if (location.origin !== 'http://127.0.0.1:3046') throw new Error('Use dedicated test origin 127.0.0.1:3046 only.')
+  if (!localStorage.getItem('task004.history.fixture')) {
+    if (localStorage.getItem(STORAGE_KEY) !== null) throw new Error('Refusing to replace unrecognized existing data.')
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(createInitialState()))
+    localStorage.setItem('task004.history.fixture', 'owned-test-data')
+  }
+  const original = localStorage.getItem(STORAGE_KEY)
+  const nativeSetItem = Storage.prototype.setItem
+  let failing = false
+  let failedWrites = 0
+  Storage.prototype.setItem = function (key, value) {
+    if (this === localStorage && key === STORAGE_KEY && failing) { failedWrites++; throw new DOMException('Synthetic quota failure', 'QuotaExceededError') }
+    return nativeSetItem.call(this, key, value)
+  }
+  function read() {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    const state = JSON.parse(raw)
+    document.querySelector('#snapshot').textContent = JSON.stringify({ failing, failedWrites, rawUnchanged: raw === original, progress: state.progress, events: state.progressChanges ?? [], active: state.active?.phase ?? null }, null, 2)
+  }
+  document.querySelector('#fail').onclick = () => { failing = true; read() }
+  document.querySelector('#allow').onclick = () => { failing = false; read() }
+  document.querySelector('#read').onclick = read
+  read()
+  createRoot(document.querySelector('#root')).render(React.createElement(React.StrictMode, null, React.createElement(App)))
+</script>
+</html>

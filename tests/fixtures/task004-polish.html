@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task 004 reps and rest QA</title>
+<details id="qa"><summary>QA 시계 및 저장 확인</summary><div id="clock-buttons"></div><button id="read">QA 저장값 확인</button><pre id="snapshot" style="max-height:100px;overflow:auto;white-space:pre-wrap;font-size:11px"></pre></details>
+<div id="root"></div>
+<script type="module">
+  import React from 'react'
+  import { createRoot } from 'react-dom/client'
+  import App from '../../src/App.tsx'
+  import '../../src/index.css'
+  import { createInitialState } from '../../src/features/workout/model.ts'
+  import { STORAGE_KEY } from '../../src/features/workout/storage.ts'
+  if (location.origin !== 'http://127.0.0.1:3048') throw new Error('Dedicated test origin 127.0.0.1:3048 only.')
+  const marker = 'task004.polish.fixture'
+  if (!localStorage.getItem(marker)) {
+    if (localStorage.getItem(STORAGE_KEY) !== null) throw new Error('Refusing to overwrite unrecognized existing data.')
+    const state = createInitialState()
+    state.routines = [{ ...state.routines[0], name: 'Task004 반복·휴식 시험', exercises: [state.routines[0].exercises[0], { ...state.routines[0].exercises[1], setCount: 1 }] }]
+    state.schedule = Object.fromEntries(Array.from({ length: 7 }, (_, day) => [day, 'push']))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(marker, 'owned-test-data')
+  }
+  const nativeNow = Date.now.bind(Date)
+  const restored = sessionStorage.getItem('qa-frozen-now')
+  let frozenNow = restored === null ? null : Number(restored)
+  Date.now = () => frozenNow ?? nativeNow()
+  let writes = 0
+  const nativeWrite = Storage.prototype.setItem
+  Storage.prototype.setItem = function (key, value) {
+    if (this === localStorage && key === STORAGE_KEY) writes++
+    return nativeWrite.call(this, key, value)
+  }
+  const read = () => JSON.parse(localStorage.getItem(STORAGE_KEY))
+  const protectedFields = state => ({ routines: state.routines, progress: state.progress, progressChanges: state.progressChanges ?? [], history: state.history, benchmarks: state.benchmarks })
+  const baseline = sessionStorage.getItem('qa-protected') ?? JSON.stringify(protectedFields(read()))
+  sessionStorage.setItem('qa-protected', baseline)
+  const snapshot = () => {
+    const state = read()
+    document.querySelector('#snapshot').textContent = JSON.stringify({ writes, now: Date.now(), protectedUnchanged: JSON.stringify(protectedFields(state)) === baseline, active: state.active, history: state.history, progressChanges: state.progressChanges ?? [] })
+  }
+  for (const seconds of [11, 10, 6, 5, 1, 0]) {
+    const button = document.createElement('button')
+    button.textContent = `QA ${seconds}초`
+    button.onclick = () => {
+      const timer = read().active?.timer
+      if (timer?.kind !== 'rest') throw new Error('An ordinary rest is required.')
+      frozenNow = timer.endAt - seconds * 1000
+      sessionStorage.setItem('qa-frozen-now', String(frozenNow))
+      document.dispatchEvent(new Event('visibilitychange'))
+      snapshot()
+    }
+    document.querySelector('#clock-buttons').append(button)
+  }
+  document.querySelector('#read').onclick = snapshot
+  createRoot(document.getElementById('root')).render(React.createElement(App))
+  snapshot()
+</script>
+</html>

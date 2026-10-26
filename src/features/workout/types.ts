@@ -43,6 +43,18 @@ export type WorkoutSession = {
 }
 export type Benchmark = { sessionId: string; reps: number[] }
 export type RestSettings = { low: number; medium: number; high: number }
+export type ProgressChange = {
+  id: string
+  occurredAt: number
+  routineId: string
+  placementId: string
+  routineName: string
+  exerciseName: string
+  previousApprovedWeight: number
+  nextApprovedWeight: number
+  source: 'routine_editor' | 'workout'
+  relatedSessionId?: string
+}
 export type WorkoutState = {
   version: 1
   definitions: ExerciseDefinition[]
@@ -54,4 +66,5 @@ export type WorkoutState = {
   restSettings: RestSettings
   active: WorkoutSession | null
   history: WorkoutSession[]
+  progressChanges?: ProgressChange[]
 }

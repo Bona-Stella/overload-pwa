@@ -1,0 +1,887 @@
+{
+  "date": "2026-10-26",
+  "environment": "desktop Chromium, LAN HTTP preview on isolated port 3024",
+  "checks": [
+    {
+      "name": "375 initial home",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "temporary selection",
+      "badge": "오늘만 선택",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "return to scheduled selection",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "warmup resume status",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "resume": "준비운동 중\nPUSH DAY\n\n0세트 완료 · 전체 00:00:00\n\n운동 이어하기 →",
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "warmup LAN reload",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "resume": "준비운동 중\nPUSH DAY\n\n0세트 완료 · 전체 00:00:00\n\n운동 이어하기 →",
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "working resume status",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "resume": "운동 중\nPUSH DAY\n\n0세트 완료 · 전체 00:00:00\n\n운동 이어하기 →",
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "LAN first set rest",
+      "actions": "휴식 종료\n＋30초",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:01\n남은 휴식\n00:02:05",
+      "width": 375
+    },
+    {
+      "name": "home rest after extension",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "resume": "휴식 중\nPUSH DAY\n\n1세트 완료 · 전체 00:00:01\n\n남은 휴식 00:02:35\n\n운동 이어하기 →",
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "home rest reload",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "resume": "휴식 중\nPUSH DAY\n\n1세트 완료 · 전체 00:00:02\n\n남은 휴식 00:02:34\n\n운동 이어하기 →",
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "second set no increase banner",
+      "actions": "휴식 종료\n＋30초",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:24\n남은 휴식\n00:02:05",
+      "width": 375
+    },
+    {
+      "name": "eligible first exercise banner",
+      "actions": "증량 가능 · 60kg\n다음 운동에서 중량 증가를 고려해 보세요.\n\n다음 종목으로",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [],
+      "scroll": 360,
+      "timer": "전체 운동 시간\n00:00:25\n이전 종목 완료 후\n00:00:00",
+      "width": 375
+    },
+    {
+      "name": "transition home 375",
+      "badge": "요일 기본 루틴",
+      "client": 360,
+      "header": false,
+      "height": 812,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 80
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 80
+        }
+      ],
+      "resume": "종목 전환 중\nPUSH DAY\n\n3세트 완료 · 전체 00:00:25\n\n완료 후 경과 00:00:00\n\n운동 이어하기 →",
+      "scroll": 360,
+      "width": 375
+    },
+    {
+      "name": "transition home 390",
+      "badge": "요일 기본 루틴",
+      "client": 375,
+      "header": false,
+      "height": 844,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 83.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 83.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 83.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 83.75
+        }
+      ],
+      "resume": "종목 전환 중\nPUSH DAY\n\n3세트 완료 · 전체 00:00:26\n\n완료 후 경과 00:00:01\n\n운동 이어하기 →",
+      "scroll": 375,
+      "width": 390
+    },
+    {
+      "name": "transition home 430",
+      "badge": "요일 기본 루틴",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 93.75
+        }
+      ],
+      "resume": "종목 전환 중\nPUSH DAY\n\n3세트 완료 · 전체 00:00:26\n\n완료 후 경과 00:00:01\n\n운동 이어하기 →",
+      "scroll": 415,
+      "width": 430
+    },
+    {
+      "name": "undo removes increase",
+      "actions": "3세트 완료",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [],
+      "scroll": 415,
+      "timer": "전체 운동 시간\n00:01:04\n휴식 없음\n—",
+      "width": 430
+    },
+    {
+      "name": "missed last target hides increase",
+      "actions": "이 종목의 본세트를 모두 완료했어요.\n\n다음 종목으로",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [],
+      "scroll": 415,
+      "timer": "전체 운동 시간\n00:01:05\n이전 종목 완료 후\n00:00:00",
+      "width": 430
+    },
+    {
+      "name": "next exercise transition",
+      "actions": "1세트 완료",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [],
+      "scroll": 415,
+      "timer": "전체 운동 시간\n00:01:05\n이전 종목 완료 후\n00:00:00",
+      "width": 430
+    },
+    {
+      "name": "next exercise home reload",
+      "badge": "요일 기본 루틴",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 93.75
+        }
+      ],
+      "resume": "종목 전환 중\nPUSH DAY\n\n3세트 완료 · 전체 00:01:06\n\n완료 후 경과 00:00:00\n\n운동 이어하기 →",
+      "scroll": 415,
+      "width": 430
+    },
+    {
+      "name": "next exercise home rest",
+      "badge": "요일 기본 루틴",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 93.75
+        }
+      ],
+      "resume": "휴식 중\nPUSH DAY\n\n4세트 완료 · 전체 00:01:06\n\n남은 휴식 00:02:05\n\n운동 이어하기 →",
+      "scroll": 415,
+      "width": 430
+    },
+    {
+      "name": "all complete fixed increase before finish",
+      "actions": "증량 가능 · 15kg\n다음 운동에서 중량 증가를 고려해 보세요.\n\n운동 종료 및 요약",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [],
+      "scroll": 415,
+      "timer": "전체 운동 시간\n00:01:24\n모든 종목 완료\n—",
+      "width": 430
+    },
+    {
+      "name": "all complete home awaiting finish",
+      "badge": "요일 기본 루틴",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 93.75
+        }
+      ],
+      "resume": "운동 종료 대기\nPUSH DAY\n\n9세트 완료 · 전체 00:01:24\n\n운동 이어하기 →",
+      "scroll": 415,
+      "width": 430
+    },
+    {
+      "name": "long name home preserved",
+      "badge": "오늘만 선택",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 93.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 93.75
+        }
+      ],
+      "scroll": 415,
+      "width": 430
+    },
+    {
+      "name": "long name decimal all complete banner",
+      "actions": "증량 가능 · 12.5kg\n다음 운동에서 중량 증가를 고려해 보세요.\n\n운동 종료 및 요약",
+      "client": 415,
+      "header": false,
+      "height": 932,
+      "nav": [],
+      "scroll": 415,
+      "timer": "전체 운동 시간\n00:00:00\n모든 종목 완료\n—",
+      "width": 430
+    },
+    {
+      "name": "final resume LAN reload",
+      "badge": "요일 기본 루틴",
+      "client": 375,
+      "header": false,
+      "height": 844,
+      "nav": [
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 83.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 83.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 83.75
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 83.75
+        }
+      ],
+      "resume": "운동 종료 대기\nTask004 후속 시험\n\n1세트 완료 · 전체 00:00:37\n\n운동 이어하기 →",
+      "scroll": 375,
+      "width": 390
+    },
+    {
+      "name": "settings active navigation",
+      "client": 390,
+      "header": false,
+      "height": 844,
+      "nav": [
+        {
+          "current": null,
+          "height": 56,
+          "text": "⌂\n홈",
+          "width": 87.5
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "▤\n루틴",
+          "width": 87.5
+        },
+        {
+          "current": null,
+          "height": 56,
+          "text": "◷\n기록",
+          "width": 87.5
+        },
+        {
+          "current": "page",
+          "height": 56,
+          "text": "⚙\n설정",
+          "width": 87.5
+        }
+      ],
+      "scroll": 390,
+      "width": 390
+    }
+  ],
+  "layouts": [
+    {
+      "requested": {
+        "width": 375,
+        "height": 812
+      },
+      "workoutLayout": {
+        "banner": {
+          "bottom": 736,
+          "height": 37.90625,
+          "left": 20,
+          "right": 340,
+          "top": 698.09375,
+          "width": 320,
+          "x": 20,
+          "y": 698.09375
+        },
+        "button": {
+          "bottom": 798,
+          "height": 52,
+          "left": 20,
+          "right": 340,
+          "top": 746,
+          "width": 320,
+          "x": 20,
+          "y": 746
+        },
+        "client": 360,
+        "height": 812,
+        "scroll": 360,
+        "timer": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 360,
+          "top": 0,
+          "width": 360,
+          "x": 0,
+          "y": 0
+        },
+        "width": 375
+      },
+      "nav": [
+        {
+          "height": 56,
+          "width": 80
+        },
+        {
+          "height": 56,
+          "width": 80
+        },
+        {
+          "height": 56,
+          "width": 80
+        },
+        {
+          "height": 56,
+          "width": 80
+        }
+      ]
+    },
+    {
+      "requested": {
+        "width": 390,
+        "height": 844
+      },
+      "workoutLayout": {
+        "banner": {
+          "bottom": 768,
+          "height": 37.90625,
+          "left": 20,
+          "right": 355,
+          "top": 730.09375,
+          "width": 335,
+          "x": 20,
+          "y": 730.09375
+        },
+        "button": {
+          "bottom": 830,
+          "height": 52,
+          "left": 20,
+          "right": 355,
+          "top": 778,
+          "width": 335,
+          "x": 20,
+          "y": 778
+        },
+        "client": 375,
+        "height": 844,
+        "scroll": 375,
+        "timer": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 375,
+          "top": 0,
+          "width": 375,
+          "x": 0,
+          "y": 0
+        },
+        "width": 390
+      },
+      "nav": [
+        {
+          "height": 56,
+          "width": 83.75
+        },
+        {
+          "height": 56,
+          "width": 83.75
+        },
+        {
+          "height": 56,
+          "width": 83.75
+        },
+        {
+          "height": 56,
+          "width": 83.75
+        }
+      ]
+    },
+    {
+      "requested": {
+        "width": 430,
+        "height": 932
+      },
+      "workoutLayout": {
+        "banner": {
+          "bottom": 856,
+          "height": 37.90625,
+          "left": 20,
+          "right": 395,
+          "top": 818.09375,
+          "width": 375,
+          "x": 20,
+          "y": 818.09375
+        },
+        "button": {
+          "bottom": 918,
+          "height": 52,
+          "left": 20,
+          "right": 395,
+          "top": 866,
+          "width": 375,
+          "x": 20,
+          "y": 866
+        },
+        "client": 415,
+        "height": 932,
+        "scroll": 415,
+        "timer": {
+          "bottom": 80.765625,
+          "height": 80.765625,
+          "left": 0,
+          "right": 415,
+          "top": 0,
+          "width": 415,
+          "x": 0,
+          "y": 0
+        },
+        "width": 430
+      },
+      "nav": [
+        {
+          "height": 56,
+          "width": 93.75
+        },
+        {
+          "height": 56,
+          "width": 93.75
+        },
+        {
+          "height": 56,
+          "width": 93.75
+        },
+        {
+          "height": 56,
+          "width": 93.75
+        }
+      ]
+    }
+  ],
+  "logs": [],
+  "limits": [
+    "Actual iPhone Safari, keyboard, Safe Area and screen lock not tested.",
+    "Health backend was not started; HTTP 502 diagnostic failure was expected."
+  ]
+}

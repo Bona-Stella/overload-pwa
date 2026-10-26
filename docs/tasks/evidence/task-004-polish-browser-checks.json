@@ -1,0 +1,2719 @@
+{
+  "date": "2026-10-27",
+  "browser": "desktop Chromium CUA, real App mounted by dedicated fixture, clock controlled via fixture UI",
+  "checks": [
+    {
+      "name": "first draft 10 +1 +1 -1 =11, second7, no actual or rest",
+      "stored": {
+        "writes": 7,
+        "now": 1793027861928,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": null
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": null,
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "1세트 완료",
+        "alerts": [],
+        "animation": "none",
+        "client": 360,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": false,
+            "label": "1세트 이번 반복 횟수",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "value": ""
+          }
+        ],
+        "scroll": 360,
+        "timer": "전체 운동 시간\n00:00:32\n휴식 없음\n—"
+      }
+    },
+    {
+      "name": "reject complete ",
+      "ui": {
+        "actions": "1세트 완료",
+        "alert": "실제 반복 횟수를 1 이상의 정수로 입력해 주세요.",
+        "disabled": [
+          true,
+          true
+        ],
+        "value": ""
+      }
+    },
+    {
+      "name": "reject complete 0",
+      "ui": {
+        "actions": "1세트 완료",
+        "alert": "실제 반복 횟수를 1 이상의 정수로 입력해 주세요.",
+        "disabled": [
+          true,
+          true
+        ],
+        "value": "0"
+      }
+    },
+    {
+      "name": "reject complete -1",
+      "ui": {
+        "actions": "1세트 완료",
+        "alert": "실제 반복 횟수를 1 이상의 정수로 입력해 주세요.",
+        "disabled": [
+          true,
+          true
+        ],
+        "value": "-1"
+      }
+    },
+    {
+      "name": "reject complete 1.5",
+      "ui": {
+        "actions": "1세트 완료",
+        "alert": "실제 반복 횟수를 1 이상의 정수로 입력해 주세요.",
+        "disabled": [
+          true,
+          true
+        ],
+        "value": "1.5"
+      }
+    },
+    {
+      "name": "reject complete 9007199254740992",
+      "ui": {
+        "actions": "1세트 완료",
+        "alert": "실제 반복 횟수를 1 이상의 정수로 입력해 주세요.",
+        "disabled": [
+          true,
+          true
+        ],
+        "value": "9007199254740992"
+      }
+    },
+    {
+      "name": "reload resumes drafts11/7/blank with no completion",
+      "stored": {
+        "writes": 0,
+        "now": 1793027920571,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": null
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": null,
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "1세트 완료",
+        "alerts": [],
+        "animation": "none",
+        "client": 360,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": false,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 360,
+        "timer": "전체 운동 시간\n00:01:30\n휴식 없음\n—"
+      }
+    },
+    {
+      "name": "bottom complete records11 and starts ordinary rest",
+      "stored": {
+        "writes": 1,
+        "now": 1793027946365,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028065820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:01:56\n남은 휴식\n00:02:00"
+      }
+    },
+    {
+      "name": "rest deadline remaining 11 seconds",
+      "stored": {
+        "writes": 1,
+        "now": 1793028054820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028065820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:03:44\n남은 휴식\n00:00:11"
+      }
+    },
+    {
+      "name": "rest deadline remaining 10 seconds",
+      "stored": {
+        "writes": 1,
+        "now": 1793028055820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028065820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock rest-warning",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:03:45\n남은 휴식\n00:00:10\n다음 세트 준비"
+      }
+    },
+    {
+      "name": "rest deadline remaining 6 seconds",
+      "stored": {
+        "writes": 1,
+        "now": 1793028059820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028065820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock rest-warning",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:03:49\n남은 휴식\n00:00:06\n다음 세트 준비"
+      }
+    },
+    {
+      "name": "rest deadline remaining 5 seconds",
+      "stored": {
+        "writes": 1,
+        "now": 1793028060820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028065820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock rest-warning rest-urgent",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:03:50\n남은 휴식\n00:00:05\n다음 세트 준비"
+      }
+    },
+    {
+      "name": "rest deadline remaining 1 seconds",
+      "stored": {
+        "writes": 1,
+        "now": 1793028064820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028065820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock rest-warning rest-urgent",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:03:54\n남은 휴식\n00:00:01\n다음 세트 준비"
+      }
+    },
+    {
+      "name": "rest deadline remaining 0 seconds",
+      "stored": {
+        "writes": 1,
+        "now": 1793028065820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028065820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "2세트 완료",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:03:55\n휴식 완료\n—"
+      }
+    },
+    {
+      "name": "+30 returns5 to35 and removes warning",
+      "stored": {
+        "writes": 2,
+        "now": 1793028060820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028095820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:03:50\n남은 휴식\n00:00:35"
+      }
+    },
+    {
+      "name": "reload at5 restores warning and actual11 with reduced motion",
+      "stored": {
+        "writes": 0,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028095820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock rest-warning rest-urgent",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n남은 휴식\n00:00:05\n다음 세트 준비"
+      }
+    },
+    {
+      "name": "tab navigation and resume keep5 second warning",
+      "stored": {
+        "writes": 0,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028095820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock rest-warning rest-urgent",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n남은 휴식\n00:00:05\n다음 세트 준비"
+      }
+    },
+    {
+      "name": "manual rest end removes warning immediately",
+      "stored": {
+        "writes": 1,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 11,
+                    "completedAt": 1793027945820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": null,
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "2세트 완료",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n휴식 없음\n—"
+      }
+    },
+    {
+      "name": "undo restores editable11 and clears actual and rest",
+      "stored": {
+        "writes": 4,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": null
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": null,
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "1세트 완료",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": false,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n휴식 없음\n—"
+      }
+    },
+    {
+      "name": "row completion after correction stores8 and starts rest",
+      "stored": {
+        "writes": 6,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "7",
+                  "actual": null
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+            "endAt": 1793028210820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "8"
+          },
+          {
+            "disabled": false,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "7"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n남은 휴식\n00:02:00"
+      }
+    },
+    {
+      "name": "bottom second completion stores8 with the same rest behavior",
+      "stored": {
+        "writes": 9,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "rest",
+            "exerciseId": "push-bench",
+            "setId": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+            "endAt": 1793028210820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "휴식 종료\n＋30초",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "rest-clock",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "8"
+          },
+          {
+            "disabled": true,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "8"
+          },
+          {
+            "disabled": false,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": ""
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n남은 휴식\n00:02:00"
+      }
+    },
+    {
+      "name": "last set stays on exercise with next action and transition, no rest warning",
+      "stored": {
+        "writes": 13,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-bench",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "10",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 10,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "transition",
+            "exerciseId": "push-bench",
+            "setId": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+            "since": 1793028090820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "이 종목의 본세트를 모두 완료했어요.\n\n다음 종목으로",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "8"
+          },
+          {
+            "disabled": true,
+            "label": "2세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "8"
+          },
+          {
+            "disabled": true,
+            "label": "3세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "10"
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n이전 종목 완료 후\n00:00:00"
+      }
+    },
+    {
+      "name": "next exercise has independent draft1 and transition without warnings",
+      "stored": {
+        "writes": 15,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-incline",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "10",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 10,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "1",
+                  "actual": null
+                }
+              ]
+            }
+          ],
+          "timer": {
+            "kind": "transition",
+            "exerciseId": "push-bench",
+            "setId": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+            "since": 1793028090820
+          },
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "1세트 완료",
+        "alerts": [],
+        "animation": "none",
+        "client": 415,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": false,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "1"
+          }
+        ],
+        "scroll": 415,
+        "timer": "전체 운동 시간\n00:04:20\n이전 종목 완료 후\n00:00:00"
+      }
+    },
+    {
+      "name": "all exercises complete but active session awaits explicit finish, no warning",
+      "stored": {
+        "writes": 19,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-incline",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "10",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 10,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 20,
+                    "reps": 11,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                }
+              ]
+            }
+          ],
+          "timer": null,
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "증량 가능 · 20kg\n다음 운동에서 중량 증가를 고려해 보세요.\n\n운동 종료 및 요약",
+        "alerts": [],
+        "animation": "none",
+        "client": 360,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          }
+        ],
+        "scroll": 360,
+        "timer": "전체 운동 시간\n00:04:20\n모든 종목 완료\n—"
+      }
+    },
+    {
+      "name": "reload retains completed actuals and manual finish state",
+      "stored": {
+        "writes": 0,
+        "now": 1793028090820,
+        "protectedUnchanged": true,
+        "active": {
+          "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+          "routineId": "push",
+          "routineName": "Task004 반복·휴식 시험",
+          "date": "2026-10-27",
+          "startedAt": 1793027830200,
+          "endedAt": null,
+          "phase": "working",
+          "currentExerciseId": "push-incline",
+          "exercises": [
+            {
+              "id": "push-bench",
+              "exerciseId": "bench",
+              "setCount": 3,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 60,
+              "name": "바벨 벤치프레스",
+              "approvedWeight": 60,
+              "weight": 60,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                  "ordinal": 1,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                  "ordinal": 2,
+                  "reps": "8",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 8,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                },
+                {
+                  "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                  "ordinal": 3,
+                  "reps": "10",
+                  "actual": {
+                    "weight": 60,
+                    "reps": 10,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                }
+              ]
+            },
+            {
+              "id": "push-incline",
+              "exerciseId": "incline",
+              "setCount": 1,
+              "minReps": 6,
+              "maxReps": 10,
+              "initialWeight": 20,
+              "name": "인클라인 덤벨 프레스",
+              "approvedWeight": 20,
+              "weight": 20,
+              "temporaryWeight": false,
+              "structureModified": false,
+              "benchmark": null,
+              "sets": [
+                {
+                  "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                  "ordinal": 1,
+                  "reps": "11",
+                  "actual": {
+                    "weight": 20,
+                    "reps": 11,
+                    "completedAt": 1793028090820,
+                    "temporaryWeight": false
+                  }
+                }
+              ]
+            }
+          ],
+          "timer": null,
+          "updatedBenchmarks": []
+        },
+        "history": [],
+        "progressChanges": []
+      },
+      "ui": {
+        "actions": "증량 가능 · 20kg\n다음 운동에서 중량 증가를 고려해 보세요.\n\n운동 종료 및 요약",
+        "alerts": [],
+        "animation": "none",
+        "client": 360,
+        "clockClass": "",
+        "inputs": [
+          {
+            "disabled": true,
+            "label": "1세트 이번 반복 횟수",
+            "mode": "numeric",
+            "value": "11"
+          }
+        ],
+        "scroll": 360,
+        "timer": "전체 운동 시간\n00:04:20\n모든 종목 완료\n—"
+      }
+    },
+    {
+      "name": "explicit finish creates one session with actual8/8/10 and11; no approval events",
+      "stored": {
+        "writes": 1,
+        "now": 1793028090820,
+        "protectedUnchanged": false,
+        "active": null,
+        "history": [
+          {
+            "id": "371dd51a-0f6e-4715-af9e-d809de2a638e",
+            "routineId": "push",
+            "routineName": "Task004 반복·휴식 시험",
+            "date": "2026-10-27",
+            "startedAt": 1793027830200,
+            "endedAt": 1793028090820,
+            "phase": "finished",
+            "currentExerciseId": "push-incline",
+            "exercises": [
+              {
+                "id": "push-bench",
+                "exerciseId": "bench",
+                "setCount": 3,
+                "minReps": 6,
+                "maxReps": 10,
+                "initialWeight": 60,
+                "name": "바벨 벤치프레스",
+                "approvedWeight": 60,
+                "weight": 60,
+                "temporaryWeight": false,
+                "structureModified": false,
+                "benchmark": null,
+                "sets": [
+                  {
+                    "id": "362d36e6-4c4f-4976-badd-3bb2cf9c27af",
+                    "ordinal": 1,
+                    "reps": "8",
+                    "actual": {
+                      "weight": 60,
+                      "reps": 8,
+                      "completedAt": 1793028090820,
+                      "temporaryWeight": false
+                    }
+                  },
+                  {
+                    "id": "45ee0149-87d6-4f85-924a-78b10fdd9cdd",
+                    "ordinal": 2,
+                    "reps": "8",
+                    "actual": {
+                      "weight": 60,
+                      "reps": 8,
+                      "completedAt": 1793028090820,
+                      "temporaryWeight": false
+                    }
+                  },
+                  {
+                    "id": "7254f641-6554-4b14-84cb-68acf3ba1d78",
+                    "ordinal": 3,
+                    "reps": "10",
+                    "actual": {
+                      "weight": 60,
+                      "reps": 10,
+                      "completedAt": 1793028090820,
+                      "temporaryWeight": false
+                    }
+                  }
+                ],
+                "plannedSetCount": 3
+              },
+              {
+                "id": "push-incline",
+                "exerciseId": "incline",
+                "setCount": 1,
+                "minReps": 6,
+                "maxReps": 10,
+                "initialWeight": 20,
+                "name": "인클라인 덤벨 프레스",
+                "approvedWeight": 20,
+                "weight": 20,
+                "temporaryWeight": false,
+                "structureModified": false,
+                "benchmark": null,
+                "sets": [
+                  {
+                    "id": "7cfee5fc-7aac-4d8f-b468-e2292dcbfe47",
+                    "ordinal": 1,
+                    "reps": "11",
+                    "actual": {
+                      "weight": 20,
+                      "reps": 11,
+                      "completedAt": 1793028090820,
+                      "temporaryWeight": false
+                    }
+                  }
+                ],
+                "plannedSetCount": 1
+              }
+            ],
+            "timer": null,
+            "updatedBenchmarks": [
+              "바벨 벤치프레스",
+              "인클라인 덤벨 프레스"
+            ]
+          }
+        ],
+        "progressChanges": []
+      },
+      "ui": {
+        "alerts": [],
+        "animation": null,
+        "client": 360,
+        "inputs": [],
+        "scroll": 360
+      }
+    }
+  ],
+  "layouts": [
+    {
+      "width": 375,
+      "height": 812,
+      "buttons": [
+        {
+          "height": 44,
+          "width": 44
+        },
+        {
+          "height": 44,
+          "width": 44
+        }
+      ],
+      "client": 360,
+      "cta": {
+        "bottom": 812,
+        "height": 81,
+        "left": 0,
+        "right": 360,
+        "top": 731,
+        "width": 360,
+        "x": 0,
+        "y": 731
+      },
+      "focus": "1세트 이번 반복 횟수",
+      "input": {
+        "font": "16.8px",
+        "mode": "numeric",
+        "rect": {
+          "bottom": 427.71875,
+          "height": 44,
+          "left": 153,
+          "right": 205,
+          "top": 383.71875,
+          "width": 52,
+          "x": 153,
+          "y": 383.71875
+        }
+      },
+      "rows": [
+        {
+          "client": 298,
+          "scroll": 298
+        },
+        {
+          "client": 298,
+          "scroll": 298
+        },
+        {
+          "client": 298,
+          "scroll": 298
+        },
+        {
+          "client": 298,
+          "scroll": 298
+        }
+      ],
+      "scroll": 360
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "buttons": [
+        {
+          "height": 44,
+          "width": 44
+        },
+        {
+          "height": 44,
+          "width": 44
+        }
+      ],
+      "client": 375,
+      "cta": {
+        "bottom": 844,
+        "height": 81,
+        "left": 0,
+        "right": 375,
+        "top": 763,
+        "width": 375,
+        "x": 0,
+        "y": 763
+      },
+      "focus": "1세트 이번 반복 횟수",
+      "input": {
+        "font": "16.8px",
+        "mode": "numeric",
+        "rect": {
+          "bottom": 444.078125,
+          "height": 44,
+          "left": 177.625,
+          "right": 234.984375,
+          "top": 400.078125,
+          "width": 57.359375,
+          "x": 177.625,
+          "y": 400.078125
+        }
+      },
+      "rows": [
+        {
+          "client": 313,
+          "scroll": 313
+        },
+        {
+          "client": 313,
+          "scroll": 313
+        },
+        {
+          "client": 313,
+          "scroll": 313
+        },
+        {
+          "client": 313,
+          "scroll": 313
+        }
+      ],
+      "scroll": 375
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "buttons": [
+        {
+          "height": 44,
+          "width": 44
+        },
+        {
+          "height": 44,
+          "width": 44
+        }
+      ],
+      "client": 415,
+      "cta": {
+        "bottom": 932,
+        "height": 81,
+        "left": 0,
+        "right": 415,
+        "top": 851,
+        "width": 415,
+        "x": 0,
+        "y": 851
+      },
+      "focus": "1세트 이번 반복 횟수",
+      "input": {
+        "font": "16.8px",
+        "mode": "numeric",
+        "rect": {
+          "bottom": 487.640625,
+          "height": 44,
+          "left": 188.828125,
+          "right": 274.984375,
+          "top": 443.640625,
+          "width": 86.15625,
+          "x": 188.828125,
+          "y": 443.640625
+        }
+      },
+      "rows": [
+        {
+          "client": 353,
+          "scroll": 353
+        },
+        {
+          "client": 353,
+          "scroll": 353
+        },
+        {
+          "client": 353,
+          "scroll": 353
+        },
+        {
+          "client": 353,
+          "scroll": 353
+        }
+      ],
+      "scroll": 415
+    }
+  ],
+  "motion": {
+    "animationRules": [
+      ".rest-urgent strong { animation: 1.6s ease-in-out 0s infinite normal none running rest-ready; }",
+      "@keyframes rest-ready { \n  0%, 100% { background-color: rgba(81, 57, 27, 0.4); }\n  50% { background-color: rgba(128, 84, 33, 0.533); }\n}",
+      "@media (prefers-reduced-motion: reduce) {\n  .rest-urgent strong { animation: auto ease 0s 1 normal none running none; }\n}"
+    ],
+    "reduced": true
+  },
+  "logs": []
+}

@@ -1,0 +1,947 @@
+{
+  "date": "2026-10-26",
+  "browser": "desktop Chromium",
+  "checks": [
+    {
+      "name": "375 home",
+      "height": 677,
+      "inputs": [],
+      "scrollWidth": 320,
+      "width": 312
+    },
+    {
+      "name": "375 zoom reset",
+      "height": 677,
+      "inputs": [],
+      "scrollWidth": 320,
+      "width": 312
+    },
+    {
+      "name": "375 CSS viewport",
+      "cta": "준비운동 완료 →",
+      "height": 812,
+      "inputs": [],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:05\n준비 중\n—",
+      "width": 375
+    },
+    {
+      "name": "warmup reload",
+      "cta": "준비운동 완료 →",
+      "height": 812,
+      "inputs": [],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:06\n준비 중\n—",
+      "width": 375
+    },
+    {
+      "name": "draft reload",
+      "cta": "1세트 완료",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "8"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:23\n휴식 없음\n—",
+      "width": 375
+    },
+    {
+      "name": "row first set rest",
+      "cta": "휴식 종료\n＋30초",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "8"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:29\n남은 휴식\n00:02:00",
+      "width": 375
+    },
+    {
+      "name": "rest extended",
+      "cta": "휴식 종료\n＋30초",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "8"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:29\n남은 휴식\n00:02:30",
+      "width": 375
+    },
+    {
+      "name": "rest reload",
+      "cta": "휴식 종료\n＋30초",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "8"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:29\n남은 휴식\n00:02:29",
+      "width": 375
+    },
+    {
+      "name": "last set transition",
+      "cta": "이 종목의 본세트를 모두 완료했어요.\n\n다음 종목으로",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "8"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": "7"
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:54\n이전 종목 완료 후\n00:00:00",
+      "width": 375
+    },
+    {
+      "name": "transition before navigation reload",
+      "cta": "이 종목의 본세트를 모두 완료했어요.\n\n다음 종목으로",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "8"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": "7"
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:55\n이전 종목 완료 후\n00:00:00",
+      "width": 375
+    },
+    {
+      "name": "transition after navigation",
+      "cta": "1세트 완료",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:55\n이전 종목 완료 후\n00:00:00",
+      "width": 375
+    },
+    {
+      "name": "transition after navigation reload",
+      "cta": "1세트 완료",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:00:56\n이전 종목 완료 후\n00:00:01",
+      "width": 375
+    },
+    {
+      "name": "temporary decimal weight recorded rest",
+      "cta": "휴식 종료\n＋30초",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:01:37\n남은 휴식\n00:02:00",
+      "width": 375
+    },
+    {
+      "name": "manual navigation preserves rest",
+      "cta": "휴식 종료\n＋30초",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:01:38\n남은 휴식\n00:01:59",
+      "width": 375
+    },
+    {
+      "name": "all complete active",
+      "cta": "운동 종료 및 요약",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": "8"
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:02:46\n모든 종목 완료\n—",
+      "width": 375
+    },
+    {
+      "name": "all complete reload active",
+      "cta": "운동 종료 및 요약",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": "8"
+        }
+      ],
+      "scrollWidth": 362,
+      "timer": "전체 운동 시간\n00:02:46\n모든 종목 완료\n—",
+      "width": 375
+    },
+    {
+      "name": "375 long name picker",
+      "cta": "취소\n루틴 저장",
+      "height": 974,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "루틴 이름",
+          "value": "Task004 시험"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "종목 검색 / 사용자 종목 이름",
+          "value": "Task004SuperLongExerciseNameWithoutSpacesInclineDumbbellPress"
+        }
+      ],
+      "scrollWidth": 595,
+      "width": 450
+    },
+    {
+      "name": "375 long name editor",
+      "cta": "취소\n루틴 저장",
+      "height": 974,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "루틴 이름",
+          "value": "Task004 시험"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "최초 중량 (kg)",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 435,
+      "width": 450
+    },
+    {
+      "name": "375 editor actual",
+      "cta": "취소\n루틴 저장",
+      "height": 974,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "루틴 이름",
+          "value": "Task004 시험"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "본세트 수",
+          "value": "3"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "최소 횟수",
+          "value": "6"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "최대 횟수",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "16px",
+          "label": "최초 중량 (kg)",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 435,
+      "width": 450
+    },
+    {
+      "name": "375 long name home",
+      "height": 974,
+      "inputs": [],
+      "scrollWidth": 532,
+      "width": 450
+    },
+    {
+      "name": "375 actual long home",
+      "height": 812,
+      "inputs": [],
+      "scrollWidth": 532,
+      "width": 375
+    },
+    {
+      "name": "375 long home fixed",
+      "height": 812,
+      "inputs": [],
+      "scrollWidth": 360,
+      "width": 375
+    },
+    {
+      "name": "375 long exercise modal fixed",
+      "cta": "1세트 완료",
+      "height": 812,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 360,
+      "timer": "전체 운동 시간\n00:00:00\n휴식 없음\n—",
+      "width": 375
+    },
+    {
+      "name": "390 workout fixed",
+      "cta": "1세트 완료",
+      "height": 844,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 375,
+      "timer": "전체 운동 시간\n00:00:11\n휴식 없음\n—",
+      "width": 390
+    },
+    {
+      "name": "430 workout fixed",
+      "cta": "1세트 완료",
+      "height": 932,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 415,
+      "timer": "전체 운동 시간\n00:00:12\n휴식 없음\n—",
+      "width": 430
+    },
+    {
+      "name": "before network outage",
+      "cta": "1세트 완료",
+      "height": 932,
+      "inputs": [
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": ""
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 415,
+      "timer": "전체 운동 시간\n00:05:24\n휴식 없음\n—",
+      "width": 430
+    },
+    {
+      "name": "loaded app while server unavailable",
+      "cta": "2세트 완료",
+      "height": 932,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 415,
+      "timer": "전체 운동 시간\n00:05:41\n휴식 없음\n—",
+      "width": 430
+    },
+    {
+      "name": "server restored reload",
+      "cta": "2세트 완료",
+      "height": 932,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": false,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": ""
+        }
+      ],
+      "scrollWidth": 415,
+      "timer": "전체 운동 시간\n00:07:16\n휴식 없음\n—",
+      "width": 430
+    },
+    {
+      "name": "final build all complete",
+      "cta": "운동 종료 및 요약",
+      "height": 932,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "9"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": "8"
+        }
+      ],
+      "scrollWidth": 415,
+      "timer": "전체 운동 시간\n00:07:17\n모든 종목 완료\n—",
+      "width": 430
+    },
+    {
+      "name": "final screenshot next exercise",
+      "cta": "이 종목의 본세트를 모두 완료했어요.\n\n다음 종목으로",
+      "height": 844,
+      "inputs": [
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "1세트 이번 반복 횟수회",
+          "value": "10"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "2세트 이번 반복 횟수회",
+          "value": "8"
+        },
+        {
+          "disabled": true,
+          "font": "18.4px",
+          "label": "3세트 이번 반복 횟수회",
+          "value": "7"
+        }
+      ],
+      "scrollWidth": 375,
+      "timer": "전체 운동 시간\n00:00:01\n이전 종목 완료 후\n00:00:00",
+      "width": 390
+    }
+  ],
+  "layoutResults": [
+    {
+      "requested": {
+        "width": 375,
+        "height": 812
+      },
+      "home": {
+        "clientWidth": 360,
+        "height": 812,
+        "scrollWidth": 360,
+        "width": 375
+      },
+      "picker": {
+        "button": {
+          "bottom": 683.59375,
+          "height": 124.375,
+          "left": 42,
+          "right": 318,
+          "top": 559.21875,
+          "width": 276,
+          "x": 42,
+          "y": 559.21875
+        },
+        "clientWidth": 360,
+        "height": 812,
+        "scrollWidth": 360,
+        "width": 375
+      }
+    },
+    {
+      "requested": {
+        "width": 390,
+        "height": 844
+      },
+      "home": {
+        "clientWidth": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "width": 390
+      },
+      "picker": {
+        "button": {
+          "bottom": 699.625,
+          "height": 124.375,
+          "left": 42,
+          "right": 333,
+          "top": 575.25,
+          "width": 291,
+          "x": 42,
+          "y": 575.25
+        },
+        "clientWidth": 375,
+        "height": 844,
+        "scrollWidth": 375,
+        "width": 390
+      }
+    },
+    {
+      "requested": {
+        "width": 430,
+        "height": 932
+      },
+      "home": {
+        "clientWidth": 415,
+        "height": 932,
+        "scrollWidth": 415,
+        "width": 430
+      },
+      "picker": {
+        "button": {
+          "bottom": 780.4375,
+          "height": 98.78125,
+          "left": 42,
+          "right": 373,
+          "top": 681.65625,
+          "width": 331,
+          "x": 42,
+          "y": 681.65625
+        },
+        "clientWidth": 415,
+        "height": 932,
+        "scrollWidth": 415,
+        "width": 430
+      }
+    }
+  ],
+  "faultResults": [
+    {
+      "name": "quota failure preserves in-memory draft and disk",
+      "failing": true,
+      "failedWrites": 1,
+      "rawUnchanged": true,
+      "storedReps": [
+        "8",
+        "9",
+        ""
+      ],
+      "alerts": [
+        "로컬 저장에 실패했습니다. 현재 입력은 이 화면에 유지됩니다. 저장 공간을 확인하고 다시 저장해 주세요. 새로고침하면 저장되지 않은 입력이 사라질 수 있습니다.다시 저장"
+      ],
+      "heading": [
+        "바벨 벤치프레스"
+      ],
+      "inputs": [
+        {
+          "disabled": true,
+          "value": "8"
+        },
+        {
+          "disabled": false,
+          "value": "12"
+        },
+        {
+          "disabled": false,
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "retry persists draft",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": false,
+      "storedReps": [
+        "8",
+        "12",
+        ""
+      ],
+      "alerts": [],
+      "heading": [
+        "바벨 벤치프레스"
+      ],
+      "inputs": [
+        {
+          "disabled": true,
+          "value": "8"
+        },
+        {
+          "disabled": false,
+          "value": "12"
+        },
+        {
+          "disabled": false,
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "retry draft reload",
+      "failing": true,
+      "failedWrites": 0,
+      "rawUnchanged": true,
+      "storedReps": [
+        "8",
+        "12",
+        ""
+      ],
+      "storedHistory": 0,
+      "alerts": [],
+      "heading": [
+        "바벨 벤치프레스"
+      ],
+      "inputs": [
+        {
+          "disabled": true,
+          "value": "8"
+        },
+        {
+          "disabled": false,
+          "value": "12"
+        },
+        {
+          "disabled": false,
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "finish write failure does not claim saved",
+      "failing": true,
+      "failedWrites": 1,
+      "rawUnchanged": true,
+      "storedReps": [
+        "8",
+        "12",
+        ""
+      ],
+      "storedHistory": 0,
+      "alerts": [
+        "로컬 저장에 실패했습니다. 현재 입력은 이 화면에 유지됩니다. 저장 공간을 확인하고 다시 저장해 주세요. 새로고침하면 저장되지 않은 입력이 사라질 수 있습니다.다시 저장"
+      ],
+      "heading": [
+        "운동 기록 요약"
+      ],
+      "inputs": []
+    },
+    {
+      "name": "finish retry stored",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": false,
+      "storedHistory": 1,
+      "alerts": [],
+      "heading": [
+        "운동 기록 저장 완료"
+      ],
+      "inputs": []
+    },
+    {
+      "name": "other tab storage event blocks old UI",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": false,
+      "storedHistory": 1,
+      "alerts": [
+        "다른 탭에서 저장 내용이 변경되었습니다. 충돌 방지를 위해 편집을 중지했습니다. 이 탭의 입력을 확인한 뒤 새로고침해 주세요."
+      ],
+      "heading": [
+        "운동 기록 요약"
+      ],
+      "inputs": []
+    }
+  ],
+  "notes": [
+    "LAN HTTP start failed before UUID fallback; start/record/reload passed after fix.",
+    "Network failure used stopped local preview server, not browser-wide offline emulation.",
+    "Actual iPhone Safari not tested.",
+    "Initial viewport/zoom exploration recorded requested labels differing from measured sizes; use layoutResults for final dimensions."
+  ]
+}

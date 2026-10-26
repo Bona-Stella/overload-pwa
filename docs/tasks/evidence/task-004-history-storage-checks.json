@@ -1,0 +1,263 @@
+{
+  "date": "2026-10-26",
+  "checks": [
+    {
+      "name": "legacy load writes nothing",
+      "failing": false,
+      "failedWrites": 0,
+      "rawUnchanged": true,
+      "progress": {
+        "push-bench": 60,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [],
+      "active": null,
+      "alerts": [],
+      "blocked": false,
+      "weights": []
+    },
+    {
+      "name": "failed editor approval retains 60 and no event with draft 62.5",
+      "failing": true,
+      "failedWrites": 1,
+      "rawUnchanged": true,
+      "progress": {
+        "push-bench": 60,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [],
+      "active": null,
+      "alerts": [
+        "중량 승인을 저장하지 못해 변경을 반영하지 않았습니다. 입력값은 유지됩니다. 저장소를 확인한 뒤 다시 승인하거나 루틴 저장을 눌러 주세요.\n\n저장소 재확인"
+      ],
+      "blocked": false,
+      "weights": [
+        "62.5"
+      ]
+    },
+    {
+      "name": "storage recheck does not approve draft",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": true,
+      "progress": {
+        "push-bench": 60,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [],
+      "active": null,
+      "alerts": [],
+      "blocked": false,
+      "weights": [
+        "62.5"
+      ]
+    },
+    {
+      "name": "reconfirm editor saves one event",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": false,
+      "progress": {
+        "push-bench": 62.5,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [
+        {
+          "id": "6c21cc5e-3126-4bcd-b87c-2e0f748c602e",
+          "occurredAt": 1793026121676,
+          "routineId": "push",
+          "placementId": "push-bench",
+          "routineName": "PUSH DAY",
+          "exerciseName": "바벨 벤치프레스",
+          "previousApprovedWeight": 60,
+          "nextApprovedWeight": 62.5,
+          "source": "routine_editor"
+        }
+      ],
+      "active": null,
+      "alerts": [],
+      "blocked": false,
+      "weights": []
+    },
+    {
+      "name": "same value routine save does not duplicate",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": false,
+      "progress": {
+        "push-bench": 62.5,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [
+        {
+          "id": "6c21cc5e-3126-4bcd-b87c-2e0f748c602e",
+          "occurredAt": 1793026121676,
+          "routineId": "push",
+          "placementId": "push-bench",
+          "routineName": "PUSH DAY",
+          "exerciseName": "바벨 벤치프레스",
+          "previousApprovedWeight": 60,
+          "nextApprovedWeight": 62.5,
+          "source": "routine_editor"
+        }
+      ],
+      "active": null,
+      "alerts": [],
+      "blocked": false,
+      "weights": []
+    },
+    {
+      "name": "failed workout approval leaves first event and old weight",
+      "failing": true,
+      "failedWrites": 1,
+      "rawUnchanged": true,
+      "progress": {
+        "push-bench": 62.5,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [
+        {
+          "id": "6c21cc5e-3126-4bcd-b87c-2e0f748c602e",
+          "occurredAt": 1793026121676,
+          "routineId": "push",
+          "placementId": "push-bench",
+          "routineName": "PUSH DAY",
+          "exerciseName": "바벨 벤치프레스",
+          "previousApprovedWeight": 60,
+          "nextApprovedWeight": 62.5,
+          "source": "routine_editor"
+        }
+      ],
+      "active": "working",
+      "alerts": [
+        "중량 승인을 저장하지 못해 변경을 반영하지 않았습니다. 입력값은 유지됩니다. 저장소를 확인한 뒤 다시 승인하거나 루틴 저장을 눌러 주세요.\n\n저장소 재확인"
+      ],
+      "blocked": false,
+      "weights": []
+    },
+    {
+      "name": "successful workout reconfirm adds exactly second event",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": false,
+      "progress": {
+        "push-bench": 65,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [
+        {
+          "id": "d8c6c58d-856f-42b2-a827-e23220f09318",
+          "occurredAt": 1793026256463,
+          "routineId": "push",
+          "placementId": "push-bench",
+          "routineName": "PUSH DAY",
+          "exerciseName": "바벨 벤치프레스",
+          "previousApprovedWeight": 62.5,
+          "nextApprovedWeight": 65,
+          "source": "workout",
+          "relatedSessionId": "56b84f4f-29b5-4957-9c2d-6c8af604e228"
+        },
+        {
+          "id": "6c21cc5e-3126-4bcd-b87c-2e0f748c602e",
+          "occurredAt": 1793026121676,
+          "routineId": "push",
+          "placementId": "push-bench",
+          "routineName": "PUSH DAY",
+          "exerciseName": "바벨 벤치프레스",
+          "previousApprovedWeight": 60,
+          "nextApprovedWeight": 62.5,
+          "source": "routine_editor"
+        }
+      ],
+      "active": "working",
+      "alerts": [],
+      "blocked": false,
+      "weights": []
+    },
+    {
+      "name": "actual other-tab storage write blocks old tab without adding events",
+      "failing": false,
+      "failedWrites": 1,
+      "rawUnchanged": false,
+      "progress": {
+        "push-bench": 65,
+        "push-incline": 20,
+        "push-shoulder": 15,
+        "pull-lat": 40,
+        "pull-row": 35,
+        "legs-squat": 60,
+        "legs-curl": 25
+      },
+      "events": [
+        {
+          "id": "d8c6c58d-856f-42b2-a827-e23220f09318",
+          "occurredAt": 1793026256463,
+          "routineId": "push",
+          "placementId": "push-bench",
+          "routineName": "PUSH DAY",
+          "exerciseName": "바벨 벤치프레스",
+          "previousApprovedWeight": 62.5,
+          "nextApprovedWeight": 65,
+          "source": "workout",
+          "relatedSessionId": "56b84f4f-29b5-4957-9c2d-6c8af604e228"
+        },
+        {
+          "id": "6c21cc5e-3126-4bcd-b87c-2e0f748c602e",
+          "occurredAt": 1793026121676,
+          "routineId": "push",
+          "placementId": "push-bench",
+          "routineName": "PUSH DAY",
+          "exerciseName": "바벨 벤치프레스",
+          "previousApprovedWeight": 60,
+          "nextApprovedWeight": 62.5,
+          "source": "routine_editor"
+        }
+      ],
+      "active": "working",
+      "alerts": [
+        "다른 탭에서 저장 내용이 변경되었습니다. 충돌 방지를 위해 편집을 중지했습니다. 이 탭의 입력을 확인한 뒤 새로고침해 주세요."
+      ],
+      "blocked": true,
+      "weights": []
+    }
+  ],
+  "notes": [
+    "Dedicated 127.0.0.1:3046 synthetic legacy v1 fixture; no user origin modified.",
+    "Storage recheck only retries current state; rejected approval requires explicit reconfirmation."
+  ]
+}
