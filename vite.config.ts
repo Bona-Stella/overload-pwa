@@ -5,7 +5,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: "127.0.0.1",
+    host: true, // "127.0.0.1" 대신 true 또는 "0.0.0.0"으로 수정!
     port: 3000,
     strictPort: true,
     proxy: {

@@ -21,6 +21,7 @@ export type WorkoutExercise = RoutineExercise & {
   temporaryWeight: boolean
   structureModified: boolean
   benchmark: number[] | null
+  plannedSetCount?: number
   sets: WorkoutSet[]
 }
 export type WorkoutTimer =

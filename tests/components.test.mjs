@@ -55,19 +55,32 @@ test('working screen focuses one exercise, with blank reps, explicit benchmarks 
   assert.match(markup, /value=""/)
 })
 
-test('rest controls and next exercise action appear after the final set', () => {
+test('final completion keeps its records visible and offers next exercise with elapsed time instead of rest', () => {
   let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
   const exercise = state.active.exercises[0]
   for (const set of exercise.sets) {
     state = m.editReps(state, exercise.id, set.id, '10')
     state = m.completeSet(state, exercise.id, set.id, NOW + 59000)
+    if (set.id !== exercise.sets.at(-1).id) {
+      const markup = html(WorkoutScreen, props(state))
+      assert.match(markup, /남은 휴식/)
+      assert.match(markup, /휴식 종료/)
+      assert.match(markup, /＋30초/)
+    }
   }
   const markup = html(WorkoutScreen, props(state))
-  assert.match(markup, /남은 휴식/)
-  assert.match(markup, /휴식 종료/)
-  assert.match(markup, /＋30초/)
-  assert.match(markup, /다음 종목으로/)
+  assert.match(markup, /바벨 벤치프레스/)
+  assert.match(markup, /다음 종목으로<\/button>/)
+  assert.doesNotMatch(markup, /인클라인 덤벨 프레스/)
+  assert.match(markup, /이전 종목 완료 후/)
+  assert.match(markup, /00:00:01/)
+  assert.doesNotMatch(markup, /남은 휴식|휴식 종료|＋30초/)
   assert.match(markup, /중량 증가를 고려/)
+  assert.match(markup, /1세트 완료 취소/)
+  const moved = html(WorkoutScreen, props(m.navigateExercise(state, state.active.exercises[1].id)))
+  assert.match(moved, /인클라인 덤벨 프레스/)
+  assert.match(moved, /이전 종목 완료 후/)
+  assert.match(moved, /00:00:01/)
 })
 
 test('summary keeps the actual second-set number after incomplete sets are excluded', () => {
@@ -81,16 +94,111 @@ test('summary keeps the actual second-set number after incomplete sets are exclu
   assert.match(markup, /60 kg × 8회/)
   assert.match(markup, /480/)
   assert.match(markup, /서버 동기화 미지원/)
+  assert.match(markup, /운동 기록 저장 완료/)
+  assert.match(markup, /완료 1\/9 본세트/)
+  assert.doesNotMatch(markup, /WORKOUT COMPLETE|전체 루틴 완료/)
 })
 
-test('routine editor provides save, cancel, original and approved weights and multi-day selection', () => {
+test('finishing only the first exercise shows 3/9 and does not claim the full routine was completed', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  const exercise = state.active.exercises[0]
+  for (const set of exercise.sets) {
+    state = m.editReps(state, exercise.id, set.id, '10')
+    state = m.completeSet(state, exercise.id, set.id, NOW + 59000)
+  }
+  const finished = m.finishWorkout(state, NOW + 60000, true)
+  const markup = html(SessionDetail, { session: finished.history[0], saved: true })
+  assert.match(markup, /완료 3\/9 본세트/)
+  assert.match(markup, /완료한 세트 없음/)
+  assert.doesNotMatch(markup, /WORKOUT COMPLETE|전체 루틴 완료/)
+})
+
+test('existing routine editor shows read-only progress weight and Monday-first days', () => {
   const state = m.createInitialState()
   const markup = html(RoutineEditor, { state, routine: state.routines[0], onSave: noop, onCancel: noop, onCreate: () => '' })
   assert.match(markup, /루틴 저장/)
   assert.match(markup, /취소/)
-  assert.match(markup, /현재 승인 진행 중량/)
-  assert.match(markup, /최초 중량/)
+  assert.match(markup, /현재 진행 중량/)
+  assert.match(markup, /60 kg/)
+  assert.doesNotMatch(markup, /최초 중량/)
   assert.match(markup, /aria-pressed="true"/)
+  assert.deepEqual([...markup.matchAll(/aria-pressed="(?:true|false)"[^>]*>(.)<\/button>/g)].map(match => match[1]), ['월', '화', '수', '목', '금', '토', '일'])
+})
+
+test('new routine exercises still offer initial weight input', () => {
+  const state = m.createInitialState()
+  const routine = { id: 'new', name: '', exercises: [{ ...state.routines[0].exercises[0], id: 'new-placement' }] }
+  const markup = html(RoutineEditor, { state, routine, onSave: noop, onCancel: noop, onCreate: () => '' })
+  assert.match(markup, /최초 중량 \(kg\)/)
+  assert.doesNotMatch(markup, /현재 진행 중량/)
+})
+
+test('all complete screen offers explicit finish and can reopen completed sets without timers', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  for (const e of state.active.exercises) for (const set of e.sets) {
+    state = m.editReps(state, e.id, set.id, '8')
+    state = m.completeSet(state, e.id, set.id, NOW + 59000)
+  }
+  const markup = html(WorkoutScreen, props(state))
+  assert.match(markup, /모든 종목 완료/)
+  assert.match(markup, /class="primary full">운동 종료 및 요약<\/button>/)
+  assert.match(markup, /종목 목록/)
+  assert.match(markup, /완료 취소/)
+  assert.doesNotMatch(markup, /이전 종목 완료 후|휴식 종료|＋30초/)
+  const finished = m.finishWorkout(state, NOW + 60000)
+  assert.match(html(SessionDetail, { session: finished.history[0], saved: true }), /전체 루틴 완료 · 완료 9\/9 본세트/)
+  state = m.undoSet(state, state.active.exercises[2].id, state.active.exercises[2].sets[0].id)
+  state = m.navigateExercise(state, state.active.exercises[2].id)
+  const undone = html(WorkoutScreen, props(state))
+  assert.doesNotMatch(undone, /모든 종목 완료/)
+  assert.match(undone, /class="primary full">1세트 완료<\/button>/)
+})
+
+test('restored legacy final-set rest renders elapsed time and next action without any rest controls', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  const e = state.active.exercises[0]
+  for (const set of e.sets) {
+    state = m.editReps(state, e.id, set.id, '8')
+    state = m.completeSet(state, e.id, set.id, NOW + 59000)
+  }
+  state.active.timer = { kind: 'rest', exerciseId: e.id, setId: e.sets[2].id, endAt: NOW + 200000 }
+  const markup = html(WorkoutScreen, props(state))
+  assert.match(markup, /이전 종목 완료 후/)
+  assert.match(markup, /00:00:01/)
+  assert.match(markup, /다음 종목으로<\/button>/)
+  assert.match(markup, /바벨 벤치프레스/)
+  assert.doesNotMatch(markup, /남은 휴식|휴식 종료|＋30초/)
+  assert.equal(state.active.timer.kind, 'rest')
+})
+
+test('legacy all-complete rest is hidden and unknown history plans use neutral text', () => {
+  let state = m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW))
+  state.active.exercises = [state.active.exercises[0]]
+  for (const set of state.active.exercises[0].sets) {
+    state = m.editReps(state, 'push-bench', set.id, '8')
+    state = m.completeSet(state, 'push-bench', set.id, NOW + 59000)
+  }
+  state.active.timer = { kind: 'rest', exerciseId: 'push-bench', setId: state.active.exercises[0].sets[2].id, endAt: NOW + 200000 }
+  assert.doesNotMatch(html(WorkoutScreen, props(state)), /남은 휴식|휴식 종료/)
+  const finished = m.finishWorkout(state, NOW + 60000)
+  delete finished.history[0].exercises[0].plannedSetCount
+  finished.history[0].exercises[0].structureModified = true
+  const markup = html(SessionDetail, { session: finished.history[0], saved: true })
+  assert.match(markup, /당시 계획 수 미확인/)
+  assert.doesNotMatch(markup, /전체 루틴 완료/)
+  assert.doesNotMatch(html(SessionDetail, { session: finished.history[0], saved: false }), /운동 기록 저장 완료/)
+})
+
+test('active home leads with resume before greeting and disables new workout creation', () => {
+  const state = m.startWorkout(m.createInitialState(), 'push', NOW)
+  const previous = globalThis.window
+  globalThis.window = { localStorage: { getItem: () => JSON.stringify(state) } }
+  try {
+    const markup = html(App, {})
+    assert.ok(markup.indexOf('resume-card') < markup.indexOf('home-greeting'))
+    assert.match(markup, /운동 이어하기/)
+    assert.match(markup, /disabled="">진행 중인 운동을 이어가세요/)
+  } finally { globalThis.window = previous }
 })
 
 test('home renders three navigation tabs and allows starting without sending a Health request', t => {

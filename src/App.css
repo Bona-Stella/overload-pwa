@@ -26,6 +26,8 @@
 .home-greeting { margin: 2px 0 27px; }
 .home-greeting h1 { margin: 12px 0 14px; font-size: clamp(1.6rem, 6.2vw, 2rem); line-height: 1.5; }
 .home-greeting > p:last-child { font-size: .78rem; }
+.home-greeting.compact { margin-bottom: 20px; }
+.home-greeting.compact h1 { font-size: 1.25rem; margin: 8px 0; }
 .today-card { border: 1px solid #344963; border-radius: 20px; padding: 23px 20px 16px; background: linear-gradient(135deg, #1c2d46 0%, #19212d 60%, #18202b 100%); }
 .today-card h2 { font-size: 1.9rem; font-weight: 800; letter-spacing: -.03em; margin-top: 20px; }
 .today-card > .muted { font-size: .8rem; margin: 4px 0 0; }

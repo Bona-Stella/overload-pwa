@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { Dialog } from '../../components/Dialog'
 import { ExercisePicker } from '../routine/ExercisePicker'
-import { addSessionExercise, addSessionSet, adjustRest, beginWorking, changeWeight, completeSet, editReps, formatDuration, navigateExercise, recommendation, removeSessionExercise, removeSessionSet, reorderSessionExercise, undoSet } from './model'
+import { addSessionExercise, addSessionSet, adjustRest, beginWorking, changeWeight, completeSet, editReps, formatDuration, hasIncompleteSets, navigateExercise, nextIncompleteExercise, recommendation, removeSessionExercise, removeSessionSet, reorderSessionExercise, resolveWorkoutTimer, undoSet } from './model'
 import type { WorkoutState } from './types'
 
-type Props = { state: WorkoutState; now: number; onUpdate: (transform: (s: WorkoutState) => WorkoutState) => void; onExit: () => void; onFinish: () => void; onCreate: (name: string) => string }
+type Props = { state: WorkoutState; now: number; onUpdate: (transform: (s: WorkoutState) => WorkoutState) => boolean; onExit: () => void; onFinish: () => void; onCreate: (name: string) => string }
 
 export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate }: Props) {
   const [weightOpen, setWeightOpen] = useState(false)
@@ -19,16 +19,26 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
   const exercise = session.exercises.find(e => e.id === session.currentExerciseId)
   if (!exercise) return null
   const index = session.exercises.findIndex(e => e.id === exercise.id)
-  const timer = session.timer
+  const allDone = !hasIncompleteSets(session)
+  const resolvedTimer = resolveWorkoutTimer(session)
+  const timer = resolvedTimer?.kind === 'rest' && resolvedTimer.exerciseId !== exercise.id ? null : resolvedTimer
   const resting = timer?.kind === 'rest' && timer.endAt > now && timer.exerciseId === exercise.id
   const done = exercise.sets.every(s => s.actual)
+  const nextExercise = nextIncompleteExercise(session, exercise.id)
   const nextSet = exercise.sets.find(s => !s.actual)
   const advice = recommendation(exercise)
   const completedCount = session.exercises.flatMap(e => e.sets).filter(s => s.actual).length
   const totalCount = session.exercises.reduce((sum, e) => sum + e.sets.length, 0)
   const currentExerciseId = exercise.id
 
-  function go(id: string) { onUpdate(s => navigateExercise(s, id)); setList(false); setEdit(false) }
+  function go(id: string) { if (onUpdate(s => navigateExercise(s, id))) { setList(false); setEdit(false); window.scrollTo(0, 0) } }
+  function recordSet(setId: string) {
+    const willCompleteExercise = exercise?.sets.filter(s => !s.actual).length === 1
+    if (onUpdate(s => completeSet(s, currentExerciseId, setId, Date.now())) && willCompleteExercise) {
+      setEdit(false)
+      window.scrollTo(0, 0)
+    }
+  }
   function applyWeight() {
     const value = weight.trim() ? Number(weight) : NaN
     if (!Number.isFinite(value) || value < 0) { setWeightError('0 이상의 중량을 입력해 주세요.'); return }
@@ -39,7 +49,7 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
   return <>
     <header className="timer-bar">
       <div><span>전체 운동 시간</span><strong>{formatDuration(now - session.startedAt)}</strong></div>
-      <div className={resting ? 'rest-clock' : ''}><span>{session.phase === 'warmup' ? '준비 중' : resting ? '남은 휴식' : timer?.kind === 'transition' ? '이전 종목 완료 후' : timer?.kind === 'rest' ? '휴식 완료' : '휴식 없음'}</span><strong>{resting && timer?.kind === 'rest' ? formatDuration(timer.endAt - now) : timer?.kind === 'transition' ? formatDuration(now - timer.since) : '—'}</strong></div>
+      <div className={resting ? 'rest-clock' : ''}><span>{session.phase === 'warmup' ? '준비 중' : allDone ? '모든 종목 완료' : resting ? '남은 휴식' : timer?.kind === 'transition' ? '이전 종목 완료 후' : timer?.kind === 'rest' ? '휴식 완료' : '휴식 없음'}</span><strong>{resting && timer?.kind === 'rest' ? formatDuration(timer.endAt - now) : timer?.kind === 'transition' ? formatDuration(now - timer.since) : '—'}</strong></div>
     </header>
     <div className="workout-content">
       <div className="section-heading"><button className="quiet" onClick={onExit}>‹ 홈</button><span className="muted small">{session.routineName}</span><button className="quiet danger" onClick={onFinish}>운동 종료</button></div>
@@ -50,7 +60,8 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
       </> : <>
         <div className="progress-caption"><span>{String(index + 1).padStart(2, '0')} / {String(session.exercises.length).padStart(2, '0')} 종목</span><span>{completedCount} / {totalCount} 세트 완료</span></div>
         <progress value={completedCount} max={totalCount} aria-label="전체 세트 진행" />
-        <div className="exercise-heading"><p className="eyebrow">FOCUS ON THIS SET</p><h1>{exercise.name}</h1><p className="muted">목표 {exercise.minReps}–{exercise.maxReps}회 × {exercise.sets.length}본세트</p></div>
+        {allDone && <p className="notice success" role="status">모든 종목 완료 · 기록을 확인하고 운동 종료를 눌러 저장해 주세요.</p>}
+        <div className="exercise-heading" aria-live="polite"><p className="eyebrow">FOCUS ON THIS SET</p><h1>{exercise.name}</h1><p className="muted">목표 {exercise.minReps}–{exercise.maxReps}회 × {exercise.sets.length}본세트</p></div>
         <div className="exercise-navigation"><button className="quiet" disabled={index === 0} onClick={() => go(session.exercises[index - 1].id)}>‹ 이전</button><button className="quiet" onClick={() => setList(true)}>종목 목록</button><button className="quiet" disabled={index === session.exercises.length - 1} onClick={() => go(session.exercises[index + 1].id)}>다음 ›</button></div>
         <section className="card weight-card"><div><p className="muted small">{exercise.temporaryWeight ? '오늘만 중량' : '진행 중량 · 잠금'}</p><strong>{exercise.weight}<small> kg</small></strong><p className="muted small">승인 중량 {exercise.approvedWeight} kg</p></div><button className="outline" onClick={() => { setWeight(String(exercise.weight)); setMode('today'); setWeightError(null); setWeightOpen(true) }}>중량 변경</button></section>
         {!exercise.benchmark && <p className="hint">비교 가능한 기준이 없습니다. 이번 반복 횟수를 직접 입력해 주세요.</p>}
@@ -60,7 +71,7 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
             <div className={`set-row ${set.actual ? 'completed' : nextSet?.id === set.id ? 'current' : ''}`}>
               <span className="set-number">{String(set.ordinal).padStart(2, '0')}</span><span className="benchmark">{exercise.benchmark?.[i] ?? '—'}<small> 회</small></span>
               <label className="reps-input"><span className="sr-only">{set.ordinal}세트 이번 반복 횟수</span><input inputMode="numeric" placeholder="입력" value={set.reps} disabled={!!set.actual} onChange={event => onUpdate(s => editReps(s, exercise.id, set.id, event.target.value))} /><span>회</span></label>
-              <button className={set.actual ? 'set-check checked' : 'set-check'} disabled={!set.actual && resting} aria-label={`${set.ordinal}세트 ${set.actual ? '완료 취소' : '완료'}`} onClick={() => { if (set.actual) { if (window.confirm('이 세트의 완료를 취소하고 수정할까요?')) onUpdate(s => undoSet(s, exercise.id, set.id)) } else onUpdate(s => completeSet(s, exercise.id, set.id, Date.now())) }}>{set.actual ? '✓ 완료' : '완료'}</button>
+              <button className={set.actual ? 'set-check checked' : 'set-check'} disabled={!set.actual && resting} aria-label={`${set.ordinal}세트 ${set.actual ? '완료 취소' : '완료'}`} onClick={() => { if (set.actual) { if (window.confirm('이 세트의 완료를 취소하고 수정할까요?')) onUpdate(s => undoSet(s, exercise.id, set.id)) } else recordSet(set.id) }}>{set.actual ? '✓ 완료' : '완료'}</button>
             </div>
             {set.actual && set.actual.weight !== exercise.weight && <p className="small muted actual-note">실제 완료 중량 {set.actual.weight} kg</p>}
             {edit && <button className="quiet danger full" disabled={!!set.actual || exercise.sets.length <= 1} onClick={() => onUpdate(s => removeSessionSet(s, exercise.id, set.id))}>{set.ordinal}세트 제외{set.actual ? ' · 완료 기록 보호' : ''}</button>}
@@ -71,8 +82,8 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
         {edit && <section className="card stack"><p className="small muted">현재 운동에만 적용됩니다. 완료 기록을 먼저 취소해야 해당 세트나 종목을 제외할 수 있습니다.</p><button className="outline" onClick={() => onUpdate(s => addSessionSet(s, exercise.id))}>＋ 본세트 추가</button><button className="outline" onClick={() => setPicker('add')}>＋ 종목 추가</button><button className="quiet" disabled={exercise.sets.some(s => s.actual)} onClick={() => setPicker('replace')}>현재 종목 교체</button><button className="quiet danger" disabled={exercise.sets.some(s => s.actual) || session.exercises.length <= 1} onClick={() => { if (window.confirm('현재 종목을 이번 운동에서만 제외할까요?')) onUpdate(s => removeSessionExercise(s, exercise.id)) }}>현재 종목 제외</button></section>}
         <section className="card memo-card"><label>기구 세팅 메모<textarea value={state.memos[exercise.exerciseId] ?? ''} placeholder="예: 의자 높이 3 · 그립 눈금 2" onChange={event => onUpdate(s => ({ ...s, memos: { ...s.memos, [exercise.exerciseId]: event.target.value } }))} rows={3} /></label><p className="small muted">이 종목의 기본 메모로 다음 운동에도 유지됩니다.</p></section>
         <div className="bottom-actions workout-actions">
-          {resting ? <div className="row full"><button className="primary" onClick={() => onUpdate(s => adjustRest(s, null, Date.now()))}>휴식 종료</button><button className="outline" onClick={() => onUpdate(s => adjustRest(s, 30, Date.now()))}>＋30초</button></div> : nextSet ? <button className="primary full" onClick={() => onUpdate(s => completeSet(s, exercise.id, nextSet.id, Date.now()))}>{nextSet.ordinal}세트 완료</button> : <p className="success-text">이 종목의 본세트를 모두 완료했어요.</p>}
-          {done && (index < session.exercises.length - 1 ? <button className={resting ? 'quiet full' : 'primary full'} onClick={() => go(session.exercises[index + 1].id)}>다음 종목으로 →</button> : <button className="outline full" onClick={onFinish}>운동 종료 및 요약</button>)}
+          {allDone ? <button className="primary full" onClick={onFinish}>운동 종료 및 요약</button> : resting ? <div className="row full"><button className="primary" onClick={() => onUpdate(s => adjustRest(s, null, Date.now()))}>휴식 종료</button><button className="outline" onClick={() => onUpdate(s => adjustRest(s, 30, Date.now()))}>＋30초</button></div> : nextSet ? <button key={nextSet.id} className="primary full" onClick={() => recordSet(nextSet.id)}>{nextSet.ordinal}세트 완료</button> : <p className="success-text">이 종목의 본세트를 모두 완료했어요.</p>}
+          {done && !allDone && nextExercise && <button className="primary full" onClick={() => go(nextExercise.id)}>다음 종목으로</button>}
         </div>
       </>}
     </div>

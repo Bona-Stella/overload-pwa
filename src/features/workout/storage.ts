@@ -17,6 +17,7 @@ function routineExercise(v: unknown) {
 }
 
 function workoutExercise(v: unknown) {
+  if (record(v) && v.plannedSetCount !== undefined && (!positive(v.plannedSetCount) || !Array.isArray(v.sets) || v.plannedSetCount < v.sets.length)) return false
   return record(v) && routineExercise(v) && text(v.name) && number(v.approvedWeight) && number(v.weight) && typeof v.temporaryWeight === 'boolean' && typeof v.structureModified === 'boolean' && (v.benchmark === null || list(v.benchmark, integer)) && list(v.sets, s => record(s) && text(s.id) && positive(s.ordinal) && text(s.reps) && (s.actual === null || (record(s.actual) && number(s.actual.weight) && integer(s.actual.reps) && number(s.actual.completedAt) && typeof s.actual.temporaryWeight === 'boolean'))) && unique(v.sets as unknown[])
 }
 

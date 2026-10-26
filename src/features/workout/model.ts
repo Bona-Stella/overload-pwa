@@ -1,6 +1,7 @@
-import type { Routine, RoutineExercise, WorkoutExercise, WorkoutSession, WorkoutState } from './types.ts'
+import type { Routine, RoutineExercise, WorkoutExercise, WorkoutSession, WorkoutState, WorkoutTimer } from './types.ts'
 
 export const DAYS = ['일', '월', '화', '수', '목', '금', '토']
+export const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 // Demonstration defaults only; these are editable in Settings, not training prescriptions.
 export const DEFAULT_REST_SETTINGS = { low: 180, medium: 120, high: 90 }
 export const newId = () => crypto.randomUUID()
@@ -100,8 +101,32 @@ export function restSeconds(maxReps: number, settings = DEFAULT_REST_SETTINGS) {
 function editActive(state: WorkoutState, edit: (session: WorkoutSession) => void): WorkoutState {
   if (!state.active) return state
   const active = structuredClone(state.active)
+  active.timer = resolveWorkoutTimer(active)
   edit(active)
+  active.timer = resolveWorkoutTimer(active)
   return { ...state, active }
+}
+
+export function isExerciseComplete(exercise: WorkoutExercise) {
+  return exercise.sets.length > 0 && exercise.sets.every(s => s.actual !== null)
+}
+
+export function resolveWorkoutTimer(session: WorkoutSession): WorkoutTimer {
+  const timer = session.timer
+  if (!timer || !hasIncompleteSets(session)) return null
+  const source = session.exercises.find(e => e.id === timer.exerciseId)
+  if (!source?.sets.some(s => s.id === timer.setId && s.actual)) return null
+  if (timer.kind === 'transition') return isExerciseComplete(source) ? timer : null
+  if (!isExerciseComplete(source)) return timer
+  // v1 sessions can still contain a rest saved by the old last-set behavior.
+  // Derive its display from actual completion time without rewriting stored records on load.
+  const last = source.sets.reduce((a, b) => (a.actual?.completedAt ?? 0) >= (b.actual?.completedAt ?? 0) ? a : b)
+  return last.actual ? { kind: 'transition', exerciseId: source.id, setId: last.id, since: last.actual.completedAt } : null
+}
+
+export function nextIncompleteExercise(session: WorkoutSession, afterId: string) {
+  const index = session.exercises.findIndex(e => e.id === afterId)
+  return [...session.exercises.slice(index + 1), ...session.exercises.slice(0, index)].find(e => !isExerciseComplete(e)) ?? null
 }
 
 export function beginWorking(state: WorkoutState) {
@@ -125,7 +150,12 @@ export function completeSet(state: WorkoutState, exerciseId: string, setId: stri
     if (!set.reps.trim() || !Number.isSafeInteger(reps) || reps < 0) throw new Error('실제 반복 횟수를 0 이상의 정수로 입력해 주세요.')
     if (!Number.isFinite(exercise.weight * reps)) throw new Error('중량과 횟수가 너무 큽니다. 입력을 확인해 주세요.')
     set.actual = { weight: exercise.weight, reps, completedAt: now, temporaryWeight: exercise.temporaryWeight }
-    session.timer = { kind: 'rest', exerciseId, setId, endAt: now + restSeconds(exercise.maxReps, state.restSettings) * 1000 }
+    if (isExerciseComplete(exercise)) {
+      const next = nextIncompleteExercise(session, exerciseId)
+      session.timer = next ? { kind: 'transition', exerciseId, setId, since: now } : null
+    } else {
+      session.timer = { kind: 'rest', exerciseId, setId, endAt: now + restSeconds(exercise.maxReps, state.restSettings) * 1000 }
+    }
   })
 }
 
@@ -148,11 +178,6 @@ export function adjustRest(state: WorkoutState, extraSeconds: number | null, now
 export function navigateExercise(state: WorkoutState, id: string) {
   return editActive(state, session => {
     if (session.currentExerciseId === id || !session.exercises.some(e => e.id === id)) return
-    const previous = session.exercises.find(e => e.id === session.currentExerciseId)
-    if (previous?.sets.length && previous.sets.every(s => s.actual)) {
-      const last = previous.sets.reduce((a, b) => (a.actual?.completedAt ?? 0) > (b.actual?.completedAt ?? 0) ? a : b)
-      if (last.actual) session.timer = { kind: 'transition', since: last.actual.completedAt, exerciseId: previous.id, setId: last.id }
-    } else if (session.timer?.kind === 'rest') session.timer = null
     session.currentExerciseId = id
   })
 }
@@ -235,6 +260,14 @@ export function summary(session: WorkoutSession, now: number) {
 
 export function hasIncompleteSets(session: WorkoutSession) { return session.exercises.some(e => e.sets.some(s => !s.actual)) }
 
+export function completionCounts(session: WorkoutSession) {
+  const completed = session.exercises.reduce((sum, e) => sum + e.sets.filter(s => s.actual).length, 0)
+  // Old edited history has already discarded drafts; its final plan cannot be inferred safely.
+  const counts = session.exercises.map(e => session.phase !== 'finished' ? e.sets.length : e.plannedSetCount ?? (e.structureModified ? null : e.setCount))
+  const total = counts.every(count => count !== null) ? counts.reduce<number>((sum, count) => sum + (count ?? 0), 0) : null
+  return { completed, total, allComplete: total !== null && total > 0 && completed === total }
+}
+
 export function finishWorkout(state: WorkoutState, now: number, confirmIncomplete = false): WorkoutState {
   if (!state.active) return state
   if (hasIncompleteSets(state.active) && !confirmIncomplete) throw new Error('미완료 세트는 기록에서 제외됩니다. 종료를 확인해 주세요.')
@@ -255,7 +288,7 @@ export function finishWorkout(state: WorkoutState, now: number, confirmIncomplet
   session.phase = 'finished'
   session.timer = null
   // Uncompleted drafts never become history records.
-  session.exercises = session.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.actual) }))
+  session.exercises = session.exercises.map(e => ({ ...e, plannedSetCount: e.sets.length, sets: e.sets.filter(s => s.actual) }))
   return { ...state, benchmarks, active: null, history: [session, ...state.history] }
 }
 
