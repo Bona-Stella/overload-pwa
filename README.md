@@ -18,7 +18,7 @@
   <img src="https://img.shields.io/badge/Vite-8.3.5-646CFF?style=flat-square&amp;logo=vite&amp;logoColor=white" alt="Vite">
   <img src="https://img.shields.io/badge/Tailwind_CSS-Planned-06B6D4?style=flat-square&amp;logo=tailwindcss&amp;logoColor=white" alt="Tailwind CSS Planned">
   <img src="https://img.shields.io/badge/PWA-Planned-5A0FC8?style=flat-square&amp;logo=pwa&amp;logoColor=white" alt="PWA Planned">
-  <img src="https://img.shields.io/badge/Status-Initial_Setup-6B7280?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-Core_UI_Prototype-6B7280?style=flat-square" alt="Status">
 </div>
 
 ---
@@ -40,7 +40,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> 🚧 현재 React·TypeScript·Vite와 ESLint가 구성되어 있으며, Spring Boot Health API를 호출해 서버 연결 확인 중·연결 성공·연결 실패 상태를 표시합니다. 업무 화면·인증·PWA는 아직 구현되지 않았습니다. 아래 주요 기능은 개발 목표입니다.
+> Task 002: 다크 모드 모바일 UI에서 루틴 생성·편집, 워밍업, 본세트 기록·휴식, 운동 요약·이력을 Mock 데이터와 로컬 저장으로 사용할 수 있습니다. 서버 연결 진단은 설정에서 명시적으로 열 때 실행됩니다. 인증, 실제 운동 API, 서버 동기화와 PWA 설치 지원은 아직 구현되지 않았습니다. 아래 체크리스트는 서버 연동을 포함하는 장기 목표이며, 현재 로컬 프로토타입의 상세 범위는 [Task 002 구현 보고](docs/tasks/task-002-core-ui-report.md)를 참고하세요.
 
 ---
 
@@ -178,7 +178,7 @@ PWA 배포 완료 후 다음 방법으로 설치할 수 있습니다.
 
 ### 오프라인 기록 관리
 
-운동 중 네트워크 연결이 불안정하더라도 기록을 유지할 수 있도록 로컬 저장 방식을 검토하고 있습니다.
+Task 002는 `localStorage` 저장 어댑터로 진행 중 운동과 완료 이력을 복원합니다. 로컬 저장 실패를 표시하고, 손상되거나 지원하지 않는 저장 형식은 덮어쓰지 않습니다. 아래 IndexedDB·서버 동기화 흐름은 후속 설계입니다. 앱 리소스의 오프라인 로딩과 영구 백업을 보장하지 않습니다.
 
 ```text
 User Input
@@ -324,13 +324,17 @@ overload-pwa/
 │   └── icons.svg
 ├── src/
 │   ├── assets/
-│   ├── features/health/api.ts
+│   ├── components/Dialog.tsx
+│   ├── features/health/          # 기존 API 및 진단 패널
+│   ├── features/routine/         # 종목 선택, 루틴 편집
+│   ├── features/workout/         # 상태 전이, 저장 어댑터, 운동 화면
+│   ├── features/history/         # 완료 기록 상세
 │   ├── App.css
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
 ├── eslint.config.js
-├── tests/health-api.test.mjs
+├── tests/                      # Health, 도메인, 서버 렌더링 테스트
 ├── index.html
 ├── package.json
 ├── package-lock.json
@@ -358,13 +362,13 @@ overload-pwa/
 | `types` | TypeScript 타입 정의 |
 | `utils` | 공통 유틸리티 함수 |
 
-> 위 역할 표는 향후 설계안입니다. 현재 `features/health`에 Health API 호출 코드가 있으며, 공통 `services`, 라우터와 Store 등은 아직 생성하지 않았습니다.
+> 위 역할 표는 향후 설계안입니다. 현재 `features/health`에 기존 Health API와 진단 패널이 있으며, `routine`, `workout`, `history`에 로컬 프로토타입을 구현했습니다. React 상태와 일반 CSS를 사용하며 추가 프레임워크를 설치하지 않았습니다.
 
 ---
 
 ## 🔗 Backend API 연동
 
-`overload-app`은 `fetch`로 기존 `overload-server`의 `GET /api/v1/health`를 호출합니다. HTTP 200과 JSON의 `status: "UP"`를 확인한 경우에만 연결 성공으로 표시합니다. HTTP 오류, 네트워크 오류, 잘못된 응답 및 5초 시간 초과는 연결 실패로 표시하며, **다시 확인** 버튼으로 재시도할 수 있습니다. 확인 중에는 버튼을 비활성화하고, 화면이 해제되면 진행 중인 요청을 취소합니다. 응답은 캐시하지 않습니다.
+`overload-app`의 설정 → 서버 연결 진단은 `fetch`로 기존 `overload-server`의 `GET /api/v1/health`를 호출합니다. HTTP 200과 JSON의 `status: "UP"`를 확인한 경우에만 연결 성공으로 표시합니다. HTTP 오류, 네트워크 오류, 잘못된 응답 및 5초 시간 초과는 연결 실패로 표시하며, **다시 확인** 버튼으로 재시도할 수 있습니다. 확인 중에는 버튼을 비활성화하고, 화면이 해제되면 진행 중인 요청을 취소합니다. 응답은 캐시하지 않습니다.
 
 이 검사는 애플리케이션의 HTTP 응답 여부만 확인하며 데이터베이스와 외부 서비스 상태를 보장하지 않습니다.
 
@@ -410,7 +414,7 @@ React → http://127.0.0.1:3000/api/v1/health
    ```
 
 2. 다른 터미널에서 `overload-pwa` 루트의 `npm run dev`를 실행하고 `http://127.0.0.1:3000`을 엽니다.
-3. 화면에서 **서버 연결 성공**, **UP**를 확인합니다. `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 프록시 응답의 HTTP 200과 `{"status":"UP"}`도 확인할 수 있습니다.
+3. 홈의 **설정 → 서버 연결 진단 열기**에서 **서버 연결 성공**, **UP**를 확인합니다. `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 프록시 응답의 HTTP 200과 `{"status":"UP"}`도 확인할 수 있습니다.
 4. 백엔드를 `Ctrl+C`로 종료한 뒤 **다시 확인**을 눌러 연결 실패를 확인합니다. 백엔드 재실행 후 같은 버튼으로 연결 성공 복구를 확인합니다.
 5. 검증 후 각 서버 터미널에서 `Ctrl+C`로 종료합니다.
 
@@ -474,7 +478,7 @@ node node_modules/typescript/bin/tsc -b
 npm test
 ```
 
-빌드 명령에도 TypeScript 검사(`tsc -b`)가 포함됩니다. `npm test`는 Node.js 24의 내장 테스트 러너와 TypeScript 실행 지원으로 Health API 경계 테스트 11개를 실행합니다. 정상 응답, HTTP 오류, 잘못된 JSON·상태, 네트워크 실패, 취소, 응답 헤더·본문 시간 초과를 검증하며 추가 테스트 라이브러리는 사용하지 않습니다. 별도의 `typecheck` 스크립트와 React 컴포넌트·자동 E2E 테스트는 아직 없습니다.
+빌드 명령에도 strict TypeScript 검사(`tsc -b`)가 포함됩니다. `npm test`는 Node.js 24 내장 테스트 러너로 38개 테스트(기존 Health API 11개, 운동 도메인·저장 21개, React 서버 렌더링 6개)를 실행합니다. 렌더링 테스트는 기존 TypeScript 컴파일러와 `react-dom/server`를 사용합니다. DOM 클릭·키보드 상호작용이나 브라우저 E2E 검증을 대체하지 않습니다. 별도 `typecheck` 스크립트와 E2E 도구는 도입하지 않았습니다.
 
 ### Preview Build
 

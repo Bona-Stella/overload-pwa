@@ -1,24 +1,18 @@
-:root {
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color: #615a6d;
-  background: #f7f6fa;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1.6;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  min-width: 280px;
-}
-
-p {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
+:root { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif; color: #f5f7fa; background: #0c0f14; font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; line-height: 1.6; color-scheme: dark; font-variant-numeric: tabular-nums; --bg: #101318; --card: #1a202a; --line: #303a48; --muted: #a8b3c2; --blue: #3b82f6; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, textarea, select { font: inherit; -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:disabled { opacity: .42; cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid #87b5ff; outline-offset: 3px; }
+p, h1, h2, h3 { margin: 0; overflow-wrap: anywhere; }
+h1 { font-size: 1.9rem; line-height: 1.35; font-weight: 750; letter-spacing: -.045em; margin: 7px 0 12px; }
+h2 { font-size: 1.12rem; line-height: 1.5; letter-spacing: -.025em; }
+small { font-size: .75rem; font-weight: 400; }
+button { border: 1px solid transparent; background: #242d3a; color: #f5f7fa; border-radius: 12px; min-height: 44px; padding: 10px 15px; font-weight: 650; }
+button:hover:not(:disabled) { filter: brightness(1.13); }
+input, textarea, select { width: 100%; min-width: 0; min-height: 48px; color: #f5f7fa; background: #10161f; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 16px; }
+input::placeholder, textarea::placeholder { color: #8996a7; }
+textarea { resize: vertical; }
+label { display: grid; gap: 8px; color: #c3cbd8; font-size: .82rem; font-weight: 550; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
