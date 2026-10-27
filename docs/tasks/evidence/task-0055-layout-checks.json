@@ -1,0 +1,410 @@
+[
+  {
+    "heading": "꾸준히 쌓은 나의 기록,어디서든 이어서.",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "entry",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "6자리 코드를입력해 주세요",
+    "inputFont": [
+      "27.2px"
+    ],
+    "scene": "codeWrong",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "계정 설정",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "email",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "벤치프레스",
+    "inputFont": [],
+    "scene": "workout",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "아직 전송하지 않은기록이 있어요",
+    "inputFont": [],
+    "scene": "pending",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "conflict",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "resetBlocked",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "localFailed",
+    "scroll": 305,
+    "size": {
+      "height": 568,
+      "width": 320
+    },
+    "undersized": [],
+    "viewport": 305
+  },
+  {
+    "heading": "꾸준히 쌓은 나의 기록,어디서든 이어서.",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "entry",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "6자리 코드를입력해 주세요",
+    "inputFont": [
+      "27.2px"
+    ],
+    "scene": "codeWrong",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "계정 설정",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "email",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "벤치프레스",
+    "inputFont": [],
+    "scene": "workout",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "아직 전송하지 않은기록이 있어요",
+    "inputFont": [],
+    "scene": "pending",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "conflict",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "resetBlocked",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "localFailed",
+    "scroll": 360,
+    "size": {
+      "height": 812,
+      "width": 375
+    },
+    "undersized": [],
+    "viewport": 360
+  },
+  {
+    "heading": "꾸준히 쌓은 나의 기록,어디서든 이어서.",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "entry",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "6자리 코드를입력해 주세요",
+    "inputFont": [
+      "27.2px"
+    ],
+    "scene": "codeWrong",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "계정 설정",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "email",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "벤치프레스",
+    "inputFont": [],
+    "scene": "workout",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "아직 전송하지 않은기록이 있어요",
+    "inputFont": [],
+    "scene": "pending",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "conflict",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "resetBlocked",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "localFailed",
+    "scroll": 375,
+    "size": {
+      "height": 844,
+      "width": 390
+    },
+    "undersized": [],
+    "viewport": 375
+  },
+  {
+    "heading": "꾸준히 쌓은 나의 기록,어디서든 이어서.",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "entry",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  },
+  {
+    "heading": "6자리 코드를입력해 주세요",
+    "inputFont": [
+      "27.2px"
+    ],
+    "scene": "codeWrong",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  },
+  {
+    "heading": "계정 설정",
+    "inputFont": [
+      "16px"
+    ],
+    "scene": "email",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  },
+  {
+    "heading": "벤치프레스",
+    "inputFont": [],
+    "scene": "workout",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  },
+  {
+    "heading": "아직 전송하지 않은기록이 있어요",
+    "inputFont": [],
+    "scene": "pending",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "conflict",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "resetBlocked",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  },
+  {
+    "heading": "기록의 저장 상태",
+    "inputFont": [],
+    "scene": "localFailed",
+    "scroll": 415,
+    "size": {
+      "height": 932,
+      "width": 430
+    },
+    "undersized": [],
+    "viewport": 415
+  }
+]
