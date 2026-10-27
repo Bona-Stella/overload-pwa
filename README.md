@@ -143,7 +143,7 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 | E2E Test | Playwright | 브라우저 테스트 |
 | Hosting | Cloudflare Pages | 정적 웹 애플리케이션 배포 |
 
-> React, TypeScript, Vite 및 ESLint만 현재 구성되어 있습니다. 버전 표는 `package-lock.json` 기준이며, 나머지 도구는 개발 단계에 따라 도입할 예정입니다. 스타일은 현재 일반 CSS를 사용합니다.
+> 현재 React, TypeScript, Vite, ESLint와 Node.js 내장 테스트 러너를 사용하며, 스타일은 일반 CSS입니다. 버전 표는 `package-lock.json` 기준입니다. 미도입 라이브러리는 현재 필수 도구가 아니며 채택 여부를 별도로 검토합니다. 실제 구성은 `package.json`과 [프론트엔드 개발 규칙](docs/engineering/frontend.md)을 확인합니다. 운영 IndexedDB + 원자적 Outbox는 [Task 006 최종 설계 v0.3.1](../overload-server/docs/tasks/task-006-integrated-design-v0.3.1.md)에서 확정되었지만 아직 미구현이며, Dexie.js 채택은 미확정입니다.
 
 ---
 
@@ -460,7 +460,7 @@ npm run dev
 http://127.0.0.1:3000
 ```
 
-개발 서버는 `127.0.0.1`에만 바인딩하며 `strictPort: true`이므로 3000번 포트가 사용 중이면 실행에 실패합니다. 현재 설정으로는 다른 기기의 iPhone에서 직접 접속할 수 없습니다.
+개발 서버는 `host: true`로 LAN 접속을 허용하며, 같은 네트워크의 iPhone에서는 `http://<PC의 LAN IP>:3000`으로 접속합니다. 네트워크·방화벽에서 해당 접속을 허용해야 합니다. `port: 3000`, `strictPort: true`이므로 3000번 포트가 사용 중이면 실행에 실패합니다. iPhone에서도 API 요청은 같은 Origin의 `/api`를 사용하며, 기존 Vite 프록시가 PC의 `http://127.0.0.1:8080`으로 전달합니다.
 
 ### Production Build
 
@@ -478,7 +478,7 @@ node node_modules/typescript/bin/tsc -b
 npm test
 ```
 
-빌드 명령에도 strict TypeScript 검사(`tsc -b`)가 포함됩니다. `npm test`는 Node.js 24 내장 테스트 러너로 38개 테스트(기존 Health API 11개, 운동 도메인·저장 21개, React 서버 렌더링 6개)를 실행합니다. 렌더링 테스트는 기존 TypeScript 컴파일러와 `react-dom/server`를 사용합니다. DOM 클릭·키보드 상호작용이나 브라우저 E2E 검증을 대체하지 않습니다. 별도 `typecheck` 스크립트와 E2E 도구는 도입하지 않았습니다.
+빌드 명령에도 strict TypeScript 검사(`tsc -b`)가 포함됩니다. `npm test`는 Node.js 24 내장 테스트 러너로 `tests/*.test.mjs`를 실행하며, 테스트 개수와 성공 여부는 해당 실행 결과로 확인합니다. 렌더링 테스트는 기존 TypeScript 컴파일러와 `react-dom/server`를 사용합니다. DOM 클릭·키보드 상호작용이나 브라우저 E2E 검증을 대체하지 않습니다. 별도 `typecheck` 스크립트와 E2E 도구는 도입하지 않았습니다.
 
 ### Preview Build
 

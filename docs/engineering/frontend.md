@@ -21,6 +21,9 @@ AI 코딩 에이전트와 개발자는 프론트엔드 코드의 생성,
 
 공통 작업 원칙은 저장소 루트의 `AGENTS.md`를 따릅니다.
 
+Task 007의 확정 정책과 구현 단계는 [Task 006 최종 설계 v0.3.1](../../../overload-server/docs/tasks/task-006-integrated-design-v0.3.1.md)을 따릅니다.
+아래 초기 지침의 검토·예시 표현은 최종 설계의 필수 요건을 선택 사항으로 바꾸지 않습니다.
+
 본 문서는 다음 항목에 집중합니다.
 
 - React 및 TypeScript 코드 작성 규칙
@@ -56,19 +59,23 @@ AI 코딩 에이전트와 개발자는 프론트엔드 코드의 생성,
 | Language | TypeScript |
 | UI Library | React 19.x |
 | Build Tool | Vite |
-| PWA | vite-plugin-pwa |
-| Styling | Tailwind CSS |
+| PWA | vite-plugin-pwa (미도입, 채택 검토) |
+| Styling | 일반 CSS (현재), Tailwind CSS (미도입, 채택 검토) |
 | UI Components | shadcn/ui (도입 예정) |
-| Routing | React Router |
-| HTTP Client | Axios |
-| Server State | TanStack Query |
-| Client State | Zustand |
-| Local Database | IndexedDB / Dexie.js |
-| Charts | Recharts |
-| Unit Testing | Vitest |
-| Component Testing | React Testing Library |
-| E2E Testing | Playwright |
+| Routing | React 화면 상태 (현재), React Router (미도입, 채택 검토) |
+| HTTP Client | fetch (현재), Axios (미도입, 채택 검토) |
+| Server State | 전용 라이브러리 미도입, TanStack Query 채택 검토 |
+| Client State | React 상태 (현재), Zustand (미도입, 채택 검토) |
+| Local Database | localStorage (개발 목업), IndexedDB + 원자적 Outbox (운영 설계 확정·미구현), Dexie.js (미도입, 채택 미확정) |
+| Charts | Recharts (미도입, 채택 검토) |
+| Unit Testing | Node.js 내장 test (현재), Vitest (미도입, 채택 검토) |
+| Component Testing | 기존 TypeScript 컴파일러 + React SSR (현재), React Testing Library (미도입, 채택 검토) |
+| E2E Testing | Playwright (미도입, 채택 검토) |
 | Hosting | Cloudflare Pages (예정) |
+
+현재 도입 상태는 `package.json`, Lockfile과 실제 코드를 기준으로 확인합니다.
+미도입 도구는 현재 필수 도구가 아니며, 이 문서만을 이유로 설치하거나 기존 테스트 체계를 교체하지 않습니다.
+추가 도입은 필요성 검토와 `AGENTS.md`의 주요 의존성 승인 기준을 따릅니다.
 
 ### 2.2 버전 관리 원칙
 
@@ -360,17 +367,17 @@ WorkoutCard
 |:---|:---|
 | Local UI State | React useState |
 | Complex Local State | useReducer |
-| Server State | TanStack Query |
-| Shared Client State | Zustand |
+| Server State | 전용 라이브러리 미도입; TanStack Query 채택 시 아래 지침 적용 |
+| Shared Client State | 현재 React 상태; Zustand 채택 시 아래 지침 적용 |
 | Form State | Local State / Form Library |
-| Offline Data | IndexedDB / Dexie.js |
+| Offline Data | 운영은 IndexedDB + 원자적 Outbox로 설계 확정·미구현; Dexie.js 채택 미확정 |
 
 모든 상태를 하나의 전역 Store에서 관리하지 않습니다.
 
 ### 6.2 Server State
 
-서버에서 제공하는 데이터는
-TanStack Query를 사용하여 관리합니다.
+TanStack Query는 현재 미도입입니다.
+채택하는 경우 서버 데이터 관리에 아래 지침을 적용합니다.
 
 대표적인 데이터:
 
@@ -392,8 +399,8 @@ TanStack Query를 사용하여 관리합니다.
 
 ### 6.3 Client State
 
-Zustand는 여러 컴포넌트에서 공유해야 하는
-클라이언트 상태에 사용합니다.
+Zustand는 현재 미도입입니다.
+채택하는 경우 여러 컴포넌트에서 공유해야 하는 클라이언트 상태에 아래 지침을 적용합니다.
 
 예시:
 
@@ -439,7 +446,7 @@ Zustand는 여러 컴포넌트에서 공유해야 하는
 규칙:
 
 - API 호출은 공통 HTTP Client를 사용합니다.
-- 컴포넌트에서 Axios 인스턴스를 반복 생성하지 않습니다.
+- Axios를 채택하는 경우 컴포넌트에서 인스턴스를 반복 생성하지 않습니다.
 - API Endpoint를 여러 파일에 중복 하드코딩하지 않습니다.
 - 요청 및 응답 타입을 명확하게 정의합니다.
 - 서버 오류와 네트워크 오류를 구분합니다.
@@ -552,9 +559,9 @@ Overload는 iPhone 사용 환경을 우선합니다.
 - PC 및 태블릿에서도 정상적으로 동작하도록 확장합니다.
 - 가로 스크롤을 불필요하게 발생시키지 않습니다.
 
-### 8.2 Tailwind CSS
+### 8.2 스타일링
 
-- Tailwind CSS를 기본 스타일링 도구로 사용합니다.
+- 현재 일반 CSS를 유지합니다. Tailwind CSS는 미도입이며 채택 전 필수 도구로 취급하지 않습니다.
 - 디자인 토큰을 일관되게 사용합니다.
 - 색상, 간격, 타이포그래피 규칙을 통일합니다.
 - 같은 스타일의 불필요한 중복을 줄입니다.
@@ -703,7 +710,8 @@ Overload의 핵심 기능은 운동 기록 입력입니다.
 
 ### 10.1 Routing
 
-React Router를 기본 라우팅 도구로 사용합니다.
+현재 React 화면 상태 기반 내비게이션을 유지합니다.
+React Router는 미도입이며, 채택하는 경우 아래 라우터 관련 지침을 적용합니다.
 
 - 화면 경로를 일관되게 정의합니다.
 - 라우터 설정을 여러 위치에 분산하지 않습니다.
@@ -779,7 +787,7 @@ Standalone 모드를 기본 방향으로 검토합니다.
 
 ### 11.3 Service Worker
 
-`vite-plugin-pwa`를 기본 도구로 사용합니다.
+`vite-plugin-pwa`는 미도입입니다. 도입을 검토하고 승인된 범위에서 채택할 때 아래 지침을 적용합니다.
 
 - Service Worker의 역할을 명확하게 유지합니다.
 - 캐싱 대상과 제외 대상을 구분합니다.
@@ -851,9 +859,11 @@ Service Worker 업데이트 과정에서
 
 ### 12.1 로컬 데이터 저장
 
-오프라인 기록 저장에는 IndexedDB 사용을 검토합니다.
+운영 로컬 저장은 IndexedDB + 원자적 Outbox로 설계가 확정되었으며 아직 미구현입니다.
+도메인 상태와 전송 명령의 저장 원자성·완료 표시 기준은 최종 설계 4절을 따릅니다.
 
-Dexie.js를 도입하면 IndexedDB 접근을 추상화할 수 있습니다.
+Dexie.js 채택은 미확정입니다. 기존 `overload.core.v1` 개발 목업을 운영 계정 데이터로 이전하지 않으며,
+목업 데이터의 실제 폐기는 별도 승인 범위입니다.
 
 규칙:
 
@@ -868,12 +878,12 @@ Dexie.js를 도입하면 IndexedDB 접근을 추상화할 수 있습니다.
 
 사용자별 로컬 데이터를 구분합니다.
 
-- 사용자 ID 또는 식별 가능한 소유 범위를 고려합니다.
+- 사용자별 로컬 소유 범위는 최종 설계 4절의 계정·세대 격리 기준을 따릅니다.
 - 다른 계정의 기록이 노출되지 않도록 합니다.
-- 로그아웃 시 미동기화 데이터의 처리 정책을 정의합니다.
+- 로그아웃 시 미동기화 데이터는 최종 설계의 계정 격리·보존 정책에 따라 처리합니다.
 - 사용자 전환 시 이전 사용자의 데이터가 섞이지 않도록 합니다.
 - 미동기화 기록을 경고 없이 삭제하지 않습니다.
-- 로그아웃 후 데이터 보존 및 삭제 정책은 별도로 확정합니다.
+- 로그아웃 후 데이터 보존·접근 차단·삭제는 최종 설계와 계정 정책을 따릅니다. 세부 저장소 구현은 별도로 검증합니다.
 
 ### 12.3 동기화 상태
 
@@ -897,6 +907,8 @@ SYNCING
 상태의 정확한 이름은 구현 시 변경할 수 있습니다.
 
 ### 12.4 동기화 흐름
+
+아래의 로컬 상태 저장과 대기 명령 추가는 최종 설계에 따라 하나의 IndexedDB 트랜잭션으로 처리합니다.
 
 권장 개념 구조:
 
@@ -938,10 +950,10 @@ Network Available?
 
 - 동기화 이전에 로컬 기록 저장 성공 여부를 확인합니다.
 - 네트워크 오류로 Pending 데이터를 삭제하지 않습니다.
-- 서버에 성공적으로 반영되었는지 확인한 뒤 상태를 변경합니다.
+- 서버 ACK를 확인한 뒤 동기화 완료 상태로 변경합니다. 로컬 운동 완료 기준과 구분합니다.
 - 요청의 순서가 중요한 경우 순서를 유지합니다.
 - 중복 요청으로 인한 기록 중복 생성을 방지합니다.
-- 필요 시 클라이언트 요청 ID 또는 멱등성 키를 사용합니다.
+- 전송 명령의 식별·멱등성·봉인·ACK는 최종 설계 4절을 따르며, 구체적인 API 형식은 구현 전 검토합니다.
 - 인증 실패 시 무조건적인 재시도를 중단합니다.
 - 충돌 발생 시 데이터를 임의로 덮어쓰지 않습니다.
 
@@ -970,8 +982,8 @@ Network Available?
 단순히 최신 타임스탬프라는 이유로
 무조건 덮어쓰는 방식을 채택하지 않습니다.
 
-최종 충돌 해결 정책은
-백엔드와 함께 설계합니다.
+충돌 해결의 확정 정책은 최종 설계 4절을 따릅니다.
+차이 비교·복구 DTO와 실패 처리 등 남은 기술 계약은 백엔드와 함께 검증합니다.
 
 ### 12.8 저장소 유실 가능성
 
@@ -1007,10 +1019,10 @@ IndexedDB도 사용자가 데이터를 삭제하거나
 
 ### 13.2 인증 정보 저장
 
-인증 방식은 백엔드와 함께 확정합니다.
+인증 방향은 최종 설계 3절의 쿠키 세션 방식으로 확정되었으며, 현재 실제 인증은 미구현입니다.
 
-- Access Token을 무조건 Local Storage에 저장하지 않습니다.
-- Cookie 기반 인증을 사용할 경우 보안 속성을 검토합니다.
+- 애플리케이션 JWT·Access/Refresh Token 저장 흐름을 별도로 도입하지 않습니다.
+- 운영 Cookie 인증의 보안 속성을 최종 설계에 맞게 적용합니다.
 - 인증 비밀 정보를 코드에 하드코딩하지 않습니다.
 - 로그에 토큰이나 비밀번호를 출력하지 않습니다.
 - 브라우저에 노출되는 환경변수를 비밀 저장소로 취급하지 않습니다.
@@ -1158,8 +1170,9 @@ Vite 환경변수는 다음 원칙을 따릅니다.
 
 ### 16.3 Component Test
 
-React Testing Library를 사용하여
-사용자 관점에서 컴포넌트를 테스트합니다.
+현재 기존 TypeScript 컴파일러와 React 서버 렌더링을 사용하는 테스트를 유지합니다.
+React Testing Library는 미도입이며, 채택하는 경우 사용자 관점의 상호작용 테스트에 활용합니다.
+서버 렌더링 테스트를 실제 DOM 상호작용·브라우저 E2E 검증 완료로 간주하지 않습니다.
 
 검증 대상:
 
@@ -1480,42 +1493,34 @@ Tests
 
 ## 20. 추가 설계 결정이 필요한 항목
 
-다음 항목은 프로젝트 진행 중 별도로 확정합니다.
+인증·저장·동기화·운동 도메인의 확정 정책은 최종 설계를 따릅니다.
+아래에는 그 정책을 다시 결정하는 항목이 아닌, 남은 기술 상세와 후속 검토 대상을 정리합니다.
 
 ### UI / UX
 
-- 디자인 시스템 및 테마
-- 모바일 내비게이션 구조
-- 운동 중 입력 화면의 상세 UX
-- 운동 완료 및 저장 피드백 방식
+- 기존 디자인·테마를 넘어서는 후속 확장
+- 최종 설계 범위 안의 입력 화면·저장 상태 피드백 세부 UX
 - 그래프 및 통계 시각화 방식
 
 ### API / Authentication
 
-- 최종 인증 방식
-- 인증 상태 유지 및 갱신 정책
+- 확정된 인증 정책을 적용할 쿠키·CSRF·배치 환경의 기술 상세
 - API 오류 응답 규약
 - 요청 및 응답 타입
-- 인증 만료 시 운동 기록 처리
 
 ### PWA / Offline
 
-- 오프라인 저장 도입 시점
 - 로컬 데이터 스키마
-- 오프라인 동기화 정책
-- 중복 요청 및 멱등성 처리
-- 여러 기기 간 데이터 충돌 해결 정책
-- 로그아웃 시 로컬 데이터 처리
+- 동기화 명령·ACK·변경 pull cursor의 세부 계약
+- 멱등 요청 fingerprint와 재시도·재기준화의 기술 상세
+- 기기 제어권 이전·선택 복구의 세부 DTO와 경합 처리
 - PWA 업데이트 및 사용자 안내 방식
 
 ### Domain
 
-- 중량의 최소 단위 및 정밀도
-- 세트 유형
-- 운동 완료 기준
-- 운동 볼륨 계산 기준
-- PR 계산 기준
-- 사용자별 시간대 처리
+- 중량 데이터의 정밀도 및 기술적 수치 상한
+- MVP 범위 밖 세트 유형과 PR의 후속 확장 기준
+- 기기 시계 오류·날짜 정정 등 최종 설계에서 남긴 기술 계약
 
 확정되지 않은 항목은 임의로 결정하지 않습니다.
 
