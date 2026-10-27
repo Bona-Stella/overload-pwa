@@ -1,0 +1,264 @@
+{
+  "origin": "http://127.0.0.1:3055",
+  "fixture": "tests/fixtures/task005-cardio.html",
+  "priorChecks": [
+    {
+      "scenario": "weight progress hides persistent cardio add",
+      "passed": true
+    },
+    {
+      "scenario": "last weight set waits for manual next",
+      "passed": true
+    },
+    {
+      "scenario": "ready timer stays at zero after 65 seconds",
+      "passed": true
+    },
+    {
+      "scenario": "running exceeds target without auto completion",
+      "passed": true
+    },
+    {
+      "scenario": "pause excludes one hour",
+      "passed": true
+    },
+    {
+      "scenario": "resume adds 30 seconds to 65 seconds",
+      "passed": true
+    },
+    {
+      "scenario": "reload and home restore running, paused and review states",
+      "passed": true
+    },
+    {
+      "scenario": "review drafts survive cancel and reload",
+      "passed": true
+    },
+    {
+      "scenario": "negative distance blocks confirmation",
+      "passed": true
+    },
+    {
+      "scenario": "routine required time validation",
+      "passed": true
+    },
+    {
+      "scenario": "bike resistance replaces incline",
+      "passed": true
+    },
+    {
+      "scenario": "routine cardio add/edit/reorder/delete",
+      "passed": true
+    },
+    {
+      "scenario": "saved failures preserve BPM draft and retry",
+      "passed": true
+    },
+    {
+      "scenario": "weight-only finish has no mandatory cardio popup",
+      "passed": true
+    }
+  ],
+  "checks": [
+    {
+      "scenario": "stairs-no-distance-required",
+      "passed": true
+    },
+    {
+      "scenario": "real-two-tab-conflict",
+      "passed": true
+    },
+    {
+      "scenario": "all-final-storage-valid",
+      "passed": true
+    },
+    {
+      "scenario": "today-only-keeps-original-routine",
+      "passed": true
+    },
+    {
+      "scenario": "cardio-only-history-and-zero-weight-sets",
+      "passed": true
+    },
+    {
+      "scenario": "mixed-corrected-time-and-skipped-plan",
+      "passed": true
+    }
+  ],
+  "layouts": [
+    {
+      "cta": [
+        {
+          "bottom": 798,
+          "left": 20,
+          "right": 340,
+          "text": "유산소 기록 확정",
+          "top": 746
+        }
+      ],
+      "headerTop": 0,
+      "inputRect": {
+        "bottom": 429.796875,
+        "height": 48,
+        "left": 42,
+        "right": 318,
+        "top": 381.796875,
+        "width": 276,
+        "x": 42,
+        "y": 381.796875
+      },
+      "scrollWidth": 360,
+      "viewport": [
+        375,
+        812
+      ]
+    },
+    {
+      "cta": [
+        {
+          "bottom": 830,
+          "left": 20,
+          "right": 355,
+          "text": "유산소 기록 확정",
+          "top": 778
+        }
+      ],
+      "headerTop": 0,
+      "inputRect": {
+        "bottom": 446.1875,
+        "height": 48,
+        "left": 42,
+        "right": 333,
+        "top": 398.1875,
+        "width": 291,
+        "x": 42,
+        "y": 398.1875
+      },
+      "scrollWidth": 375,
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "cta": [
+        {
+          "bottom": 918,
+          "left": 20,
+          "right": 395,
+          "text": "유산소 기록 확정",
+          "top": 866
+        }
+      ],
+      "headerTop": 0,
+      "inputRect": {
+        "bottom": 489.59375,
+        "height": 48,
+        "left": 42,
+        "right": 373,
+        "top": 441.59375,
+        "width": 331,
+        "x": 42,
+        "y": 441.59375
+      },
+      "scrollWidth": 415,
+      "viewport": [
+        430,
+        932
+      ]
+    }
+  ],
+  "history": [
+    {
+      "id": "fa182fce-702b-445d-918d-7f6923e41617",
+      "routineName": "유산소 전용 QA",
+      "weightSets": 0,
+      "cardio": [
+        {
+          "kind": "bike",
+          "status": "completed",
+          "result": {
+            "timerMs": 5000,
+            "activeMs": 5000,
+            "corrected": false,
+            "distance": null,
+            "bpm": null,
+            "completedAt": 1793075034425
+          }
+        }
+      ]
+    },
+    {
+      "id": "f8f02ab9-9753-4ec3-8a13-ec7e1c8de081",
+      "routineName": "웨이트만 QA",
+      "weightSets": 1,
+      "cardio": [
+        {
+          "kind": "stairs",
+          "status": "completed",
+          "result": {
+            "timerMs": 5000,
+            "activeMs": 5000,
+            "corrected": false,
+            "distance": null,
+            "bpm": null,
+            "completedAt": 1793074789287
+          }
+        }
+      ]
+    },
+    {
+      "id": "4c392922-668a-4d0f-bddd-ac1483ea653f",
+      "routineName": "웨이트만 QA",
+      "weightSets": 1
+    },
+    {
+      "id": "4760a46e-9f62-4fc1-9dbb-6de427a73e07",
+      "routineName": "유산소 전용 QA",
+      "weightSets": 0,
+      "cardio": [
+        {
+          "kind": "bike",
+          "status": "completed",
+          "result": {
+            "timerMs": 65000,
+            "activeMs": 65000,
+            "corrected": false,
+            "distance": null,
+            "bpm": 145,
+            "completedAt": 1793074784287
+          }
+        }
+      ]
+    },
+    {
+      "id": "3f7242ba-cafc-453e-a391-f228048f9f3e",
+      "routineName": "혼합 QA",
+      "weightSets": 1,
+      "cardio": [
+        {
+          "kind": "treadmill",
+          "status": "completed",
+          "result": {
+            "timerMs": 95000,
+            "activeMs": 90000,
+            "corrected": true,
+            "distance": 1.2,
+            "bpm": 140,
+            "completedAt": 1793074719287
+          }
+        },
+        {
+          "kind": "bike",
+          "status": "skipped",
+          "result": null
+        }
+      ]
+    }
+  ],
+  "notes": [
+    "Synthetic isolated test data only.",
+    "The test clock advances through QA UI; no production or iPhone storage touched.",
+    "DOM viewports do not verify actual iPhone Safari, virtual keyboard, lock screen or Standalone."
+  ]
+}

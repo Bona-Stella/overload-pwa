@@ -34,12 +34,73 @@ const { SettingsScreen } = await import('../src/features/settings/SettingsScreen
 const { CurrentWeightReview, ProgressChangeHistory } = await import('../src/features/history/ProgressionHistory.tsx')
 const { WeightInput } = await import('../src/components/WeightInput.tsx')
 const { RepsInput } = await import('../src/components/RepsInput.tsx')
+const { CardioPlanEditor } = await import('../src/features/routine/CardioPlanEditor.tsx')
+const c = await import('../src/features/workout/cardio.ts')
 const { default: App } = await import('../src/App.tsx')
 const m = await import('../src/features/workout/model.ts')
 const NOW = new Date(2026, 9, 26, 12).getTime()
 const noop = () => {}
 const props = state => ({ state, now: NOW + 60000, onUpdate: noop, onExit: noop, onFinish: noop, onCreate: () => '' })
 const html = (Component, props) => renderToStaticMarkup(React.createElement(Component, props))
+
+const cardioPlan = (kind = 'treadmill') => ({ id: 'cardio-plan', kind, name: c.CARDIO_NAMES[kind], targetSeconds: 60, targetDistance: null, intensity: null, incline: null, resistance: null })
+function cardioState() {
+  const state = m.createInitialState()
+  return m.startWorkout(m.saveRoutine(state, { id: 'cardio', name: '유산소', exercises: [], cardio: [cardioPlan()] }, []), 'cardio', NOW)
+}
+
+test('cardio plan inputs show no weight fields and equipment-specific optional settings', () => {
+  for (const kind of Object.keys(c.CARDIO_NAMES)) {
+    const markup = html(CardioPlanEditor, { plan: cardioPlan(kind), onSave: noop, onCancel: noop })
+    assert.match(markup, /목표 시간/)
+    assert.doesNotMatch(markup, /본세트|최소 횟수|최초 중량|BPM|칼로리/)
+    assert.equal(markup.includes('경사도'), kind === 'treadmill')
+    assert.equal(markup.includes('저항 레벨'), kind === 'bike')
+    assert.equal(markup.includes('목표 거리'), ['treadmill', 'bike', 'outdoor'].includes(kind))
+  }
+})
+
+test('cardio-only preparation has explicit start and zero actual time without warmup or weight controls', () => {
+  const markup = html(WorkoutScreen, props(cardioState()))
+  assert.match(markup, /유산소 시작/)
+  assert.match(markup, /시작을 눌러야 측정/)
+  assert.match(markup, /00:00:00/)
+  assert.doesNotMatch(markup, /준비운동 완료|중량 변경|본세트 기록|휴식 종료|다음 세트 준비/)
+})
+
+test('cardio running and review use actual timer and optional results without rest warnings or automatic target completion', () => {
+  let state = cardioState()
+  const id = state.active.cardio[0].id
+  state = c.startCardio(state, id, NOW)
+  let markup = html(WorkoutScreen, { ...props(state), now: NOW + 65000 })
+  assert.match(markup, /00:01:05/)
+  assert.match(markup, /목표 시간 도달/)
+  assert.match(markup, /일시정지|유산소 완료/)
+  assert.doesNotMatch(markup, /다음 세트 준비|rest-preparation-card|휴식 종료|실제 거리/)
+  state = c.reviewCardio(state, id, NOW + 65000)
+  markup = html(WorkoutScreen, props(state))
+  assert.match(markup, /타이머 자동 기록/)
+  assert.match(markup, /실제 거리|수동 선택 입력|방치 등으로 실제 시간 정정|유산소 기록 확정/)
+  assert.doesNotMatch(markup, /정정 실제 시간 \(초\)/)
+})
+
+test('skipped cardio summary cannot claim full completion and keeps weight volume isolated', () => {
+  const state = m.finishWorkout(cardioState(), NOW + 60000, true)
+  const markup = html(SessionDetail, { session: state.history[0], saved: true })
+  assert.match(markup, /유산소 완료 0\/1 종목/)
+  assert.match(markup, /미시작 · 건너뜀/)
+  assert.doesNotMatch(markup, /전체 루틴 완료|이 운동의 중량 검토 결과/)
+  assert.equal(m.summary(state.history[0], NOW).volume, 0)
+})
+
+test('resume exposes persisted cardio review state and timer; weight progress has no persistent cardio add', () => {
+  let state = cardioState()
+  const id = state.active.cardio[0].id
+  state = c.reviewCardio(c.startCardio(state, id, NOW), id, NOW + 10000)
+  assert.match(html(ResumeWorkoutCard, { session: state.active, now: NOW + 60000, onResume: noop }), /유산소 완료 확인/)
+  assert.match(html(ResumeWorkoutCard, { session: state.active, now: NOW + 60000, onResume: noop }), /00:00:10/)
+  assert.doesNotMatch(html(WorkoutScreen, props(m.beginWorking(m.startWorkout(m.createInitialState(), 'push', NOW)))), /＋ 유산소 추가/)
+})
 
 test('warmup renders total elapsed time and one preparation action without any set inputs', () => {
   const markup = html(WorkoutScreen, props(m.startWorkout(m.createInitialState(), 'push', NOW)))

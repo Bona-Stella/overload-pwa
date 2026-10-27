@@ -7,7 +7,29 @@ export type RoutineExercise = {
   maxReps: number
   initialWeight: number
 }
-export type Routine = { id: string; name: string; exercises: RoutineExercise[] }
+export type CardioKind = 'treadmill' | 'bike' | 'outdoor' | 'stairs' | 'other'
+export type CardioPlan = {
+  id: string
+  kind: CardioKind
+  name: string
+  targetSeconds: number
+  targetDistance: number | null
+  intensity: { mode: 'speed' | 'pace'; value: number } | null
+  incline: number | null
+  resistance: number | null
+}
+export type CardioActivity = {
+  id: string
+  plan: CardioPlan
+  status: 'ready' | 'running' | 'paused' | 'review' | 'completed' | 'skipped'
+  startedAt: number | null
+  runSince: number | null
+  pausedAt: number | null
+  accumulatedMs: number
+  draft: { distance: string; bpm: string; correctedSeconds: string | null }
+  result: { timerMs: number; activeMs: number; corrected: boolean; distance: number | null; bpm: number | null; completedAt: number } | null
+}
+export type Routine = { id: string; name: string; exercises: RoutineExercise[]; cardio?: CardioPlan[] }
 export type WorkoutSet = {
   id: string
   ordinal: number
@@ -38,6 +60,7 @@ export type WorkoutSession = {
   phase: 'warmup' | 'working' | 'finished'
   currentExerciseId: string
   exercises: WorkoutExercise[]
+  cardio?: CardioActivity[]
   timer: WorkoutTimer
   updatedBenchmarks: string[]
 }

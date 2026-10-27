@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { WeightInput } from '../../components/WeightInput'
 import { DAYS, WEEKDAY_ORDER, moveItem, newId, validateRoutine } from '../workout/model'
-import type { Routine, RoutineExercise, WorkoutState } from '../workout/types'
+import type { CardioPlan, Routine, RoutineExercise, WorkoutState } from '../workout/types'
+import { CardioPlanEditor } from './CardioPlanEditor'
+import { CardioPlanSummary } from '../workout/CardioPlanSummary'
 import { ExercisePicker } from './ExercisePicker'
 
 type DraftExercise = { id: string; exerciseId: string; setCount: string; minReps: string; maxReps: string; initialWeight: string }
@@ -12,13 +14,16 @@ export function RoutineEditor({ state, routine, onSave, onCancel, onCreate }: { 
   const [days, setDays] = useState<number[]>(Object.entries(state.schedule).filter(([, id]) => id === routine.id).map(([day]) => Number(day)))
   const [exercises, setExercises] = useState<DraftExercise[]>(routine.exercises.map(e => ({ ...e, setCount: String(e.setCount), minReps: String(e.minReps), maxReps: String(e.maxReps), initialWeight: String(e.initialWeight) })))
   const [picker, setPicker] = useState(false)
+  const [cardio, setCardio] = useState<CardioPlan[]>(routine.cardio ?? [])
+  const [cardioEditor, setCardioEditor] = useState<CardioPlan | 'new' | null>(null)
   const [progressWeights, setProgressWeights] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
   function change(id: string, field: keyof Pick<RoutineExercise, 'setCount' | 'minReps' | 'maxReps' | 'initialWeight'>, value: string) {
     setExercises(current => current.map(e => e.id === id ? { ...e, [field]: value } : e))
   }
   function save() {
-    const result: Routine = { id: routine.id, name, exercises: exercises.map(e => ({ ...e, setCount: numeric(e.setCount), minReps: numeric(e.minReps), maxReps: numeric(e.maxReps), initialWeight: numeric(e.initialWeight) })) }
+    if (cardioEditor) { setError('유산소 계획을 적용하거나 편집 취소한 뒤 루틴을 저장해 주세요.'); return }
+    const result: Routine = { id: routine.id, name, exercises: exercises.map(e => ({ ...e, setCount: numeric(e.setCount), minReps: numeric(e.minReps), maxReps: numeric(e.maxReps), initialWeight: numeric(e.initialWeight) })), ...(cardio.length || routine.cardio ? { cardio } : {}) }
     const issue = validateRoutine(result)
     const changes = Object.fromEntries(exercises.filter(e => progressWeights[e.id] !== undefined).map(e => [e.id, numeric(progressWeights[e.id])]))
     if (issue) setError(issue)
@@ -51,6 +56,8 @@ export function RoutineEditor({ state, routine, onSave, onCancel, onCreate }: { 
     </section>)}
     <button type="button" className="outline full" onClick={() => setPicker(!picker)}>{picker ? '종목 선택 닫기' : '＋ 운동 종목 추가'}</button>
     {picker && <ExercisePicker definitions={state.definitions} onCreate={onCreate} onSelect={exerciseId => { setExercises([...exercises, { id: newId(), exerciseId, setCount: '3', minReps: '6', maxReps: '10', initialWeight: '' }]); setPicker(false) }} />}
+    {cardio.map((plan, i) => <section className="card stack" key={plan.id}><h2>유산소 {i + 1} · {plan.name}</h2><CardioPlanSummary plan={plan} /><div className="row"><button type="button" className="quiet" disabled={i === 0} aria-label={`유산소 ${i + 1} 위로`} onClick={() => setCardio(moveItem(cardio, i, -1))}>↑</button><button type="button" className="quiet" disabled={i === cardio.length - 1} aria-label={`유산소 ${i + 1} 아래로`} onClick={() => setCardio(moveItem(cardio, i, 1))}>↓</button><button type="button" className="outline" onClick={() => setCardioEditor(plan)}>계획 편집</button><button type="button" className="quiet danger" onClick={() => setCardio(cardio.filter(a => a.id !== plan.id))}>유산소 제거</button></div></section>)}
+    {cardioEditor ? <CardioPlanEditor key={cardioEditor === 'new' ? 'new' : cardioEditor.id} plan={cardioEditor === 'new' ? undefined : cardioEditor} onCancel={() => setCardioEditor(null)} onSave={plan => { setCardio(current => current.some(a => a.id === plan.id) ? current.map(a => a.id === plan.id ? plan : a) : [...current, plan]); setCardioEditor(null); setError(null) }} /> : <button type="button" className="outline full" onClick={() => setCardioEditor('new')}>＋ 유산소 계획 추가</button>}
     {error && <p role="alert" className="notice error">{error}</p>}
     <div className="bottom-actions"><button type="button" className="quiet" onClick={onCancel}>취소</button><button type="submit" className="primary">루틴 저장</button></div>
   </form>

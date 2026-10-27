@@ -1,5 +1,6 @@
 import { createInitialState } from './model.ts'
 import type { WorkoutState } from './types.ts'
+import { isCardioActivity, isCardioPlan } from './cardio.ts'
 
 export const STORAGE_KEY = 'overload.core.v1'
 export type StorageAdapter = Pick<Storage, 'getItem' | 'setItem'>
@@ -24,7 +25,11 @@ function workoutExercise(v: unknown) {
 function session(v: unknown, finished: boolean) {
   if (!record(v) || !text(v.id) || !text(v.routineId) || !text(v.routineName) || !text(v.date) || !/^\d{4}-\d{2}-\d{2}$/.test(v.date) || !number(v.startedAt) || !text(v.currentExerciseId) || !list(v.exercises, workoutExercise) || !list(v.updatedBenchmarks, text)) return false
   const exercises = v.exercises as Record<string, unknown>[]
-  if (!unique(exercises) || !exercises.length || !exercises.some(e => e.id === v.currentExerciseId)) return false
+  if (v.cardio !== undefined && !list(v.cardio, a => isCardioActivity(a, finished))) return false
+  const cardio = (v.cardio ?? []) as Record<string, unknown>[]
+  const activities = [...exercises, ...cardio]
+  if (!unique([...activities, ...cardio.map(a => a.plan)]) || !activities.length || !activities.some(e => e.id === v.currentExerciseId) || cardio.filter(a => a.status === 'running' || a.status === 'review').length > 1) return false
+  if (cardio.some(a => Number(a.startedAt ?? v.startedAt) < Number(v.startedAt) || (finished && Number((a.result as Record<string, unknown> | null)?.completedAt ?? v.endedAt) > Number(v.endedAt)))) return false
   if (finished) return v.phase === 'finished' && number(v.endedAt) && v.endedAt >= v.startedAt && v.timer === null && exercises.every(e => (e.sets as Record<string, unknown>[]).every(s => s.actual !== null))
   if (!['warmup', 'working'].includes(String(v.phase)) || v.endedAt !== null || exercises.some(e => !(e.sets as unknown[]).length)) return false
   if (v.timer === null) return true
@@ -40,10 +45,10 @@ function progressChange(v: unknown) {
 }
 
 export function isWorkoutState(v: unknown): v is WorkoutState {
-  if (!record(v) || v.version !== 1 || !list(v.definitions, d => record(d) && text(d.id) && text(d.name)) || !list(v.routines, r => record(r) && text(r.id) && text(r.name) && list(r.exercises, routineExercise) && (r.exercises as unknown[]).length > 0 && unique(r.exercises as unknown[]))) return false
+  if (!record(v) || v.version !== 1 || !list(v.definitions, d => record(d) && text(d.id) && text(d.name)) || !list(v.routines, r => record(r) && text(r.id) && text(r.name) && list(r.exercises, routineExercise) && (r.cardio === undefined || list(r.cardio, isCardioPlan)) && ((r.exercises as unknown[]).length + ((r.cardio as unknown[] | undefined)?.length ?? 0)) > 0 && unique([...(r.exercises as unknown[]), ...((r.cardio as unknown[] | undefined) ?? [])]))) return false
   const definitions = v.definitions as { id: string }[]
-  const routines = v.routines as { id: string; exercises: { exerciseId: string; id: string }[] }[]
-  if (!unique(definitions) || !unique(routines) || !unique(routines.flatMap(r => r.exercises)) || routines.some(r => r.exercises.some(e => !definitions.some(d => d.id === e.exerciseId)))) return false
+  const routines = v.routines as { id: string; exercises: { exerciseId: string; id: string }[]; cardio?: { id: string }[] }[]
+  if (!unique(definitions) || !unique(routines) || !unique(routines.flatMap(r => [...r.exercises, ...(r.cardio ?? [])])) || routines.some(r => r.exercises.some(e => !definitions.some(d => d.id === e.exerciseId)) || r.cardio?.some(e => definitions.some(d => d.id === e.id)))) return false
   if (v.progressChanges !== undefined && (!list(v.progressChanges, progressChange) || !unique(v.progressChanges))) return false
   return record(v.schedule) && Object.entries(v.schedule).every(([day, id]) => /^[0-6]$/.test(day) && routines.some(r => r.id === id)) && dictionary(v.progress, number) && dictionary(v.memos, text) && dictionary(v.benchmarks, b => record(b) && text(b.sessionId) && list(b.reps, integer)) && record(v.restSettings) && positive(v.restSettings.low) && positive(v.restSettings.medium) && positive(v.restSettings.high) && (v.active === null || session(v.active, false)) && list(v.history, h => session(h, true))
 }

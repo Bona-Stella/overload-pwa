@@ -101,6 +101,11 @@
 .rest-urgent strong { animation: rest-ready 1.6s ease-in-out infinite; }
 @keyframes rest-ready { 0%, 100% { background-color: #51391b66; } 50% { background-color: #80542188; } }
 .workout-content { padding: 12px 20px calc(200px + env(safe-area-inset-bottom)); }
+.workout-content:has(.cardio-add-end) { padding-bottom: calc(320px + env(safe-area-inset-bottom)); }
+.cardio-clock { text-align: center; }
+.cardio-clock > strong { display: block; margin: 20px 0; font-size: clamp(2.2rem, 10vw, 3rem); font-variant-numeric: tabular-nums; }
+.cardio-content { padding-bottom: calc(240px + env(safe-area-inset-bottom)); }
+.cardio-content .exercise-heading h1 { overflow-wrap: anywhere; }
 .warmup-hero { padding: 35px 0; text-align: center; }
 .orbit { width: 100px; height: 100px; margin: 10px auto 30px; display: grid; place-content: center; border: 1px solid #4e7bb5; border-radius: 50%; background: #20334c; color: #92bdff; font-size: 55px; }
 .warmup-hero h1 { font-size: 1.85rem; margin: 15px 0; }

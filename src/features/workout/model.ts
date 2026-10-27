@@ -1,19 +1,13 @@
+import { newId } from './id.ts'
+export { newId } from './id.ts'
 import type { Benchmark, ProgressChange, Routine, RoutineExercise, WorkoutExercise, WorkoutSession, WorkoutState, WorkoutTimer } from './types.ts'
 import { validReps } from './reps.ts'
+import { cardioCounts, cardioPending, createCardio, isCardioPlan, skipCardio } from './cardio.ts'
 
 export const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 export const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
 // Demonstration defaults only; these are editable in Settings, not training prescriptions.
 export const DEFAULT_REST_SETTINGS = { low: 180, medium: 120, high: 90 }
-export function newId() {
-  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
-  // LAN HTTP previews lack randomUUID; getRandomValues still provides UUID v4 entropy.
-  const bytes = crypto.getRandomValues(new Uint8Array(16))
-  bytes[6] = (bytes[6] & 0x0f) | 0x40
-  bytes[8] = (bytes[8] & 0x3f) | 0x80
-  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
-}
 export const localDate = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
 export function createInitialState(): WorkoutState {
@@ -37,7 +31,10 @@ export function createInitialState(): WorkoutState {
 
 export function validateRoutine(routine: Routine): string | null {
   if (!routine.name.trim()) return '루틴 이름을 입력해 주세요.'
-  if (!routine.exercises.length) return '운동을 한 종목 이상 추가해 주세요.'
+  if (!routine.exercises.length && !routine.cardio?.length) return '운동을 한 종목 이상 추가해 주세요.'
+  if (routine.cardio?.some(plan => !isCardioPlan(plan))) return '유산소 종류와 목표 시간, 선택값의 입력 범위를 확인해 주세요.'
+  const ids = [...routine.exercises, ...(routine.cardio ?? [])].map(e => e.id)
+  if (new Set(ids).size !== ids.length) return '종목 배치 식별자가 중복되었습니다.'
   if (new Set(routine.exercises.map(e => e.id)).size !== routine.exercises.length) return '종목 배치 식별자가 중복되었습니다.'
   for (const e of routine.exercises) {
     if (!Number.isSafeInteger(e.setCount) || e.setCount <= 0) return '본세트 수는 양의 정수로 입력해 주세요.'
@@ -57,6 +54,8 @@ export function saveRoutine(state: WorkoutState, routine: Routine, days: number[
   if (days.some(d => !Number.isInteger(d) || d < 0 || d > 6)) throw new Error('올바른 요일을 선택해 주세요.')
   if (routine.exercises.some(e => !state.definitions.some(d => d.id === e.exerciseId))) throw new Error('운동 종목을 확인해 주세요.')
   if (routine.exercises.some(e => state.routines.some(r => r.id !== routine.id && r.exercises.some(other => other.id === e.id)))) throw new Error('다른 루틴의 종목 배치 식별자를 사용할 수 없습니다.')
+  const placements = [...routine.exercises, ...(routine.cardio ?? [])]
+  if (placements.some(e => state.definitions.some(d => d.id === e.id) || state.routines.some(r => r.id !== routine.id && [...r.exercises, ...(r.cardio ?? [])].some(other => other.id === e.id)))) throw new Error('종목 배치 식별자가 충돌합니다.')
   if (!replace && scheduleConflicts(state, routine.id, days).length) throw new Error('기존 요일 일정을 교체할지 확인해 주세요.')
   const previousRoutine = state.routines.find(r => r.id === routine.id)
   for (const [id, weight] of Object.entries(progressWeights)) {
@@ -117,9 +116,10 @@ export function startWorkout(state: WorkoutState, routineId: string, now: number
   const routine = state.routines.find(r => r.id === routineId)
   if (!routine) throw new Error('시작할 루틴을 선택해 주세요.')
   const exercises = routine.exercises.map(e => createWorkoutExercise(state, routine.id, e))
+  const cardio = routine.cardio?.map(createCardio)
   return { ...state, active: {
     id: newId(), routineId, routineName: routine.name, date: localDate(new Date(now)), startedAt: now,
-    endedAt: null, phase: 'warmup', currentExerciseId: exercises[0].id, exercises, timer: null, updatedBenchmarks: [],
+    endedAt: null, phase: exercises.length ? 'warmup' : 'working', currentExerciseId: exercises[0]?.id ?? cardio?.[0]?.id ?? '', exercises, ...(cardio ? { cardio } : {}), timer: null, updatedBenchmarks: [],
   } }
 }
 
@@ -155,7 +155,7 @@ export function resolveWorkoutTimer(session: WorkoutSession): WorkoutTimer {
 
 export function nextIncompleteExercise(session: WorkoutSession, afterId: string) {
   const index = session.exercises.findIndex(e => e.id === afterId)
-  return [...session.exercises.slice(index + 1), ...session.exercises.slice(0, index)].find(e => !isExerciseComplete(e)) ?? null
+  return [...session.exercises.slice(index + 1), ...session.exercises.slice(0, index)].find(e => !isExerciseComplete(e)) ?? session.cardio?.find(a => !['completed', 'skipped'].includes(a.status)) ?? null
 }
 
 export function beginWorking(state: WorkoutState) {
@@ -206,7 +206,7 @@ export function adjustRest(state: WorkoutState, extraSeconds: number | null, now
 
 export function navigateExercise(state: WorkoutState, id: string) {
   return editActive(state, session => {
-    if (session.currentExerciseId === id || !session.exercises.some(e => e.id === id)) return
+    if (session.currentExerciseId === id || ![...session.exercises, ...(session.cardio ?? [])].some(e => e.id === id)) return
     session.currentExerciseId = id
   })
 }
@@ -263,9 +263,9 @@ export function removeSessionExercise(state: WorkoutState, id: string) {
   return editActive(state, session => {
     const e = session.exercises.find(e => e.id === id)
     if (e?.sets.some(s => s.actual)) throw new Error('완료 기록이 있는 종목은 제외할 수 없습니다.')
-    if (session.exercises.length <= 1) throw new Error('종목은 한 개 이상 남겨 주세요.')
+    if (session.exercises.length + (session.cardio?.length ?? 0) <= 1) throw new Error('종목은 한 개 이상 남겨 주세요.')
     session.exercises = session.exercises.filter(e => e.id !== id)
-    if (session.currentExerciseId === id) session.currentExerciseId = session.exercises[0].id
+    if (session.currentExerciseId === id) session.currentExerciseId = session.exercises[0]?.id ?? session.cardio?.[0]?.id ?? ''
   })
 }
 
@@ -292,18 +292,20 @@ export function summary(session: WorkoutSession, now: number) {
   return { sets: actuals.length, volume: actuals.reduce((sum, s) => sum + s.weight * s.reps, 0), elapsed: Math.max(0, (session.endedAt ?? now) - session.startedAt) }
 }
 
-export function hasIncompleteSets(session: WorkoutSession) { return session.exercises.some(e => e.sets.some(s => !s.actual)) }
+export function hasIncompleteSets(session: WorkoutSession) { return session.exercises.some(e => e.sets.some(s => !s.actual)) || cardioPending(session) }
 
 export function completionCounts(session: WorkoutSession) {
   const completed = session.exercises.reduce((sum, e) => sum + e.sets.filter(s => s.actual).length, 0)
   // Old edited history has already discarded drafts; its final plan cannot be inferred safely.
   const counts = session.exercises.map(e => session.phase !== 'finished' ? e.sets.length : e.plannedSetCount ?? (e.structureModified ? null : e.setCount))
   const total = counts.every(count => count !== null) ? counts.reduce<number>((sum, count) => sum + (count ?? 0), 0) : null
-  return { completed, total, allComplete: total !== null && total > 0 && completed === total }
+  const cardio = cardioCounts(session)
+  return { completed, total, allComplete: total !== null && total + cardio.total > 0 && completed === total && cardio.completed === cardio.total }
 }
 
 export function historicalWeightReview(session: WorkoutSession, exercise: WorkoutExercise): { kind: 'unavailable'; reason: string } | { kind: 'increase' | 'decrease' | 'maintain'; weight: number; reps: number[] } {
-  if (session.phase !== 'finished' || !completionCounts(session).allComplete) return { kind: 'unavailable' as const, reason: '전체 계획 미완료 또는 당시 계획 수 미확인' }
+  const counts = completionCounts(session)
+  if (session.phase !== 'finished' || counts.total === null || counts.total === 0 || counts.completed !== counts.total) return { kind: 'unavailable' as const, reason: '전체 계획 미완료 또는 당시 계획 수 미확인' }
   if (exercise.structureModified || exercise.sets.length !== exercise.setCount) return { kind: 'unavailable' as const, reason: '세션에서 본세트 구성을 변경한 기록' }
   if (exercise.temporaryWeight || !exercise.sets.every(s => s.actual && !s.actual.temporaryWeight && s.actual.weight === exercise.approvedWeight)) return { kind: 'unavailable' as const, reason: '일시 중량 또는 혼합 중량 기록' }
   return { kind: recommendation(exercise) ?? 'maintain', weight: exercise.approvedWeight, reps: exercise.sets.map(s => s.actual?.reps ?? 0) }
@@ -327,10 +329,12 @@ export function currentWeightReviews(state: WorkoutState, onlyRoutineId?: string
 export function finishWorkout(state: WorkoutState, now: number, confirmIncomplete = false): WorkoutState {
   if (!state.active) return state
   if (hasIncompleteSets(state.active) && !confirmIncomplete) throw new Error('미완료 세트는 기록에서 제외됩니다. 종료를 확인해 주세요.')
-  const session = structuredClone(state.active)
+  let finishing = state
+  for (const item of state.active.cardio ?? []) if (!['completed', 'skipped'].includes(item.status)) finishing = skipCardio(finishing, item.id, now)
+  const session = structuredClone(finishing.active ?? state.active)
   const benchmarks = { ...state.benchmarks }
-  // Only a fully completed session can contribute a benchmark; actual history is always kept.
-  if (session.phase === 'working' && !hasIncompleteSets(session)) for (const e of session.exercises) {
+  // Only a fully completed weight plan can contribute a benchmark; cardio is independent.
+  if (session.phase === 'working' && !session.exercises.some(e => e.sets.some(s => !s.actual))) for (const e of session.exercises) {
     if (e.temporaryWeight || e.structureModified || e.sets.length !== e.setCount || !e.sets.every(s => s.actual && !s.actual.temporaryWeight && s.actual.weight === e.approvedWeight)) continue
     const key = benchmarkKey(session.routineId, e, e.approvedWeight)
     const reps = e.sets.map(s => s.actual?.reps ?? 0)

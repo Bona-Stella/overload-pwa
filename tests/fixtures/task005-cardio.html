@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko"><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Task 005 격리 DOM 검증</title>
+<details id="qa"><summary>Task 005 QA 시계 및 저장 검사</summary><div id="controls"></div><pre id="snapshot" style="max-height:220px;overflow:auto;white-space:pre-wrap;font-size:10px"></pre></details><div id="root"></div>
+<script type="module">
+  import React from 'react'
+  import { createRoot } from 'react-dom/client'
+  import App from '../../src/App.tsx'
+  import '../../src/index.css'
+  import { createInitialState } from '../../src/features/workout/model.ts'
+  import { isWorkoutState, STORAGE_KEY } from '../../src/features/workout/storage.ts'
+  if (location.origin !== 'http://127.0.0.1:3055') throw new Error('Dedicated test origin only.')
+  const marker = 'task005.owned'
+  const plan = (id, kind, name) => ({ id, kind, name, targetSeconds: 60, targetDistance: kind === 'treadmill' ? 1 : null, intensity: null, incline: null, resistance: null })
+  if (!localStorage.getItem(marker)) {
+    if (localStorage.getItem(STORAGE_KEY) !== null) throw new Error('Refusing to overwrite unrecognized data.')
+    const state = createInitialState()
+    const e = { ...state.routines[0].exercises[0], setCount: 1 }
+    state.routines = [
+      { id: 'mixed', name: '혼합 QA', exercises: [e], cardio: [plan('plan-run', 'treadmill', '러닝머신'), plan('plan-bike', 'bike', '실내 자전거')] },
+      { id: 'only', name: '유산소 전용 QA', exercises: [], cardio: [plan('only-run', 'outdoor', '야외 러닝')] },
+      { id: 'weights', name: '웨이트만 QA', exercises: [{ ...e, id: 'only-weight' }] },
+    ]
+    state.schedule = Object.fromEntries(Array.from({ length: 7 }, (_, day) => [day, 'mixed']))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(marker, 'isolated-fixture')
+  }
+  let now = Number(sessionStorage.getItem('task005.now') ?? Date.now())
+  Date.now = () => now
+  let writes = 0, fail = false
+  const nativeWrite = Storage.prototype.setItem
+  Storage.prototype.setItem = function(key, value) { if (this === localStorage && key === STORAGE_KEY) { writes++; if (fail) throw new Error('QA quota'); } return nativeWrite.call(this, key, value) }
+  function snapshot() {
+    const state = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    document.querySelector('#snapshot').textContent = JSON.stringify({ now, writes, valid: isWorkoutState(state), active: state.active, history: state.history, routines: state.routines, progress: state.progress, benchmarks: state.benchmarks, conflictBlocked: document.querySelector('.app-controls')?.disabled })
+  }
+  function button(label, action) { const el = document.createElement('button'); el.textContent = label; el.onclick = () => { action(); snapshot() }; document.querySelector('#controls').append(el) }
+  for (const seconds of [5, 30, 65, 3600]) button(`QA +${seconds}초`, () => { now += seconds * 1000; sessionStorage.setItem('task005.now', String(now)); document.dispatchEvent(new Event('visibilitychange')) })
+  button('QA 저장값 확인', () => {})
+  button('QA 저장 실패 전환', () => { fail = !fail })
+  button('QA 다른 탭 변경 알림', () => window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY, newValue: localStorage.getItem(STORAGE_KEY) })))
+  createRoot(document.getElementById('root')).render(React.createElement(App))
+  snapshot()
+</script></html>
