@@ -1,0 +1,334 @@
+{
+  "email-login": {
+    "phase": "email-login",
+    "preserved": {
+      "users": true,
+      "auth_identities": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "user_reauthentication_emails": true,
+      "reauth_email_candidates": true,
+      "google_identity_change_versions": true,
+      "flyway_schema_history": true,
+      "existingOtpRows": true
+    },
+    "userCount": 4,
+    "newOtp": [
+      {
+        "purpose": "LOGIN",
+        "state": "CONSUMED",
+        "accepted": true,
+        "consumed": true,
+        "approvedRecipient": true,
+        "verifierCleared": true
+      }
+    ],
+    "expectedExistingUser": true,
+    "jdbcPrincipalMatches": true,
+    "restoredTwice": true,
+    "days90": true,
+    "exerciseCount": 20,
+    "proofPresent": true,
+    "oldCsrf403": true,
+    "newCsrf405": true
+  },
+  "email-refresh": {
+    "phase": "email-refresh",
+    "preserved": {
+      "users": true,
+      "auth_identities": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "user_reauthentication_emails": true,
+      "reauth_email_candidates": true,
+      "google_identity_change_versions": true,
+      "flyway_schema_history": true,
+      "existingOtpRows": true
+    },
+    "userCount": 4,
+    "newOtp": [
+      {
+        "purpose": "LOGIN",
+        "state": "CONSUMED",
+        "accepted": true,
+        "consumed": true,
+        "approvedRecipient": true,
+        "verifierCleared": true
+      }
+    ],
+    "expectedExistingUser": true,
+    "jdbcPrincipalMatches": true,
+    "restoredTwice": true,
+    "days90": true,
+    "exerciseCount": 20,
+    "proofPresent": true,
+    "oldCsrf403": true,
+    "newCsrf405": true,
+    "metadataUnchangedAfterRefresh": true
+  },
+  "email-logout": {
+    "phase": "email-logout",
+    "preserved": {
+      "users": true,
+      "auth_identities": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "user_reauthentication_emails": true,
+      "reauth_email_candidates": true,
+      "google_identity_change_versions": true,
+      "flyway_schema_history": true,
+      "existingOtpRows": true
+    },
+    "userCount": 4,
+    "newOtp": [
+      {
+        "purpose": "LOGIN",
+        "state": "CONSUMED",
+        "accepted": true,
+        "consumed": true,
+        "approvedRecipient": true,
+        "verifierCleared": true
+      }
+    ],
+    "expectedExistingUser": true,
+    "sessionRemoved": true,
+    "oldCookie401": true
+  },
+  "google-login": {
+    "phase": "google-login",
+    "preserved": {
+      "users": true,
+      "auth_identities": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "user_reauthentication_emails": true,
+      "reauth_email_candidates": true,
+      "google_identity_change_versions": true,
+      "flyway_schema_history": true,
+      "existingOtpRows": true
+    },
+    "userCount": 4,
+    "newOtp": [
+      {
+        "purpose": "LOGIN",
+        "state": "CONSUMED",
+        "accepted": true,
+        "consumed": true,
+        "approvedRecipient": true,
+        "verifierCleared": true
+      }
+    ],
+    "expectedExistingUser": true,
+    "jdbcPrincipalMatches": true,
+    "restoredTwice": true,
+    "days90": true,
+    "exerciseCount": 20,
+    "proofPresent": false,
+    "oldCsrf403": true,
+    "newCsrf405": true
+  },
+  "google-refresh": {
+    "phase": "google-refresh",
+    "preserved": {
+      "users": true,
+      "auth_identities": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "user_reauthentication_emails": true,
+      "reauth_email_candidates": true,
+      "google_identity_change_versions": true,
+      "flyway_schema_history": true,
+      "existingOtpRows": true
+    },
+    "userCount": 4,
+    "newOtp": [
+      {
+        "purpose": "LOGIN",
+        "state": "CONSUMED",
+        "accepted": true,
+        "consumed": true,
+        "approvedRecipient": true,
+        "verifierCleared": true
+      }
+    ],
+    "expectedExistingUser": true,
+    "jdbcPrincipalMatches": true,
+    "restoredTwice": true,
+    "days90": true,
+    "exerciseCount": 20,
+    "proofPresent": false,
+    "oldCsrf403": true,
+    "newCsrf405": true,
+    "metadataUnchangedAfterRefresh": true
+  },
+  "google-logout": {
+    "phase": "google-logout",
+    "preserved": {
+      "users": true,
+      "auth_identities": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "user_reauthentication_emails": true,
+      "reauth_email_candidates": true,
+      "google_identity_change_versions": true,
+      "flyway_schema_history": true,
+      "existingOtpRows": true
+    },
+    "userCount": 4,
+    "newOtp": [
+      {
+        "purpose": "LOGIN",
+        "state": "CONSUMED",
+        "accepted": true,
+        "consumed": true,
+        "approvedRecipient": true,
+        "verifierCleared": true
+      }
+    ],
+    "expectedExistingUser": true,
+    "sessionRemoved": true,
+    "oldCookie401": true
+  },
+  "existingSessionDetails": {
+    "baselineSessions": 9,
+    "removedBaselineSessions": 1,
+    "retainedBaselineSessions": 8,
+    "retainedRowsUnchanged": true,
+    "retainedAttributesUnchanged": true,
+    "envUnchanged": true,
+    "serverHeadUnchanged": true,
+    "pwaHeadUnchanged": true,
+    "logBytes": {
+      "server.log": 0,
+      "vite.log": 0
+    },
+    "removedSessionReason": "User confirmed manually logging out an already authenticated browser before dedicated EMAIL login."
+  },
+  "mail": {
+    "forwardedRequests": 1,
+    "unapprovedSyntheticPreflightBlocked": 1,
+    "userConfirmedReceipt": true,
+    "userConfirmedLogin": true
+  },
+  "googleReturn": [
+    {
+      "path": "/auth/complete",
+      "hostExpected": true,
+      "sensitiveQueryPresent": false
+    }
+  ],
+  "cookieChecks": [
+    {
+      "path": "/api/v1/auth/csrf",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": false
+    },
+    {
+      "path": "/api/v1/auth/logout",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": true
+    },
+    {
+      "path": "/api/v1/auth/csrf",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": false
+    },
+    {
+      "path": "/api/v1/auth/email-otp/verify",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": false
+    },
+    {
+      "path": "/api/v1/auth/logout",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": true
+    },
+    {
+      "path": "/api/v1/auth/csrf",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": false
+    },
+    {
+      "path": "/api/v1/auth/logout",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": true
+    },
+    {
+      "path": "/api/v1/auth/csrf",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "pathRoot": true,
+      "secure": false,
+      "cleared": false
+    }
+  ],
+  "initialUnexpectedAuthenticatedUser": {
+    "observed": true,
+    "explainedByUser": true,
+    "note": "Pre-existing browser authentication followed by explicit user logout; dedicated EMAIL and GOOGLE login UUIDs independently matched expected existing users."
+  },
+  "automatedTests": {
+    "rerunDuringLive": false,
+    "priorFrontendReportPassed": 173,
+    "priorBackendReportPassed": 388,
+    "backendExistingXml": {
+      "test": {
+        "tests": 61,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "integrationTest": {
+        "tests": 327,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "encryptedBackup": {
+    "dpapiDecryptionAndPgDumpHeaderValid": true,
+    "pgRestoreArchiveListReadable": true,
+    "restoreNotPerformed": true
+  },
+  "finalCorePreservation": {
+    "users": true,
+    "auth_identities": true,
+    "exercise_definitions": true,
+    "user_workout_settings": true,
+    "user_reauthentication_emails": true,
+    "reauth_email_candidates": true,
+    "google_identity_change_versions": true,
+    "flyway_schema_history": true,
+    "existingOtpRows": true
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "login375": {
+    "width": 375,
+    "overflow": false,
+    "primary": "rgb(59, 130, 246)",
+    "buttonHeights": [
+      54,
+      54,
+      48,
+      48
+    ],
+    "inputHeights": [
+      48
+    ]
+  },
+  "otherViewports": [
+    {
+      "height": 844,
+      "mainWidth": 390,
+      "overflow": false,
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "height": 740,
+      "mainWidth": 305,
+      "overflow": false,
+      "scrollWidth": 305,
+      "width": 320
+    },
+    {
+      "height": 900,
+      "mainWidth": 518,
+      "overflow": false,
+      "scrollWidth": 1440,
+      "width": 1440
+    }
+  ],
+  "connection390": {
+    "overflow": false,
+    "serverActuallyStopped": true
+  }
+}
