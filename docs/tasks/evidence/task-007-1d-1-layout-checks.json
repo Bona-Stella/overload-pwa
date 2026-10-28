@@ -1,0 +1,34 @@
+[
+  {
+    "controlsAtLeast44": true,
+    "controlsWithinWidth": true,
+    "primaryColor": "rgb(59, 130, 246)",
+    "scrollWidth": 320,
+    "shellWidth": 320,
+    "width": 320
+  },
+  {
+    "controlsAtLeast44": true,
+    "controlsWithinWidth": true,
+    "primaryColor": "rgb(59, 130, 246)",
+    "scrollWidth": 375,
+    "shellWidth": 375,
+    "width": 375
+  },
+  {
+    "controlsAtLeast44": true,
+    "controlsWithinWidth": true,
+    "primaryColor": "rgb(59, 130, 246)",
+    "scrollWidth": 390,
+    "shellWidth": 390,
+    "width": 390
+  },
+  {
+    "controlsAtLeast44": true,
+    "controlsWithinWidth": true,
+    "primaryColor": "rgb(59, 130, 246)",
+    "scrollWidth": 1440,
+    "shellWidth": 520,
+    "width": 1440
+  }
+]

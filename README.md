@@ -40,7 +40,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> Task 002: 다크 모드 모바일 UI에서 루틴 생성·편집, 워밍업, 본세트 기록·휴식, 운동 요약·이력을 Mock 데이터와 로컬 저장으로 사용할 수 있습니다. 서버 연결 진단은 설정에서 명시적으로 열 때 실행됩니다. 인증, 실제 운동 API, 서버 동기화와 PWA 설치 지원은 아직 구현되지 않았습니다. 아래 체크리스트는 서버 연동을 포함하는 장기 목표이며, 현재 로컬 프로토타입의 상세 범위는 [Task 002 구현 보고](docs/tasks/task-002-core-ui-report.md)를 참고하세요.
+> Task 007-1D-1: 기본 화면은 서버 세션 기반 EMAIL OTP·Google 로그인, 새로고침 복원 및 로그아웃을 사용합니다. 운동 API·동기화·설치형 PWA는 아직 미구현입니다. 기존 운동 프로토타입과 저장 데이터는 개발 전용 `/demo`, 기존 인증 목업은 `/auth-preview`에서 확인합니다. 데모 기록은 실제 계정 데이터가 아닙니다. [인증 연동 및 로컬 실행](docs/engineering/authentication.md), [검증 보고서](docs/tasks/task-007-1d-1-validation-report.md)를 참고하세요. 아래 장기 체크리스트와 [Task 002 기록](docs/tasks/task-002-core-ui-report.md)은 구분합니다.
 
 ---
 
@@ -402,7 +402,7 @@ React → http://127.0.0.1:3000/api/v1/health
       → Vite Proxy → http://127.0.0.1:8080/api/v1/health
 ```
 
-이 프록시는 Vite 개발 서버에만 적용됩니다. 운영 배포 시 `/api`를 백엔드로 전달하는 별도 구성이 필요하며 이번 작업에서는 배포하지 않습니다. 현재 API 관련 환경변수는 사용하지 않습니다.
+이 프록시는 Vite 개발 서버에만 적용됩니다. `/oauth2/authorization/google`도 같은 백엔드로 전달합니다. 기본 대상은 `http://127.0.0.1:8080`이며 `OVERLOAD_DEV_API_TARGET`으로 loopback 테스트 서버를 지정할 수 있습니다. 운영은 동일 호스트의 HTTPS 역방향 프록시가 필요하며 배포는 하지 않았습니다. Google 복귀 및 쿠키 설정은 [인증 연동 문서](docs/engineering/authentication.md)를 따릅니다.
 
 ### 로컬 통합 확인 (Windows)
 
@@ -413,7 +413,7 @@ React → http://127.0.0.1:3000/api/v1/health
    .\gradlew.bat --offline bootRun --args="--server.address=127.0.0.1 --server.port=8080"
    ```
 
-2. 다른 터미널에서 `overload-pwa` 루트의 `npm run dev`를 실행하고 `http://127.0.0.1:3000`을 엽니다.
+2. 다른 터미널에서 `overload-pwa` 루트의 `npm run dev`를 실행하고 개발 데모 `http://localhost:3000/demo`를 엽니다. 실제 인증 진입은 `http://localhost:3000/`입니다.
 3. 홈의 **설정 → 서버 연결 진단 열기**에서 **서버 연결 성공**, **UP**를 확인합니다. `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 프록시 응답의 HTTP 200과 `{"status":"UP"}`도 확인할 수 있습니다.
 4. 백엔드를 `Ctrl+C`로 종료한 뒤 **다시 확인**을 눌러 연결 실패를 확인합니다. 백엔드 재실행 후 같은 버튼으로 연결 성공 복구를 확인합니다.
 5. 검증 후 각 서버 터미널에서 `Ctrl+C`로 종료합니다.
@@ -454,15 +454,18 @@ npm ci
 npm run dev
 ```
 
-기본 개발 서버 주소:
+인증 연동용 개발 서버 주소 (Google 콜백과 같은 localhost 호스트 사용):
 
 ```text
-http://127.0.0.1:3000
+http://localhost:3000
 ```
 
 개발 서버는 `host: true`로 LAN 접속을 허용하며, 같은 네트워크의 iPhone에서는 `http://<PC의 LAN IP>:3000`으로 접속합니다. 네트워크·방화벽에서 해당 접속을 허용해야 합니다. `port: 3000`, `strictPort: true`이므로 3000번 포트가 사용 중이면 실행에 실패합니다. iPhone에서도 API 요청은 같은 Origin의 `/api`를 사용하며, 기존 Vite 프록시가 PC의 `http://127.0.0.1:8080`으로 전달합니다.
 
 ### Production Build
+
+Google 인증은 위 localhost 주소와 [고정 PWA 복귀 설정](docs/engineering/authentication.md)을 사용합니다.
+LAN/iPhone 안내는 개발 데모 `/demo` 확인용이며 실제 Google·HTTPS 검증을 완료했다는 의미가 아닙니다.
 
 ```bash
 npm run build
