@@ -1,4 +1,7 @@
 export type ServerSession = { userId: string }
+export type Identity = { id: string; provider: 'email' | 'google' }
+export type Contact = { status: 'VERIFIED'; maskedEmail: string } | { status: 'REQUIRED'; candidate?: { id: string; maskedEmail: string } }
+export type ContactForm = { identityId: string; csrf: string }
 type Csrf = { headerName: string; token: string }
 export class AuthError extends Error {
   readonly status: number
@@ -25,6 +28,7 @@ export class AuthApi {
       const response = await this.fetcher(path, { method, credentials: 'include', cache: 'no-store', redirect: 'error', signal: controller.signal,
         headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(csrf ? { [csrf.headerName]: csrf.token } : {}) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
+      if (response.status === 401) this.clearCsrf()
       let data: unknown = null
       if (response.status !== 204) {
         try { data = await response.json() } catch { throw new AuthError(controller.signal.aborted ? 'TIMEOUT' : 'RESPONSE_INVALID', response.status) }
@@ -79,5 +83,50 @@ export class AuthApi {
     const { status } = await this.post('/api/v1/auth/logout', {})
     if (status !== 204) throw new AuthError('RESPONSE_INVALID')
     this.clearCsrf()
+  }
+  async identities(): Promise<Identity[]> {
+    const { status, data } = await this.call('/api/v1/auth/identities')
+    if (status !== 200 || !object(data) || !Array.isArray(data.identities) || data.identities.length > 20) throw new AuthError('RESPONSE_INVALID')
+    const identities = data.identities.map(value => {
+      if (!object(value) || !uuid(value.id) || (value.provider !== 'email' && value.provider !== 'google')) throw new AuthError('RESPONSE_INVALID')
+      return { id: value.id, provider: value.provider } as Identity
+    })
+    if (new Set(identities.map(value => value.id)).size !== identities.length) throw new AuthError('RESPONSE_INVALID')
+    return identities
+  }
+  async contact(): Promise<Contact> {
+    const { status, data } = await this.call('/api/v1/auth/reauth/email/contact')
+    // The current server returns first-character + ***@*** only. Never accept a raw address as a display label.
+    const masked = (v: unknown): v is string => typeof v === 'string' && /^[^\s@<>]\*{3}@\*{3}$/.test(v)
+    if (status !== 200 || !object(data)) throw new AuthError('RESPONSE_INVALID')
+    if (data.status === 'VERIFIED' && masked(data.maskedEmail)) return { status: 'VERIFIED', maskedEmail: data.maskedEmail }
+    if (data.status === 'REQUIRED') {
+      if (data.candidate === undefined) return { status: 'REQUIRED' }
+      if (object(data.candidate) && uuid(data.candidate.id) && masked(data.candidate.maskedEmail)) return { status: 'REQUIRED', candidate: { id: data.candidate.id, maskedEmail: data.candidate.maskedEmail } }
+    }
+    throw new AuthError('RESPONSE_INVALID')
+  }
+  async requestEmailProof(candidateId?: string) {
+    if (candidateId !== undefined && !uuid(candidateId)) throw new AuthError('INVALID_REQUEST', 400)
+    const { status, data } = await this.post(candidateId ? '/api/v1/auth/reauth/email/registration/request' : '/api/v1/auth/reauth/email/request', candidateId ? { candidateId } : {})
+    if (status !== 202 || !object(data) || data.status !== 'ACCEPTED' || !uuid(data.challengeId)) throw new AuthError('RESPONSE_INVALID')
+    return data.challengeId
+  }
+  async verifyEmailProof(challengeId: string, code: string, candidateId?: string) {
+    if (!uuid(challengeId) || !/^\d{6}$/.test(code) || (candidateId !== undefined && !uuid(candidateId))) throw new AuthError('INVALID_REQUEST', 400)
+    const { status } = await this.post(candidateId ? '/api/v1/auth/reauth/email/registration/verify' : '/api/v1/auth/reauth/email/verify',
+      { challengeId, code, ...(candidateId ? { candidateId } : {}) })
+    if (status !== 204) throw new AuthError('RESPONSE_INVALID')
+    this.clearCsrf()
+  }
+  async cancelRegistration() {
+    const { status } = await this.post('/api/v1/auth/reauth/email/registration/cancel', {})
+    if (status !== 204) throw new AuthError('RESPONSE_INVALID')
+  }
+  async contactForm(identityId: string): Promise<ContactForm> {
+    if (!uuid(identityId)) throw new AuthError('INVALID_REQUEST', 400)
+    await this.refreshCsrf()
+    if (!this.csrf) throw new AuthError('RESPONSE_INVALID')
+    return { identityId, csrf: this.csrf.token }
   }
 }

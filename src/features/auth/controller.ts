@@ -1,19 +1,24 @@
 import { AuthApi, AuthError } from './api.ts'
+import { emptyAccount } from './account.ts'
+import type { AccountState } from './account.ts'
 
 export type AuthIssue = { code: string; message: string }
 export type AuthState = {
   status: 'checking' | 'anonymous' | 'authenticated' | 'unavailable'
   userId: string | null
-  pending: null | 'request' | 'verify' | 'logout' | 'google' | 'restore'
+  pending: null | 'request' | 'verify' | 'logout' | 'google' | 'restore' | 'account' | 'proof-request' | 'proof-verify' | 'contact' | 'contact-navigation' | 'cancel-registration'
   challenge: null | { id: string | null; email: string; expiresAt: number }
   resendAt: number
   verifyAt: number
   issue: AuthIssue | null
   notice: string
   updatedAt: number
+  accountOpen: boolean
+  account: AccountState
 }
-export type ReturnFlow = 'none' | 'complete' | 'failed'
-export const returnFlow = (path: string): ReturnFlow => path === '/auth/complete' ? 'complete' : path === '/auth/failed' ? 'failed' : 'none'
+export type ReturnFlow = 'none' | 'complete' | 'failed' | 'account' | 'contact-complete' | 'contact-failed'
+export const returnFlow = (path: string): ReturnFlow => path === '/auth/complete' ? 'complete' : path === '/auth/failed' ? 'failed'
+  : path === '/account/contact/complete' ? 'contact-complete' : path === '/account/contact/failed' ? 'contact-failed' : path === '/account' ? 'account' : 'none'
 export function authIssue(error: unknown): AuthIssue {
   const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
   let message = '요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.'
@@ -27,18 +32,28 @@ export function authIssue(error: unknown): AuthIssue {
   else if (e.code === 'CODE_EXPIRED') message = '코드가 만료됐습니다. 재발송 가능 시간을 확인해 새 코드를 요청해 주세요.'
   else if (e.code === 'GOOGLE_FAILED') message = 'Google 로그인을 완료하지 못했습니다. 다시 시도해 주세요.'
   else if (e.code === 'GOOGLE_NOT_CONFIRMED') message = 'Google 로그인 결과를 확인할 수 없습니다. 로그인 상태를 다시 확인해 주세요.'
+  else if (e.code === 'GOOGLE_CONTACT_FAILED') message = 'Google 이메일 확인을 완료하지 못했습니다. 연결된 Google 계정과 동의 여부를 확인해 주세요.'
+  else if (e.code === 'CONTACT_NOT_CONFIRMED') message = '유효한 이메일 후보를 확인하지 못했습니다. Google 이메일 확인부터 다시 진행해 주세요.'
+  else if (e.code === 'REAUTH_EMAIL_REQUIRED') message = '대표 재인증 이메일을 먼저 등록해 주세요.'
+  else if (e.code === 'REAUTH_EMAIL_ALREADY_VERIFIED') message = '대표 이메일이 이미 등록됐습니다. 계정 정보를 다시 확인해 주세요.'
+  else if (e.code === 'AUTHENTICATION_REQUIRED') message = '로그인이 만료되거나 세션이 변경됐습니다. 다시 로그인해 주세요.'
+  else if (e.code === 'SESSION_CHANGED') message = '계정 상태가 변경됐습니다. 인증 상태를 다시 확인해 주세요. 이전 요청은 반복하지 않습니다.'
   return { code: e.code, message }
 }
 
 export class AuthController {
-  private state: AuthState = { status: 'checking', userId: null, pending: null, challenge: null, resendAt: 0, verifyAt: 0, issue: null, notice: '', updatedAt: 0 }
+  private state: AuthState = { status: 'checking', userId: null, pending: null, challenge: null, resendAt: 0, verifyAt: 0, issue: null, notice: '', updatedAt: 0, accountOpen: false, account: emptyAccount() }
   private listeners = new Set<() => void>()
   private running = false
   private started = false
   private readonly api: AuthApi
   private readonly now: () => number
   private readonly navigate: (path: string) => void
-  constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path)) { this.api = api; this.now = now; this.navigate = navigate }
+  private readonly route: (path: string) => void
+  private generation = 0
+  private resumePending = false
+  private resumeFlow: ReturnFlow = 'none'
+  constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route = (path: string) => window.history.pushState(null, '', path)) { this.api = api; this.now = now; this.navigate = navigate; this.route = route }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   private set(patch: Partial<AuthState>) { this.state = { ...this.state, ...patch, updatedAt: this.now() }; this.listeners.forEach(listener => listener()) }
@@ -47,23 +62,38 @@ export class AuthController {
     this.started = true
     return this.restore(flow)
   }
-  resume() {
-    if (this.state.pending === 'google') { this.running = false; this.set({ pending: null }) }
-    return this.restore()
+  resume(flow: ReturnFlow = 'none') {
+    this.generation++
+    this.set({ account: emptyAccount(), challenge: null, notice: '', issue: null })
+    this.api.clearCsrf?.()
+    if (this.state.pending === 'google' || this.state.pending === 'contact-navigation') { this.running = false; this.set({ pending: null }) }
+    if (this.running) { this.resumePending = true; this.resumeFlow = flow; return }
+    return this.restore(flow)
   }
   private async loadSession(flow: ReturnFlow = 'none', notice = '') {
     const session = await this.api.session()
     await this.api.refreshCsrf()
     const issue = flow === 'failed' ? authIssue(new AuthError('GOOGLE_FAILED'))
       : flow === 'complete' && !session ? authIssue(new AuthError('GOOGLE_NOT_CONFIRMED')) : null
-    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null, challenge: null, issue, notice })
+    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null, challenge: null, account: emptyAccount(), accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed'].includes(flow)), issue, notice })
   }
-  async restore(flow: ReturnFlow = 'none') {
+  async restore(flow: ReturnFlow = this.state.accountOpen ? 'account' : 'none') {
     if (this.running) return
     this.running = true; this.set({ pending: 'restore', issue: null })
-    try { await this.loadSession(flow) }
-    catch (error) { this.set({ status: 'unavailable', issue: authIssue(error), challenge: null }) }
-    finally { this.running = false; this.set({ pending: null }) }
+    this.generation++; this.set({ account: emptyAccount() })
+    try {
+      await this.loadSession(flow)
+      if (this.state.accountOpen && this.state.userId) {
+        await this.readAccount(this.state.userId, this.generation)
+        if (flow === 'contact-failed') this.set({ issue: authIssue(new AuthError('GOOGLE_CONTACT_FAILED')) })
+        if (flow === 'contact-complete' && this.state.account.contact?.status === 'REQUIRED' && !this.state.account.contact.candidate) this.set({ issue: authIssue(new AuthError('CONTACT_NOT_CONFIRMED')) })
+      }
+    }
+    catch (error) {
+      if (error instanceof AuthError && error.status === 401 && error.code !== 'OTP_INVALID') this.accountFailure(error)
+      else this.set({ status: 'unavailable', issue: authIssue(error), challenge: null, account: emptyAccount() })
+    }
+    finally { await this.finish() }
   }
   async requestOtp(email: string) {
     if (this.running || this.state.status !== 'anonymous' || this.now() < this.state.resendAt) return
@@ -82,7 +112,7 @@ export class AuthController {
       const uncertain = error instanceof AuthError && (['NETWORK', 'TIMEOUT', 'RESPONSE_INVALID'].includes(error.code) || error.status === 503)
       this.set({ issue: authIssue(error), notice: uncertain ? '메일 요청 결과를 확인하지 못했습니다. 메일함을 확인하고 기다려 주세요. 자동으로 재발송하지 않습니다.' : '발송 요청이 완료되지 않았습니다.', resendAt: Math.max(this.state.resendAt, this.now() + Math.max(60, retry) * 1000) })
       if (error instanceof AuthError && error.code === 'LOGOUT_REQUIRED') await this.recoverSession()
-    } finally { this.running = false; this.set({ pending: null }) }
+    } finally { await this.finish() }
   }
   async verifyOtp(code: string) {
     const challenge = this.state.challenge
@@ -103,14 +133,14 @@ export class AuthController {
       this.set({ issue: authIssue(error), resendAt: Math.max(this.state.resendAt, this.now() + wait), verifyAt: limited ? this.now() + wait : this.state.verifyAt })
       const uncertain = error instanceof AuthError && (['NETWORK', 'TIMEOUT', 'RESPONSE_INVALID'].includes(error.code) || error.status >= 500)
       if (!this.state.challenge || uncertain) this.set({ status: 'unavailable', challenge: null })
-    } finally { this.running = false; this.set({ pending: null }) }
+    } finally { await this.finish() }
   }
   cancelOtp() {
     if (!this.running) this.set({ challenge: null, issue: null, notice: '' })
   }
   async logout() {
     if (this.running || this.state.status !== 'authenticated') return
-    this.running = true; this.set({ pending: 'logout', issue: null })
+    this.running = true; this.generation++; this.set({ pending: 'logout', issue: null, account: emptyAccount(), accountOpen: false })
     try {
       await this.api.logout()
       if (await this.api.session()) throw new AuthError('RESPONSE_INVALID')
@@ -119,7 +149,7 @@ export class AuthController {
       this.set({ status: 'anonymous', issue: null, notice: '로그아웃했습니다.' })
     } catch (error) {
       this.set({ status: 'unavailable', issue: authIssue(error), challenge: null })
-    } finally { this.running = false; this.set({ pending: null }) }
+    } finally { await this.finish() }
   }
   private async recoverSession() {
     try { await this.loadSession() } catch (error) { this.set({ status: 'unavailable', issue: authIssue(error) }) }
@@ -129,5 +159,127 @@ export class AuthController {
     this.running = true; this.set({ pending: 'google', challenge: null, issue: null })
     // Fixed path, top-level navigation; no email, state, code, token or returnUrl parameters.
     this.navigate('/oauth2/authorization/google')
+  }
+
+  private accountPatch(patch: Partial<AccountState>) { this.set({ account: { ...this.state.account, ...patch } }) }
+  private async finish() {
+    this.running = false; this.set({ pending: null })
+    if (this.resumePending) { this.resumePending = false; await this.restore(this.resumeFlow) }
+  }
+  private async owner(expected: string, generation: number) {
+    const session = await this.api.session()
+    if (generation !== this.generation) throw new AuthError('SESSION_CHANGED', 409)
+    if (!session) throw new AuthError('AUTHENTICATION_REQUIRED', 401)
+    if (session.userId !== expected) throw new AuthError('SESSION_CHANGED', 409)
+  }
+  private async readAccount(expected: string, generation: number) {
+    await this.owner(expected, generation)
+    const [identities, contact] = await Promise.all([this.api.identities(), this.api.contact()])
+    await this.owner(expected, generation)
+    this.accountPatch({ identities, contact, loaded: true, form: null })
+  }
+  private async prepareWrite(expected: string, generation: number) {
+    await this.owner(expected, generation)
+    await this.api.refreshCsrf()
+    await this.owner(expected, generation)
+  }
+  private accountFailure(error: unknown) {
+    const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
+    if (e.code === 'SESSION_CHANGED') this.set({ status: 'unavailable', account: emptyAccount(), challenge: null })
+    else if (e.status === 401 && e.code !== 'OTP_INVALID') this.set({ status: 'anonymous', userId: null, account: emptyAccount(), accountOpen: false })
+    this.set({ issue: authIssue(e.status === 401 && e.code !== 'OTP_INVALID' ? new AuthError('AUTHENTICATION_REQUIRED', 401) : error) })
+  }
+  async openAccount() {
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId) return
+    const entering = !this.state.accountOpen
+    this.running = true
+    const expected = this.state.userId, generation = ++this.generation
+    this.set({ accountOpen: true, account: { ...emptyAccount(), resendAt: this.state.account.resendAt }, issue: null, notice: '', pending: 'account' })
+    if (entering) this.route('/account')
+    try { await this.readAccount(expected, generation) }
+    catch (error) { this.accountFailure(error) }
+    finally { await this.finish() }
+  }
+  closeAccount() {
+    if (this.running) return
+    this.generation++; this.set({ accountOpen: false, account: { ...emptyAccount(), resendAt: this.state.account.resendAt }, issue: null, notice: '' }); this.route('/')
+  }
+  async prepareGoogleContact() {
+    const account = this.state.account
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId || !account.loaded || account.contact?.status !== 'REQUIRED') return
+    const identity = account.identities.find(value => value.provider === 'google')
+    if (!identity) return
+    this.running = true; this.set({ pending: 'contact', issue: null, notice: '' }); this.accountPatch({ challenge: null, form: null, confirmedAt: null })
+    const expected = this.state.userId, generation = this.generation
+    try {
+      await this.owner(expected, generation)
+      const form = await this.api.contactForm(identity.id)
+      await this.owner(expected, generation)
+      this.accountPatch({ form })
+    } catch (error) { this.accountFailure(error) }
+    finally { await this.finish() }
+  }
+  beginContactNavigation() {
+    if (this.running || this.state.status !== 'authenticated' || !this.state.account.form) return false
+    this.running = true; this.set({ pending: 'contact-navigation' }); return true
+  }
+  async requestEmailProof() {
+    const account = this.state.account
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId || !account.loaded || !account.contact || this.now() < account.resendAt) return
+    const candidateId = account.contact.status === 'REQUIRED' ? account.contact.candidate?.id : undefined
+    if (account.contact.status === 'REQUIRED' && !candidateId) return
+    const expected = this.state.userId, generation = this.generation, started = this.now()
+    this.running = true; this.set({ pending: 'proof-request', issue: null, notice: '' })
+    this.accountPatch({ challenge: null, form: null, confirmedAt: null, resendAt: started + 60_000 })
+    try {
+      await this.prepareWrite(expected, generation)
+      // Re-read the server-owned recipient/candidate. No address or login identity is sent in the OTP body.
+      const contact = await this.api.contact()
+      if (candidateId ? contact.status !== 'REQUIRED' || contact.candidate?.id !== candidateId : contact.status !== 'VERIFIED') throw new AuthError('CONTACT_NOT_CONFIRMED', 409)
+      await this.owner(expected, generation)
+      const id = await this.api.requestEmailProof(candidateId)
+      await this.owner(expected, generation)
+      this.accountPatch({ contact, challenge: { id, ...(candidateId ? { candidateId } : {}), expiresAt: started + 300_000 }, resendAt: this.now() + 60_000 })
+      this.set({ notice: '인증코드를 보냈습니다. 메일함을 확인해 주세요.' })
+    } catch (error) {
+      this.accountPatch({ challenge: null, resendAt: Math.max(this.state.account.resendAt, this.now() + Math.max(60, error instanceof AuthError ? error.retryAfter : 0) * 1000) })
+      this.accountFailure(error)
+    } finally { await this.finish() }
+  }
+  async verifyEmailProof(code: string) {
+    const account = this.state.account, challenge = account.challenge
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId || !challenge || this.now() < account.verifyAt || !/^\d{6}$/.test(code)) return
+    if (this.now() >= challenge.expiresAt) { this.set({ issue: authIssue(new AuthError('CODE_EXPIRED')) }); return }
+    const expected = this.state.userId, generation = this.generation
+    let consumed = false
+    this.running = true; this.set({ pending: 'proof-verify', issue: null, notice: '' })
+    try {
+      await this.prepareWrite(expected, generation)
+      await this.api.verifyEmailProof(challenge.id, code, challenge.candidateId)
+      consumed = true; this.accountPatch({ challenge: null, form: null })
+      await this.owner(expected, generation)
+      await this.api.refreshCsrf()
+      await this.readAccount(expected, generation)
+      if (this.state.account.contact?.status !== 'VERIFIED') throw new AuthError('RESPONSE_INVALID')
+      this.accountPatch({ confirmedAt: this.now() })
+      this.set({ notice: challenge.candidateId ? '대표 이메일을 등록하고 이메일 재인증을 완료했습니다.' : '이메일 재인증을 완료했습니다.' })
+    } catch (error) {
+      const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
+      if (e.status === 429) this.accountPatch({ verifyAt: this.now() + Math.max(60, e.retryAfter) * 1000, resendAt: Math.max(this.state.account.resendAt, this.now() + Math.max(60, e.retryAfter) * 1000) })
+      const uncertain = consumed || ['NETWORK', 'TIMEOUT', 'RESPONSE_INVALID'].includes(e.code) || e.status >= 500
+      if (uncertain) { this.set({ status: 'unavailable', account: emptyAccount() }); this.api.clearCsrf() }
+      this.accountFailure(error)
+    } finally { await this.finish() }
+  }
+  clearAccountCode() {
+    if (!this.running) { this.accountPatch({ challenge: null }); this.set({ issue: null, notice: '' }) }
+  }
+  async cancelRegistration() {
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId || this.state.account.contact?.status !== 'REQUIRED') return
+    const expected = this.state.userId, generation = this.generation
+    this.running = true; this.set({ pending: 'cancel-registration', issue: null, notice: '' }); this.accountPatch({ challenge: null, form: null })
+    try { await this.prepareWrite(expected, generation); await this.api.cancelRegistration(); await this.readAccount(expected, generation); this.set({ notice: '대표 이메일 등록을 취소했습니다.' }) }
+    catch (error) { this.accountFailure(error) }
+    finally { await this.finish() }
   }
 }

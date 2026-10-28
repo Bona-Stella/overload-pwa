@@ -16,5 +16,16 @@ body:has(.auth-app) { min-width: 0; }
 .auth-code-caption { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; }
 .auth-address { overflow-wrap: anywhere; }
 .auth-app .notice { margin-bottom: 18px; }
+.auth-legal > button { white-space: nowrap; }
+@media (max-width: 350px) {
+  .auth-legal { flex-direction: column; align-items: stretch; }
+  .auth-legal > button { flex: none; }
+}
+.auth-account h1 { font-size: 1.8rem; }
+.auth-account .card { margin: 0; }
+.auth-account .auth-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.auth-account .auth-status span { color: var(--muted); font-size: .8rem; }
+.auth-account h2 { font-size: 1rem; }
+.auth-account .small { overflow-wrap: anywhere; }
 .demo-banner { margin: 0 auto; padding: 14px 20px; width: min(100%, 520px); border: 1px solid var(--line); background: var(--card); font-size: .8rem; }
 .demo-banner a { color: #87b5ff; display: inline-flex; min-height: 44px; align-items: center; }

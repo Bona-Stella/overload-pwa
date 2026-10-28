@@ -1,0 +1,87 @@
+{
+  "environment": "isolated loopback fake API only; no Google/Resend/development database",
+  "login320": {
+    "legal": [
+      {
+        "height": 48,
+        "text": "이용약관",
+        "whiteSpace": "nowrap"
+      },
+      {
+        "height": 48,
+        "text": "개인정보 처리방침",
+        "whiteSpace": "nowrap"
+      }
+    ],
+    "legalDirection": "column",
+    "overflow": false,
+    "primary": "rgb(59, 130, 246)",
+    "width": 320
+  },
+  "loginOtherWidths": [
+    {
+      "legalDirection": "row",
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 375
+    },
+    {
+      "legalDirection": "row",
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 390
+    },
+    {
+      "legalDirection": "row",
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 1440
+    }
+  ],
+  "accountWidths": [
+    {
+      "minButtonHeight": 48,
+      "overflow": false,
+      "privateUuidVisible": false,
+      "width": 320
+    },
+    {
+      "minButtonHeight": 48,
+      "overflow": false,
+      "privateUuidVisible": false,
+      "width": 375
+    },
+    {
+      "minButtonHeight": 48,
+      "overflow": false,
+      "privateUuidVisible": false,
+      "width": 390
+    },
+    {
+      "minButtonHeight": 48,
+      "overflow": false,
+      "privateUuidVisible": false,
+      "width": 1440
+    }
+  ],
+  "observed": {
+    "emailLogin": true,
+    "reauthRequest202Verify204": true,
+    "otpValueEmptyAfterSubmit": true,
+    "googleLoginPreserved": true,
+    "googleContactPostForm": true,
+    "contactSafeReturn": true,
+    "candidateRequiredUntilOtp": true,
+    "candidateCancel": true,
+    "contactFailureNotice": true,
+    "contactEnrollmentSuccess": true,
+    "proofFeedbackClearedOnReload": true,
+    "backNavigationHome": true,
+    "logoutClearsAccount": true,
+    "rateLimited120SecondWait": true,
+    "accountReadFailureRetainsKnownAuthentication": true
+  },
+  "externalGoogleRequests": 0,
+  "externalResendMessages": 0,
+  "developmentDatabaseAccess": false
+}

@@ -1,7 +1,8 @@
-# 서버 세션 인증 — Task 007-1D-1
+# 서버 세션 인증 — Task 007-1D-1 / 1D-2A
 
 `/`는 실제 인증 API를 사용하는 React 화면이다. 최종 로그인 여부의 근거는 GET session의 서버 응답뿐이다.
-Google/이메일 로그인 수단 관리·대표 이메일 변경·운동 API는 이 단계에 포함하지 않는다.
+`/account`는 인증된 계정의 로그인 수단 조회·대표 이메일 등록·이메일 재인증 화면이다.
+Google/이메일 로그인 수단 연결·해제·대표 이메일 변경·운동 API는 포함하지 않는다.
 
 ## 디자인 기준
 
@@ -84,3 +85,52 @@ npm run build
 공식 참고: [React 외부 상태 구독](https://react.dev/reference/react/useSyncExternalStore),
 [Vite 프록시 설정](https://vite.dev/config/server-options.html#server-proxy),
 [쿠키 속성](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie).
+
+## Task 007-1D-2A: 계정·대표 이메일·재인증
+
+기존 AuthController 안의 `account` 상태를 사용하고 별도 인증 저장소를 만들지 않는다.
+연결된 수단은 GET `/api/v1/auth/identities`의 소문자 provider로 표시하며 UUID는 내부 동작에만 사용한다.
+GET `/api/v1/auth/reauth/email/contact`의 VERIFIED/REQUIRED와 `maskedEmail`만 표시한다.
+원문 주소·Google sub/issuer·토큰을 수신 DTO의 추가 필드에서 복사하지 않는다.
+현재 서버의 `첫 문자 + ***@***` 마스크 계약과 UUID/provider 형식을 검증한다.
+
+- 일반 재인증: POST `/api/v1/auth/reauth/email/request` `{}` → 202 challengeId.
+- 최초 등록 발급: POST `/api/v1/auth/reauth/email/registration/request` `{candidateId}` → 202 challengeId.
+- 검증: 각 경로의 `/verify`에 `{challengeId,code}`, 등록만 candidateId 추가 → 204.
+- 등록 취소: POST `/api/v1/auth/reauth/email/registration/cancel` `{}` → 204 후 서버 상태 재조회.
+
+수신 주소/userId/선택적 legacy EMAIL identityId는 OTP 본문에 넣지 않는다.
+모든 쓰기 전에 같은 UUID의 서버 세션·새 CSRF·서버 연락처/후보를 확인한다.
+검증 성공 후 회전된 세션 UUID가 같은지 다시 확인하고 CSRF와 계정 데이터를 새로 조회한다.
+204 이후 조회 실패/네트워크·5xx 등 결과 불확실은 challenge를 버리고 연결 확인 상태로 전환한다.
+성공으로 추정하거나 소비됐을 수 있는 OTP를 자동 재제출하지 않는다.
+
+OTP는 메모리 전용이고 입력은 제출/닫기/후보 변경/화면 종료 시 비운다. 5분/60초/5회와 Retry-After를 안내하며
+클릭 직렬화·발급/검증 대기를 적용한다. 화면을 닫았다 다시 열어도 같은 메모리의 발급 대기는 유지한다.
+전체 새로고침 이후 제한은 서버가 최종 판단한다. 자동 발송/재발송은 없다.
+401 OTP_INVALID는 오답/만료/바인딩 오류이며 로그아웃으로 단정하지 않는다. 인증 세션 401은 비로그인이다.
+계정 GET 5xx/네트워크 오류는 재조회 안내이며 정상 비로그인과 구분한다.
+
+Google-only REQUIRED에서는 현재 서버가 반환한 Google identity로 확인 form을 준비한다.
+새 CSRF를 받은 후 `<form method="post" action="/oauth2/contact/google">`에 hidden identityId와 `_csrf`를 넣고
+사용자가 계속 버튼을 눌러 일반 브라우저 이동을 수행한다. OAuth 시작을 fetch로 추적하거나 GET으로 바꾸지 않는다.
+Vite는 이 경로도 기존 loopback API target에 프록시한다.
+서버에 `AUTH_CONTACT_FRONTEND_RETURN_URI=http://localhost:3000/account/contact/complete`를 명시한 경우
+확인 성공/실패는 각각 고정 complete/failed 경로로 복귀한다. 기존 LOGIN 복귀 설정과 독립적이다.
+복귀 URL은 인증 근거가 아니며 session/identities/contact를 다시 조회하고 `/account`로 URL을 정리한다.
+후보만 있으면 계속 REQUIRED다. 사용자가 후보 발급을 요청하고 OTP를 검증해야 VERIFIED가 된다.
+EMAIL-only REQUIRED는 정상 EMAIL OTP 재로그인으로 실제 소유권을 다시 입증하도록 안내하며 새 등록 API를 만들지 않는다.
+
+일반 Google 로그인·VERIFIED 주소만으로 최근 이메일 소유 증명을 추정하지 않는다.
+`confirmedAt`은 이번 화면의 204·같은 UUID·CSRF·VERIFIED 재조회까지 완료한 뒤 표시하는 메모리 피드백이다.
+10분 안내는 서버 인가가 아니다. 서버 EmailOwnershipProof를 복제/재구성하지 않으며 새로고침하면 이 안내도 초기화한다.
+뒤로가기/popstate/bfcache 복귀는 계정/OTP/form/최근 표시를 지우고 서버를 다시 확인한다.
+진행 중 응답은 세대 번호와 UUID 전후 검사로 오래된 계정 데이터에 적용하지 않는다.
+
+320px 약관은 인증 전용 `.auth-legal` 세로 배치를 사용하며 375px 이상은 기존 가로 배치를 유지한다.
+공통 `.row > button`, 운동 소스/데모 저장소/Task 005.5 목업은 변경하지 않는다.
+CONTACT 시작 자체가 CSRF/신원 오류로 거절되면 서버 JSON이 브라우저에 표시될 수 있다. 뒤로 돌아와 서버 상태를 재조회한다.
+CSRF 우회나 일반 LOGIN 실패 처리로 기존 인증 세션을 폐기하는 대안은 사용하지 않는다.
+
+실제 Google/Resend/개발 DB는 이번 구현 테스트에서 사용하지 않는다.
+결과·비식별 화면·후속 LIVE 범위는 [1D-2A 보고서](../tasks/task-007-1d-2a-validation-report.md)를 따른다.

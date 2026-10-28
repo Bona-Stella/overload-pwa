@@ -25,6 +25,8 @@ registerHooks({
 const { LoginScreens } = await import('../src/features/auth/LoginScreens.tsx')
 const { AuthApp } = await import('../src/features/auth/AuthApp.tsx')
 const { AuthContext } = await import('../src/features/auth/context.ts')
+const { AccountSettings } = await import('../src/features/auth/AccountSettings.tsx')
+const { emptyAccount } = await import('../src/features/auth/account.ts')
 const NOW = 1_800_000_000_000
 const controller = new AuthController()
 const initial = { status: 'anonymous', userId: null, pending: null, challenge: null, resendAt: 0, issue: null, notice: '' }
@@ -77,4 +79,42 @@ test('layout geometry follows the approved mock while current app colors take pr
   for (const [before, after] of [['.preview-wordmark {', '.auth-wordmark {'], ['.preview-entry-heading {', '.auth-entry-heading {'], ['.preview-entry h1 {', '.auth-entry h1 {'], ['.preview-google {', '.auth-google {'], ['.preview-code {', '.auth-code {']]) assert.equal(block(real, after), block(mock, before))
   assert.doesNotMatch(real, /--blue\s*:|#d93b40|#fa696d/)
   assert.match(real, /#68a2ff/)
+})
+
+const accountHtml = (patch = {}, statePatch = {}) => renderToStaticMarkup(React.createElement(AccountSettings, { state: { ...initial, status: 'authenticated', updatedAt: NOW, accountOpen: true, account: { ...emptyAccount(), loaded: true, ...patch }, ...statePatch }, controller, now: NOW }))
+const ID='30000000-1111-4222-8333-000000000003'
+for (const providers of [['email'], ['google'], ['email','google'], []]) test(`account read-only UI: ${providers.join('+') || 'no identities'}`, () => {
+  const html=accountHtml({ identities: providers.map(provider => ({ id: ID, provider })), contact: { status: 'VERIFIED', maskedEmail: 'a***@***' } })
+  assert.match(html,/계정 설정|로그인 수단/);assert.match(html,/a\*\*\*@\*\*\*/);assert.doesNotMatch(html,new RegExp(ID))
+  assert.doesNotMatch(html,/로그인 수단 연결|Google 연결|이메일 연결|해제 버튼|issuer|sub=/)
+  assert.match(html,/최근 이메일 OTP 검증은 이 화면에서 확인되지 않았습니다/)
+  if(!providers.length)assert.match(html,/연결된 로그인 수단을 확인할 수 없습니다/)
+})
+test('REQUIRED with EMAIL-only explains normal OTP login instead of inventing an address-registration form',()=>{
+  const html=accountHtml({identities:[{id:ID,provider:'email'}],contact:{status:'REQUIRED'}})
+  assert.match(html,/이메일 OTP로 다시 로그인/);assert.doesNotMatch(html,/type="email"|Google로 등록 이메일 확인|이메일로 재인증/)
+})
+test('Google contact uses a fixed CSRF-protected POST form with hidden internal identity only',()=>{
+  const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'REQUIRED'},form:{identityId:ID,csrf:'fake-form-csrf'}})
+  assert.match(html,/action="\/oauth2\/contact\/google" method="post"/);assert.match(html,/type="hidden" name="_csrf"/);assert.match(html,/type="hidden" name="identityId"/)
+  assert.doesNotMatch(html,/type="email"|\/oauth2\/link\/|\/oauth2\/reauth\/|Google 비밀번호 재인증을 강제합니다/)
+})
+test('candidate UI remains REQUIRED until OTP success and uses only masked address',()=>{
+  const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'REQUIRED',candidate:{id:ID,maskedEmail:'g***@***'}}})
+  assert.match(html,/후보 이메일로 등록 코드 요청|아직 등록되지 않았습니다|대표 이메일 등록 취소/);assert.doesNotMatch(html,/등록 완료 · VERIFIED|type="email"/)
+})
+test('proof OTP field, local expiration, resend wait and verification budget are visible',()=>{
+  const account={identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'},challenge:{id:ID,expiresAt:NOW+300_000},resendAt:NOW+60_000}
+  const html=accountHtml(account)
+  for(const text of ['autoComplete="one-time-code"','inputMode="numeric"','maxLength="6"','5:00','최대 5회 오답','60초 후 요청 가능'])assert.ok(html.includes(text),text)
+  assert.match(accountHtml({...account,verifyAt:NOW+120_000}),/120초 후 코드 확인/)
+  assert.match(accountHtml({...account,challenge:{id:ID,expiresAt:NOW}}),/코드 만료/)
+})
+test('recent OTP feedback lasts through the ten-minute boundary but never claims server authorization',()=>{
+  assert.match(accountHtml({confirmedAt:NOW-600_000}),/이 화면에서 OTP 검증을 완료했습니다/)
+  assert.match(accountHtml({confirmedAt:NOW-600_001}),/최근 이메일 OTP 검증은 이 화면에서 확인되지 않았습니다/)
+})
+test('account loading and retryable lookup failure are distinct and contain no private identifiers',()=>{
+  assert.match(accountHtml({loaded:false},{pending:'account'}),/계정 정보를 확인하고 있어요/)
+  assert.match(accountHtml({loaded:false}),/계정 정보를 불러오지 못했습니다|계정 정보 다시 확인/)
 })

@@ -34,6 +34,6 @@ export function LoginScreens({ state, controller, now, onLegal }: Props) {
       <button className="primary full" type="submit" disabled={busy || resend > 0}>{resend > 0 ? `${resend}초 후 요청 가능` : '이메일로 계속하기'}</button>
     </form>
     <p className="muted small">처음이라면 인증 후 가입으로, 기존 회원이라면 로그인으로 이어집니다. 비밀번호는 필요하지 않아요.</p>
-    <div className="row"><button className="quiet" onClick={() => onLegal('이용약관')}>이용약관</button><button className="quiet" onClick={() => onLegal('개인정보 처리방침')}>개인정보 처리방침</button></div>
+    <div className="row auth-legal"><button className="quiet" onClick={() => onLegal('이용약관')}>이용약관</button><button className="quiet" onClick={() => onLegal('개인정보 처리방침')}>개인정보 처리방침</button></div>
   </div>
 }
