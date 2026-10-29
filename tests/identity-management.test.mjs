@@ -101,7 +101,7 @@ for(const error of [new AuthError('AUTHENTICATION_REQUIRED',401),new AuthError('
 for(const error of [new AuthError('NETWORK'),new AuthError('TIMEOUT'),new AuthError('RESPONSE_INVALID'),new AuthError('IDENTITY_CHANGE_UNAVAILABLE',503)])test(`uncertain ${error.code} rereads actual state without claiming mutation success`,async()=>{
   const f=fake();await open(f);let writes=0;const count=f.calls.filter(x=>x==='identities').length
   f.api.linkEmail=async()=>{writes++;f.setIdentities([EMAIL,GOOGLE]);throw error};await f.controller.linkEmail()
-  assert.equal(writes,1);assert.ok(f.calls.filter(x=>x==='identities').length>count);assert.equal(f.controller.getSnapshot().account.identities.length,2);assert.match(f.controller.getSnapshot().notice,/불확실.*자동 재실행하지/)
+  assert.equal(writes,1);assert.ok(f.calls.filter(x=>x==='identities').length>count);assert.equal(f.controller.getSnapshot().account.identities.length,2);assert.match(f.controller.getSnapshot().notice,/현재 이메일 로그인 연결 상태.*자동 재실행하지/);assert.doesNotMatch(f.controller.getSnapshot().notice,/연결했습니다/);assert.equal(f.controller.getSnapshot().issue,null)
 })
 test('uncertain write followed by failed GET hides stale account data',async()=>{
   const f=fake();await open(f);f.api.linkEmail=async()=>{f.api.identities=async()=>{throw new AuthError('NETWORK')};throw new AuthError('TIMEOUT')}

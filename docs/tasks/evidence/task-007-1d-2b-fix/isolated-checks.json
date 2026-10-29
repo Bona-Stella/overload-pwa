@@ -1,0 +1,1419 @@
+{
+  "environment": "in-memory fake API; no external services or development DB",
+  "strictMode": true,
+  "scenarios": [
+    {
+      "scenario": "A",
+      "mode": "link-ok",
+      "ui": "confirmed",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "B",
+      "ui": "연결 요청은 처리됐지만",
+      "mode": "link-read-503",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 503,
+          "reason": "simulated-followup-fault"
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 19,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 503,
+          "reason": "simulated-followup-fault"
+        },
+        {
+          "order": 20,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "B-recovery",
+      "ui": "대표 이메일의 로그인 수단을 연결했습니다.",
+      "mode": "link-read-once-503",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 503,
+          "reason": "simulated-followup-fault"
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 19,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 20,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 21,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "C",
+      "ui": "연결 요청은 처리됐지만",
+      "mode": "link-read-network",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": null,
+          "reason": "simulated-followup-fault"
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 19,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": null,
+          "reason": "simulated-followup-fault"
+        },
+        {
+          "order": 20,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "D",
+      "ui": "현재 이메일 로그인 연결 상태를 서버에서 확인했습니다.",
+      "mode": "link-lost",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": null,
+          "reason": "simulated-response-loss"
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "E",
+      "ui": "연결 요청은 처리됐지만",
+      "mode": "link-read-403",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 403,
+          "reason": "simulated-followup-fault"
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 19,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 403,
+          "reason": "simulated-followup-fault"
+        },
+        {
+          "order": 20,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "F-refresh",
+      "ui": "readback after refresh",
+      "mode": "link-delayed",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": null
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 19,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 20,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 21,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "G-H",
+      "strictMode": true,
+      "ui": "double-click produces one POST",
+      "mode": "link-delayed",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "F-owner",
+      "ui": "owner change blocks success",
+      "mode": "link-account-changed",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "infrastructure-control",
+      "ui": "simulated guard denial remains an error",
+      "mode": "link-guard-blocked",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": false,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 409,
+          "reason": "simulated-approval-guard"
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "scenario": "F-back",
+      "ui": "cleared intent on back; read only restore",
+      "mode": "link-delayed",
+      "writes": 1,
+      "mails": 0,
+      "state": {
+        "emailLinked": true,
+        "googleLinked": true
+      },
+      "events": [
+        {
+          "order": 1,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 2,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 3,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 4,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 5,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 6,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 7,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 8,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 9,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 10,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 11,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 12,
+          "method": "GET",
+          "path": "/api/v1/auth/identities",
+          "status": 200
+        },
+        {
+          "order": 13,
+          "method": "GET",
+          "path": "/api/v1/auth/reauth/email/contact",
+          "status": 200
+        },
+        {
+          "order": 14,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 15,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 16,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        },
+        {
+          "order": 17,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 18,
+          "method": "POST",
+          "path": "/api/v1/auth/identities/email/link",
+          "status": 201
+        },
+        {
+          "order": 19,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 20,
+          "method": "GET",
+          "path": "/api/v1/auth/session",
+          "status": 200
+        },
+        {
+          "order": 21,
+          "method": "GET",
+          "path": "/api/v1/auth/csrf",
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

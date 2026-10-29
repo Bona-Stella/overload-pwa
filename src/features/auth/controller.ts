@@ -324,6 +324,11 @@ export class AuthController {
     this.running = true; this.set({ pending: 'identity-change', issue: null, notice: '' })
     this.accountPatch({ unlink: null, linkForm: null, form: null, challenge: null })
     let sent = false
+    let linked: Awaited<ReturnType<AuthApi['linkEmail']>> | undefined
+    const linkNotice = () => linked?.status === 'ALREADY_LINKED' ? '이미 같은 계정에 연결된 이메일 로그인입니다.' : '대표 이메일의 로그인 수단을 연결했습니다.'
+    const unconfirmedLink = () => this.set({ issue: { code: 'EMAIL_LINK_STATUS_UNCONFIRMED', message: linked
+      ? '연결 요청은 처리됐지만 현재 상태를 조회하지 못했습니다. 계정 정보 다시 확인으로 연결 상태를 다시 확인해 주세요. 연결 요청은 자동으로 반복하지 않습니다.'
+      : '연결 요청 결과를 확인하지 못했습니다. 계정 정보 다시 확인으로 연결 상태를 다시 확인해 주세요. 연결 요청은 자동으로 반복하지 않습니다.' } })
     try {
       await this.readAccount(expected, generation)
       if (this.state.account.contact?.status !== 'VERIFIED') throw new AuthError('REAUTH_EMAIL_REQUIRED', 409)
@@ -335,18 +340,32 @@ export class AuthController {
       await this.prepareWrite(expected, generation)
       sent = true
       const result = target ? await this.api.unlinkIdentity(target) : await this.api.linkEmail()
+      if (result) linked = result
       await this.readAccount(expected, generation)
       if (target ? this.state.account.identities.some(value => value.id === target.id)
         : !result || !this.state.account.identities.some(value => value.id === result.identity.id && value.provider === 'email')) throw new AuthError('RESPONSE_INVALID')
-      this.set({ notice: target ? '로그인 수단을 해제했습니다. 대표 재인증 이메일은 유지됩니다.' : result?.status === 'ALREADY_LINKED' ? '이미 같은 계정에 연결된 이메일 로그인입니다.' : '대표 이메일의 로그인 수단을 연결했습니다.' })
+      this.set({ notice: target ? '로그인 수단을 해제했습니다. 대표 재인증 이메일은 유지됩니다.' : linkNotice() })
     } catch (error) {
       const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
       const uncertain = sent && (['NETWORK', 'TIMEOUT', 'RESPONSE_INVALID'].includes(e.code) || e.status >= 500)
       this.accountPatch({ unlink: null, linkForm: null, ...(e.code === 'EMAIL_OWNERSHIP_PROOF_REQUIRED' ? { confirmedAt: null } : {}) })
+      if (!target && (e.code === 'SESSION_CHANGED' || e.status === 401)) { this.accountFailure(e); return }
       if (sent) {
         // Read only: a failed/uncertain mutation is never retried, including after CSRF refresh.
         try { await this.readAccount(expected, generation) }
-        catch (readError) { this.accountPatch({ loaded: false, identities: [], contact: null }); this.accountFailure(readError); return }
+        catch (readError) {
+          this.accountPatch({ loaded: false, identities: [], contact: null })
+          this.accountFailure(readError)
+          // Acknowledgement and readback are separate outcomes. Authentication/owner failures still win.
+          if (!target && (linked || uncertain) && this.state.status === 'authenticated') unconfirmedLink()
+          return
+        }
+      }
+      if (!target && (linked || uncertain)) {
+        const confirmed = this.state.account.identities.some(value => value.provider === 'email' && (!linked || value.id === linked.identity.id))
+        if (confirmed) this.set({ issue: null, notice: linked ? linkNotice() : '현재 이메일 로그인 연결 상태를 서버에서 확인했습니다. 앞선 요청의 응답은 확인하지 못했으며 자동 재실행하지 않습니다.' })
+        else unconfirmedLink()
+        return
       }
       this.accountFailure(e)
       if (!target && e.code === 'IDENTITY_ALREADY_OWNED') this.set({ issue: { code: e.code, message: '이 이메일 로그인은 이미 다른 계정에 연결되어 있습니다. 계정은 자동으로 합쳐지지 않습니다.' } })

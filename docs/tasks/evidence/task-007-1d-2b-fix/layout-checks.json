@@ -1,0 +1,154 @@
+{
+  "method": "same-site iframe with real CSS viewport, measured DOM dimensions; desktop presentation scaled to 75%",
+  "viewports": [
+    {
+      "width": 320,
+      "state": "acknowledged-unconfirmed",
+      "displayScale": 1,
+      "buttons": [
+        {
+          "height": 48,
+          "label": "‹ 로그인된 화면으로"
+        },
+        {
+          "height": 48,
+          "label": "계정 정보 다시 확인"
+        },
+        {
+          "height": 48,
+          "label": "로그아웃"
+        }
+      ],
+      "clientWidth": 305,
+      "innerWidth": 320,
+      "scrollWidth": 305
+    },
+    {
+      "width": 375,
+      "state": "confirmed",
+      "displayScale": 1,
+      "buttons": [
+        {
+          "height": 48,
+          "label": "‹ 로그인된 화면으로"
+        },
+        {
+          "height": 48,
+          "label": "대표 이메일 로그인 연결 확인"
+        },
+        {
+          "height": 48,
+          "label": "이메일 로그인 해제"
+        },
+        {
+          "height": 48,
+          "label": "Google 로그인 추가 연결"
+        },
+        {
+          "height": 48,
+          "label": "Google 로그인 해제"
+        },
+        {
+          "height": 48,
+          "label": "이메일로 재인증"
+        },
+        {
+          "height": 48,
+          "label": "계정 정보 새로 확인"
+        },
+        {
+          "height": 48,
+          "label": "로그아웃"
+        }
+      ],
+      "clientWidth": 360,
+      "innerWidth": 375,
+      "scrollWidth": 360
+    },
+    {
+      "width": 390,
+      "state": "current-state-confirmed-response-lost",
+      "displayScale": 1,
+      "buttons": [
+        {
+          "height": 48,
+          "label": "‹ 로그인된 화면으로"
+        },
+        {
+          "height": 48,
+          "label": "대표 이메일 로그인 연결 확인"
+        },
+        {
+          "height": 48,
+          "label": "이메일 로그인 해제"
+        },
+        {
+          "height": 48,
+          "label": "Google 로그인 추가 연결"
+        },
+        {
+          "height": 48,
+          "label": "Google 로그인 해제"
+        },
+        {
+          "height": 48,
+          "label": "이메일로 재인증"
+        },
+        {
+          "height": 48,
+          "label": "계정 정보 새로 확인"
+        },
+        {
+          "height": 48,
+          "label": "로그아웃"
+        }
+      ],
+      "clientWidth": 375,
+      "innerWidth": 390,
+      "scrollWidth": 375
+    },
+    {
+      "width": 1440,
+      "state": "confirmed",
+      "displayScale": 0.75,
+      "brandDotColor": "rgb(104, 162, 255)",
+      "buttons": [
+        {
+          "height": 48,
+          "label": "‹ 로그인된 화면으로"
+        },
+        {
+          "height": 48,
+          "label": "대표 이메일 로그인 연결 확인"
+        },
+        {
+          "height": 48,
+          "label": "이메일 로그인 해제"
+        },
+        {
+          "height": 48,
+          "label": "Google 로그인 추가 연결"
+        },
+        {
+          "height": 48,
+          "label": "Google 로그인 해제"
+        },
+        {
+          "height": 48,
+          "label": "이메일로 재인증"
+        },
+        {
+          "height": 48,
+          "label": "계정 정보 새로 확인"
+        },
+        {
+          "height": 48,
+          "label": "로그아웃"
+        }
+      ],
+      "clientWidth": 1425,
+      "innerWidth": 1440,
+      "scrollWidth": 1425
+    }
+  ]
+}
