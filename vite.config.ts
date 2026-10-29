@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
         '/api': { target },
         '/oauth2/authorization/google': { target },
         '/oauth2/contact/google': { target },
+        '/oauth2/link/google': { target },
       },
     },
   };

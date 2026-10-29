@@ -27,5 +27,8 @@ body:has(.auth-app) { min-width: 0; }
 .auth-account .auth-status span { color: var(--muted); font-size: .8rem; }
 .auth-account h2 { font-size: 1rem; }
 .auth-account .small { overflow-wrap: anywhere; }
+.auth-identity + .auth-identity { border-top: 1px solid var(--line); padding-top: 16px; }
+.auth-proof-link { color: #87b5ff; min-height: 48px; display: flex; align-items: center; }
+#account-email-proof { scroll-margin-top: 20px; }
 .demo-banner { margin: 0 auto; padding: 14px 20px; width: min(100%, 520px); border: 1px solid var(--line); background: var(--card); font-size: .8rem; }
 .demo-banner a { color: #87b5ff; display: inline-flex; min-height: 44px; align-items: center; }

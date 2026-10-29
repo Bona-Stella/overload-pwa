@@ -1,0 +1,120 @@
+{
+  "scope": "isolated fake API browser checks; not live Google/Resend/database verification",
+  "viewports": [
+    {
+      "accountWidth": 277,
+      "buttonMinHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 320
+    },
+    {
+      "accountWidth": 320,
+      "buttonMinHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 375
+    },
+    {
+      "accountWidth": 335,
+      "buttonMinHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 390
+    },
+    {
+      "accountWidth": 478,
+      "buttonMinHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 1440
+    }
+  ],
+  "checks": [
+    {
+      "scenario": "email-link-201-and-200",
+      "passed": true
+    },
+    {
+      "scenario": "unlink-cancel-no-request",
+      "passed": true
+    },
+    {
+      "scenario": "email-unlink-contact-preserved",
+      "passed": true
+    },
+    {
+      "scenario": "last-usable-login-server-refusal",
+      "passed": true
+    },
+    {
+      "scenario": "proof-required-uses-existing-reauth-no-auto-replay",
+      "passed": true
+    },
+    {
+      "scenario": "google-link-form-post-and-return-readback",
+      "passed": true
+    },
+    {
+      "scenario": "google-unlink-preserves-contact",
+      "passed": true
+    },
+    {
+      "scenario": "email-ownership-conflict-no-merge",
+      "passed": true
+    },
+    {
+      "scenario": "multiple-google-identities-no-arbitrary-unlink",
+      "passed": true
+    },
+    {
+      "scenario": "uncertain-response-readback-without-retry",
+      "passed": true
+    },
+    {
+      "scenario": "google-link-failure-generic-no-false-success",
+      "passed": true
+    },
+    {
+      "scenario": "required-contact-disables-identity-writes",
+      "passed": true
+    },
+    {
+      "scenario": "logout-clears-account-and-navigation-state",
+      "passed": true
+    },
+    {
+      "scenario": "login320-legal-column-nowrap-preserved",
+      "passed": true
+    },
+    {
+      "scenario": "refresh-clears-google-link-form-no-auto-submit",
+      "passed": true
+    }
+  ],
+  "displayPrivacy": {
+    "rawEmailVisible": false,
+    "uuidVisible": false
+  },
+  "login320": {
+    "overflow": false,
+    "legalDirection": "column",
+    "legalNoWrap": true
+  },
+  "fullPageCaptureDistortionReplacedWithViewportCaptures": true,
+  "actualExternalRequests": 0,
+  "dialog320": {
+    "buttonMinHeight": 48,
+    "dialogWidth": 267,
+    "horizontalOverflow": false,
+    "overflowY": "auto",
+    "verticalScrolling": false,
+    "width": 320
+  },
+  "errorScreenshotsRecapturedAtTopAfterVisibleConfirmation": true,
+  "cleanup": {
+    "viewportReset": true,
+    "normalValidationTabsClosed": true,
+    "fakeServerStopped": true
+  }
+}

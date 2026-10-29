@@ -10,7 +10,7 @@ export function AuthProvider({ children, flow = 'none' }: { children: ReactNode;
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   useEffect(() => {
     void controller.start(flow)
-    if (flow !== 'none' && flow !== 'account') window.history.replaceState(null, '', flow.startsWith('contact-') ? '/account' : '/')
+    if (flow !== 'none' && flow !== 'account') window.history.replaceState(null, '', flow.startsWith('contact-') || flow.startsWith('link-') ? '/account' : '/')
     const restore = (event: PageTransitionEvent) => { if (event.persisted) controller.resume(returnFlow(window.location.pathname)) }
     const back = () => { controller.resume(returnFlow(window.location.pathname)) }
     window.addEventListener('pageshow', restore)

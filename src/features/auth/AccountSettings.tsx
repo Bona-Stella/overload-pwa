@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AuthController, AuthState } from './controller.ts'
+import { IdentityManagement } from './IdentityManagement'
 
 export function AccountSettings({ state, controller, now }: { state: AuthState; controller: AuthController; now: number }) {
   const [code, setCode] = useState('')
@@ -16,13 +17,8 @@ export function AccountSettings({ state, controller, now }: { state: AuthState; 
     <p className="muted">로그인되어 있습니다. 로그인 수단과 재인증 이메일을 확인하세요.</p>
     {!account.loaded ? <section className="card stack" role="status"><p>{busy ? '계정 정보를 확인하고 있어요.' : '계정 정보를 불러오지 못했습니다.'}</p>
       <button className="outline full" disabled={busy} onClick={() => { clear(); void controller.openAccount() }}>계정 정보 다시 확인</button></section> : <>
-      <section className="card stack"><h2>로그인 수단</h2>
-        {account.identities.length === 0 && <p className="notice error">연결된 로그인 수단을 확인할 수 없습니다. 다시 조회해 주세요.</p>}
-        <div className="auth-status"><strong>이메일 OTP</strong><span>{account.identities.some(value => value.provider === 'email') ? '연결됨' : '연결 안 됨'}</span></div>
-        <div className="auth-status"><strong>Google</strong><span>{account.identities.some(value => value.provider === 'google') ? '연결됨' : '연결 안 됨'}</span></div>
-        <p className="muted small">로그인 수단은 읽기 전용으로 표시합니다. 서로 다른 계정을 자동으로 합치지 않습니다.</p>
-      </section>
-      <section className="card stack"><h2>대표 재인증 이메일</h2>
+      <IdentityManagement state={state} controller={controller} />
+      <section className="card stack" id="account-email-proof"><h2>대표 재인증 이메일</h2>
         {contact?.status === 'VERIFIED' ? <><div className="auth-status"><strong>등록 완료 · VERIFIED</strong><span>{contact.maskedEmail}</span></div>
           <p className="muted small">대표 이메일은 로그인 수단과 별도입니다. 등록 완료가 최근 이메일 재인증 완료를 뜻하지는 않습니다.</p>
           <button className="primary full" disabled={busy || wait > 0} onClick={() => { clear(); void controller.requestEmailProof() }}>{state.pending === 'proof-request' ? '인증코드를 보내는 중…' : wait > 0 ? `${wait}초 후 요청 가능` : '이메일로 재인증'}</button></>
@@ -30,6 +26,7 @@ export function AccountSettings({ state, controller, now }: { state: AuthState; 
             {contact?.status === 'REQUIRED' && contact.candidate ? <><div className="auth-status"><strong>확인된 등록 후보</strong><span>{contact.candidate.maskedEmail}</span></div>
               <p className="muted small">아직 등록되지 않았습니다. 이 후보로 메일을 요청하고 OTP를 검증해야 등록됩니다.</p>
               <button className="primary full" disabled={busy || wait > 0} onClick={() => { clear(); void controller.requestEmailProof() }}>{state.pending === 'proof-request' ? '인증코드를 보내는 중…' : wait > 0 ? `${wait}초 후 요청 가능` : '후보 이메일로 등록 코드 요청'}</button></>
+              : account.identities.filter(value => value.provider === 'google').length > 1 ? <p className="muted small">Google 신원이 여러 개여서 등록 확인 대상을 안전하게 구별할 수 없습니다. 개별 신원 확인 기능이 필요합니다.</p>
               : account.identities.some(value => value.provider === 'google') ? <>
                 <p className="muted small">현재 계정에 연결된 Google 계정으로 이메일을 확인합니다. Google 비밀번호 재인증을 강제하는 절차가 아니며, 이메일 OTP 검증은 별도로 필요합니다.</p>
                 {account.form ? <form action="/oauth2/contact/google" method="post" className="stack" onSubmit={event => { clear(); if (!controller.beginContactNavigation()) event.preventDefault() }}>

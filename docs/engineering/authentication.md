@@ -134,3 +134,41 @@ CSRF 우회나 일반 LOGIN 실패 처리로 기존 인증 세션을 폐기하�
 
 실제 Google/Resend/개발 DB는 이번 구현 테스트에서 사용하지 않는다.
 결과·비식별 화면·후속 LIVE 범위는 [1D-2A 보고서](../tasks/task-007-1d-2a-validation-report.md)를 따른다.
+
+## Task 007-1D-2B: 로그인 수단 관리
+
+같은 AuthController/AccountState에 해제 확인과 Google LINK form의 메모리 상태만 추가했다.
+IdentityManagement는 기존 카드·Dialog·버튼·#3B82F6을 재사용한다. 대표 이메일 VERIFIED와 EMAIL 연결 상태는 별도다.
+
+| 동작 | 요청 | 완료 확인 |
+|---|---|---|
+| 대표 이메일의 EMAIL 로그인 연결 | POST /api/v1/auth/identities/email/link, 빈 JSON | 201 LINKED 또는 200 ALREADY_LINKED의 id/provider 검증 후 재조회 |
+| 자기 EMAIL/Google 해제 | POST /api/v1/auth/identities/{email,google}/unlink, identityId만 | 사용자 최종 확인 → 204 → 대상 부재 재조회 |
+| Google 추가 연결 | HTML form POST /oauth2/link/google, _csrf만 | 고정 React 복귀 후 session/identities/contact 재조회 |
+
+쓰기 전후 서버 세션 UUID·세대 번호를 검사하고 fresh CSRF를 사용한다. 서버가 EmailOwnershipProof를 최종 검사한다.
+confirmedAt은 권한 근거가 아니다. 403 EMAIL_OWNERSHIP_PROOF_REQUIRED는 기존 공통 재인증 화면으로 안내하며
+OTP 완료 후에도 자동으로 연결·해제를 재실행하지 않는다. 사용자에게 다시 선택받는다.
+해제 확인에는 새 가입 가능성·이전 계정 데이터 접근 불가·대표 연락처/운동 보존·다른 기기 세션 미철회를 안내한다.
+마지막 수단의 실제 가용성은 서버 409 LAST_LOGIN_IDENTITY를 따른다. 단순 provider 개수로 허용 여부를 추측하지 않는다.
+
+타 계정 EMAIL 소유 충돌은 409 IDENTITY_ALREADY_OWNED이며 자동 병합 불가를 안내한다.
+401 세션 만료, 403 CSRF, 404 대상 부재, 409 세대 변경, 503 사용 불가를 구분하고 POST는 재시도하지 않는다.
+네트워크·시간 초과·응답 불일치·5xx로 쓰기 결과가 불확실하면 읽기 전용으로 계정 정보를 확인하고
+성공을 단정하지 않는다. 후속 조회도 실패하면 오래된 계정 데이터를 숨긴다.
+
+LINK 복귀 설정: 서버 프로세스에 AUTH_LINK_FRONTEND_RETURN_URI=http://localhost:3000/account/link/complete.
+실패는 고정 /account/link/failed이며 URL에 사유나 인증정보를 싣지 않는다. React는 구체적 실패 원인을 추정하지 않는다.
+Google 신원이 이미 있으면 ‘현재 연결 상태를 다시 확인’했다고만 안내하며 이번 새 연결의 대상을 추측하지 않는다.
+인증/CSRF 필터·비활성 LINK의 시작 거절은 기존 JSON일 수 있으며 뒤로 돌아와 다시 조회한다. 우회하지 않는다.
+Google Console의 LINK 콜백은 localhost:8080/login/oauth2/code/google-link로 별도 유지한다.
+
+같은 provider의 신원은 여러 개 존재할 수 있다. 안전한 표시 계약이 없으므로 복수 신원의 임의 해제를 제공하지 않는다.
+같은 이유로 Google-contact 대상이 복수이면 임의 첫 신원을 고르지 않는다.
+로그아웃·다른 사용자·뒤로가기·새로고침·bfcache 복귀는 해제 확인과 LINK 준비 상태를 폐기하고 서버를 재조회한다.
+UUID는 내부 선택값이며 URL/표시용으로 쓰지 않는다. OTP·CSRF·계정 상태를 브라우저 영구 저장소에 저장하지 않는다.
+데모 데이터·공통 운동 CSS·로그인 목업·320px 약관 수정·기존 LOGIN/CONTACT 정책은 유지한다.
+
+격리 브라우저 재현은 node tests/fixtures/identity-browser.mjs로 실행하고 localhost:18081에서 시나리오를 선택한다.
+이는 테스트 전용 loopback fake API이며 DB·Google·메일에 연결하지 않는다. Ctrl+C로 종료한다.
+결과와 제한은 [1D-2B 검증 보고서](../tasks/task-007-1d-2b-validation-report.md)에 기록한다.

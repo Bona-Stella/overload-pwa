@@ -2,6 +2,7 @@ export type ServerSession = { userId: string }
 export type Identity = { id: string; provider: 'email' | 'google' }
 export type Contact = { status: 'VERIFIED'; maskedEmail: string } | { status: 'REQUIRED'; candidate?: { id: string; maskedEmail: string } }
 export type ContactForm = { identityId: string; csrf: string }
+export type LinkForm = { csrf: string }
 type Csrf = { headerName: string; token: string }
 export class AuthError extends Error {
   readonly status: number
@@ -128,5 +129,21 @@ export class AuthApi {
     await this.refreshCsrf()
     if (!this.csrf) throw new AuthError('RESPONSE_INVALID')
     return { identityId, csrf: this.csrf.token }
+  }
+  async linkEmail(): Promise<{ status: 'LINKED' | 'ALREADY_LINKED'; identity: Identity }> {
+    const { status, data } = await this.post('/api/v1/auth/identities/email/link', {})
+    if (!object(data) || !object(data.identity) || !uuid(data.identity.id) || data.identity.provider !== 'email'
+      || !((status === 201 && data.status === 'LINKED') || (status === 200 && data.status === 'ALREADY_LINKED'))) throw new AuthError('RESPONSE_INVALID')
+    return { status: data.status as 'LINKED' | 'ALREADY_LINKED', identity: { id: data.identity.id, provider: 'email' } }
+  }
+  async unlinkIdentity(identity: Identity) {
+    if (!uuid(identity.id) || !['email', 'google'].includes(identity.provider)) throw new AuthError('INVALID_REQUEST', 400)
+    const { status } = await this.post(`/api/v1/auth/identities/${identity.provider}/unlink`, { identityId: identity.id })
+    if (status !== 204) throw new AuthError('RESPONSE_INVALID')
+  }
+  async googleLinkForm(): Promise<LinkForm> {
+    await this.refreshCsrf()
+    if (!this.csrf) throw new AuthError('RESPONSE_INVALID')
+    return { csrf: this.csrf.token }
   }
 }

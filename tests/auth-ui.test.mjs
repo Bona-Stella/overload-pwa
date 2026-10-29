@@ -118,3 +118,27 @@ test('account loading and retryable lookup failure are distinct and contain no p
   assert.match(accountHtml({loaded:false},{pending:'account'}),/계정 정보를 확인하고 있어요/)
   assert.match(accountHtml({loaded:false}),/계정 정보를 불러오지 못했습니다|계정 정보 다시 확인/)
 })
+
+test('identity management keeps VERIFIED contact separate and offers explicit actions without raw identifiers',()=>{
+  const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}})
+  for(const label of ['이메일 로그인 연결','Google 로그인 추가 연결','Google 로그인 해제','대표 재인증 이메일과 로그인 수단은 별도','서버가 최종 검사'])assert.ok(html.includes(label),label)
+  assert.doesNotMatch(html,new RegExp(ID));assert.doesNotMatch(html,/type="email"/)
+})
+test('Google LINK renders fixed form POST containing only CSRF and never identityId or returnUrl',()=>{
+  const html=accountHtml({identities:[{id:ID,provider:'email'}],contact:{status:'VERIFIED',maskedEmail:'e***@***'},linkForm:{csrf:'test-only-csrf'}})
+  assert.match(html,/action="\/oauth2\/link\/google" method="post"/);assert.match(html,/type="hidden" name="_csrf"/)
+  assert.doesNotMatch(html,/name="identityId"|name="next"|name="returnUrl"/)
+})
+for(const provider of ['email','google'])test(`${provider} unlink confirmation explains new account, sessions, contact preservation, and explicit final action`,()=>{
+  const html=accountHtml({identities:[{id:ID,provider}],contact:{status:'VERIFIED',maskedEmail:'a***@***'},unlink:{userId:'private-user',identity:{id:ID,provider}}})
+  for(const label of ['로그인 수단 해제 최종 확인','해제 취소','새 계정이 생성될 수','다른 기기에서 로그인한 세션은 즉시 모두 로그아웃되지','대표 재인증 이메일과 운동 기록은 유지'])assert.ok(html.includes(label),label)
+  assert.doesNotMatch(html,/private-user/);assert.doesNotMatch(html,new RegExp(ID))
+})
+test('multiple same-provider identities expose neither guessed addresses nor an arbitrary unlink button',()=>{
+  const html=accountHtml({identities:[{id:ID,provider:'google'},{id:'50000000-1111-4222-8333-000000000005',provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}})
+  assert.match(html,/2개 연결됨|개별 계정을 구별할 수 없어/);assert.doesNotMatch(html,/Google 로그인 해제|sub=|example\.test/)
+})
+test('server proof refusal links to the existing email reauthentication section without adding a second OTP form',()=>{
+  const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}},{issue:{code:'EMAIL_OWNERSHIP_PROOF_REQUIRED',message:'재인증 필요'}})
+  assert.match(html,/href="#account-email-proof"/);assert.match(html,/id="account-email-proof"/);assert.equal((html.match(/>이메일로 재인증</g)||[]).length,1)
+})

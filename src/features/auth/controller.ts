@@ -1,12 +1,13 @@
 import { AuthApi, AuthError } from './api.ts'
 import { emptyAccount } from './account.ts'
 import type { AccountState } from './account.ts'
+import type { Identity } from './api.ts'
 
 export type AuthIssue = { code: string; message: string }
 export type AuthState = {
   status: 'checking' | 'anonymous' | 'authenticated' | 'unavailable'
   userId: string | null
-  pending: null | 'request' | 'verify' | 'logout' | 'google' | 'restore' | 'account' | 'proof-request' | 'proof-verify' | 'contact' | 'contact-navigation' | 'cancel-registration'
+  pending: null | 'request' | 'verify' | 'logout' | 'google' | 'restore' | 'account' | 'proof-request' | 'proof-verify' | 'contact' | 'contact-navigation' | 'cancel-registration' | 'identity-change' | 'link' | 'link-navigation'
   challenge: null | { id: string | null; email: string; expiresAt: number }
   resendAt: number
   verifyAt: number
@@ -16,9 +17,10 @@ export type AuthState = {
   accountOpen: boolean
   account: AccountState
 }
-export type ReturnFlow = 'none' | 'complete' | 'failed' | 'account' | 'contact-complete' | 'contact-failed'
+export type ReturnFlow = 'none' | 'complete' | 'failed' | 'account' | 'contact-complete' | 'contact-failed' | 'link-complete' | 'link-failed'
 export const returnFlow = (path: string): ReturnFlow => path === '/auth/complete' ? 'complete' : path === '/auth/failed' ? 'failed'
-  : path === '/account/contact/complete' ? 'contact-complete' : path === '/account/contact/failed' ? 'contact-failed' : path === '/account' ? 'account' : 'none'
+  : path === '/account/contact/complete' ? 'contact-complete' : path === '/account/contact/failed' ? 'contact-failed'
+  : path === '/account/link/complete' ? 'link-complete' : path === '/account/link/failed' ? 'link-failed' : path === '/account' ? 'account' : 'none'
 export function authIssue(error: unknown): AuthIssue {
   const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
   let message = '요청을 완료하지 못했습니다. 잠시 후 다시 시도해 주세요.'
@@ -34,6 +36,14 @@ export function authIssue(error: unknown): AuthIssue {
   else if (e.code === 'GOOGLE_NOT_CONFIRMED') message = 'Google 로그인 결과를 확인할 수 없습니다. 로그인 상태를 다시 확인해 주세요.'
   else if (e.code === 'GOOGLE_CONTACT_FAILED') message = 'Google 이메일 확인을 완료하지 못했습니다. 연결된 Google 계정과 동의 여부를 확인해 주세요.'
   else if (e.code === 'CONTACT_NOT_CONFIRMED') message = '유효한 이메일 후보를 확인하지 못했습니다. Google 이메일 확인부터 다시 진행해 주세요.'
+  else if (e.code === 'EMAIL_OWNERSHIP_PROOF_REQUIRED') message = '최근 10분 이내의 이메일 소유 확인이 필요합니다. 대표 이메일로 재인증한 뒤 원하는 연결·해제를 다시 선택해 주세요.'
+  else if (e.code === 'IDENTITY_ALREADY_OWNED') message = '이 로그인 수단은 이미 다른 계정에 연결되어 있습니다. 계정은 자동으로 합쳐지지 않습니다.'
+  else if (e.code === 'LAST_LOGIN_IDENTITY') message = '마지막으로 사용할 수 있는 로그인 수단은 해제할 수 없습니다. 다른 로그인 수단을 먼저 연결해 주세요.'
+  else if (e.code === 'IDENTITY_NOT_FOUND') message = '해제 대상을 찾을 수 없습니다. 계정 정보를 다시 확인해 주세요.'
+  else if (e.code === 'IDENTITY_AMBIGUOUS') message = '같은 종류의 로그인 수단이 여러 개여서 해제 대상을 안전하게 구분할 수 없습니다. 개별 신원 확인 기능이 필요합니다.'
+  else if (e.code === 'IDENTITY_CHANGE_SUPERSEDED') message = '다른 로그인 수단 변경으로 이 요청이 만료됐습니다. 현재 상태를 확인한 뒤 직접 다시 시작해 주세요.'
+  else if (e.code === 'GOOGLE_LINK_FAILED') message = 'Google 연결을 완료했는지 확인할 수 없습니다. 취소·충돌·요청 또는 이메일 증명 만료 등이 원인일 수 있습니다. 현재 연결 상태를 확인하고 필요하면 이메일 재인증 후 직접 다시 시작해 주세요.'
+  else if (e.code === 'GOOGLE_LINK_NOT_CONFIRMED') message = '서버에서 Google 로그인 연결을 확인하지 못했습니다. 복귀 주소만으로 성공 처리하지 않습니다.'
   else if (e.code === 'REAUTH_EMAIL_REQUIRED') message = '대표 재인증 이메일을 먼저 등록해 주세요.'
   else if (e.code === 'REAUTH_EMAIL_ALREADY_VERIFIED') message = '대표 이메일이 이미 등록됐습니다. 계정 정보를 다시 확인해 주세요.'
   else if (e.code === 'AUTHENTICATION_REQUIRED') message = '로그인이 만료되거나 세션이 변경됐습니다. 다시 로그인해 주세요.'
@@ -66,7 +76,7 @@ export class AuthController {
     this.generation++
     this.set({ account: emptyAccount(), challenge: null, notice: '', issue: null })
     this.api.clearCsrf?.()
-    if (this.state.pending === 'google' || this.state.pending === 'contact-navigation') { this.running = false; this.set({ pending: null }) }
+    if (['google', 'contact-navigation', 'link-navigation'].includes(this.state.pending ?? '')) { this.running = false; this.set({ pending: null }) }
     if (this.running) { this.resumePending = true; this.resumeFlow = flow; return }
     return this.restore(flow)
   }
@@ -74,8 +84,10 @@ export class AuthController {
     const session = await this.api.session()
     await this.api.refreshCsrf()
     const issue = flow === 'failed' ? authIssue(new AuthError('GOOGLE_FAILED'))
+      : flow === 'link-failed' ? authIssue(new AuthError('GOOGLE_LINK_FAILED'))
+      : flow === 'link-complete' && !session ? authIssue(new AuthError('AUTHENTICATION_REQUIRED', 401))
       : flow === 'complete' && !session ? authIssue(new AuthError('GOOGLE_NOT_CONFIRMED')) : null
-    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null, challenge: null, account: emptyAccount(), accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed'].includes(flow)), issue, notice })
+    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null, challenge: null, account: emptyAccount(), accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed', 'link-complete', 'link-failed'].includes(flow)), issue, notice })
   }
   async restore(flow: ReturnFlow = this.state.accountOpen ? 'account' : 'none') {
     if (this.running) return
@@ -87,6 +99,11 @@ export class AuthController {
         await this.readAccount(this.state.userId, this.generation)
         if (flow === 'contact-failed') this.set({ issue: authIssue(new AuthError('GOOGLE_CONTACT_FAILED')) })
         if (flow === 'contact-complete' && this.state.account.contact?.status === 'REQUIRED' && !this.state.account.contact.candidate) this.set({ issue: authIssue(new AuthError('CONTACT_NOT_CONFIRMED')) })
+        if (flow === 'link-failed') this.set({ issue: authIssue(new AuthError('GOOGLE_LINK_FAILED')) })
+        if (flow === 'link-complete') {
+          if (!this.state.account.identities.some(identity => identity.provider === 'google')) this.set({ issue: authIssue(new AuthError('GOOGLE_LINK_NOT_CONFIRMED')) })
+          else this.set({ notice: '서버에서 현재 Google 로그인 수단 연결 상태를 다시 확인했습니다.' })
+        }
       }
     }
     catch (error) {
@@ -176,7 +193,7 @@ export class AuthController {
     await this.owner(expected, generation)
     const [identities, contact] = await Promise.all([this.api.identities(), this.api.contact()])
     await this.owner(expected, generation)
-    this.accountPatch({ identities, contact, loaded: true, form: null })
+    this.accountPatch({ identities, contact, loaded: true, form: null, linkForm: null, unlink: null })
   }
   private async prepareWrite(expected: string, generation: number) {
     await this.owner(expected, generation)
@@ -207,9 +224,10 @@ export class AuthController {
   async prepareGoogleContact() {
     const account = this.state.account
     if (this.running || this.state.status !== 'authenticated' || !this.state.userId || !account.loaded || account.contact?.status !== 'REQUIRED') return
-    const identity = account.identities.find(value => value.provider === 'google')
+    const google = account.identities.filter(value => value.provider === 'google')
+    const identity = google.length === 1 ? google[0] : undefined
     if (!identity) return
-    this.running = true; this.set({ pending: 'contact', issue: null, notice: '' }); this.accountPatch({ challenge: null, form: null, confirmedAt: null })
+    this.running = true; this.set({ pending: 'contact', issue: null, notice: '' }); this.accountPatch({ challenge: null, form: null, confirmedAt: null, linkForm: null, unlink: null })
     const expected = this.state.userId, generation = this.generation
     try {
       await this.owner(expected, generation)
@@ -230,7 +248,7 @@ export class AuthController {
     if (account.contact.status === 'REQUIRED' && !candidateId) return
     const expected = this.state.userId, generation = this.generation, started = this.now()
     this.running = true; this.set({ pending: 'proof-request', issue: null, notice: '' })
-    this.accountPatch({ challenge: null, form: null, confirmedAt: null, resendAt: started + 60_000 })
+    this.accountPatch({ challenge: null, form: null, confirmedAt: null, linkForm: null, unlink: null, resendAt: started + 60_000 })
     try {
       await this.prepareWrite(expected, generation)
       // Re-read the server-owned recipient/candidate. No address or login identity is sent in the OTP body.
@@ -281,5 +299,75 @@ export class AuthController {
     try { await this.prepareWrite(expected, generation); await this.api.cancelRegistration(); await this.readAccount(expected, generation); this.set({ notice: '대표 이메일 등록을 취소했습니다.' }) }
     catch (error) { this.accountFailure(error) }
     finally { await this.finish() }
+  }
+
+  selectUnlink(identity: Identity) {
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId || !this.state.account.loaded) return
+    const matches = this.state.account.identities.filter(value => value.provider === identity.provider)
+    if (matches.length !== 1 || matches[0].id !== identity.id) { this.set({ issue: authIssue(new AuthError('IDENTITY_AMBIGUOUS')) }); return }
+    this.accountPatch({ unlink: { userId: this.state.userId, identity: { ...matches[0] } }, linkForm: null, form: null })
+    this.set({ issue: null, notice: '' })
+  }
+  cancelIdentityChange() {
+    if (!this.running) { this.accountPatch({ unlink: null, linkForm: null }); this.set({ issue: null, notice: '' }) }
+  }
+  async linkEmail() { await this.changeIdentity() }
+  async confirmUnlink() {
+    const selected = this.state.account.unlink
+    if (!selected) return
+    if (selected.userId !== this.state.userId) { this.accountPatch({ unlink: null }); this.accountFailure(new AuthError('SESSION_CHANGED', 409)); return }
+    await this.changeIdentity(selected.identity)
+  }
+  private async changeIdentity(target?: Identity) {
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId || !this.state.account.loaded) return
+    const expected = this.state.userId, generation = this.generation
+    this.running = true; this.set({ pending: 'identity-change', issue: null, notice: '' })
+    this.accountPatch({ unlink: null, linkForm: null, form: null, challenge: null })
+    let sent = false
+    try {
+      await this.readAccount(expected, generation)
+      if (this.state.account.contact?.status !== 'VERIFIED') throw new AuthError('REAUTH_EMAIL_REQUIRED', 409)
+      if (target) {
+        const matches = this.state.account.identities.filter(value => value.provider === target.provider)
+        if (!matches.some(value => value.id === target.id)) throw new AuthError('IDENTITY_NOT_FOUND', 404)
+        if (matches.length !== 1) throw new AuthError('IDENTITY_AMBIGUOUS')
+      }
+      await this.prepareWrite(expected, generation)
+      sent = true
+      const result = target ? await this.api.unlinkIdentity(target) : await this.api.linkEmail()
+      await this.readAccount(expected, generation)
+      if (target ? this.state.account.identities.some(value => value.id === target.id)
+        : !result || !this.state.account.identities.some(value => value.id === result.identity.id && value.provider === 'email')) throw new AuthError('RESPONSE_INVALID')
+      this.set({ notice: target ? '로그인 수단을 해제했습니다. 대표 재인증 이메일은 유지됩니다.' : result?.status === 'ALREADY_LINKED' ? '이미 같은 계정에 연결된 이메일 로그인입니다.' : '대표 이메일의 로그인 수단을 연결했습니다.' })
+    } catch (error) {
+      const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
+      const uncertain = sent && (['NETWORK', 'TIMEOUT', 'RESPONSE_INVALID'].includes(e.code) || e.status >= 500)
+      this.accountPatch({ unlink: null, linkForm: null, ...(e.code === 'EMAIL_OWNERSHIP_PROOF_REQUIRED' ? { confirmedAt: null } : {}) })
+      if (sent) {
+        // Read only: a failed/uncertain mutation is never retried, including after CSRF refresh.
+        try { await this.readAccount(expected, generation) }
+        catch (readError) { this.accountPatch({ loaded: false, identities: [], contact: null }); this.accountFailure(readError); return }
+      }
+      this.accountFailure(e)
+      if (!target && e.code === 'IDENTITY_ALREADY_OWNED') this.set({ issue: { code: e.code, message: '이 이메일 로그인은 이미 다른 계정에 연결되어 있습니다. 계정은 자동으로 합쳐지지 않습니다.' } })
+      if (uncertain) this.set({ notice: '요청 결과가 불확실해 현재 서버 상태만 다시 조회했습니다. 성공을 단정하거나 자동 재실행하지 않습니다.' })
+    } finally { await this.finish() }
+  }
+  async prepareGoogleLink() {
+    if (this.running || this.state.status !== 'authenticated' || !this.state.userId || !this.state.account.loaded) return
+    const expected = this.state.userId, generation = this.generation
+    this.running = true; this.set({ pending: 'link', issue: null, notice: '' }); this.accountPatch({ unlink: null, form: null, linkForm: null, challenge: null })
+    try {
+      await this.readAccount(expected, generation)
+      if (this.state.account.contact?.status !== 'VERIFIED') throw new AuthError('REAUTH_EMAIL_REQUIRED', 409)
+      const linkForm = await this.api.googleLinkForm()
+      await this.owner(expected, generation)
+      this.accountPatch({ linkForm })
+    } catch (error) { this.accountFailure(error) }
+    finally { await this.finish() }
+  }
+  beginLinkNavigation() {
+    if (this.running || this.state.status !== 'authenticated' || !this.state.account.linkForm) return false
+    this.running = true; this.set({ pending: 'link-navigation', issue: null, notice: '' }); return true
   }
 }
