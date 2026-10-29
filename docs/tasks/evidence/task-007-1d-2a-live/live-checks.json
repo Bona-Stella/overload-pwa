@@ -1,0 +1,1456 @@
+{
+  "scope": "actual React / Spring Boot / PostgreSQL / Google / Resend LIVE, not fixture results",
+  "phases": {
+    "google-login": {
+      "phase": "google-login",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10
+      },
+      "userCount": 4,
+      "contactCount": 3,
+      "newOtp": [],
+      "expectedExistingUser": true,
+      "jdbcPrincipalMatches": true,
+      "restoredTwice": true,
+      "days90": true,
+      "exerciseCount": 20,
+      "emailProof": {
+        "present": false
+      },
+      "dedicatedGoogleContact": {
+        "verified": false,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    },
+    "google-candidate": {
+      "phase": "google-candidate",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10
+      },
+      "userCount": 4,
+      "contactCount": 3,
+      "newOtp": [],
+      "expectedExistingUser": true,
+      "jdbcPrincipalMatches": true,
+      "restoredTwice": true,
+      "days90": true,
+      "exerciseCount": 20,
+      "emailProof": {
+        "present": false
+      },
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUpdated": false,
+      "sessionIdRotated": false,
+      "dedicatedGoogleContact": {
+        "verified": false,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    },
+    "google-registered": {
+      "phase": "google-registered",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10
+      },
+      "userCount": 4,
+      "contactCount": 4,
+      "newOtp": [
+        {
+          "purpose": "CONTACT_ENROLL",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ],
+      "expectedExistingUser": true,
+      "jdbcPrincipalMatches": true,
+      "restoredTwice": true,
+      "days90": true,
+      "exerciseCount": 20,
+      "emailProof": {
+        "source": "CONTACT_ENROLL",
+        "userSessionContactBound": true,
+        "recent10Minutes": true
+      },
+      "oldCsrf403": true,
+      "newCsrf405": true,
+      "oldSessionRemoved": true,
+      "oldCookie401": true,
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUpdated": true,
+      "sessionIdRotated": true,
+      "dedicatedGoogleContact": {
+        "verified": true,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      },
+      "approvedRecipientMatched": true,
+      "oauthTokenObjectsAbsent": true
+    },
+    "google-refreshed": {
+      "phase": "google-refreshed",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10,
+        "protectedSessionsExactPreserved": true,
+        "protectedSessionAttributesExactPreserved": true
+      },
+      "userCount": 4,
+      "contactCount": 4,
+      "newOtp": [
+        {
+          "purpose": "CONTACT_ENROLL",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ],
+      "expectedExistingUser": true,
+      "oauthTokenObjectsAbsent": true,
+      "jdbcPrincipalMatches": true,
+      "restoredTwice": true,
+      "days90": true,
+      "exerciseCount": 20,
+      "emailProof": {
+        "source": "CONTACT_ENROLL",
+        "userSessionContactBound": true,
+        "recent10Minutes": false
+      },
+      "oldCsrf403": true,
+      "newCsrf405": true,
+      "oldSessionRemoved": true,
+      "oldCookie401": true,
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUpdated": false,
+      "sessionIdRotated": false,
+      "dedicatedGoogleContact": {
+        "verified": true,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    },
+    "google-logout": {
+      "phase": "google-logout",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10,
+        "protectedSessionsExactPreserved": true,
+        "protectedSessionAttributesExactPreserved": true
+      },
+      "userCount": 4,
+      "contactCount": 4,
+      "newOtp": [
+        {
+          "purpose": "CONTACT_ENROLL",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ],
+      "expectedExistingUser": true,
+      "sessionRemoved": true,
+      "oldCookie401": true,
+      "dedicatedGoogleContact": {
+        "verified": true,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    },
+    "email-before-reauth": {
+      "phase": "email-before-reauth",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10,
+        "protectedSessionsExactPreserved": true,
+        "protectedSessionAttributesExactPreserved": true
+      },
+      "userCount": 4,
+      "contactCount": 4,
+      "newOtp": [
+        {
+          "purpose": "LOGIN",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        },
+        {
+          "purpose": "CONTACT_ENROLL",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ],
+      "expectedExistingUser": true,
+      "oauthTokenObjectsAbsent": true,
+      "jdbcPrincipalMatches": true,
+      "restoredTwice": true,
+      "days90": true,
+      "exerciseCount": 20,
+      "emailProof": {
+        "source": "EMAIL_LOGIN",
+        "userSessionContactBound": true,
+        "recent10Minutes": true
+      },
+      "oldCsrf403": true,
+      "newCsrf405": true,
+      "oldSessionRemoved": true,
+      "oldCookie401": true,
+      "dedicatedGoogleContact": {
+        "verified": true,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    },
+    "email-after-reauth": {
+      "phase": "email-after-reauth",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10,
+        "protectedSessionsExactPreserved": true,
+        "protectedSessionAttributesExactPreserved": true
+      },
+      "userCount": 4,
+      "contactCount": 4,
+      "newOtp": [
+        {
+          "purpose": "LOGIN",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        },
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        },
+        {
+          "purpose": "CONTACT_ENROLL",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ],
+      "expectedExistingUser": true,
+      "oauthTokenObjectsAbsent": true,
+      "jdbcPrincipalMatches": true,
+      "restoredTwice": true,
+      "days90": true,
+      "exerciseCount": 20,
+      "contactResponseMaskedOnly": true,
+      "identityResponseKindsAndIdsOnly": true,
+      "emailProof": {
+        "source": "EMAIL_REAUTH",
+        "userSessionContactBound": true,
+        "recent10Minutes": true
+      },
+      "oldCsrf403": true,
+      "newCsrf405": true,
+      "oldSessionRemoved": true,
+      "oldCookie401": true,
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUpdated": true,
+      "sessionIdRotated": true,
+      "dedicatedGoogleContact": {
+        "verified": true,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    },
+    "email-refreshed": {
+      "phase": "email-refreshed",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10,
+        "protectedSessionsExactPreserved": true,
+        "protectedSessionAttributesExactPreserved": true
+      },
+      "userCount": 4,
+      "contactCount": 4,
+      "newOtp": [
+        {
+          "purpose": "LOGIN",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        },
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        },
+        {
+          "purpose": "CONTACT_ENROLL",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ],
+      "expectedExistingUser": true,
+      "oauthTokenObjectsAbsent": true,
+      "jdbcPrincipalMatches": true,
+      "restoredTwice": true,
+      "days90": true,
+      "exerciseCount": 20,
+      "contactResponseMaskedOnly": true,
+      "identityResponseKindsAndIdsOnly": true,
+      "emailProof": {
+        "source": "EMAIL_REAUTH",
+        "userSessionContactBound": true,
+        "recent10Minutes": true
+      },
+      "oldCsrf403": true,
+      "newCsrf405": true,
+      "oldSessionRemoved": true,
+      "oldCookie401": true,
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUpdated": false,
+      "sessionIdRotated": false,
+      "dedicatedGoogleContact": {
+        "verified": true,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    },
+    "email-logout": {
+      "phase": "email-logout",
+      "preserved": {
+        "users": true,
+        "auth_identities": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "google_identity_change_versions": true,
+        "flyway_schema_history": true,
+        "existingContactsUnchanged": true,
+        "protectedAccountsDataUnchanged": true,
+        "baselineSessionsRetained": 9,
+        "baselineSessionCount": 10,
+        "protectedSessionsExactPreserved": true,
+        "protectedSessionAttributesExactPreserved": true
+      },
+      "userCount": 4,
+      "contactCount": 4,
+      "newOtp": [
+        {
+          "purpose": "LOGIN",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        },
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        },
+        {
+          "purpose": "CONTACT_ENROLL",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ],
+      "expectedExistingUser": true,
+      "sessionRemoved": true,
+      "oldCookie401": true,
+      "loggedOutAccountApis401": true,
+      "dedicatedGoogleContact": {
+        "verified": true,
+        "newContactOnly": true,
+        "emailIdentityAbsent": true
+      }
+    }
+  },
+  "mail": {
+    "LOGIN": {
+      "localApproval": true,
+      "grantConsumed": true,
+      "forwarded": 1,
+      "dbChallengeCount": 1,
+      "providerAccepted": true,
+      "otpConsumed": true,
+      "approvedRecipientMatched": true,
+      "verifierCleared": true,
+      "userConfirmedReceiptAndSuccess": true
+    },
+    "REAUTH": {
+      "localApproval": true,
+      "grantConsumed": true,
+      "forwarded": 1,
+      "dbChallengeCount": 1,
+      "providerAccepted": true,
+      "otpConsumed": true,
+      "approvedRecipientMatched": true,
+      "verifierCleared": true,
+      "userConfirmedReceiptAndSuccess": true
+    },
+    "CONTACT_ENROLL": {
+      "localApproval": true,
+      "grantConsumed": true,
+      "forwarded": 1,
+      "dbChallengeCount": 1,
+      "providerAccepted": true,
+      "otpConsumed": true,
+      "approvedRecipientMatched": true,
+      "verifierCleared": true,
+      "userConfirmedReceiptAndSuccess": true
+    }
+  },
+  "observer": {
+    "events": [
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 401,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/oauth2/authorization/google",
+        "status": 302,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/oauth2/contact/google",
+        "status": 302,
+        "csrfHeader": false,
+        "formPost": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/reauth/email/registration/request",
+        "status": 202,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 401,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/reauth/email/registration/verify",
+        "status": 204,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/logout",
+        "status": 204,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 401,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/email-otp/request",
+        "status": 202,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/email-otp/verify",
+        "status": 204,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/reauth/email/request",
+        "status": 202,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/reauth/email/verify",
+        "status": 204,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/reauth/email/contact",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/identities",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/auth/logout",
+        "status": 204,
+        "csrfHeader": true,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 401,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/session",
+        "status": 401,
+        "csrfHeader": false,
+        "formPost": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/auth/csrf",
+        "status": 200,
+        "csrfHeader": false,
+        "formPost": false
+      }
+    ],
+    "cookies": [
+      {
+        "path": "/api/v1/auth/csrf",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      },
+      {
+        "path": "/api/v1/auth/csrf",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      },
+      {
+        "path": "/api/v1/auth/reauth/email/registration/verify",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      },
+      {
+        "path": "/api/v1/auth/logout",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": true
+      },
+      {
+        "path": "/api/v1/auth/csrf",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      },
+      {
+        "path": "/api/v1/auth/email-otp/verify",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      },
+      {
+        "path": "/api/v1/auth/reauth/email/verify",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      },
+      {
+        "path": "/api/v1/auth/logout",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": true
+      },
+      {
+        "path": "/api/v1/auth/csrf",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      },
+      {
+        "path": "/api/v1/auth/csrf",
+        "httpOnly": true,
+        "sameSiteLax": true,
+        "hostOnly": true,
+        "pathRoot": true,
+        "secure": false,
+        "cleared": false
+      }
+    ],
+    "returns": [
+      {
+        "path": "/auth/complete",
+        "hostExpected": true,
+        "sensitiveQueryPresent": false
+      },
+      {
+        "path": "/account/contact/complete",
+        "hostExpected": true,
+        "sensitiveQueryPresent": false
+      }
+    ],
+    "mailForwarded": {
+      "LOGIN": 1,
+      "REAUTH": 1,
+      "CONTACT_ENROLL": 1
+    },
+    "mailBlocked": 2,
+    "protectedWriteBlocked": 0,
+    "unexpectedAuthenticatedUser": false,
+    "approvals": {
+      "CONTACT_ENROLL": "approved",
+      "LOGIN": "approved",
+      "REAUTH": "approved"
+    }
+  },
+  "finalPreservation": {
+    "core": {
+      "users": true,
+      "auth_identities": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "google_identity_change_versions": true,
+      "flyway_schema_history": true,
+      "existingContactsUnchanged": true,
+      "protectedAccountsDataUnchanged": true,
+      "baselineSessionsRetained": 9,
+      "baselineSessionCount": 10,
+      "protectedSessionsExactPreserved": true,
+      "protectedSessionAttributesExactPreserved": true
+    },
+    "countsBefore": {
+      "users": 4,
+      "spring_session": 10,
+      "auth_identities": 4,
+      "email_otp_limits": 4,
+      "email_otp_challenges": 7,
+      "exercise_definitions": 80,
+      "email_otp_rate_limits": 14,
+      "flyway_schema_history": 8,
+      "user_workout_settings": 4,
+      "email_otp_login_claims": 4,
+      "reauth_email_candidates": 1,
+      "spring_session_attributes": 17,
+      "user_reauthentication_emails": 3,
+      "google_identity_change_versions": 1
+    },
+    "countsAfter": {
+      "users": 4,
+      "spring_session": 12,
+      "auth_identities": 4,
+      "email_otp_limits": 5,
+      "email_otp_challenges": 10,
+      "exercise_definitions": 80,
+      "email_otp_rate_limits": 16,
+      "flyway_schema_history": 8,
+      "user_workout_settings": 4,
+      "email_otp_login_claims": 5,
+      "reauth_email_candidates": 2,
+      "spring_session_attributes": 19,
+      "user_reauthentication_emails": 4,
+      "google_identity_change_versions": 1
+    },
+    "baselineSessionsRemoved": 1,
+    "removedBaselineSessionsWereAnonymous": true,
+    "retainedBaselineSessionRowsUnchanged": true,
+    "retainedBaselineSessionAttributesUnchanged": true,
+    "oldOtpChallengeIdsRetained": true,
+    "oldCandidateRowsUnchanged": true,
+    "envUnchanged": true,
+    "serverHeadUnchanged": true,
+    "pwaHeadUnchanged": true,
+    "serverLogBytes": 0,
+    "viteLogBytes": 0,
+    "envUnchangedAfterCleanup": true
+  },
+  "approvedTotalCap": 3,
+  "actualAcceptedTotal": 3,
+  "localExtraRequestsBlockedWithoutForwarding": 2,
+  "blockedRequestsUserExplainedAsApprovalOrderOrDuplicateOperation": true,
+  "nativeAccountCapture": {
+    "performed": false,
+    "reason": "Windows current browser URL could not be determined with sufficient confidence; tool stopped. User clarified no fullscreen action had occurred."
+  },
+  "authenticatedPcResponsiveMeasurementsPerformed": false,
+  "priorAutomatedTestsNotRerunDuringLive": {
+    "frontend": 215,
+    "backend": 409
+  },
+  "cleanup": {
+    "springBootStopped": true,
+    "viteAndObserverStopped": true,
+    "approvalHelpersStopped": true,
+    "listeners3000_8080_8091Absent": true,
+    "postgresRestoredToInitialExited": true,
+    "agentBrowserTabsClosedAndViewportReset": true,
+    "userBrowserWindowsNotClosed": true,
+    "databaseAndEncryptedBackupRetained": true,
+    "privateTemporarySnapshotsAndHelpersRemoved": true
+  },
+  "toolLimitation": {
+    "nativeBrowserUrlConfidenceFailure": true,
+    "nativeCaptureSkipped": true,
+    "userActuallyEnteredFullscreen": false,
+    "earlierFullscreenCauseAssumptionCorrected": true
+  },
+  "privacyReview": {
+    "reportAndJsonExactSecretsAndPersonalIdentifiersAbsent": true,
+    "reportAndJsonGenericEmailUuidJwtScanPassed": true,
+    "allFiveScreenshotsVisuallyReviewed": true,
+    "screenshotExifAbsent": true,
+    "relativeEvidenceLinksExist": true
+  }
+}

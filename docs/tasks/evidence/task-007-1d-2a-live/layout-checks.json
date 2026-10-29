@@ -1,0 +1,51 @@
+{
+  "scope": "actual anonymous React UI; authenticated PC account layouts not directly measured in this LIVE",
+  "viewports": [
+    {
+      "legalDirection": "column",
+      "legalNoWrap": true,
+      "minButtonHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 320
+    },
+    {
+      "legalDirection": "row",
+      "legalNoWrap": true,
+      "minButtonHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 375
+    },
+    {
+      "legalDirection": "row",
+      "legalNoWrap": true,
+      "minButtonHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 390
+    },
+    {
+      "legalDirection": "row",
+      "legalNoWrap": true,
+      "minButtonHeight": 48,
+      "overflow": false,
+      "primary": "rgb(59, 130, 246)",
+      "width": 1440
+    }
+  ],
+  "serverFailure": {
+    "backendActuallyStopped": true,
+    "connectionStateShown": true,
+    "anonymousLoginNotShown": true,
+    "overflow": false
+  },
+  "screenshotLimitations": {
+    "login320ImagePixels": [
+      305,
+      172
+    ],
+    "login320FullResolutionCaptureAvailable": false,
+    "login320DomMeasurementsAvailable": true
+  }
+}
