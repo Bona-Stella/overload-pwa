@@ -1,0 +1,730 @@
+{
+  "scope": "actual React / Spring Boot / PostgreSQL / Google OIDC / Resend LIVE; no fixture results",
+  "initialServerHead": "41ba84904c9c212b4b514512461a173e512549c0",
+  "initialFrontendHead": "42dfedc1d567316881b4b943faf10328cc152135",
+  "phases": {
+    "A": {
+      "phase": "A",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 5,
+        "email_otp_limits": 6,
+        "email_otp_challenges": 11,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 18,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 23,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 1
+      },
+      "targetProviders": {
+        "email": 1,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": true,
+      "emailProofRecentAndBound": true,
+      "emailProofSource": "EMAIL_REAUTH",
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUnchanged": true,
+      "sessionIdUnchanged": true,
+      "emailProofUnchanged": true,
+      "newCsrfPassesThen405": true,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": [
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ]
+    },
+    "A-readback": {
+      "phase": "A-readback",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 5,
+        "email_otp_limits": 6,
+        "email_otp_challenges": 11,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 18,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 23,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 1
+      },
+      "targetProviders": {
+        "email": 1,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": true,
+      "emailProofRecentAndBound": true,
+      "emailProofSource": "EMAIL_REAUTH",
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUnchanged": true,
+      "sessionIdUnchanged": true,
+      "emailProofUnchanged": true,
+      "newCsrfPassesThen405": true,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": [
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ]
+    },
+    "B": {
+      "phase": "B",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 4,
+        "email_otp_limits": 6,
+        "email_otp_challenges": 11,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 18,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 23,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 2
+      },
+      "targetProviders": {
+        "email": 1,
+        "google": 0
+      },
+      "originalGoogleCredentialPresent": false,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": true,
+      "emailProofRecentAndBound": true,
+      "emailProofSource": "EMAIL_REAUTH",
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUnchanged": true,
+      "sessionIdUnchanged": true,
+      "emailProofUnchanged": true,
+      "newCsrfPassesThen405": true,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": [
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ]
+    },
+    "baseline": {
+      "counts": {
+        "users": 4,
+        "spring_session": 12,
+        "auth_identities": 4,
+        "email_otp_limits": 5,
+        "email_otp_challenges": 10,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 16,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 19,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 1
+      },
+      "flywayChecksums": {
+        "1": true,
+        "2": true,
+        "3": true,
+        "4": true,
+        "5": true,
+        "6": true,
+        "7": true,
+        "8": true
+      },
+      "protectedAccounts": 2,
+      "dedicatedGoogleOnlyVerified": true,
+      "emailCredentialConflict": false,
+      "dedicatedExercises": 20,
+      "encryptedBackupReadVerified": true,
+      "configured": {
+        "RESEND_API_KEY": true,
+        "RESEND_FROM_EMAIL": true,
+        "GOOGLE_CLIENT_ID": true,
+        "GOOGLE_CLIENT_SECRET": true
+      },
+      "hmacValid": true
+    },
+    "C": {
+      "phase": "C",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 5,
+        "email_otp_limits": 6,
+        "email_otp_challenges": 11,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 18,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 23,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 2
+      },
+      "targetProviders": {
+        "email": 1,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": true,
+      "emailProofRecentAndBound": true,
+      "emailProofSource": "EMAIL_REAUTH",
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUnchanged": true,
+      "sessionIdUnchanged": true,
+      "emailProofUnchanged": true,
+      "newCsrfPassesThen405": true,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": [
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ]
+    },
+    "D": {
+      "phase": "D",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 4,
+        "email_otp_limits": 6,
+        "email_otp_challenges": 11,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 18,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 23,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 2
+      },
+      "targetProviders": {
+        "email": 0,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": true,
+      "emailProofRecentAndBound": true,
+      "emailProofSource": "EMAIL_REAUTH",
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUnchanged": true,
+      "sessionIdUnchanged": true,
+      "emailProofUnchanged": true,
+      "newCsrfPassesThen405": true,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": [
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ]
+    },
+    "login": {
+      "phase": "login",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 4,
+        "email_otp_limits": 5,
+        "email_otp_challenges": 10,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 16,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 22,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 1
+      },
+      "targetProviders": {
+        "email": 0,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": false,
+      "emailProofRecentAndBound": false,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": []
+    },
+    "reauth": {
+      "phase": "reauth",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 4,
+        "email_otp_limits": 6,
+        "email_otp_challenges": 11,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 18,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 23,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 1
+      },
+      "targetProviders": {
+        "email": 0,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": true,
+      "emailProofRecentAndBound": true,
+      "emailProofSource": "EMAIL_REAUTH",
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUnchanged": false,
+      "sessionIdUnchanged": false,
+      "emailProofUnchanged": false,
+      "oldSessionRemoved": true,
+      "oldCookie401": true,
+      "newCsrfPassesThen405": true,
+      "oldCsrf403": true,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": [
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ]
+    },
+    "refreshed": {
+      "phase": "refreshed",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 4,
+        "email_otp_limits": 6,
+        "email_otp_challenges": 11,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 18,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 23,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 2
+      },
+      "targetProviders": {
+        "email": 0,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "authenticatedExpectedUser": true,
+      "independentSessionRestoredTwice": true,
+      "absolute90Days": true,
+      "emailProofPresent": true,
+      "emailProofRecentAndBound": false,
+      "emailProofSource": "EMAIL_REAUTH",
+      "loginStartAndDeadlineUnchanged": true,
+      "reauthTimeUnchanged": true,
+      "sessionIdUnchanged": true,
+      "emailProofUnchanged": true,
+      "newCsrfPassesThen405": true,
+      "oauthTokenObjectsAbsent": true,
+      "newOtp": [
+        {
+          "purpose": "REAUTH",
+          "state": "CONSUMED",
+          "accepted": true,
+          "consumed": true,
+          "verifierCleared": true
+        }
+      ]
+    },
+    "startup": {
+      "phase": "startup",
+      "preserved": {
+        "users": true,
+        "exercise_definitions": true,
+        "user_workout_settings": true,
+        "user_reauthentication_emails": true,
+        "flyway_schema_history": true,
+        "otherIdentityOwnersUnchanged": true,
+        "protectedSessionsUnchanged": true,
+        "protectedSessionAttributesUnchanged": true
+      },
+      "counts": {
+        "users": 4,
+        "spring_session": 13,
+        "auth_identities": 4,
+        "email_otp_limits": 5,
+        "email_otp_challenges": 10,
+        "exercise_definitions": 80,
+        "email_otp_rate_limits": 16,
+        "flyway_schema_history": 8,
+        "user_workout_settings": 4,
+        "email_otp_login_claims": 5,
+        "reauth_email_candidates": 2,
+        "spring_session_attributes": 21,
+        "user_reauthentication_emails": 4,
+        "google_identity_change_versions": 1
+      },
+      "targetProviders": {
+        "email": 0,
+        "google": 1
+      },
+      "originalGoogleCredentialPresent": true,
+      "emailCredentialMatchesRepresentative": true,
+      "newOtp": []
+    }
+  },
+  "finalPreservation": {
+    "core": {
+      "users": true,
+      "exercise_definitions": true,
+      "user_workout_settings": true,
+      "user_reauthentication_emails": true,
+      "flyway_schema_history": true,
+      "otherIdentityOwnersUnchanged": true,
+      "protectedSessionsUnchanged": true,
+      "protectedSessionAttributesUnchanged": true
+    },
+    "countsBefore": {
+      "users": 4,
+      "spring_session": 12,
+      "auth_identities": 4,
+      "email_otp_limits": 5,
+      "email_otp_challenges": 10,
+      "exercise_definitions": 80,
+      "email_otp_rate_limits": 16,
+      "flyway_schema_history": 8,
+      "user_workout_settings": 4,
+      "email_otp_login_claims": 5,
+      "reauth_email_candidates": 2,
+      "spring_session_attributes": 19,
+      "user_reauthentication_emails": 4,
+      "google_identity_change_versions": 1
+    },
+    "countsAfter": {
+      "users": 4,
+      "spring_session": 13,
+      "auth_identities": 4,
+      "email_otp_limits": 6,
+      "email_otp_challenges": 11,
+      "exercise_definitions": 80,
+      "email_otp_rate_limits": 18,
+      "flyway_schema_history": 8,
+      "user_workout_settings": 4,
+      "email_otp_login_claims": 5,
+      "reauth_email_candidates": 2,
+      "spring_session_attributes": 23,
+      "user_reauthentication_emails": 4,
+      "google_identity_change_versions": 2
+    },
+    "originalCredentialConfigurationRestored": true,
+    "restoredGoogleIdentityRowIdIsNew": true,
+    "allBaselineAuthenticatedSessionRowsRetained": true,
+    "allBaselineAuthenticatedSessionAttributesRetained": true,
+    "reauthSessionSecurityCsrfProofBytesUnchangedByIdentityChanges": true,
+    "oldOtpHistoryPayloadPreservedWithExpectedReferenceRetirement": true,
+    "oldCandidatePayloadPreservedWithExpectedReferenceRetirement": true,
+    "oldContactEnrollHistoryReferencesRetired": 1,
+    "oldGoogleCandidateReferencesRetired": 1,
+    "loginClaimHistoryUnchanged": true,
+    "jwtLiteralsAbsentInJdbcAttributes": true,
+    "envUnchanged": true,
+    "serverHeadUnchanged": true,
+    "pwaHeadUnchanged": true
+  },
+  "actualResponses": {
+    "/api/v1/auth/identities/email/link": {
+      "method": "POST",
+      "path": "/api/v1/auth/identities/email/link",
+      "status": 201,
+      "csrfHeader": true,
+      "formPost": false
+    },
+    "/api/v1/auth/identities/google/unlink": {
+      "method": "POST",
+      "path": "/api/v1/auth/identities/google/unlink",
+      "status": 204,
+      "csrfHeader": true,
+      "formPost": false
+    },
+    "/oauth2/link/google": {
+      "method": "POST",
+      "path": "/oauth2/link/google",
+      "status": 302,
+      "csrfHeader": false,
+      "formPost": true
+    },
+    "/api/v1/auth/identities/email/unlink": {
+      "method": "POST",
+      "path": "/api/v1/auth/identities/email/unlink",
+      "status": 204,
+      "csrfHeader": true,
+      "formPost": false
+    },
+    "/api/v1/auth/reauth/email/request": {
+      "method": "POST",
+      "path": "/api/v1/auth/reauth/email/request",
+      "status": 202,
+      "csrfHeader": true,
+      "formPost": false
+    },
+    "/api/v1/auth/reauth/email/verify": {
+      "method": "POST",
+      "path": "/api/v1/auth/reauth/email/verify",
+      "status": 204,
+      "csrfHeader": true,
+      "formPost": false
+    }
+  },
+  "localApprovals": [
+    {
+      "approved": true,
+      "action": "MAIL"
+    },
+    {
+      "approved": true,
+      "action": "A"
+    },
+    {
+      "approved": true,
+      "action": "B"
+    },
+    {
+      "approved": true,
+      "action": "C"
+    },
+    {
+      "approved": true,
+      "action": "D"
+    }
+  ],
+  "forwardedOncePerApprovedAction": {
+    "MAIL": 1,
+    "A": 1,
+    "B": 1,
+    "C": 1,
+    "D": 1,
+    "LOGOUT": 0
+  },
+  "safeReturnPaths": [
+    {
+      "path": "/auth/complete",
+      "sensitiveQueryPresent": false
+    },
+    {
+      "path": "/account/link/complete",
+      "sensitiveQueryPresent": false
+    }
+  ],
+  "cookieAttributes": [
+    {
+      "path": "/api/v1/auth/csrf",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "secure": false,
+      "cleared": false
+    },
+    {
+      "path": "/api/v1/auth/reauth/email/verify",
+      "httpOnly": true,
+      "sameSiteLax": true,
+      "hostOnly": true,
+      "secure": false,
+      "cleared": false
+    }
+  ],
+  "userConfirmed": {
+    "actualOtpEmailReceived": true,
+    "reauthenticationCompleted": true,
+    "AtoDCompleted": true,
+    "finalRefreshGoogleOnlyVerified": true,
+    "unlinkWarningsAndBlueUi": true
+  },
+  "AUiIssue": {
+    "actualServerLink201": true,
+    "actualDatabaseLinked": true,
+    "guardBlockedRequests": 1,
+    "userReportedSingleClick": true,
+    "preciseBlockedRequestCauseUnresolved": true,
+    "duplicateLinkOrProductDefectNotEstablished": true
+  },
+  "limits": {
+    "actualAuthenticatedResponsiveMeasurementsPerformed": false,
+    "actualAccountScreenshotsSaved": false,
+    "failureScenariosNotDeliberatelyTriggered": [
+      "last-identity",
+      "email-conflict",
+      "google-conflict",
+      "expired-proof-write",
+      "invalid-csrf-write",
+      "oauth-cancel",
+      "forced-network-failure"
+    ],
+    "priorAutomatedResultsNotRerunDuringLive": {
+      "frontend": 257,
+      "backend": 441
+    }
+  },
+  "cleanup": {
+    "ownedSpringBootAndViteStopped": true,
+    "approvalHelpersCompleted": true,
+    "listeners3000_8080_8091Absent": true,
+    "postgresRestoredToInitialExited": true,
+    "databaseAndEncryptedBackupRetained": true,
+    "userBrowserAndTestSessionNotForceClosed": true,
+    "envUnchangedAfterCleanup": true,
+    "privateApprovalFilesSnapshotsAndToolsRemoved": true
+  },
+  "privacyReview": {
+    "actualSensitiveValuesAbsent": true,
+    "genericEmailAbsent": true,
+    "genericUuidAbsent": true,
+    "jwtAbsent": true,
+    "noActualScreenshots": true,
+    "reportLinksExist": true
+  }
+}
