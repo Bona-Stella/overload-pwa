@@ -1,0 +1,818 @@
+{
+  "task": "007-1D-2B-FIX-LIVE",
+  "date": "2026-10-29",
+  "frontendHead": "32c96ae6baceb4275597d4bdeeeb797f2b96930f",
+  "backendHead": "41ba84904c9c212b4b514512461a173e512549c0",
+  "baselineCounts": {
+    "users": 4,
+    "identities": 4,
+    "contacts": 4,
+    "exercises": 80,
+    "settings": 4,
+    "migrations": 8
+  },
+  "dedicatedTargetIdentified": true,
+  "approvals": [
+    {
+      "action": "MAIL",
+      "approved": true
+    },
+    {
+      "action": "LINK",
+      "approved": true
+    },
+    {
+      "action": "UNLINK",
+      "approved": true
+    }
+  ],
+  "forwarded": {
+    "MAIL": 1,
+    "LINK": 1,
+    "UNLINK": 1,
+    "VERIFY": 1
+  },
+  "blocked": [],
+  "trace": [
+    {
+      "order": 1,
+      "method": "GET",
+      "path": "/api/v1/health",
+      "status": 200
+    },
+    {
+      "order": 2,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 3,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 4,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 5,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 6,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 7,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 8,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 401
+    },
+    {
+      "order": 9,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 10,
+      "method": "GET",
+      "path": "/oauth2/authorization/google",
+      "status": 302
+    },
+    {
+      "order": 11,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 12,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 13,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 14,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 15,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 16,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 17,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 18,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 19,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 20,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 21,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 22,
+      "method": "POST",
+      "path": "/api/v1/auth/reauth/email/request",
+      "status": 202
+    },
+    {
+      "order": 23,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 24,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 25,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 26,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 27,
+      "method": "POST",
+      "path": "/api/v1/auth/reauth/email/verify",
+      "status": 204
+    },
+    {
+      "order": 28,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 29,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 30,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 31,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 32,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 33,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 34,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 35,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 36,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 37,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 38,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 39,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 40,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 41,
+      "method": "POST",
+      "path": "/api/v1/auth/identities/email/link",
+      "status": 201
+    },
+    {
+      "order": 42,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 43,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 44,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 45,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 46,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 47,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 48,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 49,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 50,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 51,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 52,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 53,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 54,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 55,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 56,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 57,
+      "method": "POST",
+      "path": "/api/v1/auth/identities/email/unlink",
+      "status": 204
+    },
+    {
+      "order": 58,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 59,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 60,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 61,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 62,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 63,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 64,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 65,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 66,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 67,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 68,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 69,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 70,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 71,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 72,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 73,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    }
+  ],
+  "phases": [
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": false,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": true,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": false,
+        "source": "NONE",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "before-MAIL",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": false,
+        "source": "NONE",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": true,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "before-LINK",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": true,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 5,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 1,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": true,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "before-UNLINK",
+      "counts": {
+        "users": 4,
+        "identities": 5,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 1,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": true,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "unlink-forward-check",
+      "counts": {
+        "users": 4,
+        "identities": 5,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 1,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": true,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": true,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true,
+      "existingOtherAuthenticatedSessionsPreserved": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "sameTarget": true,
+      "session": {
+        "active": true,
+        "ninetyDays": true,
+        "recentEmailProof": false,
+        "source": "EMAIL_REAUTH",
+        "initialLoginUnchanged": false,
+        "metadataUnchangedSinceLink": true,
+        "proofUnchangedSinceLink": true
+      }
+    }
+  ],
+  "finalAudit": {
+    "label": "read-only-check",
+    "counts": {
+      "users": 4,
+      "identities": 4,
+      "contacts": 4,
+      "exercises": 80,
+      "settings": 4,
+      "migrations": 8
+    },
+    "personalDataPreserved": true,
+    "otherIdentitiesPreserved": true,
+    "originalGoogleIdentityPreserved": true,
+    "existingOtherAuthenticatedSessionsPreserved": true,
+    "googleCount": 1,
+    "emailCount": 0,
+    "sameTarget": true,
+    "session": {
+      "active": true,
+      "ninetyDays": true,
+      "recentEmailProof": false,
+      "source": "EMAIL_REAUTH",
+      "initialLoginUnchanged": false,
+      "metadataUnchangedSinceLink": true,
+      "proofUnchangedSinceLink": true
+    }
+  },
+  "baselineInterpretation": "The first observer snapshot included an earlier existing browser session. A new private Google LOGIN then established the selected test session. Compare LINK/UNLINK preservation against metadataUnchangedSinceLink/proofUnchangedSinceLink. initialLoginUnchanged refers to the earlier observer session, not the selected write-session baseline.",
+  "userConfirmed": {
+    "dedicatedGoogleOnlyVerifiedStart": true,
+    "reauthCompleted": true,
+    "actualOneEmailReceivedAndEntered": true,
+    "linkSuccessfulAndButtonChanged": true,
+    "afterLinkReadOnlyRefreshMaintained": true,
+    "unlinkCompletedWithoutError": true,
+    "finalRefreshGoogleOnlyVerified": true,
+    "exactLinkCompletionNotice": "UNCONFIRMED: user could not distinguish the exact completion/failure wording from earlier tasks",
+    "noFailureNoticeAfterLink": "UNCONFIRMED"
+  },
+  "scope": {
+    "forcedFailureInjection": false,
+    "googleUnlinkRelink": false,
+    "newAccounts": false,
+    "productCodeChanged": false,
+    "gitCommitPush": false
+  },
+  "privacy": {
+    "rawHeadersBodiesRecorded": false,
+    "emailsUserIdsCookiesOtpsTokensRecorded": false,
+    "directUserBrowserScreenshot": false
+  },
+  "additionalRawSessionInspection": "Not executed: automatic approval review rejected the separate raw-session inspection tool. Existing sanitized audit API was used instead.",
+  "previousUiErrorRecurrence": "Not established either way: 201/readback/no-block evidence passed, but exact UI notice was not independently captured and final recollection was uncertain",
+  "cleanup": {
+    "serverAndObserverStopped": true,
+    "ownedChildrenStopped": true,
+    "ports3000_8080_8091Closed": true,
+    "postgresRestoredToExited": true,
+    "containerAndVolumePreserved": true,
+    "encryptedBackupRetained": true,
+    "backupRoundtripAndArchiveInventoryVerified": true,
+    "envUnchanged": true,
+    "temporaryToolsRemoved": true
+  },
+  "uiResult": {
+    "expectedCompletionText": "대표 이메일의 로그인 수단을 연결했습니다.",
+    "exactTextActuallyDisplayed": "UNCONFIRMED",
+    "failureNoticeAbsent": "UNCONFIRMED",
+    "reason": "User confirmed state/button changes during the flow but final recollection of exact notice was uncertain; no direct capture or repeat mutation."
+  }
+}

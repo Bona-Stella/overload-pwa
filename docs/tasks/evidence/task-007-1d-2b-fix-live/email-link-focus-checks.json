@@ -1,0 +1,639 @@
+{
+  "task": "EMAIL login link button focused LIVE",
+  "date": "2026-10-29",
+  "frontendHead": "32c96ae6baceb4275597d4bdeeeb797f2b96930f",
+  "backendHead": "41ba84904c9c212b4b514512461a173e512549c0",
+  "baselineCounts": {
+    "users": 4,
+    "identities": 4,
+    "contacts": 4,
+    "exercises": 80,
+    "settings": 4,
+    "migrations": 8
+  },
+  "verifiedAtStart": true,
+  "approvals": [
+    {
+      "action": "LINK",
+      "approved": true,
+      "linkAttempt": 1
+    },
+    {
+      "action": "MAIL",
+      "approved": true,
+      "linkAttempt": null
+    },
+    {
+      "action": "LINK",
+      "approved": true,
+      "linkAttempt": 2
+    }
+  ],
+  "forwarded": {
+    "LINK": 2,
+    "MAIL": 1,
+    "VERIFY": 1
+  },
+  "linkResponses": [
+    {
+      "order": 21,
+      "status": 403,
+      "code": "EMAIL_OWNERSHIP_PROOF_REQUIRED",
+      "result": null
+    },
+    {
+      "order": 50,
+      "status": 201,
+      "code": null,
+      "result": "LINKED"
+    }
+  ],
+  "blocked": [],
+  "trace": [
+    {
+      "order": 1,
+      "method": "GET",
+      "path": "/api/v1/health",
+      "status": 200
+    },
+    {
+      "order": 2,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 3,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 4,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 5,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 6,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 7,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 8,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 9,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 10,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 11,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 12,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 13,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 14,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 15,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 16,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 17,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 18,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 19,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 20,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 21,
+      "method": "POST",
+      "path": "/api/v1/auth/identities/email/link",
+      "status": 403,
+      "code": "EMAIL_OWNERSHIP_PROOF_REQUIRED"
+    },
+    {
+      "order": 22,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 23,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 24,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 25,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 26,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 27,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 28,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 29,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 30,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 31,
+      "method": "POST",
+      "path": "/api/v1/auth/reauth/email/request",
+      "status": 202
+    },
+    {
+      "order": 32,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 33,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 34,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 35,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 36,
+      "method": "POST",
+      "path": "/api/v1/auth/reauth/email/verify",
+      "status": 204
+    },
+    {
+      "order": 37,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 38,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 39,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 40,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 41,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 42,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 43,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 44,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 45,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 46,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 47,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 48,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 49,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 50,
+      "method": "POST",
+      "path": "/api/v1/auth/identities/email/link",
+      "status": 201,
+      "result": "LINKED"
+    },
+    {
+      "order": 51,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 52,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 53,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 54,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 55,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 56,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 57,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 58,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 59,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 60,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 61,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 62,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200
+    },
+    {
+      "order": 63,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    },
+    {
+      "order": 64,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200
+    },
+    {
+      "order": 65,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200
+    },
+    {
+      "order": 66,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200
+    }
+  ],
+  "phases": [
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "sameUser": true,
+      "verified": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true
+    },
+    {
+      "label": "before-LINK",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "sameUser": true,
+      "verified": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "sameUser": true,
+      "verified": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true
+    },
+    {
+      "label": "before-MAIL",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "sameUser": true,
+      "verified": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true
+    },
+    {
+      "label": "before-LINK",
+      "counts": {
+        "users": 4,
+        "identities": 4,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "sameUser": true,
+      "verified": true,
+      "googleCount": 1,
+      "emailCount": 0,
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 5,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "sameUser": true,
+      "verified": true,
+      "googleCount": 1,
+      "emailCount": 1,
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true
+    },
+    {
+      "label": "read-only-check",
+      "counts": {
+        "users": 4,
+        "identities": 5,
+        "contacts": 4,
+        "exercises": 80,
+        "settings": 4,
+        "migrations": 8
+      },
+      "sameUser": true,
+      "verified": true,
+      "googleCount": 1,
+      "emailCount": 1,
+      "personalDataPreserved": true,
+      "otherIdentitiesPreserved": true,
+      "originalGoogleIdentityPreserved": true
+    }
+  ],
+  "finalAudit": {
+    "label": "read-only-check",
+    "counts": {
+      "users": 4,
+      "identities": 5,
+      "contacts": 4,
+      "exercises": 80,
+      "settings": 4,
+      "migrations": 8
+    },
+    "sameUser": true,
+    "verified": true,
+    "googleCount": 1,
+    "emailCount": 1,
+    "personalDataPreserved": true,
+    "otherIdentitiesPreserved": true,
+    "originalGoogleIdentityPreserved": true
+  },
+  "userObservedUi": {
+    "source": "User transcribed current visible notice immediately after each approved click, before navigation/refresh; no later-memory inference",
+    "firstLinkNotice": "최근 10분 이내의 이메일 소유 확인이 필요합니다. 대표 이메일로 재인증한 뒤 원하는 연결·해제를 다시 선택해 주세요.",
+    "successfulLinkNotice": "대표 이메일의 로그인 수단을 연결했습니다.",
+    "genericFailureNoticeAbsent": true,
+    "emailConnectedAndUnlinkButtonVisible": true,
+    "actualOneReauthEmailReceivedAndEntered": true,
+    "afterRefreshBothEmailGoogleConnected": true
+  },
+  "interpretation": {
+    "linkRequests": 2,
+    "firstRequest": "403 EMAIL_OWNERSHIP_PROOF_REQUIRED, no identity creation",
+    "secondRequest": "201 LINKED after explicitly approved EMAIL REAUTH and a new explicit LINK approval",
+    "successfulIdentityCreations": 1,
+    "automaticOrUnintendedDuplicatePostsObserved": 0,
+    "pastRootCauseStillUnresolved": true,
+    "normalSuccessPathUiMatchesServer": true,
+    "forcedGetFailureInjection": false,
+    "automaticUnlink": false
+  },
+  "privacy": {
+    "rawSessionAttributesQueried": false,
+    "requestBodiesHeadersCookiesTokensRecorded": false,
+    "directBrowserScreenshot": false
+  },
+  "backup": {
+    "encrypted": true,
+    "roundtripVerified": true,
+    "archiveInventoryVerified": true,
+    "restoreExecuted": false
+  },
+  "cleanup": {
+    "serverObserverAndOwnedChildrenStopped": true,
+    "ports3000_8080_8091Closed": true,
+    "postgresReturnedToExited": true,
+    "containerVolumeAndAccountDataPreserved": true,
+    "linkedEmailKept": true,
+    "encryptedBackupRetained": true,
+    "envUnchanged": true,
+    "temporaryToolsRemoved": true
+  }
+}
