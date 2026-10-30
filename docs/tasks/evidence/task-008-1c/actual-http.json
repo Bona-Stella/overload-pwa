@@ -1,0 +1,1697 @@
+{
+  "source": "real Spring Boot HTTP through passive Vite proxy; disposable PostgreSQL 18.6",
+  "checks": [
+    {
+      "name": "real PostgreSQL seed: 20 exercises and 1 settings row",
+      "result": "PASS"
+    },
+    {
+      "name": "every successful workout response matches the authenticated session owner and generation string",
+      "result": "PASS"
+    },
+    {
+      "name": "stored edits survive reload and relogin with identical UUIDs and timestamps",
+      "result": "PASS"
+    },
+    {
+      "name": "A and B have disjoint UUIDs and independent stored settings",
+      "result": "PASS"
+    },
+    {
+      "name": "actual missing settings is 500 without read-time repair",
+      "result": "PASS"
+    },
+    {
+      "name": "actual disconnected PostgreSQL read is 503 with a successful later retry",
+      "result": "PASS"
+    },
+    {
+      "name": "OTP rejection, three real successful logins, and session rotation",
+      "result": "PASS"
+    },
+    {
+      "name": "actual request cookies match JDBC session rows for A and B",
+      "result": "PASS"
+    },
+    {
+      "name": "logout and server-side revocation leave no authenticated JDBC session",
+      "result": "PASS"
+    },
+    {
+      "name": "all actual responses carry unique UUID request IDs and security/cache headers",
+      "result": "PASS"
+    },
+    {
+      "name": "final data preserved without duplicate provisioning or workout writes",
+      "result": "PASS"
+    }
+  ],
+  "events": [
+    {
+      "sequence": 1,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 401,
+      "sentSessionCookie": true,
+      "requestId": "ace3c5a2-f7f9-42cc-ac0f-2d7730805cbe",
+      "cacheControl": "no-store",
+      "contentType": "application/json;charset=ISO-8859-1",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 2,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "2df800e1-7227-4d4a-bfa9-645e5368639b",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 3,
+      "method": "POST",
+      "path": "/api/v1/auth/email-otp/request",
+      "status": 202,
+      "sentSessionCookie": true,
+      "requestId": "5a932946-e031-4af4-9580-6528f3ea417e",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 4,
+      "method": "POST",
+      "path": "/api/v1/auth/email-otp/verify",
+      "status": 401,
+      "sentSessionCookie": true,
+      "requestId": "f256f3db-acb6-40a5-870d-a03b18e91443",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 5,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "d32f57a1-ad32-402c-9601-598d6dcac9c2",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 6,
+      "method": "POST",
+      "path": "/api/v1/auth/email-otp/verify",
+      "status": 204,
+      "sentSessionCookie": true,
+      "requestId": "fbc1e6f3-2fc0-4a9a-8e86-8281f2a80023",
+      "cacheControl": "no-store",
+      "contentType": null,
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Max-Age=7775999",
+            "Expires=Thu, 28 Jan 2027 04:12:00 GMT",
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 7,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "28a90b05-4293-4d7b-adf4-1ccec05f824c",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 8,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "2de3d4bb-0c18-49f9-bd2b-d6d464d77c2f",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 9,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "7437dc14-0563-4649-9845-f07134de482b",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 180,
+        "restMediumSeconds": 120,
+        "restHighSeconds": 90
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 10,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "4c047cdd-f806-41b4-b6e7-1c19b565d5b6",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "사이드 레터럴 레이즈"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 11,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "bdad8b13-e66b-4afe-bbcf-28107be7ae70",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 17,
+        "restMediumSeconds": 29,
+        "restHighSeconds": 43
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 12,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "f9cf1d85-434f-4977-b92f-a1f092de9557",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "격리 검증 A 전용 종목"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 13,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "715360ef-fd9a-47a4-b097-542620bd61bc",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 14,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "cdbfa6d0-d710-4d80-9c0a-67523a2053df",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 15,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "13b0dc80-e342-4b72-858a-fdd932634951",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 17,
+        "restMediumSeconds": 29,
+        "restHighSeconds": 43
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 16,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "1ad64003-8435-4623-be54-4365841fc608",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "격리 검증 A 전용 종목"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 17,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "c218d6b0-5ea7-40f3-923a-dd8145f29ff0",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "격리 검증 A 전용 종목"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 18,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 500,
+      "sentSessionCookie": true,
+      "requestId": "6b8ec92f-7180-4f59-b4ad-cff28992fc4b",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "WORKOUT_SETTINGS_MISSING"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 19,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "46ef6934-7b35-49f6-89d4-32cadd66b368",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 17,
+        "restMediumSeconds": 29,
+        "restHighSeconds": 43
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 20,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "40fdf6f8-d46e-42b3-89b5-37aa9b758351",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "격리 검증 A 전용 종목"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 21,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "15f82922-beff-4d84-8d9b-bbe30ffee76a",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 17,
+        "restMediumSeconds": 29,
+        "restHighSeconds": 43
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 22,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 503,
+      "sentSessionCookie": true,
+      "requestId": "e9301bff-2593-44ec-a180-b24dba140163",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "WORKOUT_DATA_UNAVAILABLE"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 23,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "10c08848-6a53-4b57-869f-2d5fe6a35123",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 17,
+        "restMediumSeconds": 29,
+        "restHighSeconds": 43
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 24,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "e02f29f8-e6eb-40d2-8975-72a59cc1e546",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "격리 검증 A 전용 종목"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 25,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "08a30d94-4652-48b3-b0bc-671a75612b67",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 26,
+      "method": "GET",
+      "path": "/api/v1/auth/identities",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "55dfa26a-557a-424c-8110-fbc424b89d46",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 27,
+      "method": "GET",
+      "path": "/api/v1/auth/reauth/email/contact",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "05559fd5-10c1-4072-9cb4-30b5f4694073",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 28,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "c242b7e7-f342-4e76-ba99-643f86b3cca7",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 29,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "8d55071a-8600-48e8-9946-37762dca3ae5",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "격리 검증 A 전용 종목"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 30,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "edf332b7-49cc-4546-958d-8e8e007fc24f",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 17,
+        "restMediumSeconds": 29,
+        "restHighSeconds": 43
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 31,
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "status": 204,
+      "sentSessionCookie": true,
+      "requestId": "3f2be756-85a7-4c99-8c0c-bb9653e7499c",
+      "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+      "contentType": null,
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Max-Age=0",
+            "Expires=Thu, 1 Jan 1970 00:00:00 GMT",
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 32,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 401,
+      "sentSessionCookie": false,
+      "requestId": "8173a9fa-cae2-445e-9bf0-0285f77089f2",
+      "cacheControl": "no-store",
+      "contentType": "application/json;charset=ISO-8859-1",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 33,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": false,
+      "requestId": "cbded066-a30b-40cb-bab0-2da988fc3bed",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 34,
+      "method": "POST",
+      "path": "/api/v1/auth/email-otp/request",
+      "status": 202,
+      "sentSessionCookie": true,
+      "requestId": "07199fae-13f1-49db-882c-e35958853da3",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 35,
+      "method": "POST",
+      "path": "/api/v1/auth/email-otp/verify",
+      "status": 204,
+      "sentSessionCookie": true,
+      "requestId": "c1884c59-beb3-494e-afcc-0f3363413341",
+      "cacheControl": "no-store",
+      "contentType": null,
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Max-Age=7775999",
+            "Expires=Thu, 28 Jan 2027 04:20:53 GMT",
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 36,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "5a3bde00-9003-4226-a1d9-763c5ad55d3a",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "b0789d9b-fe50-413e-93d4-9e97c98870a8"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 37,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "1e508a7c-fb41-4185-8dae-1c602a23784a",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 38,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "ff26ca0b-cae1-45d9-aeb2-19ac89615c9e",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "b0789d9b-fe50-413e-93d4-9e97c98870a8",
+        "dataGeneration": "0",
+        "restLowSeconds": 180,
+        "restMediumSeconds": 120,
+        "restHighSeconds": 90
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 39,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "af5c23a1-c54f-4076-a1ac-af5d9385a469",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "b0789d9b-fe50-413e-93d4-9e97c98870a8",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "027f00cc-644d-4808-9e22-7f3ffdb195f5",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "03c71f85-2476-478e-a472-73f172b3fd97",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "04494458-0c54-4f7e-8af9-7d4f13ed44e8",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "177426ab-52a8-413d-8b74-2842a5551fa9",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "2640b7e5-a149-4806-b52a-087997f6ad3e",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b2a7263-f654-4c02-ad8c-f91527596bda",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "39793c71-e442-4a11-9c55-8da9b14ee49a",
+            "name": "케이블 푸시다운"
+          },
+          {
+            "id": "5dccc8dd-743d-49ae-8e87-dc8b5c30de5d",
+            "name": "사이드 레터럴 레이즈"
+          },
+          {
+            "id": "600a90b2-3466-4a87-81e4-5d615ceeccdd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "78870e91-5f74-4829-8708-3b0b4b8f4302",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "8a1c595a-bcb2-4108-896b-1cf54103aed1",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "8b882e5c-e93e-48b7-811a-8c9b81480e5a",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "aeca10fb-36f1-4a15-b398-c227c8210fa4",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "c3475764-8f4b-474e-88bd-6df9ba6518ac",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "c68a7613-5f7e-4acf-99e1-1ed793c56290",
+            "name": "풀업"
+          },
+          {
+            "id": "c6eee722-a111-4dc0-a222-2792e046c17f",
+            "name": "스쿼트"
+          },
+          {
+            "id": "ce641206-2f92-4821-a600-4b290e13afd9",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "da83664f-2114-4e33-9bf0-5cf2787f157d",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "f459bed9-fc87-4ad1-a299-5cf0cf603ce0",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "f97ef691-9b0b-47d0-83ae-7c1ee9b79c08",
+            "name": "레그 컬"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 40,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 401,
+      "sentSessionCookie": true,
+      "requestId": "89bf46d6-d0a8-4839-88a7-c8b1e0dbed60",
+      "cacheControl": "no-store",
+      "contentType": "application/json;charset=ISO-8859-1",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 41,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 401,
+      "sentSessionCookie": true,
+      "requestId": "79f916a8-a8a5-40e0-8e21-5c4de09e5d7c",
+      "cacheControl": "no-store",
+      "contentType": "application/json;charset=ISO-8859-1",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 42,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 401,
+      "sentSessionCookie": true,
+      "requestId": "5dbe41c7-00b0-44d1-8095-66223fb6b0dd",
+      "cacheControl": "no-store",
+      "contentType": "application/json;charset=ISO-8859-1",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 43,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "9a08d42c-822c-4b29-90ca-87c25616f12d",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 44,
+      "method": "POST",
+      "path": "/api/v1/auth/email-otp/request",
+      "status": 202,
+      "sentSessionCookie": true,
+      "requestId": "857df840-f251-4507-b59b-62f944e960af",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 45,
+      "method": "POST",
+      "path": "/api/v1/auth/email-otp/verify",
+      "status": 204,
+      "sentSessionCookie": true,
+      "requestId": "bd4cb1b4-5f9b-4a65-8a47-2ebbd6ac5b82",
+      "cacheControl": "no-store",
+      "contentType": null,
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Max-Age=7775999",
+            "Expires=Thu, 28 Jan 2027 04:22:24 GMT",
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 46,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "8ba1bb71-9781-4dea-a838-933a5fc23e3f",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 47,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "ad6fabea-d968-437d-bf1e-a64044dd95a4",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": []
+    },
+    {
+      "sequence": 48,
+      "method": "GET",
+      "path": "/api/v1/workout-settings",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "da3eba5a-e4ca-49a0-b7b5-2b592c7fd03e",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "restLowSeconds": 17,
+        "restMediumSeconds": 29,
+        "restHighSeconds": 43
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 49,
+      "method": "GET",
+      "path": "/api/v1/exercises",
+      "status": 200,
+      "sentSessionCookie": true,
+      "requestId": "4d96b26a-239a-4af6-ad87-9dad0de94596",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "userId": "3a83337d-a937-4961-951f-85e07ed62b58",
+        "dataGeneration": "0",
+        "exercises": [
+          {
+            "id": "056b31d8-c0af-40be-9024-f0f88871666a",
+            "name": "격리 검증 A 전용 종목"
+          },
+          {
+            "id": "0bac198c-a288-42aa-91bd-5b259cf12483",
+            "name": "바벨 컬"
+          },
+          {
+            "id": "1aa555ff-ef2c-482e-b973-569b63a704dc",
+            "name": "시티드 케이블 로우"
+          },
+          {
+            "id": "1f90766e-da89-4fad-81a0-0209ca719ae5",
+            "name": "바벨 로우"
+          },
+          {
+            "id": "2b368ab5-89b9-4a09-b6b7-474dc8af6ad4",
+            "name": "스쿼트"
+          },
+          {
+            "id": "518365f8-0747-4d4b-a8c3-73a3910b28e5",
+            "name": "케이블 플라이"
+          },
+          {
+            "id": "536185bb-b6b7-4daa-8fab-2d08765be7e7",
+            "name": "덤벨 컬"
+          },
+          {
+            "id": "584c00f7-9fa3-4225-a5c5-72d3c3308b21",
+            "name": "랫풀다운"
+          },
+          {
+            "id": "68205d31-1e8f-4e20-8c4c-885666504dd0",
+            "name": "오버헤드 트라이셉스 익스텐션"
+          },
+          {
+            "id": "7045245e-392b-41e0-90ce-748de5247abd",
+            "name": "레그 프레스"
+          },
+          {
+            "id": "7e83d5c8-e8c6-43a9-bae9-74c67d6f84e7",
+            "name": "벤치프레스"
+          },
+          {
+            "id": "854368ed-bf58-4c31-b69a-935ffafad1ad",
+            "name": "인클라인 덤벨 프레스"
+          },
+          {
+            "id": "9798aa41-be70-413d-a3ff-530348856948",
+            "name": "숄더 프레스"
+          },
+          {
+            "id": "ad540e3c-ffca-4af7-917f-6360c6506ed7",
+            "name": "레그 컬"
+          },
+          {
+            "id": "b76e8c09-bc76-451f-9bff-a15ba00cd708",
+            "name": "레그 익스텐션"
+          },
+          {
+            "id": "befe041f-7d0b-4100-acaa-b00fcae6c966",
+            "name": "풀업"
+          },
+          {
+            "id": "c0bf6082-43d5-4e0d-8b21-cbaa8d0b25b1",
+            "name": "체스트 프레스"
+          },
+          {
+            "id": "cee706df-c98b-4d85-bf74-1ed58181179a",
+            "name": "리어 델트 플라이"
+          },
+          {
+            "id": "e67ecf1f-0c37-4a44-95f6-a5763ac3bb45",
+            "name": "루마니안 데드리프트"
+          },
+          {
+            "id": "f029c44b-e513-40e9-9067-cc95e22f7c70",
+            "name": "케이블 푸시다운"
+          }
+        ]
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 50,
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "status": 204,
+      "sentSessionCookie": true,
+      "requestId": "fc1fc354-5ce9-4ec4-a635-75245734bae8",
+      "cacheControl": "no-cache, no-store, max-age=0, must-revalidate",
+      "contentType": null,
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Max-Age=0",
+            "Expires=Thu, 1 Jan 1970 00:00:00 GMT",
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    },
+    {
+      "sequence": 51,
+      "method": "GET",
+      "path": "/api/v1/auth/session",
+      "status": 401,
+      "sentSessionCookie": false,
+      "requestId": "0e8857e3-32a9-4460-b076-4bbf49f1355d",
+      "cacheControl": "no-store",
+      "contentType": "application/json;charset=ISO-8859-1",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "body": {
+        "code": "AUTHENTICATION_REQUIRED"
+      },
+      "setCookies": []
+    },
+    {
+      "sequence": 52,
+      "method": "GET",
+      "path": "/api/v1/auth/csrf",
+      "status": 200,
+      "sentSessionCookie": false,
+      "requestId": "94d904ce-ba68-4c55-8c38-5d8f26cce6f2",
+      "cacheControl": "no-store",
+      "contentType": "application/json",
+      "nosniff": "nosniff",
+      "frameOptions": "DENY",
+      "setCookies": [
+        {
+          "name": "SESSION",
+          "attributes": [
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax"
+          ]
+        }
+      ]
+    }
+  ]
+}
