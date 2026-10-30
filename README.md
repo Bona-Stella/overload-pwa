@@ -143,7 +143,7 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 | E2E Test | Playwright | 브라우저 테스트 |
 | Hosting | Cloudflare Pages | 정적 웹 애플리케이션 배포 |
 
-> 현재 React, TypeScript, Vite, ESLint와 Node.js 내장 테스트 러너를 사용하며, 스타일은 일반 CSS입니다. 버전 표는 `package-lock.json` 기준입니다. 미도입 라이브러리는 현재 필수 도구가 아니며 채택 여부를 별도로 검토합니다. 실제 구성은 `package.json`과 [프론트엔드 개발 규칙](docs/engineering/frontend.md)을 확인합니다. 운영 IndexedDB + 원자적 Outbox는 [Task 006 최종 설계 v0.3.1](../overload-server/docs/tasks/task-006-integrated-design-v0.3.1.md)에서 확정되었지만 아직 미구현이며, Dexie.js 채택은 미확정입니다.
+> 현재 React, TypeScript, Vite, ESLint와 Node.js 내장 테스트 러너를 사용하며, 스타일은 일반 CSS입니다. 버전 표는 `package-lock.json` 기준입니다. 미도입 라이브러리는 현재 필수 도구가 아니며 채택 여부를 별도로 검토합니다. 실제 구성은 `package.json`과 [프론트엔드 개발 규칙](docs/engineering/frontend.md)을 확인합니다. 운동 쓰기·진행 세션·복구의 현행 기준은 [Task 009 v1.0](../overload-server/docs/tasks/task-009-redesign-v1.0.md)입니다. 온라인 우선이며 IndexedDB는 이미 시작한 운동의 초안·타이머 복원용입니다. 일반 온라인 쓰기·세션 API·IndexedDB는 미구현이며, 범용 Outbox는 도입하지 않습니다. Dexie.js는 미도입입니다.
 
 ---
 
@@ -180,30 +180,11 @@ PWA 배포 완료 후 다음 방법으로 설치할 수 있습니다.
 
 Task 002는 `localStorage` 저장 어댑터로 진행 중 운동과 완료 이력을 복원합니다. 로컬 저장 실패를 표시하고, 손상되거나 지원하지 않는 저장 형식은 덮어쓰지 않습니다. 아래 IndexedDB·서버 동기화 흐름은 후속 설계입니다. 앱 리소스의 오프라인 로딩과 영구 백업을 보장하지 않습니다.
 
-```text
-User Input
-    │
-    ▼
-React Application
-    │
-    ▼
-IndexedDB (Local Storage)
-    │
-    ▼
-Network Available?
-    │
-    ├── No  → Keep Local Data
-    │
-    └── Yes → Sync with Backend
-                  │
-                  ▼
-            Spring Boot API
-                  │
-                  ▼
-             PostgreSQL
-```
-
-서버 데이터는 최종 원본으로 관리하며, 동기화 실패 및 데이터 충돌 상황에 대한 처리 방식을 설계할 예정입니다.
+Task 009 v1.0에 따라 새 운동 시작·종목/루틴/설정 관리·로그아웃은 온라인 기능입니다.
+진행 운동의 입력 초안·타이머는 IndexedDB에 보존하고, 완료·종료·재연결 때 전체 확정 스냅샷을 전송할 예정입니다.
+한 사용자당 진행 운동 하나, 명시적 편집 권한 이전, epoch/revision 검사를 적용하며 자동 병합은 하지 않습니다.
+24시간 서버 미갱신 시 마지막 서버 완료 기록을 자동 종료·보존합니다.
+이번 단계에서는 관련 런타임을 구현하지 않았으며 기존 데모 데이터와 인증·조회 연동은 유지합니다.
 
 ---
 
