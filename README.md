@@ -40,7 +40,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> Task 007-1D-1: 기본 화면은 서버 세션 기반 EMAIL OTP·Google 로그인, 새로고침 복원 및 로그아웃을 사용합니다. 운동 API·동기화·설치형 PWA는 아직 미구현입니다. 기존 운동 프로토타입과 저장 데이터는 개발 전용 `/demo`, 기존 인증 목업은 `/auth-preview`에서 확인합니다. 데모 기록은 실제 계정 데이터가 아닙니다. [인증 연동 및 로컬 실행](docs/engineering/authentication.md), [검증 보고서](docs/tasks/task-007-1d-1-validation-report.md)를 참고하세요. 아래 장기 체크리스트와 [Task 002 기록](docs/tasks/task-002-core-ui-report.md)은 구분합니다.
+> Task 008-1B: 기본 화면은 기존 서버 세션 인증을 유지하며 로그인된 사용자에게 운동 종목·휴식 설정 GET을 조회 전용으로 표시합니다. 운동 저장·편집·동기화·설치형 PWA는 아직 미구현입니다. 기존 운동 프로토타입과 저장 데이터는 개발 전용 `/demo`, 기존 인증 목업은 `/auth-preview`에서 확인합니다. 데모 기록은 실제 계정 데이터가 아닙니다. [인증 연동 및 로컬 실행](docs/engineering/authentication.md), [운동 조회 연동 검증](docs/tasks/task-008-1b-workout-read-integration-report.md)을 참고하세요. 아래 장기 체크리스트와 [Task 002 기록](docs/tasks/task-002-core-ui-report.md)은 구분합니다.
 
 ---
 

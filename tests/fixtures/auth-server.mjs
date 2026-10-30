@@ -35,6 +35,20 @@ export function createAuthServer(frontend = 'http://localhost:3057') {
       if (!session) { const id = randomUUID(); session = { csrf: randomUUID(), userId: null }; sessions.set(id, session); headers = cookie(id) }
       return send(200, { headerName: 'X-CSRF-TOKEN', token: session.csrf }, headers)
     }
+    // Synthetic workout reads for browser checks only; no database or demo storage access.
+    if (['/api/v1/exercises', '/api/v1/workout-settings'].includes(path) && req.method === 'GET') {
+      const headers = { 'X-Request-ID': randomUUID() }
+      if (!session?.userId || mode === 'workout-401') return send(401, { code: 'AUTHENTICATION_REQUIRED' }, headers)
+      if (mode === 'workout-403') return send(403, { code: 'ACCESS_DENIED' }, headers)
+      if (mode === 'workout-503') return send(503, { code: 'WORKOUT_DATA_UNAVAILABLE' }, headers)
+      if (mode === 'workout-missing' && path.endsWith('workout-settings')) return send(500, { code: 'WORKOUT_SETTINGS_MISSING' }, headers)
+      const userId = session.userId, dataGeneration = mode === 'workout-mismatch' && path.endsWith('workout-settings') ? '9007199254740994' : '9007199254740993'
+      return send(200, path.endsWith('exercises') ? { userId, dataGeneration, exercises: mode === 'workout-empty' ? [] : [
+        { id: '20000000-1111-4222-8333-000000000001', name: '벤치프레스' },
+        { id: '20000000-1111-4222-8333-000000000002', name: '스쿼트' },
+        { id: '20000000-1111-4222-8333-000000000003', name: '매우 긴 운동 종목 이름 · 모바일 줄바꿈 확인을 위한 한글과 LongExerciseNameWithoutSpacesABCDEFGHIJKLMNOPQRSTUVWXYZ' },
+      ] } : { userId, dataGeneration, restLowSeconds: 17, restMediumSeconds: 29, restHighSeconds: 43 }, headers)
+    }
     if(['/api/v1/auth/identities','/api/v1/auth/reauth/email/contact'].includes(path)&&req.method==='GET'){
       if(!session?.userId)return send(401,{code:'AUTHENTICATION_REQUIRED'})
       if(mode==='account-down')return send(503,{code:'OTP_UNAVAILABLE'})
