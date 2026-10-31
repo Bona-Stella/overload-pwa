@@ -1,0 +1,45 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5A 실제 IndexedDB 검증</title>
+<style>body{font:16px system-ui;padding:24px;max-width:800px}button{padding:12px;margin:8px}pre{white-space:pre-wrap}</style>
+<h1>격리 브라우저 IndexedDB 검증</h1><button id="run">IndexedDB 테스트 실행</button><button id="restore">새로고침 후 복원 확인</button><pre id="result" role="status">대기</pre>
+<script type="module">
+import { WorkoutStore } from '/src/features/workout-online/storage.ts'
+import { scope, start, session, OTHER } from './workout-online-data.mjs'
+const database='overload.test.task009.5a', result=document.querySelector('#result')
+const check=(value,label)=>{if(!value)throw Error(label)}
+document.querySelector('#run').onclick=async()=>{
+  const passed=[];let first,second
+  try {
+    first=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database);second=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database)
+    const ids=await Promise.all([first.deviceId(),second.deviceId()]);check(ids[0]===ids[1],'two-tab device initialization');passed.push('동시 연결의 기기 ID 동일·영속 보존')
+    // Use a fresh generation each run; no unrelated database or application data is deleted.
+    const testScope={...scope,dataGeneration:String(Date.now())},body={...start,dataGeneration:testScope.dataGeneration}
+    const attempts=await Promise.all([first.prepareStart(testScope,body),second.prepareStart(testScope,{...body,id:OTHER})])
+    check(attempts[0].requestJson===attempts[1].requestJson,'fixed attempt');passed.push('두 연결의 동시 START 준비가 동일 UUID·본문 사용')
+    const original=IDBObjectStore.prototype.put
+    IDBObjectStore.prototype.put=function(...args){const r=original.apply(this,args);if(this.transaction.db.name===database&&this.name==='sessionCopies')this.transaction.abort();return r}
+    let failed=false
+    try{await first.saveSession(testScope,session({...testScope}),body.id)}catch{failed=true}finally{IDBObjectStore.prototype.put=original}
+    check(failed,'transaction must reject');check((await first.attempt(testScope))?.request.id===body.id,'attempt must survive abort')
+    check((await first.copies(testScope)).length===0,'copy must roll back');passed.push('실제 IDB 트랜잭션 abort: 사본 미생성·START 요청 유지')
+    await first.saveSession(testScope,session({...testScope}),body.id)
+    check(await first.attempt(testScope)===null,'attempt cleared atomically');passed.push('성공 사본 저장과 START 요청 제거의 원자성')
+    const originalAdd=IDBObjectStore.prototype.add
+    IDBObjectStore.prototype.add=function(...args){const r=originalAdd.apply(this,args);if(this.transaction.db.name===database&&this.name==='startAttempts')this.transaction.abort();return r}
+    let prepareFailed=false;try{await first.prepareStart({...testScope,userId:OTHER},body)}catch{prepareFailed=true}finally{IDBObjectStore.prototype.add=originalAdd}
+    check(prepareFailed,'prepare failure');check(await first.attempt({...testScope,userId:OTHER})===null,'failed attempt rollback');passed.push('START 사전 저장 실패와 롤백')
+    check((await first.copies({...testScope,userId:OTHER})).length===0,'other account isolation')
+    check((await first.copies({...testScope,dataGeneration:'0'})).length===0,'generation isolation');passed.push('계정·세대별 조회 격리')
+    await first.saveSession(testScope,session({...testScope,version:'10'}));await first.saveSession(testScope,session({...testScope,version:'1'}))
+    check((await first.copies(testScope))[0].server.version==='10','late copy regression');passed.push('늦은 응답이 높은 서버 version 사본을 덮어쓰지 않음')
+    await first.close();await second.close();sessionStorage.setItem('phase5a-idb-proof',JSON.stringify({testScope,deviceId:ids[0]}))
+    result.textContent='PASS '+passed.length+'\n'+passed.join('\n')+'\n페이지를 새로고침한 뒤 복원을 확인하세요.'
+  }catch(error){result.textContent='FAIL '+error.stack}finally{await first?.close();await second?.close()}
+}
+document.querySelector('#restore').onclick=async()=>{
+  const proof=JSON.parse(sessionStorage.getItem('phase5a-idb-proof')??'null');if(!proof){result.textContent='FAIL 먼저 테스트를 실행하세요.';return}
+  const store=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database)
+  try{const copies=await store.copies(proof.testScope);check(await store.deviceId()===proof.deviceId,'device reload');check(copies.length===1&&copies[0].server.version==='10','copy reload')
+    check(copies[0].server.initialPlan.weightExercises[0].approvedWeightKg==='99999999999999.999999','decimal precision');check(copies[0].server.lastWorkoutSyncedAt.endsWith('.123456Z'),'timestamp precision')
+    result.textContent='PASS 새로고침·새 연결 이후 기기 ID, 세션 사본, InitialPlan, decimal, 서버 microsecond 복원'}catch(error){result.textContent='FAIL '+error.stack}finally{await store.close()}
+}
+</script></html>

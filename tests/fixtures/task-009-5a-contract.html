@@ -1,0 +1,20 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>5A 격리 계약 검증</title><h1>실제 격리 Backend 확인</h1><p>테스트용 계정·DB에서만 사용하는 수동 검증입니다.</p>
+<button id="verify">고정 START와 InitialPlan 확인</button><button id="takeover">테스트 다른 기기로 인수</button><pre id="result" role="status">대기</pre>
+<script type="module">
+const root='/api/v1/workout-sessions',out=document.querySelector('#result')
+const json=async(path,init)=>{const r=await fetch(path,{credentials:'include',cache:'no-store',...init});const body=await r.json();if(!r.ok)throw Error(JSON.stringify(body));return body}
+document.querySelector('#verify').onclick=async()=>{try{
+  const summary=await json('/__fixture/summary'),requests=summary.startRequests
+  if(requests.length!==2||JSON.stringify(requests[0])!==JSON.stringify(requests[1]))throw Error('Expected identical original/retry STARTs')
+  const {session}=await json(root+'/active');if(session.id!==requests[0].id)throw Error('Wrong active session')
+  const initial=session.initialPlan.weightExercises[0];if(initial.sessionExerciseId===initial.sourcePlacementId)throw Error('Identity conflated')
+  if(initial.approvedWeightKg!=='65')throw Error('InitialPlan changed')
+  const routine=await json('/api/v1/routines/'+session.initialPlan.routineId)
+  out.textContent='PASS 동일 UUID·시각·본문 START 2회 / 단일 ACTIVE / 세션·배치 UUID 구분 / InitialPlan 승인 '+initial.approvedWeightKg+' kg / 현재 루틴 승인 '+routine.weightPlacements[0].approvedWeightKg+' kg'
+}catch(e){out.textContent='FAIL '+e.stack}}
+document.querySelector('#takeover').onclick=async()=>{try{
+  const {session}=await json(root+'/active'),csrf=await json('/api/v1/auth/csrf')
+  const result=await json(root+'/'+session.id+'/takeover',{method:'POST',headers:{'Content-Type':'application/json',[csrf.headerName]:csrf.token},body:JSON.stringify({dataGeneration:session.dataGeneration,editorDeviceId:crypto.randomUUID(),expectedWriterEpoch:session.writerEpoch})})
+  out.textContent='PASS 테스트 기기로 편집권 이동, writerEpoch='+result.writerEpoch+' / 원래 화면은 다시 조회 후 읽기 전용이어야 함'
+}catch(e){out.textContent='FAIL '+e.stack}}
+</script></html>

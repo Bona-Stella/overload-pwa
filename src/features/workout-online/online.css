@@ -1,0 +1,9 @@
+.workout-online { margin-block: 1rem; }
+.online-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.online-routine-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .6rem; }
+.online-routine select { width: 100%; max-width: 100%; padding: .8rem; border: 1px solid var(--border, #334155); border-radius: .7rem; background: var(--surface, #101b2d); color: inherit; font: inherit; }
+.online-check { display: flex; align-items: center; gap: .6rem; }
+.online-check input { width: 1.2rem; min-height: 1.2rem; }
+.workout-online time { overflow-wrap: anywhere; font-size: .85rem; }
+.workout-online summary { cursor: pointer; padding-block: .7rem; }
+.workout-online [aria-pressed="true"] { border-color: #3b82f6; }

@@ -22,8 +22,11 @@ export class AuthApi {
   private readonly timeoutMs: number
   constructor(fetcher: typeof fetch = (input, init) => fetch(input, init), timeoutMs = 10_000) { this.fetcher = fetcher; this.timeoutMs = timeoutMs }
   clearCsrf() { this.csrf = null }
-  private async call(path: string, method = 'GET', body?: unknown, csrf?: Csrf) {
+  private async call(path: string, method = 'GET', body?: unknown, csrf?: Csrf, parent?: AbortSignal) {
     const controller = new AbortController()
+    const cancel = () => controller.abort()
+    parent?.addEventListener('abort', cancel, { once: true })
+    if (parent?.aborted) cancel()
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs)
     try {
       const response = await this.fetcher(path, { method, credentials: 'include', cache: 'no-store', redirect: 'error', signal: controller.signal,
@@ -41,11 +44,20 @@ export class AuthApi {
         if (code === 'CSRF_INVALID' || response.status === 401) this.clearCsrf()
         throw new AuthError(code, response.status, retryAfter)
       }
-      return { status: response.status, data }
+      return { status: response.status, data, contentType: response.headers.get('Content-Type'), requestId: response.headers.get('X-Request-ID') }
     } catch (error) {
       if (error instanceof AuthError) throw error
       throw new AuthError(controller.signal.aborted ? 'TIMEOUT' : 'NETWORK')
-    } finally { clearTimeout(timeout) }
+    } finally { clearTimeout(timeout); parent?.removeEventListener('abort', cancel) }
+  }
+  /** Uses the existing in-memory CSRF token; the controller prepares writes and fences the account. */
+  async workoutRequest(path: string, method: string, body: unknown, signal: AbortSignal) {
+    if (!/^\/api\/v1\/(exercises|workout-settings|routines|workout-sessions)(\/[-a-zA-Z0-9]+)*$/.test(path)
+      || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new AuthError('INVALID_REQUEST', 400)
+    if (method !== 'GET' && !this.csrf) throw new AuthError('CSRF_INVALID', 403)
+    const result = await this.call(path, method, body, method === 'GET' ? undefined : this.csrf!, signal)
+    if (result.status !== 204 && !/^application\/json(?:\s*;|$)/i.test(result.contentType ?? '')) throw new AuthError('RESPONSE_INVALID', result.status)
+    return result
   }
   async refreshCsrf() {
     this.clearCsrf()

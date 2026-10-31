@@ -106,7 +106,8 @@ Task 009 및 이후 운동 쓰기·진행 세션·복구 작업 시 필수:
 
 일반 관리는 온라인 API, 진행 운동 보호는 전체 확정 스냅샷과 IndexedDB를 기준으로 합니다.
 폐기된 범용 명령·Outbox·필드 병합·영수증/feed 구조를 다시 구현하지 않습니다.
-현재는 1차 코드 구조 정리 단계이며 새 온라인 쓰기·세션 API·IndexedDB는 미구현입니다.
+Backend V11~V15 계약을 기준으로 Frontend 5A의 온라인 루틴 관리·START·ACTIVE/상세 조회와 최소 IndexedDB 시작 요청/서버 사본 저장을 연결했습니다. [5A 보고서](docs/tasks/task-009-frontend-5a-report.md)를 따릅니다.
+수행 입력·초안/타이머 저장·snapshot 송신·FINISH/복구 UI·오프라인 완전 재실행은 아직 미구현입니다. 5B~5E를 승인 없이 시작하지 않습니다.
 Task 006의 운동·인증 정책은 v1.0에서 명시적으로 바꾼 부분을 제외하고 유지합니다.
 
 ### Task 006 Domain and Authentication Design

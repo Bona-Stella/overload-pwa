@@ -200,6 +200,22 @@ export class AuthController {
     await this.api.refreshCsrf()
     await this.owner(expected, generation)
   }
+  async workoutRequest(expected: string, path: string, method: string, body: unknown, signal: AbortSignal) {
+    const generation = this.generation
+    const current = () => !signal.aborted && this.generation === generation && this.state.status === 'authenticated'
+      && this.state.pending === null && this.state.userId === expected
+    if (!current()) throw new AuthError('SESSION_CHANGED', 409)
+    try {
+      if (method !== 'GET') await this.prepareWrite(expected, generation)
+      if (!current()) throw new AuthError('SESSION_CHANGED', 409)
+      const result = await this.api.workoutRequest(path, method, body, signal)
+      if (!current()) throw new AuthError('SESSION_CHANGED', 409)
+      return result
+    } catch (error) {
+      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) this.set({ status: 'unavailable', account: emptyAccount(), challenge: null })
+      throw error
+    }
+  }
   private accountFailure(error: unknown) {
     const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
     if (e.code === 'SESSION_CHANGED') this.set({ status: 'unavailable', account: emptyAccount(), challenge: null })
