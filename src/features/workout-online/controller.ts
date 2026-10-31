@@ -44,6 +44,7 @@ export class WorkoutOnlineController {
   private owner: string | null = null
   private sequence = 0
   private abort: AbortController | null = null
+  private needsRevalidation = false
   constructor(api: WorkoutApi, store: Store = new WorkoutStore()) { this.api = api; this.store = store }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener) }
@@ -52,8 +53,17 @@ export class WorkoutOnlineController {
   connect(auth: AuthSource) {
     this.auth = auth
     const update = () => {
-      const owner = eligible(auth.getSnapshot())
-      if (this.owner === owner) return
+      const authState = auth.getSnapshot()
+      // Keep only this already admitted workout when authentication expires in memory.
+      if (authState.localWorkoutUserId === this.owner && this.owner && this.state.detail?.status === 'ACTIVE') {
+        this.cancel(); this.needsRevalidation = true; this.set({ busy: false, status: 'ready' }); return
+      }
+      const owner = authState.status === 'authenticated' && (authState.pending === null || authState.userId === this.owner && authState.pending !== 'logout') ? authState.userId : null
+      if (this.owner === owner) {
+        if (this.needsRevalidation && eligible(authState)) { this.needsRevalidation = false; void this.refresh() }
+        return
+      }
+      this.needsRevalidation = false
       this.cancel(); this.owner = owner; this.state = empty(); this.set({ userId: owner })
       if (owner) void this.refresh()
     }
@@ -75,7 +85,7 @@ export class WorkoutOnlineController {
   }
   refresh = async () => {
     const context = this.context(); if (!context) return
-    this.set({ ...empty(), userId: context.userId, status: 'loading', busy: true })
+    this.set({ ...(this.state.detail?.status === 'ACTIVE' ? {} : empty()), userId: context.userId, status: 'loading', busy: true, issue: null })
     try {
       const data = await this.api.bootstrap(context.userId, context.signal)
       const active = (await this.api.active(data.scope, context.signal)).session
@@ -114,7 +124,7 @@ export class WorkoutOnlineController {
   }
   showDetail = async (id: string) => {
     const scope = this.state.scope, context = this.context(); if (!scope || !context) return
-    this.set({ busy: true, issue: null, copySaved: false })
+    this.set({ busy: true, issue: null })
     try {
       const detail = await this.api.detail(scope, id, context.signal)
       if (!context.current()) return
@@ -137,7 +147,7 @@ export class WorkoutOnlineController {
       // The attempt remains durable until the server copy commits in the same local transaction.
       await this.store.saveSession(scope, detail, pending.request.id)
       if (!context.current()) return
-      this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null, attempt: null, copySaved: true, notice: '운동 시작 결과와 계획을 이 기기에 저장했습니다. 수행 입력은 다음 단계에서 연결됩니다.' })
+      this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null, attempt: null, copySaved: true, notice: '운동 시작 결과와 계획을 이 기기에 저장했습니다. 수행 기록은 아직 서버에 전송하지 않습니다.' })
     } catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
   }

@@ -23,8 +23,31 @@ registerHooks({
 })
 const {WorkspaceView,SessionView}=await import('../src/features/workout-online/WorkoutWorkspace.tsx')
 const {RoutineForm}=await import('../src/features/workout-online/RoutineForm.tsx')
+const {LocalWorkoutView}=await import('../src/features/workout-local/LocalWorkoutScreen.tsx')
+const {createLocalWorkout,applyLocalChange,editDraft,completeSet}=await import('../src/features/workout-local/model.ts')
 const render=(type,props)=>renderToStaticMarkup(React.createElement(type,props))
 const state={...scope,scope,userId:scope.userId,data:bootstrap,selected:null,active:null,detail:null,deviceId:DEVICE,attempt:null,status:'ready',busy:false,localReady:true,copySaved:false,issue:null,notice:''}
+const editorState=workout=>({workout,writable:true,loading:false,pending:0,issue:null,drafts:{},cardioDrafts:{},unsavedDrafts:false})
+
+test('real workout view uses original plan, decimal text and local-only labels without a demo assessment or FINISH action',()=>{
+  const w=createLocalWorkout(session(),bootstrap.settings),html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:bootstrap.exercises})
+  assert.match(html,/99999999999999.999999/);assert.match(html,/1세트 중량 kg/);assert.match(html,/1세트 이번 반복 횟수/);assert.match(html,/시작 당시 불변 계획/)
+  assert.doesNotMatch(html,/목표 달성|증량 가능|운동 종료 및 요약|서버 저장 완료/)
+})
+test('real completed set is shown only from persisted facts, and read-only tabs disable edits',()=>{
+  const w=applyLocalChange(createLocalWorkout(session(),bootstrap.settings),x=>{editDraft(x,x.currentExerciseId,1,{weight:'0.000001',reps:'8'});completeSet(x,x.currentExerciseId,1,Date.parse(x.startedAt)+1000)})
+  const html=render(LocalWorkoutView,{state:{...editorState(w),writable:false},controller:{},definitions:[]})
+  assert.match(html,/읽기 전용/);assert.match(html,/서버 미전송 변경 있음/);assert.match(html,/0.000001/);assert.match(html,/disabled="" aria-label="1세트 완료 취소"/)
+})
+test('INTEGER-sized planned count renders a bounded pending window rather than allocating planned slots',()=>{
+  const w=createLocalWorkout(session(),bootstrap.settings);w.snapshot.appliedPlan.weightExercises[0].setCount=2147483647
+  const html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:[]})
+  assert.equal((html.match(/aria-label="\d+세트 중량 kg"/g)??[]).length,20);assert.match(html,/2147483647세트/)
+})
+test('failed local write is never labeled as successful local saving',()=>{
+  const html=render(LocalWorkoutView,{state:{...editorState(createLocalWorkout(session(),bootstrap.settings)),issue:'저장 실패'},controller:{},definitions:[]})
+  assert.match(html,/최근 변경 미확정/);assert.doesNotMatch(html,/이 기기에 저장됨/)
+})
 test('new account shows empty routines without demo seeds or workout input controls',()=>{
   const html=render(WorkspaceView,{state:{...state,data:{...bootstrap,routines:[]}},controller:{}})
   assert.match(html,/아직 루틴이 없습니다/);assert.match(html,/새 루틴 만들기/)

@@ -1,11 +1,18 @@
 import type { Scope, Session, Start } from './types.ts'
 import { counter, object, session, uuid, instant } from './validation.ts'
+import type { LocalKey, LocalWorkout, RestPolicy } from '../workout-local/types.ts'
+import { localKey } from '../workout-local/types.ts'
+import { createLocalWorkout } from '../workout-local/model.ts'
+import { localWorkout } from '../workout-local/validation.ts'
 
 export const DATABASE_NAME = 'overload.workout.v1'
 export type StartAttempt = Scope & { request: Start; requestJson: string }
 export type SessionCopy = Scope & { editorDeviceId: string; writerEpoch: string; sessionId: string; server: Session }
 export class LocalStoreError extends Error {
   constructor() { super('이 기기에 저장하지 못했습니다. 저장소 설정과 여유 공간을 확인한 뒤 다시 시도해 주세요.'); this.name = 'LocalStoreError' }
+}
+export class LocalWriteBlocked extends Error {
+  constructor() { super('편집권 또는 저장 기준이 변경되었습니다. 로컬 원본은 보존했습니다. 현재 세션을 다시 확인해 주세요.'); this.name = 'LocalWriteBlocked' }
 }
 const scopeKey = (scope: Scope) => [scope.userId, scope.dataGeneration]
 const request = <T>(value: IDBRequest<T>) => new Promise<T>((resolve, reject) => { value.onsuccess = () => resolve(value.result); value.onerror = () => reject(new LocalStoreError()) })
@@ -16,7 +23,7 @@ export function isAttempt(value: unknown, scope: Scope): value is StartAttempt {
     && typeof r.workoutDate === 'string' && typeof r.startedTimeZone === 'string' && value.requestJson === JSON.stringify(r)
 }
 
-/** Only START recovery metadata and server copies. No input drafts, timers or snapshot queue in 5A. */
+/** START recovery, server copies, and one complete local workout document per writer epoch. */
 export class WorkoutStore {
   private connection: Promise<IDBDatabase> | null = null
   private readonly factory: IDBFactory
@@ -28,13 +35,16 @@ export class WorkoutStore {
   private open(): Promise<IDBDatabase> {
     if (!this.connection) this.connection = new Promise<IDBDatabase>((resolve, reject) => {
       if (!this.factory) { reject(new LocalStoreError()); return }
-      const opening = this.factory.open(this.databaseName, 1)
+      const opening = this.factory.open(this.databaseName, 2)
       let failed = false
-      opening.onupgradeneeded = () => {
+      opening.onupgradeneeded = event => {
         const db = opening.result
-        db.createObjectStore('meta')
-        db.createObjectStore('startAttempts', { keyPath: ['userId', 'dataGeneration'] })
-        db.createObjectStore('sessionCopies', { keyPath: ['userId', 'dataGeneration', 'sessionId', 'editorDeviceId', 'writerEpoch'] }).createIndex('scope', ['userId', 'dataGeneration'])
+        if (event.oldVersion < 1) {
+          db.createObjectStore('meta')
+          db.createObjectStore('startAttempts', { keyPath: ['userId', 'dataGeneration'] })
+          db.createObjectStore('sessionCopies', { keyPath: ['userId', 'dataGeneration', 'sessionId', 'editorDeviceId', 'writerEpoch'] }).createIndex('scope', ['userId', 'dataGeneration'])
+        }
+        if (event.oldVersion < 2) db.createObjectStore('localWorkouts', { keyPath: ['userId', 'dataGeneration', 'sessionId', 'editorDeviceId', 'writerEpoch'] })
       }
       opening.onerror = opening.onblocked = () => { failed = true; reject(new LocalStoreError()) }
       opening.onsuccess = () => {
@@ -55,7 +65,7 @@ export class WorkoutStore {
       const outcome = done.catch(() => { throw new LocalStoreError() })
       try { const result = await action(tx); await outcome; return result }
       catch (error) { try { tx.abort() } catch { /* already aborted/committed */ } await outcome.catch(() => {}); throw error }
-    } catch { throw new LocalStoreError() }
+    } catch (error) { throw error instanceof LocalWriteBlocked ? error : new LocalStoreError() }
   }
   deviceId() {
     return this.run(['meta'], 'readwrite', async tx => {
@@ -102,6 +112,54 @@ export class WorkoutStore {
       if (!values.every(x => object(x) && x.userId === scope.userId && x.dataGeneration === scope.dataGeneration && session(x.server)
         && x.server.userId === scope.userId && x.server.dataGeneration === scope.dataGeneration && x.sessionId === x.server.id && x.writerEpoch === x.server.writerEpoch && x.editorDeviceId === x.server.editorDeviceId)) throw new LocalStoreError()
       return values as SessionCopy[]
+    })
+  }
+  readLocal(key: LocalKey) {
+    return this.run(['localWorkouts'], 'readonly', async tx => {
+      const value: unknown = await request(tx.objectStore('localWorkouts').get(localKey(key)))
+      if (value === undefined) return null
+      if (!localWorkout(value) || JSON.stringify(localKey(value)) !== JSON.stringify(localKey(key))) throw new LocalStoreError()
+      return value
+    })
+  }
+  private async checkWriter(tx: IDBTransaction, key: LocalKey, revision: string) {
+    const copies: SessionCopy[] = await request(tx.objectStore('sessionCopies').index('scope').getAll(scopeKey(key)))
+    const same = copies.filter(x => x.sessionId === key.sessionId).sort((a, b) => BigInt(a.server.version) > BigInt(b.server.version) ? -1 : 1)
+    const latest = same[0]?.server
+    if (!latest || latest.status !== 'ACTIVE' || latest.deletedAt || latest.editorDeviceId !== key.editorDeviceId || latest.writerEpoch !== key.writerEpoch || latest.localRevision !== revision) throw new LocalWriteBlocked()
+  }
+  openLocal(server: Session, policy: RestPolicy, canWrite: () => boolean) {
+    const key = { userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, editorDeviceId: server.editorDeviceId, writerEpoch: server.writerEpoch }
+    return this.run(['localWorkouts', 'sessionCopies'], 'readwrite', async tx => {
+      if (!canWrite()) throw new LocalWriteBlocked()
+      const store = tx.objectStore('localWorkouts'), previous: unknown = await request(store.get(localKey(key)))
+      if (previous !== undefined) {
+        if (!localWorkout(previous)) throw new LocalStoreError()
+        if (JSON.stringify(previous.initialPlan) !== JSON.stringify(server.initialPlan) || previous.startedAt !== server.startedAt) throw new LocalWriteBlocked()
+        await this.checkWriter(tx, key, previous.serverRevision)
+        return previous
+      }
+      await this.checkWriter(tx, key, server.localRevision)
+      const value = createLocalWorkout(server, policy)
+      if (!canWrite() || !localWorkout(value)) throw new LocalWriteBlocked()
+      await request(store.add(value)); return value
+    })
+  }
+  saveLocal(value: LocalWorkout, expectedEditVersion: string, canWrite: () => boolean) {
+    if (!localWorkout(value)) return Promise.reject(new LocalStoreError())
+    return this.run(['localWorkouts', 'sessionCopies'], 'readwrite', async tx => {
+      if (!canWrite()) throw new LocalWriteBlocked()
+      const store = tx.objectStore('localWorkouts'), previous: unknown = await request(store.get(localKey(value)))
+      if (!localWorkout(previous) || previous.editVersion !== expectedEditVersion || BigInt(value.editVersion) !== BigInt(expectedEditVersion) + 1n
+        || JSON.stringify(previous.initialPlan) !== JSON.stringify(value.initialPlan) || value.startedAt !== previous.startedAt
+        || value.serverRevision !== previous.serverRevision || value.serverVersion !== previous.serverVersion) throw new LocalWriteBlocked()
+      const snapshotChanged = JSON.stringify(value.snapshot) !== JSON.stringify(previous.snapshot)
+      if (BigInt(value.localRevision) !== BigInt(previous.localRevision) + (snapshotChanged ? 1n : 0n)
+        || snapshotChanged && value.syncState === 'CLEAN') throw new LocalWriteBlocked()
+      await this.checkWriter(tx, value, value.serverRevision)
+      if (!canWrite()) throw new LocalWriteBlocked()
+      await request(store.put(value))
+      if (!canWrite()) throw new LocalWriteBlocked()
     })
   }
   async close() { const db = await this.connection; db?.close(); this.connection = null }

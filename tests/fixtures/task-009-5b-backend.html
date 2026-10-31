@@ -1,0 +1,7 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5B 격리 실제 화면 검증</title>
+<h1>실제 Backend · IndexedDB · React 화면 검증</h1><pre id="result">대기</pre><div id="root"></div>
+<script>
+window.addEventListener('error',e=>document.querySelector('#result').textContent='FAIL '+e.message)
+window.addEventListener('unhandledrejection',e=>document.querySelector('#result').textContent='FAIL '+e.reason?.stack)
+new MutationObserver(()=>{const text=document.querySelector('#result').textContent;if(text.startsWith('FAIL')||text.includes('BACKEND_BROWSER_SUITE_PASS'))fetch('/__fixture/5b-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:new URL(location.href).searchParams.get('runId'),result:text})})}).observe(document.querySelector('#result'),{childList:true,subtree:true,characterData:true})
+</script><script type="module" src="./task-009-5b-backend.tsx"></script></html>

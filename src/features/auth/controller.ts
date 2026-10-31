@@ -7,6 +7,8 @@ export type AuthIssue = { code: string; message: string }
 export type AuthState = {
   status: 'checking' | 'anonymous' | 'authenticated' | 'unavailable'
   userId: string | null
+  // Memory-only access for an already open workout after expiry. Never admits a cold restart.
+  localWorkoutUserId?: string | null
   pending: null | 'request' | 'verify' | 'logout' | 'google' | 'restore' | 'account' | 'proof-request' | 'proof-verify' | 'contact' | 'contact-navigation' | 'cancel-registration' | 'identity-change' | 'link' | 'link-navigation'
   challenge: null | { id: string | null; email: string; expiresAt: number }
   resendAt: number
@@ -63,6 +65,7 @@ export class AuthController {
   private generation = 0
   private resumePending = false
   private resumeFlow: ReturnFlow = 'none'
+  private localWorkoutLocked = false
   constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route = (path: string) => window.history.pushState(null, '', path)) { this.api = api; this.now = now; this.navigate = navigate; this.route = route }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
@@ -81,13 +84,17 @@ export class AuthController {
     return this.restore(flow)
   }
   private async loadSession(flow: ReturnFlow = 'none', notice = '') {
+    const generation = this.generation
     const session = await this.api.session()
     await this.api.refreshCsrf()
+    if (generation !== this.generation) throw new AuthError('SESSION_CHANGED', 409)
+    if (session) this.localWorkoutLocked = false
     const issue = flow === 'failed' ? authIssue(new AuthError('GOOGLE_FAILED'))
       : flow === 'link-failed' ? authIssue(new AuthError('GOOGLE_LINK_FAILED'))
       : flow === 'link-complete' && !session ? authIssue(new AuthError('AUTHENTICATION_REQUIRED', 401))
       : flow === 'complete' && !session ? authIssue(new AuthError('GOOGLE_NOT_CONFIRMED')) : null
-    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null, challenge: null, account: emptyAccount(), accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed', 'link-complete', 'link-failed'].includes(flow)), issue, notice })
+    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null,
+      localWorkoutUserId: session || this.localWorkoutLocked ? null : this.state.localWorkoutUserId ?? this.state.userId, challenge: null, account: emptyAccount(), accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed', 'link-complete', 'link-failed'].includes(flow)), issue, notice })
   }
   async restore(flow: ReturnFlow = this.state.accountOpen ? 'account' : 'none') {
     if (this.running) return
@@ -135,6 +142,7 @@ export class AuthController {
     const challenge = this.state.challenge
     if (this.running || this.state.status !== 'anonymous' || !challenge?.id || this.now() < this.state.verifyAt || !/^\d{6}$/.test(code)) return
     if (this.now() >= challenge.expiresAt) { this.set({ issue: authIssue(new AuthError('CODE_EXPIRED')) }); return }
+    const generation = this.generation
     this.running = true; this.set({ pending: 'verify', issue: null, notice: '' })
     try {
       await this.api.verifyOtp(challenge.email, challenge.id, code)
@@ -143,7 +151,9 @@ export class AuthController {
       const session = await this.api.session()
       if (!session) throw new AuthError('RESPONSE_INVALID')
       await this.api.refreshCsrf()
-      this.set({ status: 'authenticated', userId: session.userId, challenge: null, issue: null })
+      if (generation !== this.generation) throw new AuthError('SESSION_CHANGED', 409)
+      this.localWorkoutLocked = false
+      this.set({ status: 'authenticated', userId: session.userId, localWorkoutUserId: null, challenge: null, issue: null })
     } catch (error) {
       const limited = error instanceof AuthError && error.status === 429
       const wait = limited ? Math.max(60, error.retryAfter) * 1000 : 0
@@ -157,7 +167,8 @@ export class AuthController {
   }
   async logout() {
     if (this.running || this.state.status !== 'authenticated') return
-    this.running = true; this.generation++; this.set({ pending: 'logout', issue: null, account: emptyAccount(), accountOpen: false })
+    this.localWorkoutLocked = true
+    this.running = true; this.generation++; this.set({ pending: 'logout', localWorkoutUserId: null, issue: null, account: emptyAccount(), accountOpen: false })
     try {
       await this.api.logout()
       if (await this.api.session()) throw new AuthError('RESPONSE_INVALID')
@@ -212,15 +223,22 @@ export class AuthController {
       if (!current()) throw new AuthError('SESSION_CHANGED', 409)
       return result
     } catch (error) {
-      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) this.set({ status: 'unavailable', account: emptyAccount(), challenge: null })
+      if (error instanceof AuthError && error.code === 'SESSION_CHANGED') this.localWorkoutLocked = true
+      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) this.set({ status: 'unavailable', account: emptyAccount(), challenge: null,
+        localWorkoutUserId: !this.localWorkoutLocked && error.status === 401 && error.code !== 'SESSION_CHANGED' ? expected : null, issue: authIssue(error) })
       throw error
     }
   }
   private accountFailure(error: unknown) {
     const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
-    if (e.code === 'SESSION_CHANGED') this.set({ status: 'unavailable', account: emptyAccount(), challenge: null })
-    else if (e.status === 401 && e.code !== 'OTP_INVALID') this.set({ status: 'anonymous', userId: null, account: emptyAccount(), accountOpen: false })
+    if (e.code === 'SESSION_CHANGED') this.localWorkoutLocked = true
+    if (e.code === 'SESSION_CHANGED') this.set({ status: 'unavailable', localWorkoutUserId: null, account: emptyAccount(), challenge: null })
+    else if (e.status === 401 && e.code !== 'OTP_INVALID') this.set({ status: 'anonymous', localWorkoutUserId: this.localWorkoutLocked ? null : this.state.localWorkoutUserId ?? this.state.userId, userId: null, account: emptyAccount(), accountOpen: false })
     this.set({ issue: authIssue(e.status === 401 && e.code !== 'OTP_INVALID' ? new AuthError('AUTHENTICATION_REQUIRED', 401) : error) })
+  }
+  invalidateLocalWorkoutAccess() {
+    this.generation++; this.localWorkoutLocked = true
+    this.set({ status: 'unavailable', userId: null, localWorkoutUserId: null, account: emptyAccount(), accountOpen: false, issue: authIssue(new AuthError('SESSION_CHANGED')) })
   }
   async openAccount() {
     if (this.running || this.state.status !== 'authenticated' || !this.state.userId) return

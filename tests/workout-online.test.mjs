@@ -83,14 +83,31 @@ test('logout/account transition hides immediately and prevents a late START from
   delayed.resolve(session());await writing;assert.equal(s.getCopies().length,0);assert.ok(s.getAttempt())
   s.change({userId:OTHER,pending:null});await settle();assert.equal(s.controller.getSnapshot().userId,OTHER);assert.equal(s.controller.getSnapshot().detail,null);s.disconnect()
 })
+test('a newly verified account starts bootstrap only after authentication pending clears',async()=>{
+  const s=setup();await settle();s.change({pending:'logout'});s.change({status:'anonymous',userId:null,pending:null})
+  s.change({status:'authenticated',userId:OTHER,pending:'verify'});await settle();assert.equal(s.controller.getSnapshot().detail,null)
+  s.change({pending:null});await settle();assert.equal(s.controller.getSnapshot().userId,OTHER);assert.ok(s.controller.getSnapshot().data);assert.equal(s.controller.getSnapshot().status,'ready');s.disconnect()
+})
+test('an admitted expired workout remains local, then reauthentication rechecks generation without retagging old data',async()=>{
+  const s=setup();await settle();await s.controller.select(ROUTINE);await s.controller.start();const old=s.controller.getSnapshot().detail
+  s.change({status:'unavailable',localWorkoutUserId:USER});assert.equal(s.controller.getSnapshot().detail.id,old.id)
+  const nextGeneration='9007199254740994'
+  s.store.copies=async()=>[];s.api.bootstrap=async()=>({...structuredClone(bootstrap),scope:{userId:USER,dataGeneration:nextGeneration}})
+  s.change({status:'authenticated',userId:USER,pending:'restore',localWorkoutUserId:null});assert.equal(s.controller.getSnapshot().scope.dataGeneration,scope.dataGeneration)
+  s.change({pending:null});await settle();assert.equal(s.controller.getSnapshot().scope.dataGeneration,nextGeneration);assert.equal(s.controller.getSnapshot().detail,null)
+  assert.equal(s.getCopies()[0].dataGeneration,scope.dataGeneration);s.disconnect()
+})
 test('generation mismatch clears selected routine, active state and local access',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE)
   s.api.active=async()=>{throw {code:'DATA_GENERATION_MISMATCH',status:409}}
   await s.controller.refresh();const state=s.controller.getSnapshot();assert.equal(state.scope,null);assert.equal(state.data,null);assert.equal(state.selected,null);assert.equal(state.detail,null);s.disconnect()
 })
-test('refresh rechecks server before showing a local copy, and never renders stored data when server is unavailable',async()=>{
+test('5B keeps an already admitted workout on network loss, but cold restart still requires server verification',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE);await s.controller.start();assert.equal(s.getCopies().length,1)
-  s.api.active=async()=>{throw Error('offline')};await s.controller.refresh();assert.equal(s.controller.getSnapshot().detail,null);assert.equal(s.getCopies().length,1);s.disconnect()
+  const admitted=s.controller.getSnapshot().detail
+  s.api.active=async()=>{throw Error('offline')};await s.controller.refresh();assert.deepEqual(s.controller.getSnapshot().detail,admitted);assert.equal(s.getCopies().length,1);s.disconnect()
+  const fresh=new WorkoutOnlineController(s.api,s.store),stop=fresh.connect({getSnapshot:()=>({status:'authenticated',userId:USER,pending:null}),subscribe:()=>()=>{}})
+  await settle();assert.equal(fresh.getSnapshot().detail,null);stop()
 })
 test('logout during durable START preparation stops dispatch and preserves the original local attempt',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE)

@@ -1,0 +1,22 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5B 모바일 화면 QA</title><div class="app-shell auth-app"><main class="page"><p class="notice">화면 검증 전용 합성 데이터 · 저장하지 않음</p><div id="root" class="local-workout stack"></div></main></div>
+<script type="module">
+import React from 'react'
+import {createRoot} from 'react-dom/client'
+import {LocalWorkoutView} from '/src/features/workout-local/LocalWorkoutScreen.tsx'
+import {createLocalWorkout,editDraft} from '/src/features/workout-local/model.ts'
+import {session,bootstrap} from './workout-online-data.mjs'
+import '/src/index.css'
+import '/src/App.css'
+import '/src/features/auth/auth.css'
+if(!new URL(location.href).searchParams.has('inner')){
+  const frame=document.createElement('iframe'),width=new URL(location.href).searchParams.get('width')==='320'?320:390
+  frame.src=location.pathname+'?inner=1';frame.style=`display:block;border:0;width:${width}px;height:1200px`;document.body.replaceChildren(frame)
+}else{
+const server=session();server.initialPlan.weightExercises[0].approvedWeightKg='62.5';server.startedAt=new Date().toISOString()
+const workout=createLocalWorkout(server,bootstrap.settings);editDraft(workout,workout.currentExerciseId,1,{weight:'00062.500000',reps:'8'})
+const state={workout,writable:true,loading:false,pending:0,issue:null,drafts:{},cardioDrafts:{},unsavedDrafts:false}
+const controller={change:async()=>false,complete:async()=>false,draft(){}}
+createRoot(document.querySelector('#root')).render(React.createElement(LocalWorkoutView,{state,controller,definitions:bootstrap.exercises}))
+setTimeout(()=>fetch('/__fixture/5b-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({result:'LAYOUT '+JSON.stringify({viewport:innerWidth,scroll:document.documentElement.scrollWidth,elements:[...document.querySelectorAll('.app-shell,.page,.local-workout,.sets-card,.local-set-row,.reps-control,.reps-control > button')].slice(0,12).map(e=>({class:e.className,width:e.getBoundingClientRect().width,grid:getComputedStyle(e).gridTemplateColumns}))})})}),200)
+}
+</script></html>

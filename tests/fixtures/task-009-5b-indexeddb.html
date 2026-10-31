@@ -1,0 +1,122 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5B 실제 IndexedDB 검증</title>
+<style>body{font:16px system-ui;padding:24px;max-width:900px}button{padding:12px;margin:8px}pre{white-space:pre-wrap;overflow-wrap:anywhere}</style>
+<h1>5B 실제 IndexedDB · Web Locks 검증</h1>
+<button id="run">원자 저장·실패·격리 테스트 실행</button><button id="restore">새로고침 복원 검증</button>
+<button id="hold">편집 잠금 유지</button><button id="probe">다른 탭에서 편집 시도</button><button id="release">편집 잠금 해제</button>
+<pre id="result" role="status">대기</pre><pre id="lock-result" role="status">잠금 대기</pre>
+<script>
+window.addEventListener('error',e=>document.querySelector('#result').textContent='FAIL '+e.message)
+window.addEventListener('unhandledrejection',e=>document.querySelector('#result').textContent='FAIL '+e.reason?.stack)
+new MutationObserver(()=>{const text=document.querySelector('#result').textContent;if(text.startsWith('FAIL')||text.includes('BROWSER_SUITE_PASS'))fetch('/__fixture/5b-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:new URL(location.href).searchParams.get('runId'),result:text})})}).observe(document.querySelector('#result'),{childList:true,subtree:true,characterData:true})
+</script>
+<script type="module">
+import { WorkoutStore, LocalWriteBlocked } from '/src/features/workout-online/storage.ts'
+import { LocalWorkoutController } from '/src/features/workout-local/controller.ts'
+import { acquireEditor } from '/src/features/workout-local/lock.ts'
+import * as m from '/src/features/workout-local/model.ts'
+import { localKey } from '/src/features/workout-local/types.ts'
+import { scope, session, start, SESSION_EXERCISE as E, OTHER, bootstrap } from './workout-online-data.mjs'
+const database='overload.test.task009.5b', result=document.querySelector('#result'), now=Date.parse('2026-10-31T12:10:00.000Z')
+const check=(value,label)=>{if(!value)throw Error(label)}, keyOf=s=>({...s,sessionId:s.id})
+const change=(w,fn)=>m.applyLocalChange(w,fn)
+for(const method of ['getItem','setItem','removeItem']){const original=Storage.prototype[method];Storage.prototype[method]=function(key,...args){if(key==='overload.core.v1')throw Error('Demo storage forbidden');return original.call(this,key,...args)}}
+document.querySelector('#run').onclick=async()=>{
+  let store,second,controller;const passed=[]
+  try{
+    const upgradeName=database+'.upgrade.'+Date.now()
+    const old=await new Promise((resolve,reject)=>{const r=indexedDB.open(upgradeName,1);r.onupgradeneeded=()=>{r.result.createObjectStore('meta');r.result.createObjectStore('startAttempts',{keyPath:['userId','dataGeneration']});r.result.createObjectStore('sessionCopies',{keyPath:['userId','dataGeneration','sessionId','editorDeviceId','writerEpoch']}).createIndex('scope',['userId','dataGeneration'])};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})
+    const originalSession=session(), originalKey=keyOf(originalSession)
+    await new Promise((resolve,reject)=>{const tx=old.transaction(['meta','startAttempts','sessionCopies'],'readwrite');tx.objectStore('meta').put(start.editorDeviceId,'editorDeviceId');tx.objectStore('startAttempts').put({...scope,request:start,requestJson:JSON.stringify(start)});tx.objectStore('sessionCopies').put({...scope,sessionId:originalSession.id,editorDeviceId:originalSession.editorDeviceId,writerEpoch:originalSession.writerEpoch,server:originalSession});tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error)})
+    old.close();const upgraded=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),upgradeName)
+    try{check(await upgraded.deviceId()===start.editorDeviceId&&(await upgraded.attempt(scope)).requestJson===JSON.stringify(start)&&(await upgraded.copies(scope)).length===1,'v1 preservation');await upgraded.openLocal(originalSession,bootstrap.settings,()=>true);check((await upgraded.readLocal(originalKey)).localRevision==='0','v2 local store')}finally{await upgraded.close()}
+    passed.push('실제 DB v1→v2 업그레이드: 기기 UUID·고정 START·서버 사본 보존, 새 로컬 저장소 추가')
+    store=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database);second=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database)
+    const s=session({dataGeneration:String(Date.now())}), key=keyOf(s)
+    await store.saveSession(s,s);let w=await store.openLocal(s,bootstrap.settings,()=>true)
+    const base=structuredClone(w), draft=change(w,x=>m.editDraft(x,E,1,{weight:'00062.500000',reps:'0008'}))
+    await store.saveLocal(draft,w.editVersion,()=>true);w=draft
+    check(w.localRevision==='0','draft revision');passed.push('실제 IndexedDB: 입력 원문 보존·초안 revision 미증가')
+    const originalPut=IDBObjectStore.prototype.put
+    IDBObjectStore.prototype.put=function(...args){const r=originalPut.apply(this,args);if(this.transaction.db.name===database&&this.name==='localWorkouts')this.transaction.abort();return r}
+    let rejected=false;try{await store.saveLocal(change(w,x=>m.completeSet(x,E,1,now)),w.editVersion,()=>true)}catch{rejected=true}finally{IDBObjectStore.prototype.put=originalPut}
+    check(rejected,'abort rejects');const after=await store.readLocal(key)
+    check(after.localRevision==='0'&&after.snapshot.performedSets.length===0&&after.rest===null&&after.drafts[E+':1'].reps==='0008','abort entire completion')
+    passed.push('완료 put 이후 실제 transaction.abort: 수행·revision·휴식 전체 롤백, 초안 유지')
+    const next=change(w,x=>m.completeSet(x,E,1,now));await store.saveLocal(next,w.editVersion,()=>true);w=next
+    const saved=await second.readLocal(key);check(saved.snapshot.performedSets.length===1&&saved.localRevision==='1'&&saved.rest,'atomic complete')
+    passed.push('완료·수행 UUID·실제 수치·휴식·revision·미전송 상태를 한 번에 커밋')
+    let stale=false;try{await second.saveLocal(change(draft,x=>m.editDraft(x,E,2,{weight:'0',reps:'8'})),draft.editVersion,()=>true)}catch(e){stale=e instanceof LocalWriteBlocked}check(stale,'CAS stale')
+    passed.push('두 연결의 오래된 editVersion 저장 차단')
+    const firstId=w.snapshot.performedSets[0].id;let next2=change(w,x=>m.undoSet(x,firstId));await store.saveLocal(next2,w.editVersion,()=>true);w=next2
+    next2=change(w,x=>m.completeSet(x,E,1,now+10));await store.saveLocal(next2,w.editVersion,()=>true);w=next2
+    check(w.snapshot.performedSets[0].id!==firstId&&w.cancelled.sets[0].id===firstId&&w.localRevision==='3','undo fresh id')
+    passed.push('취소 tombstone·원문 보존, 재완료 새 UUID·revision 3')
+    for(let n=2;n<=4;n++){const v=change(w,x=>{m.editDraft(x,E,n,{weight:'0.000001',reps:String(n)});m.completeSet(x,E,n,now+n*1000)});await store.saveLocal(v,w.editVersion,()=>true);w=v}
+    check(w.localRevision==='6'&&w.snapshot.performedSets.length===4,'consecutive revision');passed.push('연속 완료 4건·각 UUID·ordinal·revision 단조 증가')
+    const v=change(w,x=>{m.addCardio(x,{kind:'OUTDOOR',name:'실제 유산소',targetSeconds:600,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null});m.timerAction(x,x.currentExerciseId,'start',now+10000);x.timers[x.currentExerciseId].distance='0001.250000'})
+    await store.saveLocal(v,w.editVersion,()=>true);w=v
+    const c=w.currentExerciseId,pause=change(w,x=>m.timerAction(x,c,'pause',now+13000));await store.saveLocal(pause,w.editVersion,()=>true);w=pause
+    const running=change(w,x=>m.timerAction(x,c,'start',now+20000));await store.saveLocal(running,w.editVersion,()=>true);w=running
+    check(m.elapsed(w.timers[c],now+22000)===5000&&w.timers[c].segments.length===1,'timer originals')
+    passed.push('유산소 원본 구간·누적 시간·재개 앵커·거리 초안 저장')
+    check(await store.readLocal({...key,userId:OTHER})===null,'owner isolation');check(await store.readLocal({...key,dataGeneration:'0'})===null,'generation isolation');check(await store.readLocal({...key,sessionId:OTHER})===null,'session isolation');check(await store.readLocal({...key,writerEpoch:'1'})===null,'epoch isolation');check(await store.readLocal({...key,editorDeviceId:OTHER})===null,'device isolation')
+    passed.push('계정·세대·session·기기·epoch 복합 키 격리')
+    await store.saveSession(s,s);check(JSON.stringify((await store.readLocal(key)).snapshot)===JSON.stringify(w.snapshot),'server copy must not overwrite local')
+    passed.push('서버 InitialPlan 재조회가 미전송 로컬 운동을 덮어쓰지 않음')
+    const newer=session({...s,version:'1',writerEpoch:'1',editorDeviceId:OTHER});await store.saveSession(s,newer)
+    let lost=false;try{await store.saveLocal(change(w,x=>{x.rest=null}),w.editVersion,()=>true)}catch(e){lost=e instanceof LocalWriteBlocked}check(lost,'known takeover blocks old writer')
+    check((await store.readLocal(key)).snapshot.performedSets.length===4,'old epoch retained');passed.push('다른 epoch 확인 후 구 사본 쓰기 차단·구 수행 보존')
+    const ownSession=session({...s,id:crypto.randomUUID()}), ownKey=keyOf(ownSession);await store.saveSession(s,ownSession)
+    let held=true;controller=new LocalWorkoutController(store,()=>true,async()=>({held:()=>held,release(){held=false}}));await controller.open(ownSession,bootstrap.settings)
+    controller.draft(E,1,{weight:'62.500000',reps:'9'});await controller.settled()
+    IDBObjectStore.prototype.put=function(...args){const r=originalPut.apply(this,args);if(this.transaction.db.name===database&&this.name==='localWorkouts')this.transaction.abort();return r}
+    let complete;try{complete=await controller.complete(x=>m.completeSet(x,E,1,now))}finally{IDBObjectStore.prototype.put=originalPut}
+    check(complete===false&&controller.getSnapshot().workout.snapshot.performedSets.length===0&&(await store.readLocal(ownKey)).localRevision==='0','UI controller completion abort')
+    passed.push('실제 IDB 실패를 받은 제품 controller가 완료 UI를 확정하지 않음')
+    controller.stop();controller=null
+    const proof={key,baseInitialPlan:base.initialPlan,revision:w.localRevision,editVersion:w.editVersion,cardioId:c,recordIds:w.snapshot.performedSets.map(x=>x.id)}
+    sessionStorage.setItem('phase5b-idb-proof',JSON.stringify(proof))
+    result.textContent='PASS '+passed.length+'\n'+passed.join('\n')+'\n이 페이지를 새로고침한 뒤 복원 검증을 누르세요.'
+  }catch(error){result.textContent='FAIL '+error.stack}finally{controller?.stop();await store?.close();await second?.close()}
+}
+document.querySelector('#restore').onclick=async()=>{
+  const proof=JSON.parse(sessionStorage.getItem('phase5b-idb-proof')??'null'),store=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database)
+  try{check(proof,'run first');const w=await store.readLocal(proof.key)
+    check(w.localRevision===proof.revision&&w.editVersion===proof.editVersion,'revision reload');check(JSON.stringify(w.initialPlan)===JSON.stringify(proof.baseInitialPlan),'initial immutability')
+    check(w.drafts[E+':1'].weight==='00062.500000'&&w.drafts[E+':1'].reps==='0008','draft original reload');check(w.snapshot.performedSets.map(x=>x.id).join()===proof.recordIds.join(),'record UUID reload')
+    check(w.cancelled.sets.length===1&&w.rest&&w.timers[proof.cardioId].runningSince&&w.timers[proof.cardioId].accumulatedMs===3000&&w.timers[proof.cardioId].distance==='0001.250000','timer tombstone reload')
+    result.textContent='PASS 실제 새로고침 이후 InitialPlan·AppliedPlan·완료 UUID·입력 문자열·취소 원문·revision·미전송 상태·휴식 종료 앵커·유산소 구간/누적/재개 앵커 복원'
+  }catch(error){result.textContent='FAIL '+error.stack}finally{await store.close()}
+}
+const lockKey={...scope,sessionId:'60000000-1111-4222-8333-000000000099',editorDeviceId:'20000000-1111-4222-8333-000000000099',writerEpoch:'0'}
+let lease
+document.querySelector('#hold').onclick=async()=>{lease??=await acquireEditor(lockKey);document.querySelector('#lock-result').textContent=lease?'PASS 이 탭이 편집 잠금 보유':'READ_ONLY 다른 탭이 보유 또는 미지원'}
+document.querySelector('#probe').onclick=async()=>{const other=await acquireEditor(lockKey);document.querySelector('#lock-result').textContent=other?'EDITABLE 잠금 획득':'PASS READ_ONLY 실제 다른 탭의 편집 잠금으로 충돌 차단';other?.release()}
+document.querySelector('#release').onclick=()=>{lease?.release();lease=null;document.querySelector('#lock-result').textContent='RELEASED 편집 잠금 해제'}
+// Automated CLI runner uses a dedicated profile. These are real windows/documents and real Web Locks.
+const mode=new URL(location.href).searchParams.get('auto')
+if(mode==='holder'){
+  lease=await acquireEditor(lockKey);opener.postMessage({phase5b:'held',ok:!!lease},location.origin)
+  window.addEventListener('message',event=>{if(event.origin===location.origin&&event.data?.phase5b==='release'){lease?.release();opener.postMessage({phase5b:'released'},location.origin)}})
+}else if(mode==='probe'){
+  const other=await acquireEditor(lockKey);opener.postMessage({phase5b:'probed',readOnly:!other},location.origin);other?.release()
+}else if(mode==='suite'){
+  if(sessionStorage.getItem('phase5b-stage')!=='restore'){
+    await document.querySelector('#run').onclick()
+    if(result.textContent.startsWith('PASS')){sessionStorage.setItem('phase5b-suite-result',result.textContent);sessionStorage.setItem('phase5b-stage','restore');location.reload()}
+  }else{
+    await document.querySelector('#restore').onclick()
+    if(result.textContent.startsWith('PASS')){
+      const restore=result.textContent;let holder,probe
+      const waitFor=kind=>new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error('Web Locks tab timeout '+kind)),10000);const handler=event=>{if(event.origin===location.origin&&event.data?.phase5b===kind){clearTimeout(timeout);window.removeEventListener('message',handler);resolve(event.data)}};window.addEventListener('message',handler)})
+      try{
+        const held=waitFor('held');holder=window.open(location.pathname+'?auto=holder','phase5b-holder');check((await held).ok,'holder lock')
+        const probed=waitFor('probed');probe=window.open(location.pathname+'?auto=probe','phase5b-probe');check((await probed).readOnly,'second tab readonly')
+        const released=waitFor('released');holder.postMessage({phase5b:'release'},location.origin);await released
+        const afterRelease=await acquireEditor(lockKey);check(afterRelease,'release reacquisition');afterRelease.release()
+        result.textContent=sessionStorage.getItem('phase5b-suite-result')+'\n'+restore+'\nPASS 실제 두 탭 Web Locks: 동시 편집 차단·해제 후 재획득\nBROWSER_SUITE_PASS'
+      }catch(error){result.textContent='FAIL '+error.stack}finally{holder?.close();probe?.close();sessionStorage.removeItem('phase5b-stage')}
+    }
+  }
+}
+</script></html>

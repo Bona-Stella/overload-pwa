@@ -17,5 +17,17 @@ export function AuthProvider({ children, flow = 'none' }: { children: ReactNode;
     window.addEventListener('popstate', back)
     return () => { window.removeEventListener('pageshow', restore); window.removeEventListener('popstate', back) }
   }, [controller, flow])
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return
+    const channel = new BroadcastChannel('overload.auth.boundary')
+    let logoutPending = false
+    const unsubscribe = controller.subscribe(() => {
+      const pending = controller.getSnapshot().pending === 'logout'
+      if (pending && !logoutPending) channel.postMessage({ kind: 'logout' })
+      logoutPending = pending
+    })
+    channel.onmessage = event => { if (event.data?.kind === 'logout') controller.invalidateLocalWorkoutAccess() }
+    return () => { unsubscribe(); channel.close() }
+  }, [controller])
   return <AuthContext value={{ state, controller }}>{children}</AuthContext>
 }

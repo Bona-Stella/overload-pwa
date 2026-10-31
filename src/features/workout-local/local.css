@@ -1,0 +1,12 @@
+.local-workout { border-top: 1px solid var(--line); padding-top: 16px; min-width: 0; }
+.local-workout > * { min-width: 0; }
+.local-workout .timer-bar { position: static; border-radius: 16px; }
+.local-workout .exercise-heading h2 { font-size: 1.8rem; overflow-wrap: anywhere; }
+.local-workout .local-set-row { display: grid; grid-template-columns: 30px minmax(58px, .8fr) minmax(100px, 1.6fr) minmax(52px, .7fr); align-items: center; gap: 6px; padding: 12px 4px; }
+.local-set-row > *, .local-set-row input { min-width: 0; width: 100%; }
+.local-set-row .reps-control { grid-template-columns: minmax(0, 1fr); }
+.local-set-row .reps-control > button { display: none; }
+.local-set-row .reps-input input { padding-inline: 2px; }
+.local-set-row .set-check { min-width: 0; padding: 8px 2px; font-size: .78rem; }
+.local-workout .sets-card { padding-inline: 8px; }
+.local-workout .row > label { min-width: 0; flex: 1; }

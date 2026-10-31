@@ -67,7 +67,7 @@ Task 006의 나머지 운동·인증 정책과 기존 Task 008 조회 계약은 
 | HTTP Client | fetch (현재), Axios (미도입, 채택 검토) |
 | Server State | 전용 라이브러리 미도입, TanStack Query 채택 검토 |
 | Client State | React 상태 (현재), Zustand (미도입, 채택 검토) |
-| Local Database | localStorage (개발 목업), 진행 운동 보호용 IndexedDB (설계 확정·미구현), Dexie.js (미도입) |
+| Local Database | localStorage (개발 목업), 진행 운동 보호용 native IndexedDB (5A/5B 구현), Dexie.js (미도입) |
 | Charts | Recharts (미도입, 채택 검토) |
 | Unit Testing | Node.js 내장 test (현재), Vitest (미도입, 채택 검토) |
 | Component Testing | 기존 TypeScript 컴파일러 + React SSR (현재), React Testing Library (미도입, 채택 검토) |
@@ -371,7 +371,7 @@ WorkoutCard
 | Server State | 전용 라이브러리 미도입; TanStack Query 채택 시 아래 지침 적용 |
 | Shared Client State | 현재 React 상태; Zustand 채택 시 아래 지침 적용 |
 | Form State | Local State / Form Library |
-| Offline Data | 이미 시작한 운동의 IndexedDB 복원으로 제한·미구현; 범용 Outbox 없음 |
+| Offline Data | 이미 열린 운동의 입력·IndexedDB 복원(5B); 완전 오프라인 재실행은 후속; 범용 Outbox 없음 |
 
 모든 상태를 하나의 전역 Store에서 관리하지 않습니다.
 
@@ -851,7 +851,9 @@ Service Worker 업데이트 과정에서
 ## 12. 진행 운동의 로컬 보호 및 복원
 
 현행 정책은 [Task 009 v1.0](../../../overload-server/docs/tasks/task-009-redesign-v1.0.md) 6·7·11절을 따릅니다.
-5A는 온라인 루틴 관리·START·ACTIVE/상세 조회 및 고정 START 요청/서버 사본의 최소 IndexedDB 저장까지 구현합니다. [현재 계약·검증](../tasks/task-009-frontend-5a-report.md)을 따릅니다. 아래 수행 입력·타이머·snapshot·FINISH/복구·PWA 항목은 후속 요구사항이며 아직 동작하지 않습니다. localStorage 개발 데모를 운영 동기화 구현으로 간주하지 않습니다.
+5A의 온라인 루틴 관리·START·ACTIVE/상세 조회와 고정 START/서버 사본을 유지하고, 5B에서 실제 수행·초안·타이머·현재 계획 저장과 Web Locks 단일 탭 편집을 추가했습니다. [5A](../tasks/task-009-frontend-5a-report.md), [5B 저장 계약·검증](../tasks/task-009-frontend-5b-report.md)을 따릅니다. 아래 snapshot 송신·ACK·FINISH/승인 해결/복구·PWA는 후속 요구사항입니다. localStorage 개발 데모를 운영 동기화 구현으로 간주하지 않습니다.
+
+5B의 완료·취소·계획·승인 의도 변경은 확정 snapshot의 localRevision을 증가시킵니다. 입력 초안·작업 중량 선택·타이머 시작/정지/확인·휴식 조절·종목 이동은 로컬 editVersion만 증가시키고 타이머 tick은 저장하지 않습니다. 완료 사실·휴식·revision·미전송 메타는 한 트랜잭션으로 저장합니다. 명시 로그아웃/계정 설정 전에는 대기 초안 저장을 기다리며 실패하면 화면을 유지합니다. 이미 열린 운동의 인증 만료는 메모리에서만 같은 계정의 로컬 입력을 허용하고, 재인증 시 세대·현재 세션을 다시 확인합니다. Web Locks 미지원·다른 탭 보유 시 쓰기 우회는 없습니다.
 
 오프라인 완전 재실행은 후속 구현 시 마지막 인증 계정의 기존 진행 운동에 대한 명시 선택으로만 허용합니다. 명시 로그아웃 뒤에는 재인증 전 로컬 운동을 표시/편집하지 않으며 서버 인증 미확인 동안 전송하지 않습니다. 로컬 잠금을 실제 인증/암호화로 표현하지 않습니다. 전체 이력 목록 API는 향후 이력 화면 연결 시 별도로 범위를 확정합니다.
 
