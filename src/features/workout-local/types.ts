@@ -1,4 +1,4 @@
-import type { ActiveWeightContext, CardioResult, Counter, InitialPlan, PerformedSet, Scope, Session, Snapshot } from '../workout-online/types.ts'
+import type { ActiveResolution, ActiveWeightContext, CardioResult, Counter, InitialPlan, PerformedSet, Scope, Session, Snapshot, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
 
 export type LocalKey = Scope & { sessionId: string; editorDeviceId: string; writerEpoch: Counter }
 export type RecordPresence = 'LOCAL_ONLY' | 'SERVER_CONFIRMED' | 'UNKNOWN'
@@ -29,6 +29,12 @@ export type LocalWorkout = LocalKey & {
   exerciseNames: Record<string, string>
   restPolicy: RestPolicy
   rest: { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number } | null
+  // Optional on v2 documents written by 5B. One frozen snapshot, never a command queue.
+  pendingSnapshot?: { request: SnapshotRequest; requestJson: string; localOnlyIds: string[]; rejected?: boolean } | null
+  pendingResolution?: { request: ActiveResolution; requestJson: string; rejected?: boolean; workingBefore?: { value: string; context: ActiveWeightContext } } | null
+  confirmedDeletedSetIds?: string[]
+  confirmedDeletedCardioIds?: string[]
+  lastAck?: SnapshotAck | null
 }
 export const localKey = (value: LocalKey) => [value.userId, value.dataGeneration, value.sessionId, value.editorDeviceId, value.writerEpoch]
 export const slotKey = (exerciseId: string, ordinal: number) => `${exerciseId}:${ordinal}`

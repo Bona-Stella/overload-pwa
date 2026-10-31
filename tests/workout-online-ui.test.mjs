@@ -37,7 +37,7 @@ test('real workout view uses original plan, decimal text and local-only labels w
 test('real completed set is shown only from persisted facts, and read-only tabs disable edits',()=>{
   const w=applyLocalChange(createLocalWorkout(session(),bootstrap.settings),x=>{editDraft(x,x.currentExerciseId,1,{weight:'0.000001',reps:'8'});completeSet(x,x.currentExerciseId,1,Date.parse(x.startedAt)+1000)})
   const html=render(LocalWorkoutView,{state:{...editorState(w),writable:false},controller:{},definitions:[]})
-  assert.match(html,/읽기 전용/);assert.match(html,/서버 미전송 변경 있음/);assert.match(html,/0.000001/);assert.match(html,/disabled="" aria-label="1세트 완료 취소"/)
+  assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/revision|epoch|hash/);assert.match(html,/0.000001/);assert.match(html,/disabled="" aria-label="1세트 완료 취소"/)
 })
 test('INTEGER-sized planned count renders a bounded pending window rather than allocating planned slots',()=>{
   const w=createLocalWorkout(session(),bootstrap.settings);w.snapshot.appliedPlan.weightExercises[0].setCount=2147483647
@@ -61,7 +61,7 @@ test('selected server routine preserves exact decimals and START is blocked with
 })
 test('other editor is read only; AUTO_CLOSED does not claim a user finish or offer recovery yet',()=>{
   const html=render(SessionView,{session:session({editorDeviceId:OTHER}),deviceId:DEVICE,saved:true,busy:false,onRefresh(){}})
-  assert.match(html,/다른 기기가 편집권/);assert.doesNotMatch(html,/<input|권한 가져오기<|세트 완료/)
+  assert.match(html,/다른 기기에서 편집 중/);assert.doesNotMatch(html,/<input|세트 완료/)
   const auto=render(SessionView,{session:session({status:'AUTO_CLOSED',closedAt:'2026-11-01T12:00:00Z'}),deviceId:DEVICE,saved:true,busy:false,onRefresh(){}})
   assert.match(auto,/서버 자동 종료/);assert.doesNotMatch(auto,/<input|복구 확인<|완료한 운동입니다/)
 })

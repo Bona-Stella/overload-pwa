@@ -94,7 +94,7 @@ export class WorkoutStore {
   }
   saveSession(scope: Scope, value: Session, attemptId?: string) {
     if (!session(value) || value.userId !== scope.userId || value.dataGeneration !== scope.dataGeneration) return Promise.reject(new LocalStoreError())
-    return this.run(['sessionCopies', 'startAttempts'], 'readwrite', async tx => {
+    return this.run(['sessionCopies', 'startAttempts', 'meta'], 'readwrite', async tx => {
       const store = tx.objectStore('sessionCopies'), key = [...scopeKey(scope), value.id, value.editorDeviceId, value.writerEpoch]
       const previous: SessionCopy | undefined = await request(store.get(key))
       if (!previous || BigInt(previous.server.version) <= BigInt(value.version)) {
@@ -103,6 +103,36 @@ export class WorkoutStore {
       if (attemptId) {
         const attempts = tx.objectStore('startAttempts'), attempt: unknown = await request(attempts.get(scopeKey(scope)))
         if (isAttempt(attempt, scope) && attempt.request.id === attemptId) await request(attempts.delete(scopeKey(scope)))
+      }
+      const meta = tx.objectStore('meta'), takeoverKey = ['takeover', ...scopeKey(scope), value.id, value.editorDeviceId]
+      const pending: unknown = await request(meta.get(takeoverKey))
+      if (object(pending) && object(pending.request) && counter(pending.request.expectedWriterEpoch)
+        && BigInt(value.writerEpoch) === BigInt(pending.request.expectedWriterEpoch) + 1n) await request(meta.delete(takeoverKey))
+    })
+  }
+  prepareTakeover(scope: Scope, sessionId: string, editorDeviceId: string, expectedWriterEpoch: string) {
+    return this.run(['meta'], 'readwrite', async tx => {
+      const store = tx.objectStore('meta'), key = ['takeover', ...scopeKey(scope), sessionId, editorDeviceId]
+      const existing: unknown = await request(store.get(key))
+      if (existing !== undefined && !(object(existing) && existing.rejectedAtEpoch === expectedWriterEpoch)) {
+        if (!object(existing) || !object(existing.request) || existing.request.dataGeneration !== scope.dataGeneration || existing.request.editorDeviceId !== editorDeviceId
+          || !counter(existing.request.expectedWriterEpoch) || existing.requestJson !== JSON.stringify(existing.request)) throw new LocalStoreError()
+        return existing as { request: { dataGeneration: string; editorDeviceId: string; expectedWriterEpoch: string }; requestJson: string }
+      }
+      const body = { dataGeneration: scope.dataGeneration, editorDeviceId, expectedWriterEpoch }
+      if (!uuid(sessionId) || !uuid(editorDeviceId) || !counter(expectedWriterEpoch)) throw new LocalStoreError()
+      const value = { request: body, requestJson: JSON.stringify(body) }; await request(store.put(value, key)); return value
+    })
+  }
+  rejectTakeover(scope: Scope, sessionId: string, editorDeviceId: string, requestJson: string, current: Session) {
+    return this.run(['meta'], 'readwrite', async tx => {
+      const store = tx.objectStore('meta'), key = ['takeover', ...scopeKey(scope), sessionId, editorDeviceId]
+      const previous: unknown = await request(store.get(key))
+      if (!object(previous) || !object(previous.request) || previous.requestJson !== requestJson || !counter(previous.request.expectedWriterEpoch)
+        || current.userId !== scope.userId || current.dataGeneration !== scope.dataGeneration || current.id !== sessionId) throw new LocalWriteBlocked()
+      const expected = BigInt(previous.request.expectedWriterEpoch), actual = BigInt(current.writerEpoch)
+      if (actual > expected && (actual !== expected + 1n || current.editorDeviceId !== editorDeviceId)) {
+        await request(store.put({ ...previous, rejectedAtEpoch: current.writerEpoch }, key))
       }
     })
   }
@@ -126,7 +156,7 @@ export class WorkoutStore {
     const copies: SessionCopy[] = await request(tx.objectStore('sessionCopies').index('scope').getAll(scopeKey(key)))
     const same = copies.filter(x => x.sessionId === key.sessionId).sort((a, b) => BigInt(a.server.version) > BigInt(b.server.version) ? -1 : 1)
     const latest = same[0]?.server
-    if (!latest || latest.status !== 'ACTIVE' || latest.deletedAt || latest.editorDeviceId !== key.editorDeviceId || latest.writerEpoch !== key.writerEpoch || latest.localRevision !== revision) throw new LocalWriteBlocked()
+    if (!latest || latest.status !== 'ACTIVE' || latest.deletedAt || latest.editorDeviceId !== key.editorDeviceId || latest.writerEpoch !== key.writerEpoch || BigInt(latest.localRevision) > BigInt(revision)) throw new LocalWriteBlocked()
   }
   openLocal(server: Session, policy: RestPolicy, canWrite: () => boolean) {
     const key = { userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, editorDeviceId: server.editorDeviceId, writerEpoch: server.writerEpoch }
@@ -136,7 +166,7 @@ export class WorkoutStore {
       if (previous !== undefined) {
         if (!localWorkout(previous)) throw new LocalStoreError()
         if (JSON.stringify(previous.initialPlan) !== JSON.stringify(server.initialPlan) || previous.startedAt !== server.startedAt) throw new LocalWriteBlocked()
-        await this.checkWriter(tx, key, previous.serverRevision)
+        await this.checkWriter(tx, key, previous.pendingSnapshot && !previous.pendingSnapshot.rejected ? previous.pendingSnapshot.request.localRevision : previous.serverRevision)
         return previous
       }
       await this.checkWriter(tx, key, server.localRevision)
@@ -146,17 +176,26 @@ export class WorkoutStore {
     })
   }
   saveLocal(value: LocalWorkout, expectedEditVersion: string, canWrite: () => boolean) {
+    return this.persistLocal(value, expectedEditVersion, canWrite, false)
+  }
+  saveSyncLocal(value: LocalWorkout, expectedEditVersion: string, canWrite: () => boolean) {
+    return this.persistLocal(value, expectedEditVersion, canWrite, true)
+  }
+  private persistLocal(value: LocalWorkout, expectedEditVersion: string, canWrite: () => boolean, sync: boolean) {
     if (!localWorkout(value)) return Promise.reject(new LocalStoreError())
     return this.run(['localWorkouts', 'sessionCopies'], 'readwrite', async tx => {
       if (!canWrite()) throw new LocalWriteBlocked()
       const store = tx.objectStore('localWorkouts'), previous: unknown = await request(store.get(localKey(value)))
       if (!localWorkout(previous) || previous.editVersion !== expectedEditVersion || BigInt(value.editVersion) !== BigInt(expectedEditVersion) + 1n
         || JSON.stringify(previous.initialPlan) !== JSON.stringify(value.initialPlan) || value.startedAt !== previous.startedAt
-        || value.serverRevision !== previous.serverRevision || value.serverVersion !== previous.serverVersion) throw new LocalWriteBlocked()
+        || !sync && (value.serverRevision !== previous.serverRevision || value.serverVersion !== previous.serverVersion
+          || JSON.stringify(value.pendingSnapshot) !== JSON.stringify(previous.pendingSnapshot) || JSON.stringify(value.pendingResolution) !== JSON.stringify(previous.pendingResolution))) throw new LocalWriteBlocked()
       const snapshotChanged = JSON.stringify(value.snapshot) !== JSON.stringify(previous.snapshot)
       if (BigInt(value.localRevision) !== BigInt(previous.localRevision) + (snapshotChanged ? 1n : 0n)
         || snapshotChanged && value.syncState === 'CLEAN') throw new LocalWriteBlocked()
-      await this.checkWriter(tx, value, value.serverRevision)
+      const bound = previous.pendingSnapshot && !previous.pendingSnapshot.rejected ? previous.pendingSnapshot.request.localRevision : previous.serverRevision
+      await this.checkWriter(tx, value, bound)
+      if (BigInt(value.serverRevision) < BigInt(previous.serverRevision) || BigInt(value.serverVersion) < BigInt(previous.serverVersion) || BigInt(value.localRevision) < BigInt(value.serverRevision)) throw new LocalWriteBlocked()
       if (!canWrite()) throw new LocalWriteBlocked()
       await request(store.put(value))
       if (!canWrite()) throw new LocalWriteBlocked()

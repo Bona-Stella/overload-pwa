@@ -3,10 +3,11 @@ import { WorkoutApi } from './api.ts'
 import { WorkoutStore, LocalStoreError } from './storage.ts'
 import type { StartAttempt, SessionCopy } from './storage.ts'
 import type { Scope, Session, Routine, RoutineList, CreateRoutine, UpdateRoutine } from './types.ts'
+import { acquireEditor } from '../workout-local/lock.ts'
 
 type Bootstrap = Awaited<ReturnType<WorkoutApi['bootstrap']>>
 type AuthSource = Pick<AuthController, 'getSnapshot' | 'subscribe'>
-type Store = Pick<WorkoutStore, 'deviceId' | 'attempt' | 'prepareStart' | 'saveSession' | 'copies'>
+type Store = Pick<WorkoutStore, 'deviceId' | 'attempt' | 'prepareStart' | 'saveSession' | 'copies'> & Partial<Pick<WorkoutStore, 'prepareTakeover' | 'rejectTakeover'>>
 export type OnlineState = { userId: string | null; scope: Scope | null; data: Bootstrap | null; selected: Routine | null;
   active: Session | null; detail: Session | null; deviceId: string | null; attempt: StartAttempt | null;
   status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string }
@@ -34,7 +35,7 @@ export function startBody(scope: Scope, routineId: string, deviceId: string, id:
     workoutDate: `${part('year')}-${part('month')}-${part('day')}`, startedTimeZone: zone }
 }
 
-/** One account-bound screen controller. No workout editing or snapshot sender in 5A. */
+/** Account-bound online management and explicit editor takeover. */
 export class WorkoutOnlineController {
   private state = empty()
   private listeners = new Set<() => void>()
@@ -134,6 +135,41 @@ export class WorkoutOnlineController {
     } catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
   }
+  observeSession = (detail: Session) => {
+    const current = this.state.detail
+    if (!current || !this.owner || detail.userId !== this.owner || detail.dataGeneration !== this.state.scope?.dataGeneration || detail.id !== current.id
+      || BigInt(detail.version) < BigInt(current.version)) return
+    this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null })
+  }
+  invalidateScope = (error: unknown) => this.failure(error)
+  takeover = async () => {
+    const { scope, detail, deviceId } = this.state, context = this.context()
+    if (!context || !scope || !detail || !deviceId || detail.status !== 'ACTIVE' || !this.store.prepareTakeover) return
+    this.set({ busy: true, issue: null })
+    let lease: Awaited<ReturnType<typeof acquireEditor>> = null
+    let fixed: Awaited<ReturnType<WorkoutStore['prepareTakeover']>> | null = null
+    try {
+      lease = await acquireEditor({ ...scope, sessionId: detail.id, editorDeviceId: deviceId, writerEpoch: detail.writerEpoch })
+      if (!lease || !context.current()) { if (context.current()) this.set({ issue: '다른 탭이 운동을 편집 중이거나 편집 잠금을 지원하지 않습니다.' }); return }
+      fixed = await this.store.prepareTakeover(scope, detail.id, deviceId, detail.writerEpoch)
+      if (!context.current()) return
+      const server = await this.api.takeover(scope, detail.id, fixed.request, context.signal)
+      if (!context.current()) return
+      await this.store.saveSession(scope, server)
+      if (context.current()) this.set({ detail: server, active: server.status === 'ACTIVE' ? server : null, copySaved: true, notice: '서버에 저장된 기록으로 이 기기의 편집을 시작합니다. 이전 기기의 미전송 원본은 자동으로 합치지 않았습니다.' })
+    } catch (error) {
+      if (context.current() && ['EDITOR_OWNERSHIP_LOST', 'SESSION_AUTO_CLOSED', 'SESSION_NOT_ACTIVE'].includes((error as { code?: string }).code ?? '')) {
+        try {
+          const server = await this.api.detail(scope, detail.id, context.signal)
+          if (!context.current()) return
+          await this.store.saveSession(scope, server)
+          if (fixed && this.store.rejectTakeover) await this.store.rejectTakeover(scope, detail.id, deviceId, fixed.requestJson, server)
+          if (context.current()) { this.observeSession(server); this.set({ issue: '편집 기기 또는 운동 상태가 다시 바뀌었습니다. 현재 기록을 확인하고 다시 선택해 주세요.' }) }
+        } catch (failure) { if (context.current()) this.failure(failure) }
+      } else if (context.current()) this.failure(error)
+    }
+    finally { lease?.release(); if (context.current()) this.set({ busy: false }) }
+  }
   start = async () => {
     const { scope, selected, deviceId, attempt, localReady, active } = this.state
     const context = this.context(); if (!scope || !deviceId || !localReady || !context || (!attempt && (!selected || active))) return
@@ -147,7 +183,7 @@ export class WorkoutOnlineController {
       // The attempt remains durable until the server copy commits in the same local transaction.
       await this.store.saveSession(scope, detail, pending.request.id)
       if (!context.current()) return
-      this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null, attempt: null, copySaved: true, notice: '운동 시작 결과와 계획을 이 기기에 저장했습니다. 수행 기록은 아직 서버에 전송하지 않습니다.' })
+      this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null, attempt: null, copySaved: true, notice: '운동 시작 결과와 계획을 이 기기에 저장했습니다. 수행 완료 후 서버 저장 상태를 확인해 주세요.' })
     } catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
   }

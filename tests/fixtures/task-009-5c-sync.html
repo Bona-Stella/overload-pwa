@@ -1,0 +1,7 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5C 실제 동기화 검증</title><h1>격리 V13 · IndexedDB 동기화 검증</h1><pre id="result">대기</pre><div id="root"></div>
+<script>
+fetch('/__fixture/trace',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stage:'html',url:location.href})})
+window.addEventListener('error',e=>document.querySelector('#result').textContent='FAIL '+e.message)
+window.addEventListener('unhandledrejection',e=>document.querySelector('#result').textContent='FAIL '+e.reason?.stack)
+new MutationObserver(()=>{const result=document.querySelector('#result').textContent;if(result.startsWith('FAIL')||result.includes('SYNC_BROWSER_SUITE_PASS'))fetch('/__fixture/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({runId:new URL(location.href).searchParams.get('runId'),kind:new URL(location.href).searchParams.has('edge')?'edge':'main',result})})}).observe(document.querySelector('#result'),{childList:true,subtree:true,characterData:true})
+</script><script type="module" src="./task-009-5c-sync.tsx"></script></html>

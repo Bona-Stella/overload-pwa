@@ -9,21 +9,30 @@ import type { EditorState } from './controller.ts'
 import type { ExitGuardRegistration, LocalWorkout, RestPolicy } from './types.ts'
 import { slotKey } from './types.ts'
 import * as model from './model.ts'
+import { SYNC_LABEL } from './sync.ts'
+import type { SyncOptions } from './sync.ts'
 import './local.css'
 
 const duration = (ms: number) => { const seconds = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }
 type Definition = { id: string; name: string }
-export function LocalWorkoutScreen({ server, policy, definitions, authorized, localOnly = false, onExitGuard }: {
-  server: Session; policy: RestPolicy; definitions: Definition[]; authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration
+export function LocalWorkoutScreen({ server, policy, definitions, authorized, localOnly = false, onExitGuard, sync, authenticated = false }: {
+  server: Session; policy: RestPolicy; definitions: Definition[]; authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
 }) {
+  const [initial] = useState(() => ({ server, policy }))
   const [store] = useState(() => new WorkoutStore())
-  const [controller] = useState(() => new LocalWorkoutController(store, authorized))
+  const [controller] = useState(() => new LocalWorkoutController(store, authorized, undefined, sync))
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   useEffect(() => {
-    void controller.open(server, policy)
+    void controller.open(initial.server, initial.policy)
     return () => { controller.stop(); void controller.settled().then(() => { if (controller.isStopped()) return store.close() }) }
-    // The parent keys this component by the server version and writer identity.
-  }, [controller, store, server, policy])
+    // ACK versions update in place. Only session/writer identity remounts the editor.
+  }, [controller, store, initial])
+  useEffect(() => {
+    const retry = () => { if (authenticated) void controller.retrySync() }
+    window.addEventListener('online', retry)
+    if (authenticated) retry()
+    return () => window.removeEventListener('online', retry)
+  }, [controller, authenticated])
   useEffect(() => { onExitGuard?.(controller.flushDrafts); return () => onExitGuard?.(null) }, [controller, onExitGuard])
   useEffect(() => {
     const onUnload = (event: BeforeUnloadEvent) => { if (state.pending || state.unsavedDrafts) event.preventDefault() }
@@ -31,12 +40,15 @@ export function LocalWorkoutScreen({ server, policy, definitions, authorized, lo
     return () => window.removeEventListener('beforeunload', onUnload)
   }, [state.pending, state.unsavedDrafts])
   return <section className="local-workout stack" aria-label="실제 운동 로컬 기록">
-    <p className="notice warning">이 단계의 수행 기록은 이 브라우저에만 저장됩니다. 서버 동기화·운동 종료는 아직 지원하지 않습니다. 저장소를 삭제하면 미전송 기록이 사라질 수 있습니다.</p>
+    <p className="notice warning">입력과 타이머는 이 기기에 보존합니다. 서버에 저장되지 않은 기록은 저장소를 삭제하면 사라질 수 있습니다. 운동 종료는 아직 지원하지 않습니다.</p>
     {localOnly && <p className="notice">인증 확인이 필요합니다. 이미 열어 둔 같은 계정의 운동만 로컬에 계속 기록할 수 있습니다. 서버 요청은 중단되었습니다. 같은 계정으로 다시 로그인해 주세요.</p>}
     {state.loading && <p role="status">로컬 운동과 편집 잠금을 확인하고 있습니다.</p>}
     {state.issue && <p className="notice error" role="alert">{state.issue}</p>}
+    {state.syncIssue && <p className="notice" role="status">{state.syncIssue}</p>}
+    {!!sync && <button className="outline" disabled={!authenticated || !state.writable || state.syncStatus === 'SENDING'} onClick={() => void controller.retrySync()}>서버 저장 상태 다시 확인</button>}
     {state.unsavedDrafts && <p className="notice" role="status">입력 초안을 저장 중이거나 저장하지 못했습니다. 화면의 입력을 유지합니다.{!state.pending && <button className="outline" onClick={() => void controller.retryDrafts()}>입력 다시 저장</button>}</p>}
     {state.workout && <LocalWorkoutView state={state} controller={controller} definitions={definitions} />}
+    {state.workout && !!sync && <ApprovalControls state={state} controller={controller} />}
   </section>
 }
 export function LocalWorkoutView({ state, controller, definitions }: { state: EditorState; controller: LocalWorkoutController; definitions: Definition[] }) {
@@ -57,7 +69,7 @@ export function LocalWorkoutView({ state, controller, definitions }: { state: Ed
   return <>
     <header className="timer-bar"><div><span>전체 운동 시간</span><strong>{duration(now - Date.parse(workout.startedAt))}</strong></div><div><span>휴식 남은 시간</span><strong>{duration(remaining * 1000)}</strong></div></header>
     <div className="section-heading"><span className="muted small">{workout.initialPlan.routineName}</span><button className="outline" onClick={() => setList(true)}>종목 목록</button></div>
-    <p className="muted small" role="status">{state.writable ? state.issue ? '저장 오류 · 최근 변경 미확정' : state.pending ? '이 기기에 저장 중…' : state.unsavedDrafts ? '저장하지 못한 입력 있음' : '이 기기에 저장됨' : '읽기 전용'} · 로컬 revision {workout.localRevision} · {workout.syncState === 'CLEAN' ? '서버 확인 기준에서 로컬 운동 준비' : workout.syncState === 'UNKNOWN' ? '서버 반영 여부 확인 필요' : '서버 미전송 변경 있음'}</p>
+    <p className="muted small" role="status">{!state.writable ? '읽기 전용' : state.issue ? '저장 오류 · 최근 변경 미확정' : state.pending ? '이 기기에 저장 중…' : state.unsavedDrafts ? '저장하지 못한 입력 있음' : SYNC_LABEL[state.syncStatus ?? (workout.syncState === 'CLEAN' ? 'LOCAL' : 'WAITING')]}</p>
     {plan && <>
       <div className="exercise-heading"><p className="eyebrow">WORKING SETS</p><h2>{workout.exerciseNames[id] ?? '추가된 세션 종목'}</h2><span className="badge">현재 계획 {plan.setCount}세트 · {plan.minReps}~{plan.maxReps}회</span></div>
       <p className="muted small">현재 작업 중량 {workout.weights[id]?.value} kg · 완료 시 실제 입력값을 저장합니다. 계획과 다른 중량 입력은 오늘만 수행입니다.</p>
@@ -91,11 +103,13 @@ export function LocalWorkoutView({ state, controller, definitions }: { state: Ed
 }
 function WeightDialog({ workout, id, busy, controller, onClose }: { workout: LocalWorkout; id: string; busy: boolean; controller: LocalWorkoutController; onClose: () => void }) {
   const [value, setValue] = useState(workout.weights[id]?.value ?? ''), [approve, setApprove] = useState(false)
+  const resolving = !!workout.pendingResolution && !workout.pendingResolution.rejected && workout.pendingResolution.request.sessionExerciseId === id
   return <Dialog title="작업 중량 변경" onClose={onClose}><div className="stack"><label>변경 중량 kg<input inputMode="decimal" value={value} onChange={e => setValue(e.target.value)} /></label>
     <label className="radio-option"><input type="radio" name="local-weight-mode" checked={!approve} onChange={() => setApprove(false)} /><span>오늘만 변경</span></label>
-    <label className="radio-option"><input type="radio" name="local-weight-mode" checked={approve} disabled={!workout.initialPlan.weightExercises.some(x => x.sessionExerciseId === id)} onChange={() => setApprove(true)} /><span>다음 운동에도 적용할 승인 요청 저장</span></label>
-    <p className="muted small">승인 요청은 아직 서버에 전송하지 않습니다. 이전 수행 문맥과 최초 계획은 바뀌지 않습니다.</p>
-    <button className="primary" disabled={busy} onClick={async () => { if (await controller.change(w => model.changeWeight(w, id, value, approve, Date.now()))) onClose() }}>{approve ? '명시 승인 요청을 이 기기에 저장' : '오늘만 적용'}</button></div></Dialog>
+    <label className="radio-option"><input type="radio" name="local-weight-mode" checked={approve} disabled={resolving || !workout.initialPlan.weightExercises.some(x => x.sessionExerciseId === id)} onChange={() => setApprove(true)} /><span>다음 운동에도 적용할 승인 요청 저장</span></label>
+    <p className="muted small">승인 요청은 이 기기에 보존한 뒤 서버로 전송합니다. 이전 수행 문맥과 최초 계획은 바뀌지 않습니다.</p>
+    {resolving && <p className="notice">이 종목의 승인 해결 결과를 확인 중입니다. 오늘만 변경은 계속할 수 있습니다.</p>}
+    <button className="primary" disabled={busy || approve && resolving} onClick={async () => { if (await controller.change(w => model.changeWeight(w, id, value, approve, Date.now()))) onClose() }}>{approve ? '명시 승인 요청을 이 기기에 저장' : '오늘만 적용'}</button></div></Dialog>
 }
 function LocalCardio({ workout, id, state, controller, now }: { workout: LocalWorkout; id: string; state: EditorState; controller: LocalWorkoutController; now: number }) {
   const timer = workout.timers[id] ?? model.emptyTimer(), record = workout.snapshot.cardioResults.find(x => x.sessionActivityId === id)
@@ -116,9 +130,31 @@ function LocalCardio({ workout, id, state, controller, now }: { workout: LocalWo
       {correctedSeconds !== null && <label>정정 활동 시간 초<input inputMode="numeric" value={correctedSeconds} disabled={!state.writable} onChange={e => saveDraft({ correctedSeconds: e.target.value })} /></label>}
       <p className="muted small">거리 0.001~1000 km · 심박수 20~300 BPM · 정정 시간 1~86400초. 미입력값은 계획에서 만들지 않습니다.</p>
       {timer.reviewing && <><button className="primary" disabled={busy} onClick={() => void controller.complete(w => model.completeCardio(w, id, Date.now()))}>유산소 기록 완료</button><button className="quiet" disabled={busy} onClick={() => void controller.change(w => { w.timers[id].reviewing = false })}>확인 취소 · 일시정지로 돌아가기</button></>}</>}
-    {record && <><p className="muted small">원본 타이머 {record.status === 'COMPLETED' ? record.result.timerMs : '—'} ms · {record.status === 'COMPLETED' && record.result.corrected ? '시간 정정 있음' : '자동 측정'} · 서버에 전송하지 않음</p><button className="outline" disabled={busy} onClick={() => { if (window.confirm('유산소 완료를 취소할까요? 재완료 시 새 수행 UUID를 사용합니다.')) void controller.change(w => model.undoCardio(w, record.id)) }}>유산소 완료 취소</button></>}
+    {record && <><p className="muted small">원본 타이머 {record.status === 'COMPLETED' ? duration(record.result.timerMs) : '—'} · {record.status === 'COMPLETED' && record.result.corrected ? '시간 정정 있음' : '자동 측정'}</p><button className="outline" disabled={busy} onClick={() => { if (window.confirm('유산소 완료를 취소할까요? 원래 완료 기록과 취소 사실은 보존합니다.')) void controller.change(w => model.undoCardio(w, record.id)) }}>유산소 완료 취소</button></>}
     <p className="muted small">미완료 유산소는 자동으로 건너뜀 처리하지 않습니다.</p>
   </div>
+}
+const approvalReason: Record<string, string> = { ROUTINE_CHANGED: '다른 곳에서 루틴이 바뀌었습니다.', SOURCE_REMOVED: '원래 루틴 또는 배치가 제거되었습니다.', NO_SOURCE_PLACEMENT: '원래 루틴 배치가 없는 종목입니다.', PREDECESSOR_PENDING: '앞선 승인 요청의 확인이 필요합니다.', PREDECESSOR_NOT_APPLIED: '앞선 승인 요청이 적용되지 않았습니다.' }
+function ApprovalControls({ state, controller }: { state: EditorState; controller: LocalWorkoutController }) {
+  const workout = state.workout!
+  const groups = [...new Set(workout.approvalResults.filter(r => r.status === 'PENDING').map(r => r.sessionExerciseId))]
+  return <section className="stack" aria-label="중량 승인 상태">
+    {workout.snapshot.approvalRequests.map(request => { const result = workout.approvalResults.find(r => r.id === request.id)
+      return <p className="muted small" key={request.id}>{workout.exerciseNames[request.sessionExerciseId] ?? '운동 종목'} · 요청 {request.nextApprovedWeightKg} kg · {result?.status === 'APPLIED' ? '적용됨' : result?.status === 'NOT_APPLIED' ? '적용하지 않음' : result?.status === 'PENDING' ? '승인 확인 필요' : '연결되면 전송'}</p>
+    })}
+    {groups.map(id => <ApprovalChoice key={id + ':' + workout.approvalResults.filter(r => r.sessionExerciseId === id && r.status === 'PENDING').map(r => r.id).join(':')} state={state} controller={controller} id={id} />)}
+  </section>
+}
+function ApprovalChoice({ state, controller, id }: { state: EditorState; controller: LocalWorkoutController; id: string }) {
+  const w = state.workout!, pending = w.approvalResults.filter(r => r.sessionExerciseId === id && r.status === 'PENDING')
+  const [value, setValue] = useState(w.snapshot.approvalRequests.filter(r => r.sessionExerciseId === id).at(-1)?.nextApprovedWeightKg ?? '')
+  const busy = !state.writable || state.pending > 0 || state.syncStatus === 'SENDING'
+  const canApprove = w.initialPlan.weightExercises.some(e => e.sessionExerciseId === id) && !pending.some(r => r.reason === 'SOURCE_REMOVED' || r.reason === 'NO_SOURCE_PLACEMENT')
+  return <section className="card stack"><h3>{w.exerciseNames[id] ?? '운동 종목'} · 승인 확인 필요</h3>
+    <p>{approvalReason[pending[0]?.reason ?? ''] ?? '현재 루틴의 승인 중량을 확인해 주세요.'} 실제 수행 기록은 보존되었습니다. 아래 선택은 과거 수행의 승인 문맥을 바꾸지 않습니다.</p>
+    <button className="outline" disabled={busy} onClick={() => { if (window.confirm('이 승인 요청들을 적용하지 않고 현재 루틴 중량을 유지할까요?')) void controller.resolveApproval(id, pending.map(r => r.id), 'KEEP_CURRENT', '') }}>현재 루틴 중량 유지</button>
+    {canApprove && <><label>지금 다시 승인할 중량 kg<input inputMode="decimal" value={value} disabled={busy} onChange={e => setValue(e.target.value)} /></label><button className="primary" disabled={busy} onClick={() => { if (window.confirm(`${value} kg을 현재 시점의 새 중량으로 명시 승인할까요? 과거 수행에는 소급 적용하지 않습니다.`)) void controller.resolveApproval(id, pending.map(r => r.id), 'REAPPROVE', value) }}>이 중량으로 지금 재승인</button></>}
+  </section>
 }
 function LocalPlanEditor({ workout, controller, definitions, busy }: { workout: LocalWorkout; controller: LocalWorkoutController; definitions: Definition[]; busy: boolean }) {
   const id = workout.currentExerciseId, weight = workout.snapshot.appliedPlan.weightExercises.find(x => x.sessionExerciseId === id), cardio = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)

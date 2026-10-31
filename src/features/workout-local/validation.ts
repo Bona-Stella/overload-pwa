@@ -2,10 +2,23 @@ import * as v from '../workout-online/validation.ts'
 import type { LocalWorkout } from './types.ts'
 const dictionary = (value: unknown, guard: (x: unknown) => boolean) => v.object(value) && Object.values(value).every(guard)
 const ms = (x: unknown) => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0
+function frozen(value: unknown, kind: 'snapshot' | 'resolution', owner: Record<string, unknown>) {
+  if (value === undefined || value === null) return true
+  if (!v.object(value) || !v.object(value.request) || typeof value.requestJson !== 'string' || value.requestJson !== JSON.stringify(value.request)
+    || value.rejected !== undefined && typeof value.rejected !== 'boolean') return false
+  const r = value.request
+  if (r.dataGeneration !== owner.dataGeneration || r.editorDeviceId !== owner.editorDeviceId || r.writerEpoch !== owner.writerEpoch) return false
+  return kind === 'snapshot' ? v.counter(r.localRevision) && v.snapshot(r.snapshot) && v.array(value.localOnlyIds, v.uuid)
+    : v.counter(r.expectedSessionVersion) && v.counter(r.expectedLocalRevision) && v.uuid(r.sessionExerciseId) && v.array(r.pendingRequestIds, v.uuid) && v.instant(r.occurredAt)
+      && (r.decision === 'KEEP_CURRENT' ? r.newApprovalRequest === null : r.decision === 'REAPPROVE' && v.object(r.newApprovalRequest) && v.uuid(r.newApprovalRequest.id)
+        && v.counter(r.newApprovalRequest.sequence) && v.counter(r.newApprovalRequest.expectedRoutineVersion) && v.decimal(r.newApprovalRequest.previousApprovedWeightKg) && v.decimal(r.newApprovalRequest.nextApprovedWeightKg))
+}
 export function localWorkout(value: unknown): value is LocalWorkout {
   return v.object(value) && value.schemaVersion === 1 && v.uuid(value.userId) && v.counter(value.dataGeneration) && v.uuid(value.sessionId)
     && v.uuid(value.editorDeviceId) && v.counter(value.writerEpoch) && v.instant(value.startedAt) && v.initialPlan(value.initialPlan) && v.snapshot(value.snapshot)
     && v.counter(value.editVersion) && v.counter(value.localRevision) && v.counter(value.serverRevision) && v.counter(value.serverVersion)
+    && frozen(value.pendingSnapshot, 'snapshot', value) && frozen(value.pendingResolution, 'resolution', value)
+    && (value.confirmedDeletedSetIds === undefined || v.array(value.confirmedDeletedSetIds, v.uuid)) && (value.confirmedDeletedCardioIds === undefined || v.array(value.confirmedDeletedCardioIds, v.uuid))
     && ['CLEAN', 'UNSENT', 'UNKNOWN'].includes(String(value.syncState)) && dictionary(value.presence, x => ['LOCAL_ONLY', 'SERVER_CONFIRMED', 'UNKNOWN'].includes(String(x)))
     && dictionary(value.drafts, x => v.object(x) && v.text(x.weight) && v.text(x.reps))
     && dictionary(value.weights, x => v.object(x) && v.text(x.value) && v.object(x.context) && (x.context.kind === 'APPROVAL_REQUEST' ? v.uuid(x.context.requestId) : ['INITIAL_APPROVED', 'TODAY_ONLY'].includes(String(x.context.kind)) && x.context.requestId === null))

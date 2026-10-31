@@ -4,11 +4,13 @@ import { applyLocalChange, editDraft, emptyTimer } from './model.ts'
 import { acquireEditor } from './lock.ts'
 import type { EditorLease } from './lock.ts'
 import type { CardioTimer, LocalKey, LocalWorkout, RestPolicy, SetDraft } from './types.ts'
+import { WorkoutSynchronizer } from './sync.ts'
+import type { SyncOptions, SyncStatus } from './sync.ts'
 
-type Store = Pick<WorkoutStore, 'openLocal' | 'readLocal' | 'saveLocal'>
+type Store = Pick<WorkoutStore, 'openLocal' | 'readLocal' | 'saveLocal'> & Partial<Pick<WorkoutStore, 'saveSyncLocal' | 'saveSession'>>
 export type EditorState = { workout: LocalWorkout | null; writable: boolean; loading: boolean; pending: number; issue: string | null;
-  drafts: Record<string, SetDraft>; cardioDrafts: Record<string, Partial<CardioTimer>>; unsavedDrafts: boolean }
-/** Serial local transactions. Completion UI only observes committed documents. No HTTP sender. */
+  drafts: Record<string, SetDraft>; cardioDrafts: Record<string, Partial<CardioTimer>>; unsavedDrafts: boolean; syncStatus?: SyncStatus; syncIssue?: string | null }
+/** Serial local transactions. Completion UI only observes committed documents; the sender follows durable changes. */
 export class LocalWorkoutController {
   private state: EditorState = { workout: null, writable: false, loading: true, pending: 0, issue: null, drafts: {}, cardioDrafts: {}, unsavedDrafts: false }
   private listeners = new Set<() => void>()
@@ -21,7 +23,9 @@ export class LocalWorkoutController {
   private draftSerial = 0
   private generation = 0
   private opening: Promise<unknown> = Promise.resolve()
-  constructor(store: Store, authorized: () => boolean, acquire = acquireEditor) { this.store = store; this.authorized = authorized; this.acquire = acquire }
+  private readonly syncOptions?: SyncOptions
+  private synchronizer: WorkoutSynchronizer | null = null
+  constructor(store: Store, authorized: () => boolean, acquire = acquireEditor, sync?: SyncOptions) { this.store = store; this.authorized = authorized; this.acquire = acquire; this.syncOptions = sync }
   getSnapshot = () => this.state
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => this.listeners.delete(fn) }
   private set(patch: Partial<EditorState>) { if (this.stopped) return; this.state = { ...this.state, ...patch }; this.listeners.forEach(fn => fn()) }
@@ -45,10 +49,23 @@ export class LocalWorkoutController {
       }
       const workout = await this.store.openLocal(server, policy, this.allowed)
       if (generation === this.generation) this.set({ workout, loading: false, writable: this.allowed() })
+      if (generation === this.generation && this.syncOptions && this.allowed()) {
+        this.synchronizer?.stop()
+        this.synchronizer = new WorkoutSynchronizer(this.syncOptions, {
+          read: () => this.state.workout, allowed: () => generation === this.generation && this.allowed(),
+          mutate: fn => this.update(fn, true), saveServer: s => this.store.saveSession!(s, s),
+          block: () => { this.lease?.release(); this.lease = null; this.set({ writable: false }) },
+          status: (syncStatus, issue) => { if (generation === this.generation) this.set({ syncStatus, syncIssue: issue ?? null, ...(syncStatus === 'OTHER' ? { writable: false } : {}) }) },
+        })
+        void this.synchronizer.retry()
+      }
     } catch (error) { if (generation === this.generation) { this.set({ loading: false, writable: false, issue: error instanceof Error ? error.message : new LocalStoreError().message }); this.lease?.release() } }
     finally { opened() }
   }
   change = (transform: (workout: LocalWorkout) => void): Promise<boolean> => {
+    return this.update(transform, false)
+  }
+  private update(transform: (workout: LocalWorkout) => void, sync: boolean): Promise<boolean> {
     if (!this.allowed() || !this.state.writable) return Promise.resolve(false)
     const generation = this.generation
     const allowed = () => generation === this.generation && this.allowed()
@@ -57,10 +74,16 @@ export class LocalWorkoutController {
       if (!allowed() || !this.state.workout || !this.state.writable) return false
       try {
         const previous = this.state.workout, next = applyLocalChange(previous, transform)
-        await this.store.saveLocal(next, previous.editVersion, allowed)
+        if (sync) {
+          if (!this.store.saveSyncLocal || !this.store.saveSession) throw new LocalStoreError()
+          await this.store.saveSyncLocal(next, previous.editVersion, allowed)
+        } else await this.store.saveLocal(next, previous.editVersion, allowed)
         if (!allowed()) return false
-        this.set({ workout: next, issue: null }); return true
+        this.set({ workout: next, issue: null })
+        if (!sync && next.localRevision !== previous.localRevision) this.synchronizer?.request()
+        return true
       } catch (error) {
+        if (error instanceof LocalWriteBlocked) { this.lease?.release(); this.lease = null }
         this.set({ issue: error instanceof Error ? error.message : new LocalStoreError().message,
           ...(error instanceof LocalWriteBlocked ? { writable: false } : {}) })
         return false
@@ -108,6 +131,9 @@ export class LocalWorkoutController {
   }
   async settled() { await this.tail }
   flushDrafts = async () => { await this.tail; return !this.state.unsavedDrafts || this.retryDrafts() }
+  retrySync = () => this.synchronizer?.retry()
+  async syncSettled() { await this.synchronizer?.settled(); await this.tail }
+  resolveApproval = (exerciseId: string, ids: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE', nextWeight: string) => this.synchronizer?.resolve(exerciseId, ids, decision, nextWeight)
   isStopped() { return this.stopped }
-  stop() { this.stopped = true; this.generation++; this.lease?.release(); this.lease = null }
+  stop() { this.stopped = true; this.generation++; this.synchronizer?.stop(); this.synchronizer = null; this.lease?.release(); this.lease = null }
 }

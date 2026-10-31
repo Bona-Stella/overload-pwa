@@ -86,6 +86,8 @@ export function changeWeight(workout: LocalWorkout, id: string, value: string, a
   const weight = decimalDraft(value)
   let context: ActiveWeightContext = { kind: 'TODAY_ONLY', requestId: null }
   if (approve) {
+    const resolving = workout.pendingResolution
+    if (resolving && !resolving.rejected && resolving.request.sessionExerciseId === id) throw new Error('이 종목의 승인 해결 결과를 먼저 확인해 주세요. 오늘만 중량 변경은 계속할 수 있습니다.')
     const initial = workout.initialPlan.weightExercises.find(x => x.sessionExerciseId === id)
     if (!initial) throw new Error('추가 종목에는 원래 루틴 배치가 없어 승인 요청을 만들 수 없습니다.')
     const previous = workout.snapshot.approvalRequests.filter(x => x.sessionExerciseId === id).sort((a, b) => BigInt(a.sequence) < BigInt(b.sequence) ? -1 : 1).at(-1)
