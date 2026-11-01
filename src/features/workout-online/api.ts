@@ -1,7 +1,7 @@
 import type { AuthController } from '../auth/controller.ts'
 import type { ExerciseResponse, WorkoutSettingsResponse } from '../workout-read/api.ts'
 import type { Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
-  ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents } from './types.ts'
+  ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents, ClosedPage, ClosedCursor } from './types.ts'
 import * as v from './validation.ts'
 
 export class WorkoutApiError extends Error {
@@ -69,6 +69,13 @@ export class WorkoutApi {
   active(scope: Scope, signal: AbortSignal) { return this.call<Scope & { session: Session | null }>(scope, root + '/active', 'GET', undefined, signal,
     x => v.object(x) && (x.session === null || v.session(x.session) && envelope(x.session, scope))) }
   detail(scope: Scope, id: string, signal: AbortSignal) { return this.call<Session>(scope, idPath(root, id), 'GET', undefined, signal, v.session, id) }
+  closed(scope: Scope, cursor: ClosedCursor | null, signal: AbortSignal) {
+    const query = new URLSearchParams({ limit: '20', ...(cursor ?? {}) })
+    return this.call<ClosedPage>(scope, root + '/closed?' + query, 'GET', undefined, signal, x => v.object(x)
+      && v.array(x.sessions, s => v.object(s) && v.uuid(s.id) && v.text(s.routineName) && ['FINISHED', 'AUTO_CLOSED'].includes(String(s.status)) && v.counter(s.version)
+        && v.text(s.workoutDate) && v.instant(s.startedAt) && v.nullable(s.endedAt, v.instant) && v.instant(s.closedAt) && v.nullable(s.deletedAt, v.instant))
+      && v.nullable(x.next, n => v.object(n) && v.instant(n.beforeClosedAt) && v.uuid(n.beforeId)))
+  }
   // Later phases may call these typed contracts; 5A mounts no corresponding write controls.
   takeover(scope: Scope, id: string, body: { dataGeneration: string; editorDeviceId: string; expectedWriterEpoch: string }, signal: AbortSignal) { return this.call<Session>(scope, idPath(root, id) + '/takeover', 'POST', body, signal, v.session, id) }
   snapshot(scope: Scope, id: string, body: SnapshotRequest, signal: AbortSignal) { return this.call<SnapshotAck>(scope, idPath(root, id) + '/snapshot', 'PUT', body, signal, ack, id) }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useAuth } from '../auth/context.ts'
 import { WorkoutApi } from './api.ts'
 import { WorkoutOnlineController } from './controller.ts'
@@ -8,13 +8,14 @@ import { RoutineForm } from './RoutineForm.tsx'
 import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import './online.css'
+import { ClosedWorkout, WorkoutHistory } from './ClosedWorkout.tsx'
 
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover }: { session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
   const otherEditor = session.editorDeviceId !== deviceId
   const label = session.status === 'ACTIVE' ? '진행 중' : session.status === 'FINISHED' ? '명시 종료' : '서버 자동 종료'
   return <section className="card stack" aria-labelledby="online-session-title"><div className="section-heading"><h2 id="online-session-title">{session.initialPlan.routineName}</h2><span className="workout-read-badge">{label}</span></div>
     <p>{session.workoutDate} · <time dateTime={session.startedAt}>{session.startedAt}</time></p>
-    {session.status === 'ACTIVE' && <p className="notice">{otherEditor ? '다른 기기에서 편집 중입니다. 이 화면은 읽기 전용입니다.' : '이 기기의 운동입니다. 아래에서 기록하고 서버 저장 상태를 확인할 수 있습니다. 운동 종료는 후속 단계입니다.'}</p>}
+    {session.status === 'ACTIVE' && <p className="notice">{otherEditor ? '다른 기기에서 편집 중입니다. 이 화면은 읽기 전용입니다.' : '이 기기의 운동입니다. 아래에서 기록하고 서버 저장 상태를 확인할 수 있습니다.'}</p>}
     {session.status === 'ACTIVE' && otherEditor && onTakeover && <button className="outline full" disabled={busy || !deviceId || !saved} onClick={() => { if (window.confirm('서버에 저장된 기록으로 이 기기에서 편집할까요? 다른 기기의 미전송 기록은 자동으로 합치지 않습니다.')) onTakeover() }}>이 기기로 편집 가져오기</button>}
     {session.status === 'AUTO_CLOSED' && <p className="notice">서버가 마지막 저장 상태로 자동 종료했습니다. 사용자 종료 시각이나 최초 명시 종료 평가를 생성하지 않습니다.</p>}
     {session.deletedAt && <p className="notice">삭제된 운동입니다. 기록을 자동 복원하지 않습니다.</p>}
@@ -32,12 +33,13 @@ export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeo
 export function WorkspaceView({ state, controller }: { state: OnlineState; controller: WorkoutOnlineController }) {
   const [editor, setEditor] = useState<Routine | 'new' | null>(null)
   return <section className="stack workout-online" aria-labelledby="online-title"><div className="section-heading"><h2 id="online-title">내 루틴과 현재 운동</h2><button type="button" className="quiet" disabled={state.busy} onClick={() => void controller.refresh()}>다시 조회</button></div>
-    <p className="muted small">운동 입력·타이머는 이 기기에 보존하고 완료 기록과 적용 계획은 서버에 저장합니다. 운동 종료와 완전 오프라인 앱 재실행은 아직 지원하지 않습니다.</p>
+    <p className="muted small">운동 입력·타이머는 이 기기에 보존하고 완료 기록과 적용 계획은 서버에 저장합니다. 완전 오프라인 앱 재실행은 아직 지원하지 않습니다.</p>
     {state.status === 'loading' && <p role="status">현재 계정의 운동 정보를 확인하고 있습니다.</p>}
     {state.issue && <p className="notice error" role="alert">{state.issue}</p>}{state.notice && <p className="notice" role="status">{state.notice}</p>}
     {state.attempt && <section className="card stack"><h3>시작 결과 확인 필요</h3><p>이 기기에 원래 시작 요청이 남아 있습니다. 새 운동을 만들지 않고 같은 요청을 다시 확인합니다.</p>
       <button className="primary" disabled={state.busy || !state.localReady} onClick={() => void controller.start()}>기존 시작 요청 다시 확인</button></section>}
     {state.detail && <SessionView session={state.detail} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} onRefresh={() => void controller.showDetail(state.detail!.id)} onTakeover={() => void controller.takeover()} />}
+    {state.active && state.detail?.id !== state.active.id && <button className="outline" disabled={state.busy} onClick={() => void controller.showDetail(state.active!.id)}>진행 중인 운동으로 돌아가기</button>}
     {state.data && <>
       <section className="card stack"><h3>내 루틴</h3>{state.data.routines.length === 0 ? <p>아직 루틴이 없습니다. 내 운동 종목으로 첫 루틴을 만들어 주세요.</p>
         : <ul className="online-routine-list">{state.data.routines.map(r => <li key={r.id}><button type="button" className="outline full" aria-pressed={state.selected?.id === r.id} disabled={state.busy} onClick={() => { setEditor(null); void controller.select(r.id) }}>{r.name}</button></li>)}</ul>}
@@ -46,7 +48,7 @@ export function WorkspaceView({ state, controller }: { state: OnlineState; contr
         {state.selected.weightPlacements.map(w => <p key={w.id}>{w.exerciseName} · {w.setCount}세트 · {w.minReps}~{w.maxReps}회 · 승인 {w.approvedWeightKg} kg</p>)}
         {state.selected.cardioPlacements.map(c => <p key={c.id}>{c.plan.name} · 목표 {c.plan.targetSeconds}초</p>)}
         <button type="button" className="outline" disabled={state.busy} onClick={() => setEditor(state.selected)}>이 루틴 편집</button>
-        <p className="muted small">시작 후 입력과 타이머를 이 기기에 보존하고 완료 기록을 서버에 저장합니다. 운동 종료는 아직 지원하지 않습니다.</p>
+        <p className="muted small">시작 후 입력과 타이머를 이 기기에 보존하고 완료 기록을 서버에 저장합니다.</p>
         <button type="button" className="primary" disabled={state.busy || !state.localReady || state.attempt !== null || state.active !== null} onClick={() => void controller.start()}>온라인으로 운동 시작</button>
         {state.active && <p className="muted small">진행 중인 운동이 있어 새 운동을 시작할 수 없습니다.</p>}
       </section>}
@@ -59,6 +61,8 @@ export function WorkoutWorkspace({ onExitGuard }: { onExitGuard?: ExitGuardRegis
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
   const [controller] = useState(() => new WorkoutOnlineController(api))
+  const exitGuard = useRef<(() => Promise<boolean>) | null>(null)
+  const registerExit = useCallback<ExitGuardRegistration>(guard => { exitGuard.current = guard; onExitGuard?.(guard) }, [onExitGuard])
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   useEffect(() => controller.connect(authentication), [controller, authentication])
   const localOnly = !!state.userId && auth.localWorkoutUserId === state.userId
@@ -73,8 +77,13 @@ export function WorkoutWorkspace({ onExitGuard }: { onExitGuard?: ExitGuardRegis
   }
   return <>{!localOnly && <WorkspaceView key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} />}
     {editable && <LocalWorkoutScreen key={[session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')}
-      server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} authorized={authorized} localOnly={localOnly} onExitGuard={onExitGuard}
+      server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit}
       sync={{ api, online: () => { const a = authentication.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null} />}
+    {!localOnly && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
+      const a = authentication.getSnapshot(), s = controller.getSnapshot()
+      return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
+    }} />}
+    {!localOnly && state.scope && <WorkoutHistory key={'history:' + state.scope.userId + ':' + state.scope.dataGeneration} api={api} scope={state.scope} onInvalid={controller.invalidateScope} refreshKey={session?.status === 'ACTIVE' ? 'active' : session?.id + ':' + session?.version} onOpen={id => { void (async () => { if (await (exitGuard.current?.() ?? Promise.resolve(true))) await controller.showDetail(id) })() }} />}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
     {state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</>
 }

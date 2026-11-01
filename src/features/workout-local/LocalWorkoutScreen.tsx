@@ -19,6 +19,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, authorized, lo
   server: Session; policy: RestPolicy; definitions: Definition[]; authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
 }) {
   const [initial] = useState(() => ({ server, policy }))
+  const [ending, setEnding] = useState(false)
   const [store] = useState(() => new WorkoutStore())
   const [controller] = useState(() => new LocalWorkoutController(store, authorized, undefined, sync))
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
@@ -40,7 +41,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, authorized, lo
     return () => window.removeEventListener('beforeunload', onUnload)
   }, [state.pending, state.unsavedDrafts])
   return <section className="local-workout stack" aria-label="실제 운동 로컬 기록">
-    <p className="notice warning">입력과 타이머는 이 기기에 보존합니다. 서버에 저장되지 않은 기록은 저장소를 삭제하면 사라질 수 있습니다. 운동 종료는 아직 지원하지 않습니다.</p>
+    <p className="notice warning">입력과 타이머는 이 기기에 보존합니다. 서버에 저장되지 않은 기록은 저장소를 삭제하면 사라질 수 있습니다.</p>
     {localOnly && <p className="notice">인증 확인이 필요합니다. 이미 열어 둔 같은 계정의 운동만 로컬에 계속 기록할 수 있습니다. 서버 요청은 중단되었습니다. 같은 계정으로 다시 로그인해 주세요.</p>}
     {state.loading && <p role="status">로컬 운동과 편집 잠금을 확인하고 있습니다.</p>}
     {state.issue && <p className="notice error" role="alert">{state.issue}</p>}
@@ -49,6 +50,12 @@ export function LocalWorkoutScreen({ server, policy, definitions, authorized, lo
     {state.unsavedDrafts && <p className="notice" role="status">입력 초안을 저장 중이거나 저장하지 못했습니다. 화면의 입력을 유지합니다.{!state.pending && <button className="outline" onClick={() => void controller.retryDrafts()}>입력 다시 저장</button>}</p>}
     {state.workout && <LocalWorkoutView state={state} controller={controller} definitions={definitions} />}
     {state.workout && !!sync && <ApprovalControls state={state} controller={controller} />}
+    {state.workout && !!sync && <>
+      {state.workout.finish ? <p className="notice">{state.workout.finish.ack ? '서버에서 운동 종료를 확인했습니다.' : '종료 요청을 이 기기에 보존했습니다. 서버 종료는 아직 확인하지 못했습니다.'} 실제 종료 선택 시각 <time dateTime={state.workout.finish.endedAt}>{new Date(state.workout.finish.endedAt).toLocaleString('ko-KR')}</time></p>
+        : <button className="primary full" disabled={!state.writable || state.pending > 0} onClick={() => setEnding(true)}>운동 종료</button>}
+      {ending && <Dialog title="운동을 종료할까요?" onClose={() => setEnding(false)}><div className="stack"><p>완료한 수행만 저장합니다. 미완료 세트와 유산소는 자동 완료하지 않습니다. 확인을 누른 시각과 최종 기록을 이 기기에 보존한 뒤, 앞선 저장 결과를 확인하고 서버 종료를 요청합니다.</p>
+        <button className="primary" disabled={state.pending > 0} onClick={async () => { const endedAt = Date.now(); if (await controller.finish(endedAt)) setEnding(false) }}>이 시각으로 운동 종료 확인</button><button className="quiet" onClick={() => setEnding(false)}>계속 운동</button></div></Dialog>}
+    </>}
   </section>
 }
 export function LocalWorkoutView({ state, controller, definitions }: { state: EditorState; controller: LocalWorkoutController; definitions: Definition[] }) {
@@ -60,14 +67,14 @@ export function LocalWorkoutView({ state, controller, definitions }: { state: Ed
   const id = workout.currentExerciseId, plan = workout.snapshot.appliedPlan.weightExercises.find(x => x.sessionExerciseId === id)
   const cardio = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)
   const completed = workout.snapshot.performedSets.filter(x => x.sessionExerciseId === id).sort((a, b) => a.ordinal - b.ordinal)
-  const remaining = model.restRemaining(workout, now), busy = !state.writable || state.pending > 0
+  const remaining = model.restRemaining(workout, now), busy = !state.writable || state.pending > 0 || !!workout.finish
   const go = async (target: string) => { if (await controller.change(w => { w.currentExerciseId = target })) { setList(false); setEditing(false); window.scrollTo(0, 0) } }
   // Window only the planned slots. Backend INTEGER counts must never allocate a billion DOM rows.
   const firstPending = (() => { const occupied = new Set(completed.map(x => x.ordinal)); let n = 1; while (occupied.has(n)) n++; return n })()
   const start = Math.max(1, firstPending - 3), end = Math.min(Math.max(plan?.setCount ?? 0, completed.at(-1)?.ordinal ?? 0), start + 19)
   const ordinals = [...new Set([...completed.map(x => x.ordinal), ...Array.from({ length: Math.max(0, end - start + 1) }, (_, i) => start + i)])].sort((a, b) => a - b)
   return <>
-    <header className="timer-bar"><div><span>전체 운동 시간</span><strong>{duration(now - Date.parse(workout.startedAt))}</strong></div><div><span>휴식 남은 시간</span><strong>{duration(remaining * 1000)}</strong></div></header>
+    <header className="timer-bar"><div><span>전체 운동 시간</span><strong>{duration((workout.finish ? Date.parse(workout.finish.endedAt) : now) - Date.parse(workout.startedAt))}</strong></div><div><span>휴식 남은 시간</span><strong>{duration(remaining * 1000)}</strong></div></header>
     <div className="section-heading"><span className="muted small">{workout.initialPlan.routineName}</span><button className="outline" onClick={() => setList(true)}>종목 목록</button></div>
     <p className="muted small" role="status">{!state.writable ? '읽기 전용' : state.issue ? '저장 오류 · 최근 변경 미확정' : state.pending ? '이 기기에 저장 중…' : state.unsavedDrafts ? '저장하지 못한 입력 있음' : SYNC_LABEL[state.syncStatus ?? (workout.syncState === 'CLEAN' ? 'LOCAL' : 'WAITING')]}</p>
     {plan && <>
@@ -79,8 +86,8 @@ export function LocalWorkoutView({ state, controller, definitions }: { state: Ed
         {ordinals.map(ordinal => {
           const record = completed.find(x => x.ordinal === ordinal), draft = state.drafts[slotKey(id, ordinal)] ?? model.draftFor(workout, id, ordinal)
           return <div className={`local-set-row ${record ? 'completed' : 'current'}`} key={slotKey(id, ordinal)}>
-            <span>{ordinal}</span><label><span className="sr-only">{ordinal}세트 중량 kg</span><input inputMode="decimal" aria-label={`${ordinal}세트 중량 kg`} value={record?.weightKg ?? draft.weight} disabled={!state.writable || !!record} onChange={e => controller.draft(id, ordinal, { ...draft, weight: e.target.value })} /></label>
-            <RepsInput ordinal={ordinal} value={record ? String(record.reps) : draft.reps} disabled={!state.writable || !!record} onChange={value => controller.draft(id, ordinal, { ...draft, reps: value })} />
+            <span>{ordinal}</span><label><span className="sr-only">{ordinal}세트 중량 kg</span><input inputMode="decimal" aria-label={`${ordinal}세트 중량 kg`} value={record?.weightKg ?? draft.weight} disabled={!state.writable || !!workout.finish || !!record} onChange={e => controller.draft(id, ordinal, { ...draft, weight: e.target.value })} /></label>
+            <RepsInput ordinal={ordinal} value={record ? String(record.reps) : draft.reps} disabled={!state.writable || !!workout.finish || !!record} onChange={value => controller.draft(id, ordinal, { ...draft, reps: value })} />
             <button className={record ? 'set-check checked' : 'set-check'} disabled={busy || !record && remaining > 0} aria-label={`${ordinal}세트 ${record ? '완료 취소' : '완료'}`} onClick={() => {
               if (record) { if (window.confirm('이 세트의 완료를 취소할까요? 원래 수행 UUID와 삭제 사실은 보존합니다.')) void controller.change(w => model.undoSet(w, record.id)) }
               else void controller.complete(w => model.completeSet(w, id, ordinal, Date.now()))
@@ -93,7 +100,7 @@ export function LocalWorkoutView({ state, controller, definitions }: { state: Ed
       <button className="outline" disabled={busy || plan.setCount === 2147483647} onClick={() => void controller.change(w => model.updateTargets(w, id, plan.setCount + 1, plan.minReps, plan.maxReps))}>＋ 본세트 추가</button>
     </>}
     {cardio && <LocalCardio key={id} workout={workout} id={id} state={state} controller={controller} now={now} />}
-    <button className="quiet full" disabled={!state.writable} onClick={() => setEditing(!editing)}>현재 운동에만 계획 변경</button>
+    <button className="quiet full" disabled={busy} onClick={() => setEditing(!editing)}>현재 운동에만 계획 변경</button>
     {editing && <LocalPlanEditor key={id} workout={workout} controller={controller} definitions={definitions} busy={busy} />}
     <details><summary>시작 당시 불변 계획</summary>{workout.initialPlan.weightExercises.map(e => <p key={e.sessionExerciseId}>{e.exerciseName} · {e.setCount}세트 · {e.minReps}~{e.maxReps}회 · 승인 {e.approvedWeightKg} kg</p>)}{workout.initialPlan.cardioActivities.map(c => <p key={c.sessionActivityId}>{c.plan.name} · {c.plan.targetSeconds}초</p>)}</details>
     <p className="muted small">공식 평가와 과거 기준 기록은 서버가 계산합니다. 이 화면은 달성 평가나 자동 증량을 계산하지 않습니다.</p>
@@ -115,19 +122,19 @@ function LocalCardio({ workout, id, state, controller, now }: { workout: LocalWo
   const timer = workout.timers[id] ?? model.emptyTimer(), record = workout.snapshot.cardioResults.find(x => x.sessionActivityId === id)
   const draft = { ...timer, ...state.cardioDrafts[id] }, { distance, bpm, correctedSeconds } = draft
   const plan = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)!.plan
-  const busy = !state.writable || state.pending > 0
+  const busy = !state.writable || state.pending > 0 || !!workout.finish
   let timerText: string
-  try { timerText = duration(model.elapsed(timer, now)) } catch (error) { timerText = error instanceof Error ? error.message : '기기 시각 확인 필요' }
+  try { timerText = duration(model.elapsed(timer, workout.finish ? Date.parse(workout.finish.endedAt) : now)) } catch (error) { timerText = error instanceof Error ? error.message : '기기 시각 확인 필요' }
   const saveDraft = (patch: Pick<Partial<typeof timer>, 'distance' | 'bpm' | 'correctedSeconds'>) => controller.cardioDraft(id, patch)
   return <div className="stack cardio-content"><div className="exercise-heading"><p className="eyebrow">CARDIO</p><h2>{plan.name}</h2><p className="badge">현재 목표 {plan.targetSeconds}초</p></div>
-    <section className="card cardio-clock"><p>실제 활동 시간 · 일시정지 제외</p><strong>{record?.status === 'COMPLETED' ? duration(record.result.activeMs) : timerText}</strong><p>{record ? '이 기기의 완료 기록' : timer.runningSince ? '측정 중' : timer.startedAt ? '일시정지' : '시작 전'}</p></section>
+    <section className="card cardio-clock"><p>실제 활동 시간 · 일시정지 제외</p><strong>{record?.status === 'COMPLETED' ? duration(record.result.activeMs) : timerText}</strong><p>{record ? '이 기기의 완료 기록' : workout.finish ? '종료 선택 시점의 미완료 원본' : timer.runningSince ? '측정 중' : timer.startedAt ? '일시정지' : '시작 전'}</p></section>
     {!record && <><div className="row"><button className="outline" disabled={busy} onClick={() => void controller.change(w => model.timerAction(w, id, timer.runningSince ? 'pause' : 'start', Date.now()))}>{timer.runningSince ? '일시정지' : timer.startedAt ? '재개' : '유산소 시작'}</button>
       {timer.startedAt && !timer.reviewing && <button className="primary" disabled={busy} onClick={() => void controller.change(w => model.reviewCardio(w, id, Date.now()))}>유산소 완료 기록 확인</button>}</div>
       {timer.reviewing && <p className="notice">측정을 멈췄습니다. 원본 타이머와 실제 입력을 확인한 뒤 기록을 확정해 주세요.</p>}
-      {['TREADMILL', 'BIKE', 'OUTDOOR'].includes(plan.kind) && <label>실제 거리 km · 선택<input inputMode="decimal" value={distance} disabled={!state.writable} onChange={e => saveDraft({ distance: e.target.value })} /></label>}
-      <label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} disabled={!state.writable} onChange={e => saveDraft({ bpm: e.target.value })} /></label>
-      <label className="radio-option"><input type="checkbox" disabled={!state.writable} checked={correctedSeconds !== null} onChange={e => saveDraft({ correctedSeconds: e.target.checked ? '' : null })} /><span>활동 시간 직접 정정</span></label>
-      {correctedSeconds !== null && <label>정정 활동 시간 초<input inputMode="numeric" value={correctedSeconds} disabled={!state.writable} onChange={e => saveDraft({ correctedSeconds: e.target.value })} /></label>}
+      {['TREADMILL', 'BIKE', 'OUTDOOR'].includes(plan.kind) && <label>실제 거리 km · 선택<input inputMode="decimal" value={distance} disabled={!state.writable || !!workout.finish} onChange={e => saveDraft({ distance: e.target.value })} /></label>}
+      <label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} disabled={!state.writable || !!workout.finish} onChange={e => saveDraft({ bpm: e.target.value })} /></label>
+      <label className="radio-option"><input type="checkbox" disabled={!state.writable || !!workout.finish} checked={correctedSeconds !== null} onChange={e => saveDraft({ correctedSeconds: e.target.checked ? '' : null })} /><span>활동 시간 직접 정정</span></label>
+      {correctedSeconds !== null && <label>정정 활동 시간 초<input inputMode="numeric" value={correctedSeconds} disabled={!state.writable || !!workout.finish} onChange={e => saveDraft({ correctedSeconds: e.target.value })} /></label>}
       <p className="muted small">거리 0.001~1000 km · 심박수 20~300 BPM · 정정 시간 1~86400초. 미입력값은 계획에서 만들지 않습니다.</p>
       {timer.reviewing && <><button className="primary" disabled={busy} onClick={() => void controller.complete(w => model.completeCardio(w, id, Date.now()))}>유산소 기록 완료</button><button className="quiet" disabled={busy} onClick={() => void controller.change(w => { w.timers[id].reviewing = false })}>확인 취소 · 일시정지로 돌아가기</button></>}</>}
     {record && <><p className="muted small">원본 타이머 {record.status === 'COMPLETED' ? duration(record.result.timerMs) : '—'} · {record.status === 'COMPLETED' && record.result.corrected ? '시간 정정 있음' : '자동 측정'}</p><button className="outline" disabled={busy} onClick={() => { if (window.confirm('유산소 완료를 취소할까요? 원래 완료 기록과 취소 사실은 보존합니다.')) void controller.change(w => model.undoCardio(w, record.id)) }}>유산소 완료 취소</button></>}
@@ -148,7 +155,7 @@ function ApprovalControls({ state, controller }: { state: EditorState; controlle
 function ApprovalChoice({ state, controller, id }: { state: EditorState; controller: LocalWorkoutController; id: string }) {
   const w = state.workout!, pending = w.approvalResults.filter(r => r.sessionExerciseId === id && r.status === 'PENDING')
   const [value, setValue] = useState(w.snapshot.approvalRequests.filter(r => r.sessionExerciseId === id).at(-1)?.nextApprovedWeightKg ?? '')
-  const busy = !state.writable || state.pending > 0 || state.syncStatus === 'SENDING'
+  const busy = !state.writable || state.pending > 0 || state.syncStatus === 'SENDING' || !!w.finish
   const canApprove = w.initialPlan.weightExercises.some(e => e.sessionExerciseId === id) && !pending.some(r => r.reason === 'SOURCE_REMOVED' || r.reason === 'NO_SOURCE_PLACEMENT')
   return <section className="card stack"><h3>{w.exerciseNames[id] ?? '운동 종목'} · 승인 확인 필요</h3>
     <p>{approvalReason[pending[0]?.reason ?? ''] ?? '현재 루틴의 승인 중량을 확인해 주세요.'} 실제 수행 기록은 보존되었습니다. 아래 선택은 과거 수행의 승인 문맥을 바꾸지 않습니다.</p>

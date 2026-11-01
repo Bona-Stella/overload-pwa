@@ -15,6 +15,14 @@ export class AuthError extends Error {
 }
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 const uuid = (value: unknown): value is string => typeof value === 'string' && /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(value)
+function closedWorkoutPage(path: string, method: string, body: unknown) {
+  if (method !== 'GET' || body !== undefined || !path.startsWith('/api/v1/workout-sessions/closed?')) return false
+  const url = new URL(path, 'https://local.invalid'), keys = [...url.searchParams.keys()]
+  if (url.hash || new Set(keys).size !== keys.length || keys.some(k => !['limit', 'beforeClosedAt', 'beforeId'].includes(k))) return false
+  const limit = url.searchParams.get('limit'), at = url.searchParams.get('beforeClosedAt'), id = url.searchParams.get('beforeId')
+  return (limit === null || /^(?:[1-9]|[1-4][0-9]|50)$/.test(limit)) && (at === null && id === null
+    || typeof at === 'string' && /^(?!0000)[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,6})?Z$/.test(at) && Number.isFinite(Date.parse(at)) && uuid(id))
+}
 
 export class AuthApi {
   private csrf: Csrf | null = null
@@ -52,7 +60,7 @@ export class AuthApi {
   }
   /** Uses the existing in-memory CSRF token; the controller prepares writes and fences the account. */
   async workoutRequest(path: string, method: string, body: unknown, signal: AbortSignal) {
-    if (!/^\/api\/v1\/(exercises|workout-settings|routines|workout-sessions)(\/[-a-zA-Z0-9]+)*$/.test(path)
+    if (!/^\/api\/v1\/(exercises|workout-settings|routines|workout-sessions)(\/[-a-zA-Z0-9]+)*$/.test(path) && !closedWorkoutPage(path, method, body)
       || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new AuthError('INVALID_REQUEST', 400)
     if (method !== 'GET' && !this.csrf) throw new AuthError('CSRF_INVALID', 403)
     const result = await this.call(path, method, body, method === 'GET' ? undefined : this.csrf!, signal)

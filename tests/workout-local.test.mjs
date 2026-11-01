@@ -219,6 +219,6 @@ test('OTP reauthentication clears expired local access for both the same account
 test('operational local editor imports neither demo model/storage nor a snapshot sender',()=>{
   for(const name of ['model.ts','controller.ts','LocalWorkoutScreen.tsx','types.ts','validation.ts','lock.ts']){
     const source=readFileSync(new URL('../src/features/workout-local/'+name,import.meta.url),'utf8')
-    assert.doesNotMatch(source,/workout\/(?:model|storage|useWorkout|cardio)|overload\.core\.v1|localStorage\s*[.[]|(?:api|transport)\.snapshot\(|\.finish\(|\bfetch\(/)
+    assert.doesNotMatch(source,/workout\/(?:model|storage|useWorkout|cardio)|overload\.core\.v1|localStorage\s*[.[]|(?:api|transport)\.(?:snapshot|finish)\(|\bfetch\(/)
   }
 })

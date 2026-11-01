@@ -24,10 +24,31 @@ registerHooks({
 const {WorkspaceView,SessionView}=await import('../src/features/workout-online/WorkoutWorkspace.tsx')
 const {RoutineForm}=await import('../src/features/workout-online/RoutineForm.tsx')
 const {LocalWorkoutView}=await import('../src/features/workout-local/LocalWorkoutScreen.tsx')
+const {ClosedWorkoutView}=await import('../src/features/workout-online/ClosedWorkout.tsx')
 const {createLocalWorkout,applyLocalChange,editDraft,completeSet}=await import('../src/features/workout-local/model.ts')
 const render=(type,props)=>renderToStaticMarkup(React.createElement(type,props))
 const state={...scope,scope,userId:scope.userId,data:bootstrap,selected:null,active:null,detail:null,deviceId:DEVICE,attempt:null,status:'ready',busy:false,localReady:true,copySaved:false,issue:null,notice:''}
 const editorState=workout=>({workout,writable:true,loading:false,pending:0,issue:null,drafts:{},cardioDrafts:{},unsavedDrafts:false})
+test('AUTO_CLOSED UI keeps actual end absent, distinguishes assessments and hides protocol counters',()=>{
+  const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'})
+  const html=render(ClosedWorkoutView,{state:{server,assessment:{completionAssessment:null,currentAssessment:{state:'EXCLUDED',reasonCodes:['AUTO_CLOSED'],evaluation:null}},changes:{events:[]},copies:[],pending:null,busy:false,writable:false,issue:null,notice:''},controller:{}})
+  assert.match(html,/실제 운동 종료 없음/);assert.match(html,/최초 종료 평가/);assert.match(html,/현재 기록 기준 평가/);assert.match(html,/현재 평가 자격 없음/);assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/epoch|revision|hash/)
+})
+test('deleted closed-session UI blocks corrections, recovery and deletion controls while retaining its history',()=>{
+  const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z',deletedAt:'2026-11-01T01:01:00.000Z'})
+  const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
+  assert.match(html,/삭제된 운동/);assert.match(html,/기록 변경 이력/);assert.doesNotMatch(html,/선택한 완료 수행 복구 확인|운동 전체 논리 삭제|세트 정정·삭제/)
+})
+test('closed history shows preserved before/after values without exposing request protocol fields',()=>{
+  const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'}),event={id:OTHER,recordKind:'SET',changeKind:'CORRECTED',recordedAt:server.closedAt,before:{ordinal:1,weightKg:'60',reps:8},after:{ordinal:1,weightKg:'62.5',reps:9},changeContext:{sessionVersion:'2'}}
+  const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[event]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
+  assert.match(html,/변경 전 1세트 · 60 kg × 8회/);assert.match(html,/변경 후 1세트 · 62.5 kg × 9회/);assert.doesNotMatch(html,/sessionVersion|epoch|revision|hash/)
+})
+test('a preserved explicit cardio skip may be deleted without inventing completed measurements',()=>{
+  const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'});server.snapshot.state.cardioResults=[{id:OTHER,sessionActivityId:DEVICE,status:'SKIPPED',startedAt:null,occurredAt:server.closedAt,result:null}]
+  const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
+  assert.match(html,/명시 건너뜀/);assert.match(html,/건너뜀 기록 삭제/);assert.doesNotMatch(html,/유산소 정정·삭제|거리 0 km|심박수 0/)
+})
 
 test('real workout view uses original plan, decimal text and local-only labels without a demo assessment or FINISH action',()=>{
   const w=createLocalWorkout(session(),bootstrap.settings),html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:bootstrap.exercises})

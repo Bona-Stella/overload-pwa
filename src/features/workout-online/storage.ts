@@ -4,6 +4,7 @@ import type { LocalKey, LocalWorkout, RestPolicy } from '../workout-local/types.
 import { localKey } from '../workout-local/types.ts'
 import { createLocalWorkout } from '../workout-local/model.ts'
 import { localWorkout } from '../workout-local/validation.ts'
+import type { ClosedWrite } from './closed-model.ts'
 
 export const DATABASE_NAME = 'overload.workout.v1'
 export type StartAttempt = Scope & { request: Start; requestJson: string }
@@ -152,11 +153,38 @@ export class WorkoutStore {
       return value
     })
   }
-  private async checkWriter(tx: IDBTransaction, key: LocalKey, revision: string) {
+  localCopies(scope: Scope, sessionId: string) {
+    return this.run(['localWorkouts'], 'readonly', async tx => {
+      const values: unknown[] = await request(tx.objectStore('localWorkouts').getAll(IDBKeyRange.bound([...scopeKey(scope), sessionId], [...scopeKey(scope), sessionId, []])))
+      if (!values.every(x => localWorkout(x) && x.userId === scope.userId && x.dataGeneration === scope.dataGeneration && x.sessionId === sessionId)) throw new LocalStoreError()
+      return values as LocalWorkout[]
+    })
+  }
+  closedWrite(scope: Scope, sessionId: string) {
+    return this.run(['meta'], 'readonly', async tx => {
+      const value: unknown = await request(tx.objectStore('meta').get(['closedWrite', ...scopeKey(scope), sessionId]))
+      if (value === undefined) return null
+      if (!object(value) || value.userId !== scope.userId || value.dataGeneration !== scope.dataGeneration || value.sessionId !== sessionId
+        || !['records','recovery','delete','approval'].includes(String(value.kind)) || !['PENDING','CONFIRMED','REVIEWED'].includes(String(value.status))
+        || !object(value.body) || value.body.dataGeneration !== scope.dataGeneration || !counter(value.body.expectedVersion) || value.requestJson !== JSON.stringify(value.body)) throw new LocalStoreError()
+      return value as ClosedWrite
+    })
+  }
+  saveClosedWrite(value: ClosedWrite, previous: ClosedWrite | null, canWrite: () => boolean) {
+    return this.run(['meta'], 'readwrite', async tx => {
+      if (!canWrite()) throw new LocalWriteBlocked()
+      const store = tx.objectStore('meta'), key = ['closedWrite', ...scopeKey(value), value.sessionId]
+      const existing: unknown = await request(store.get(key))
+      if (JSON.stringify(existing ?? null) !== JSON.stringify(previous) || value.body.dataGeneration !== value.dataGeneration || value.requestJson !== JSON.stringify(value.body)) throw new LocalWriteBlocked()
+      if (previous?.status === 'PENDING' && (previous.requestJson !== value.requestJson || previous.kind !== value.kind)) throw new LocalWriteBlocked()
+      await request(store.put(value, key)); if (!canWrite()) throw new LocalWriteBlocked()
+    })
+  }
+  private async checkWriter(tx: IDBTransaction, key: LocalKey, revision: string, finish = false) {
     const copies: SessionCopy[] = await request(tx.objectStore('sessionCopies').index('scope').getAll(scopeKey(key)))
     const same = copies.filter(x => x.sessionId === key.sessionId).sort((a, b) => BigInt(a.server.version) > BigInt(b.server.version) ? -1 : 1)
     const latest = same[0]?.server
-    if (!latest || latest.status !== 'ACTIVE' || latest.deletedAt || latest.editorDeviceId !== key.editorDeviceId || latest.writerEpoch !== key.writerEpoch || BigInt(latest.localRevision) > BigInt(revision)) throw new LocalWriteBlocked()
+    if (!latest || latest.status !== 'ACTIVE' && !(finish && latest.status === 'FINISHED') || latest.deletedAt || latest.editorDeviceId !== key.editorDeviceId || latest.writerEpoch !== key.writerEpoch || BigInt(latest.localRevision) > BigInt(revision)) throw new LocalWriteBlocked()
   }
   openLocal(server: Session, policy: RestPolicy, canWrite: () => boolean) {
     const key = { userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, editorDeviceId: server.editorDeviceId, writerEpoch: server.writerEpoch }
@@ -166,7 +194,7 @@ export class WorkoutStore {
       if (previous !== undefined) {
         if (!localWorkout(previous)) throw new LocalStoreError()
         if (JSON.stringify(previous.initialPlan) !== JSON.stringify(server.initialPlan) || previous.startedAt !== server.startedAt) throw new LocalWriteBlocked()
-        await this.checkWriter(tx, key, previous.pendingSnapshot && !previous.pendingSnapshot.rejected ? previous.pendingSnapshot.request.localRevision : previous.serverRevision)
+        await this.checkWriter(tx, key, previous.finish?.request?.localRevision ?? (previous.pendingSnapshot && !previous.pendingSnapshot.rejected ? previous.pendingSnapshot.request.localRevision : previous.serverRevision), !!previous.finish?.request && !previous.finish.ack)
         return previous
       }
       await this.checkWriter(tx, key, server.localRevision)
@@ -188,13 +216,17 @@ export class WorkoutStore {
       const store = tx.objectStore('localWorkouts'), previous: unknown = await request(store.get(localKey(value)))
       if (!localWorkout(previous) || previous.editVersion !== expectedEditVersion || BigInt(value.editVersion) !== BigInt(expectedEditVersion) + 1n
         || JSON.stringify(previous.initialPlan) !== JSON.stringify(value.initialPlan) || value.startedAt !== previous.startedAt
+        || !sync && !!previous.finish
+        || previous.finish && (value.finish?.endedAt !== previous.finish.endedAt || JSON.stringify(value.finish?.snapshot) !== JSON.stringify(previous.finish.snapshot)
+          || previous.finish.requestJson && value.finish?.requestJson !== previous.finish.requestJson)
         || !sync && (value.serverRevision !== previous.serverRevision || value.serverVersion !== previous.serverVersion
           || JSON.stringify(value.pendingSnapshot) !== JSON.stringify(previous.pendingSnapshot) || JSON.stringify(value.pendingResolution) !== JSON.stringify(previous.pendingResolution))) throw new LocalWriteBlocked()
       const snapshotChanged = JSON.stringify(value.snapshot) !== JSON.stringify(previous.snapshot)
-      if (BigInt(value.localRevision) !== BigInt(previous.localRevision) + (snapshotChanged ? 1n : 0n)
-        || snapshotChanged && value.syncState === 'CLEAN') throw new LocalWriteBlocked()
-      const bound = previous.pendingSnapshot && !previous.pendingSnapshot.rejected ? previous.pendingSnapshot.request.localRevision : previous.serverRevision
-      await this.checkWriter(tx, value, bound)
+      const meaningful = snapshotChanged || !previous.finish && !!value.finish
+      if (BigInt(value.localRevision) !== BigInt(previous.localRevision) + (meaningful ? 1n : 0n)
+        || meaningful && value.syncState === 'CLEAN') throw new LocalWriteBlocked()
+      const bound = previous.finish?.request?.localRevision ?? (previous.pendingSnapshot && !previous.pendingSnapshot.rejected ? previous.pendingSnapshot.request.localRevision : previous.serverRevision)
+      await this.checkWriter(tx, value, bound, sync && !!previous.finish?.request && !previous.finish.ack)
       if (BigInt(value.serverRevision) < BigInt(previous.serverRevision) || BigInt(value.serverVersion) < BigInt(previous.serverVersion) || BigInt(value.localRevision) < BigInt(value.serverRevision)) throw new LocalWriteBlocked()
       if (!canWrite()) throw new LocalWriteBlocked()
       await request(store.put(value))

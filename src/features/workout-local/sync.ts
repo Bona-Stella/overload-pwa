@@ -1,12 +1,12 @@
 import type { WorkoutApi } from '../workout-online/api.ts'
-import type { ActiveResolution, Session, SnapshotRequest } from '../workout-online/types.ts'
+import type { ActiveResolution, FinishRequest, Session, SnapshotRequest } from '../workout-online/types.ts'
 import type { LocalWorkout } from './types.ts'
 import { LocalStoreError } from '../workout-online/storage.ts'
 import * as state from './sync-state.ts'
 
 export type SyncStatus = 'LOCAL' | 'SENDING' | 'SAVED' | 'WAITING' | 'APPROVAL' | 'CHECK' | 'OTHER'
 export const SYNC_LABEL: Record<SyncStatus, string> = { LOCAL: '이 기기에 저장됨', SENDING: '서버 전송 중', SAVED: '서버에 저장됨', WAITING: '연결되면 전송', APPROVAL: '승인 확인 필요', CHECK: '서버 상태 확인 필요', OTHER: '다른 기기에서 편집 중' }
-export type SyncApi = Pick<WorkoutApi, 'detail' | 'snapshot' | 'resolve' | 'routine'>
+export type SyncApi = Pick<WorkoutApi, 'detail' | 'snapshot' | 'resolve' | 'routine'> & Partial<Pick<WorkoutApi, 'finish'>>
 export type SyncOptions = { api: SyncApi; online: () => boolean; onServer?: (server: Session) => void; onInvalid?: (error: unknown) => void }
 type Access = { read: () => LocalWorkout | null; allowed: () => boolean; mutate: (fn: (w: LocalWorkout) => void) => Promise<boolean>;
   saveServer: (server: Session) => Promise<unknown>; status: (value: SyncStatus, issue?: string) => void; block: () => void }
@@ -29,6 +29,9 @@ export class WorkoutSynchronizer {
   private async detail() {
     const w = this.document(), server = await this.options.api.detail(w, w.sessionId, this.abort.signal)
     if (!this.current()) throw new state.SyncStateConflict()
+    // A closing session is published only after its duplicate FINISH ACK commits locally.
+    if (w.finish && !w.finish.ack && !server.deletedAt && server.status === 'FINISHED' && w.finish.request
+      && server.writerEpoch === w.writerEpoch && server.editorDeviceId === w.editorDeviceId) return server
     await this.access.saveServer(server)
     if (!this.current()) throw new state.SyncStateConflict()
     this.options.onServer?.(server)
@@ -108,14 +111,20 @@ export class WorkoutSynchronizer {
   }
   private async pump(check: boolean) {
     let server: Session | undefined
-    if (check) { server = await this.detail(); await this.mutate(w => state.observeServer(w, server!)) }
+    if (this.access.read()?.finish?.ack) { await this.publishFinished(); return }
+    if (check) { server = await this.detail(); if (server.status === 'ACTIVE') await this.mutate(w => state.observeServer(w, server!)) }
     while (this.current()) {
       let w = this.document()
       if (w.pendingResolution && !w.pendingResolution.rejected) {
         this.access.status('SENDING'); await this.sendResolution(server); server = undefined; continue
       }
+      if (w.finish && !w.pendingSnapshot) {
+        if (!w.finish.request) await this.mutate(state.sealFinish)
+        await this.sendFinish(); return
+      }
       if (w.pendingSnapshot?.rejected && w.localRevision === w.pendingSnapshot.request.localRevision) throw new state.SyncStateConflict('서버가 입력을 거절했습니다. 입력을 수정한 뒤 다시 확인해 주세요.')
       if (!w.pendingSnapshot || w.pendingSnapshot.rejected) {
+        if (w.finish && w.pendingSnapshot?.rejected) throw new state.SyncStateConflict('앞선 저장이 거절되었습니다. 종료 원본을 보존했습니다. 서버 기록을 확인해 주세요.')
         if (w.localRevision === w.serverRevision) { this.display(); return }
         await this.mutate(state.sealSnapshot); w = this.document()
       }
@@ -125,12 +134,36 @@ export class WorkoutSynchronizer {
       server = await this.detail(); await this.mutate(next => state.observeServer(next, server!))
     }
   }
+  private async publishFinished() {
+    const w = this.document(), server = await this.options.api.detail(w, w.sessionId, this.abort.signal)
+    if (!this.current()) return
+    await this.access.saveServer(server)
+    if (!this.current()) return
+    this.access.status('SAVED'); this.access.block(); this.options.onServer?.(server)
+  }
+  private async sendFinish() {
+    const w = this.document(), fixed = w.finish
+    if (!fixed?.requestJson || !this.options.api.finish) throw new state.SyncStateConflict()
+    this.access.status('SENDING')
+    const request = JSON.parse(fixed.requestJson) as FinishRequest
+    const send = () => this.options.api.finish!(w, w.sessionId, request, this.abort.signal)
+    let ack
+    try { ack = await send() } catch (error) {
+      const status = (error as { status?: number }).status ?? 0
+      if (status >= 400 && status < 500) { if (status === 409) await this.detail(); throw error }
+      await this.detail() // AUTO_CLOSED, deletion and ownership loss stop here; FINISHED allows exact confirmation.
+      ack = await send()
+    }
+    await this.mutate(next => state.acceptFinish(next, ack))
+    await this.publishFinished()
+  }
   resolve = async (exerciseId: string, pendingIds: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE', nextWeight: string) => {
     if (this.resolving) return false
     this.resolving = true
     try { return await this.resolveChoice(exerciseId, pendingIds, decision, nextWeight) } finally { this.resolving = false }
   }
   private async resolveChoice(exerciseId: string, pendingIds: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE', nextWeight: string) {
+    if (this.access.read()?.finish) return false
     await this.retry()
     if (!this.current() || this.suspended) return false
     const work = async () => {

@@ -40,7 +40,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> Task 009 5C: 실제 운동의 세트·유산소 완료/취소와 적용 계획을 IndexedDB에 보존한 뒤 서버에 동기화합니다. 고정 요청의 ACK 유실 재확인, 명시 중량 승인 해결과 편집권 가져오기를 지원하며 한 탭만 편집합니다. **운동 종료/종료 후 복구·설치형 PWA는 아직 지원하지 않습니다.** 기존 `/demo` 데이터는 실제 계정으로 이전하거나 전송하지 않습니다. [5A 보고서](docs/tasks/task-009-frontend-5a-report.md), [5B 저장 계약](docs/tasks/task-009-frontend-5b-report.md), [5C 동기화·검증 보고서](docs/tasks/task-009-frontend-5c-report.md), [인증 연동 및 로컬 실행](docs/engineering/authentication.md)을 참고하세요.
+> Task 009 5D: 실제 운동 입력·서버 동기화에 명시 종료와 종료 이력·평가 조회, 사후 정정/삭제·승인 해결·누락 완료 수행 선택 복구를 연결했습니다. 원래 종료 요청과 미전송 사본을 보존하며 한 탭만 편집합니다. **Service Worker·설치형 PWA·완전 오프라인 재실행은 아직 지원하지 않습니다.** 기존 `/demo` 데이터는 실제 계정으로 이전하거나 전송하지 않습니다. [5A](docs/tasks/task-009-frontend-5a-report.md), [5B](docs/tasks/task-009-frontend-5b-report.md), [5C](docs/tasks/task-009-frontend-5c-report.md), [5D 구현·검증 보고서](docs/tasks/task-009-frontend-5d-report.md), [인증 연동 및 로컬 실행](docs/engineering/authentication.md)을 참고하세요.
 
 ---
 
@@ -143,7 +143,7 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 | E2E Test | Playwright | 브라우저 테스트 |
 | Hosting | Cloudflare Pages | 정적 웹 애플리케이션 배포 |
 
-> 현재 React, TypeScript, Vite, ESLint와 Node.js 내장 테스트 러너를 사용하며, 스타일은 일반 CSS입니다. 버전 표는 `package-lock.json` 기준입니다. 미도입 라이브러리는 현재 필수 도구가 아니며 채택 여부를 별도로 검토합니다. 실제 구성은 `package.json`과 [프론트엔드 개발 규칙](docs/engineering/frontend.md)을 확인합니다. 운동 쓰기·진행 세션·복구의 현행 기준은 [Task 009 v1.0](../overload-server/docs/tasks/task-009-redesign-v1.0.md)입니다. 온라인 루틴 관리·START/조회, IndexedDB 입력·복원과 snapshot 동기화를 연결했습니다. FINISH/종료 후 복구는 후속 단계이며 범용 Outbox와 Dexie.js는 도입하지 않았습니다.
+> 현재 React, TypeScript, Vite, ESLint와 Node.js 내장 테스트 러너를 사용하며, 스타일은 일반 CSS입니다. 버전 표는 `package-lock.json` 기준입니다. 미도입 라이브러리는 현재 필수 도구가 아니며 채택 여부를 별도로 검토합니다. 실제 구성은 `package.json`과 [프론트엔드 개발 규칙](docs/engineering/frontend.md)을 확인합니다. 운동 쓰기·진행 세션·복구의 현행 기준은 [Task 009 v1.0](../overload-server/docs/tasks/task-009-redesign-v1.0.md)입니다. 온라인 관리·START, IndexedDB·snapshot 동기화, FINISH·사후 정정/선택 복구까지 연결했습니다. 범용 Outbox와 Dexie.js는 도입하지 않았습니다.
 
 ---
 
@@ -178,13 +178,13 @@ PWA 배포 완료 후 다음 방법으로 설치할 수 있습니다.
 
 ### 오프라인 기록 관리
 
-개발 전용 `/demo`의 Task 002 `localStorage` 저장과 운영 운동의 저장을 구분합니다. Task 009 5B/5C는 `overload.workout.v1` IndexedDB version 2에 이미 시작한 운동의 실제 수행·입력 초안·타이머와 고정 전송 요청을 저장합니다. 완료는 트랜잭션 완료 후에 표시하며 실패 시 원래 입력을 보존합니다. 서버 ACK의 로컬 저장 후에 서버 반영을 표시합니다. 앱 리소스의 오프라인 로딩과 영구 백업은 보장하지 않습니다.
+개발 전용 `/demo`의 Task 002 `localStorage` 저장과 운영 운동의 저장을 구분합니다. Task 009 5B~5D는 `overload.workout.v1` IndexedDB version 2에 실제 수행·초안·타이머, 고정 Snapshot/종료 요청과 사후 요청 결과 확인 메타를 저장합니다. 완료는 트랜잭션 완료 후에 표시하며 실패 시 원래 입력을 보존합니다. 서버 ACK 또는 허용된 서버 사실 확인을 로컬에 저장한 뒤 서버 반영을 표시합니다. 앱 리소스의 오프라인 로딩과 영구 백업은 보장하지 않습니다.
 
 Task 009 v1.0에 따라 새 운동 시작·종목/루틴/설정 관리·로그아웃은 온라인 기능입니다.
 진행 운동의 입력 초안·타이머는 IndexedDB에 보존하고, 의미 있는 완료·취소·계획·승인 요청 변경과 재연결 때 전체 확정 스냅샷을 전송합니다. 초안·타이머 tick은 전송하지 않습니다.
 한 사용자당 진행 운동 하나, 명시적 편집 권한 이전, epoch/revision 검사를 적용하며 자동 병합은 하지 않습니다.
 24시간 서버 미갱신 시 마지막 서버 완료 기록을 자동 종료·보존합니다.
-5C에서는 고정 snapshot·ACK 유실 확인, 승인 충돌의 명시 해결, takeover까지 지원합니다. FINISH/종료 후 복구 및 완전 오프라인 재실행은 후속 단계입니다. 명시 로그아웃 후에는 재인증 전 로컬 운동을 표시하지 않습니다.
+5D에서는 오프라인 종료 선택의 원래 시각·최종 상태를 보존하고, 재연결 시 선행 요청 확인 후 FINISH합니다. AUTO_CLOSED·다른 편집권·삭제가 확인되면 자동 전송을 중단하며, 종료 후 복구는 원래 사본에서 사용자가 선택한 완료 수행만 보냅니다. 최초 평가와 현재 평가는 구분합니다. 완전 오프라인 재실행은 후속 단계입니다. 명시 로그아웃 후에는 재인증 전 로컬 운동을 표시하지 않습니다.
 
 ---
 

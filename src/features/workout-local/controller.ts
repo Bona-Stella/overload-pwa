@@ -1,6 +1,7 @@
 import { LocalStoreError, LocalWriteBlocked, WorkoutStore } from '../workout-online/storage.ts'
 import type { Session } from '../workout-online/types.ts'
 import { applyLocalChange, editDraft, emptyTimer } from './model.ts'
+import { intendFinish } from './sync-state.ts'
 import { acquireEditor } from './lock.ts'
 import type { EditorLease } from './lock.ts'
 import type { CardioTimer, LocalKey, LocalWorkout, RestPolicy, SetDraft } from './types.ts'
@@ -71,7 +72,7 @@ export class LocalWorkoutController {
     const allowed = () => generation === this.generation && this.allowed()
     this.set({ pending: this.state.pending + 1 })
     const operation = this.tail.then(async () => {
-      if (!allowed() || !this.state.workout || !this.state.writable) return false
+      if (!allowed() || !this.state.workout || !this.state.writable || !sync && this.state.workout.finish) return false
       try {
         const previous = this.state.workout, next = applyLocalChange(previous, transform)
         if (sync) {
@@ -80,7 +81,7 @@ export class LocalWorkoutController {
         } else await this.store.saveLocal(next, previous.editVersion, allowed)
         if (!allowed()) return false
         this.set({ workout: next, issue: null })
-        if (!sync && next.localRevision !== previous.localRevision) this.synchronizer?.request()
+        if (!sync && (next.localRevision !== previous.localRevision || !previous.finish && next.finish)) this.synchronizer?.request()
         return true
       } catch (error) {
         if (error instanceof LocalWriteBlocked) { this.lease?.release(); this.lease = null }
@@ -92,7 +93,7 @@ export class LocalWorkoutController {
     this.tail = operation; return operation
   }
   draft(id: string, ordinal: number, value: SetDraft) {
-    if (!this.allowed() || !this.state.writable) return
+    if (!this.allowed() || !this.state.writable || this.state.workout?.finish) return
     const key = `${id}:${ordinal}`; this.draftSerial++
     this.set({ drafts: { ...this.state.drafts, [key]: value }, unsavedDrafts: true })
     void this.change(workout => editDraft(workout, id, ordinal, value)).then(saved => {
@@ -103,7 +104,7 @@ export class LocalWorkoutController {
     })
   }
   cardioDraft(id: string, patch: Pick<Partial<CardioTimer>, 'distance' | 'bpm' | 'correctedSeconds'>) {
-    if (!this.allowed() || !this.state.writable) return
+    if (!this.allowed() || !this.state.writable || this.state.workout?.finish) return
     this.draftSerial++
     const value = { ...this.state.cardioDrafts[id], ...patch }
     this.set({ cardioDrafts: { ...this.state.cardioDrafts, [id]: value }, unsavedDrafts: true })
@@ -132,6 +133,11 @@ export class LocalWorkoutController {
   async settled() { await this.tail }
   flushDrafts = async () => { await this.tail; return !this.state.unsavedDrafts || this.retryDrafts() }
   retrySync = () => this.synchronizer?.retry()
+  finish = async (now: number) => {
+    if (this.state.workout?.finish) { await this.retrySync(); return false }
+    if (!await this.flushDrafts()) return false
+    return this.change(w => intendFinish(w, now))
+  }
   async syncSettled() { await this.synchronizer?.settled(); await this.tail }
   resolveApproval = (exerciseId: string, ids: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE', nextWeight: string) => this.synchronizer?.resolve(exerciseId, ids, decision, nextWeight)
   isStopped() { return this.stopped }

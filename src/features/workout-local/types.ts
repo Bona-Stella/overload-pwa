@@ -1,4 +1,4 @@
-import type { ActiveResolution, ActiveWeightContext, CardioResult, Counter, InitialPlan, PerformedSet, Scope, Session, Snapshot, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
+import type { ActiveResolution, ActiveWeightContext, CardioResult, Counter, FinishAck, FinishRequest, InitialPlan, PerformedSet, Scope, Session, Snapshot, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
 
 export type LocalKey = Scope & { sessionId: string; editorDeviceId: string; writerEpoch: Counter }
 export type RecordPresence = 'LOCAL_ONLY' | 'SERVER_CONFIRMED' | 'UNKNOWN'
@@ -35,6 +35,7 @@ export type LocalWorkout = LocalKey & {
   confirmedDeletedSetIds?: string[]
   confirmedDeletedCardioIds?: string[]
   lastAck?: SnapshotAck | null
+  finish?: { endedAt: string; snapshot: Snapshot; request?: FinishRequest; requestJson?: string; ack?: FinishAck }
 }
 export const localKey = (value: LocalKey) => [value.userId, value.dataGeneration, value.sessionId, value.editorDeviceId, value.writerEpoch]
 export const slotKey = (exerciseId: string, ordinal: number) => `${exerciseId}:${ordinal}`

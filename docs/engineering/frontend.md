@@ -67,7 +67,7 @@ Task 006의 나머지 운동·인증 정책과 기존 Task 008 조회 계약은 
 | HTTP Client | fetch (현재), Axios (미도입, 채택 검토) |
 | Server State | 전용 라이브러리 미도입, TanStack Query 채택 검토 |
 | Client State | React 상태 (현재), Zustand (미도입, 채택 검토) |
-| Local Database | localStorage (개발 목업), 진행 운동 보호용 native IndexedDB (5A~5C 구현), Dexie.js (미도입) |
+| Local Database | localStorage (개발 목업), 진행 운동 보호용 native IndexedDB (5A~5D 구현), Dexie.js (미도입) |
 | Charts | Recharts (미도입, 채택 검토) |
 | Unit Testing | Node.js 내장 test (현재), Vitest (미도입, 채택 검토) |
 | Component Testing | 기존 TypeScript 컴파일러 + React SSR (현재), React Testing Library (미도입, 채택 검토) |
@@ -851,7 +851,7 @@ Service Worker 업데이트 과정에서
 ## 12. 진행 운동의 로컬 보호 및 복원
 
 현행 정책은 [Task 009 v1.0](../../../overload-server/docs/tasks/task-009-redesign-v1.0.md) 6·7·11절을 따릅니다.
-5A의 온라인 루틴 관리·START·ACTIVE/상세 조회와 고정 START/서버 사본을 유지하고, 5B에서 실제 수행·초안·타이머·현재 계획 저장과 Web Locks 단일 탭 편집을 추가했습니다. 5C는 고정 snapshot 송신·ACK 재확인, 명시 승인 해결과 takeover를 구현했습니다. [5A](../tasks/task-009-frontend-5a-report.md), [5B 저장 계약·검증](../tasks/task-009-frontend-5b-report.md), [5C 동기화·검증](../tasks/task-009-frontend-5c-report.md)을 따릅니다. FINISH·종료 후 정정/복구·설치형 PWA는 후속 요구사항입니다. localStorage 개발 데모를 운영 동기화 구현으로 간주하지 않습니다.
+5A의 온라인 관리·START/조회·고정 START/서버 사본, 5B의 로컬 입력·타이머·Web Locks, 5C의 고정 snapshot·승인 해결·takeover를 유지합니다. 5D에서 명시 FINISH·종료 상세/평가/이력·사후 정정/삭제·선택 복구와 최소 종료 목록을 연결했습니다. [5A](../tasks/task-009-frontend-5a-report.md), [5B](../tasks/task-009-frontend-5b-report.md), [5C](../tasks/task-009-frontend-5c-report.md), [5D 저장·검증](../tasks/task-009-frontend-5d-report.md)을 따릅니다. 설치형 PWA·완전 오프라인 재실행은 후속 요구사항입니다. localStorage 개발 데모를 운영 동기화 구현으로 간주하지 않습니다.
 
 5B의 완료·취소·계획·승인 의도 변경은 확정 snapshot의 localRevision을 증가시킵니다. 입력 초안·작업 중량 선택·타이머 시작/정지/확인·휴식 조절·종목 이동은 로컬 editVersion만 증가시키고 타이머 tick은 저장하지 않습니다. 완료 사실·휴식·revision·미전송 메타는 한 트랜잭션으로 저장합니다. 명시 로그아웃/계정 설정 전에는 대기 초안 저장을 기다리며 실패하면 화면을 유지합니다. 이미 열린 운동의 인증 만료는 메모리에서만 같은 계정의 로컬 입력을 허용하고, 재인증 시 세대·현재 세션을 다시 확인합니다. Web Locks 미지원·다른 탭 보유 시 쓰기 우회는 없습니다.
 
@@ -876,6 +876,9 @@ Service Worker 업데이트 과정에서
 - 5C는 version 2 문서의 optional pendingSnapshot에 고정 요청/JSON/신규 수행 ID를 저장하고 트랜잭션 완료 뒤 전송합니다. 모호한 실패는 상세 조회 후 동일 본문을 한 번 재전송하며, 실패하면 다음 명시 확인/재연결까지 중단합니다. 낮은 조회 revision으로 전달 실패를 추정하지 않습니다.
 - 승인 해결은 고정 pendingResolution을 먼저 저장합니다. 서버 승인 사실로 응답 유실을 확인하고, 같은 종목의 추가 승인 의도는 해결 확인까지 차단합니다. 오늘만 중량 변경·실제 수행 입력은 계속할 수 있습니다. 과거 서버 수행 문맥은 수정하지 않습니다.
 - finish는 최종 스냅샷과 사용자 종료 시각을 한 요청에 담습니다. 서버 응답 전에는 서버 종료 성공으로 표시하지 않습니다.
+- 5D는 종료 의도/선택 당시 snapshot과 endedAt을 먼저 저장하고 일반 입력을 잠급니다. 명시 종료라는 새 확정 상태에 localRevision을 한 번 증가시켜 START/takeover 직후 수행이 없는 운동도 종료할 수 있습니다. 미확인 Snapshot/승인 해결을 같은 송신 슬롯에서 확인한 뒤 FINISH 원문을 고정합니다. 재시도에는 새 revision을 발급하지 않으며 duplicate FINISH ACK를 로컬에 저장한 후 종료 상세를 게시합니다.
+- 종료 후 정정/삭제/복구/승인 해결은 expectedVersion 계약이며 한 건의 고정 온라인 요청 결과 확인 메타만 meta store에 보존합니다. 응답 유실은 상세·변경 이력/승인 사실로 확인하고 자동 재전송/버전 올리기를 하지 않습니다. 사용자 재확인은 같은 요청이며 새 변경은 최신 기록을 검토한 명시 선택입니다.
+- 구 사본의 복구는 서버 상태·UUID/슬롯/tombstone·원래 문맥을 비교한 선택 수행만 전송합니다. 승인 요청의 ACTIVE 생성 여부는 현재 읽기 DTO로 완전히 증명할 수 없으므로 복구 전 확인 불가로 안내하고 원래 주장을 그대로 서버에 보내 최종 문맥을 판정받습니다. 승인으로 추정하거나 최초 평가를 수정하지 않습니다.
 
 ### 12.3 편집 권한과 자동 종료
 

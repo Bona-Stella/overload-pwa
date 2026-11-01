@@ -188,7 +188,7 @@ export function exerciseList(workout: LocalWorkout) {
 export function applyLocalChange(previous: LocalWorkout, transform: (next: LocalWorkout) => void): LocalWorkout {
   const next = structuredClone(previous); transform(next)
   if (!snapshot(next.snapshot)) throw new Error('운동 저장 형식을 확인하지 못했습니다.')
-  if (JSON.stringify(previous.snapshot) !== JSON.stringify(next.snapshot)) {
+  if (JSON.stringify(previous.snapshot) !== JSON.stringify(next.snapshot) || !previous.finish && next.finish) {
     next.localRevision = increment(previous.localRevision)
     next.syncState = next.syncState === 'UNKNOWN' ? 'UNKNOWN' : 'UNSENT'
   }

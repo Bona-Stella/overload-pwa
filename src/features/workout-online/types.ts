@@ -62,3 +62,6 @@ export type AssessmentView = Scope & { sessionId: UUID; status: Session['status'
   currentAssessment: { state: 'EVALUATED' | 'EXCLUDED'; reasonCodes: string[]; advice: 'UNAVAILABLE' | null; evaluation: CompletionAssessment | null } }
 export type ChangeEvents = Scope & { sessionId: UUID; version: Counter; events: { id: UUID; recordKind: 'SET' | 'CARDIO' | 'SESSION'; recordId: UUID;
   changeKind: 'CORRECTED' | 'DELETED' | 'RECOVERED'; before: Record<string, unknown> | null; after: Record<string, unknown> | null; changeContext: Record<string, unknown> | null; recordedAt: Instant }[] }
+export type ClosedCursor = { beforeClosedAt: Instant; beforeId: UUID }
+export type ClosedPage = Scope & { sessions: { id: UUID; routineName: string; status: 'FINISHED' | 'AUTO_CLOSED'; version: Counter; workoutDate: string;
+  startedAt: Instant; endedAt: Instant | null; closedAt: Instant; deletedAt: Instant | null }[]; next: ClosedCursor | null }

@@ -139,7 +139,7 @@ export class WorkoutOnlineController {
     const current = this.state.detail
     if (!current || !this.owner || detail.userId !== this.owner || detail.dataGeneration !== this.state.scope?.dataGeneration || detail.id !== current.id
       || BigInt(detail.version) < BigInt(current.version)) return
-    this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null })
+    this.set({ detail, active: detail.status === 'ACTIVE' ? detail : this.state.active?.id === detail.id ? null : this.state.active })
   }
   invalidateScope = (error: unknown) => this.failure(error)
   takeover = async () => {

@@ -13,11 +13,25 @@ function frozen(value: unknown, kind: 'snapshot' | 'resolution', owner: Record<s
       && (r.decision === 'KEEP_CURRENT' ? r.newApprovalRequest === null : r.decision === 'REAPPROVE' && v.object(r.newApprovalRequest) && v.uuid(r.newApprovalRequest.id)
         && v.counter(r.newApprovalRequest.sequence) && v.counter(r.newApprovalRequest.expectedRoutineVersion) && v.decimal(r.newApprovalRequest.previousApprovedWeightKg) && v.decimal(r.newApprovalRequest.nextApprovedWeightKg))
 }
+function finish(value: unknown, owner: Record<string, unknown>) {
+  if (value === undefined) return true
+  if (!v.object(value) || !v.instant(value.endedAt) || !v.snapshot(value.snapshot)) return false
+  const r = value.request, a = value.ack
+  if (r === undefined) return value.requestJson === undefined && a === undefined
+  if (!v.object(r) || r.dataGeneration !== owner.dataGeneration || r.editorDeviceId !== owner.editorDeviceId || r.writerEpoch !== owner.writerEpoch
+    || r.endedAt !== value.endedAt || !v.counter(r.localRevision) || !v.snapshot(r.snapshot) || value.requestJson !== JSON.stringify(r)) return false
+  return a === undefined || v.object(a) && a.userId === owner.userId && a.dataGeneration === owner.dataGeneration && a.sessionId === owner.sessionId
+    && a.writerEpoch === owner.writerEpoch && a.acceptedLocalRevision === r.localRevision && a.status === 'FINISHED'
+    && v.instant(a.endedAt) && Date.parse(a.endedAt) === Date.parse(value.endedAt) && v.instant(a.closedAt) && v.instant(a.snapshotSavedAt) && v.instant(a.lastWorkoutSyncedAt)
+    && v.counter(a.version) && v.counter(a.currentVersion) && BigInt(a.currentVersion) >= BigInt(a.version) && typeof a.duplicate === 'boolean'
+    && v.nullable(a.deletedAt, v.instant) && v.approvalResults(a.approvalResults) && v.assessment(a.completionAssessment)
+}
 export function localWorkout(value: unknown): value is LocalWorkout {
   return v.object(value) && value.schemaVersion === 1 && v.uuid(value.userId) && v.counter(value.dataGeneration) && v.uuid(value.sessionId)
     && v.uuid(value.editorDeviceId) && v.counter(value.writerEpoch) && v.instant(value.startedAt) && v.initialPlan(value.initialPlan) && v.snapshot(value.snapshot)
     && v.counter(value.editVersion) && v.counter(value.localRevision) && v.counter(value.serverRevision) && v.counter(value.serverVersion)
     && frozen(value.pendingSnapshot, 'snapshot', value) && frozen(value.pendingResolution, 'resolution', value)
+    && finish(value.finish, value)
     && (value.confirmedDeletedSetIds === undefined || v.array(value.confirmedDeletedSetIds, v.uuid)) && (value.confirmedDeletedCardioIds === undefined || v.array(value.confirmedDeletedCardioIds, v.uuid))
     && ['CLEAN', 'UNSENT', 'UNKNOWN'].includes(String(value.syncState)) && dictionary(value.presence, x => ['LOCAL_ONLY', 'SERVER_CONFIRMED', 'UNKNOWN'].includes(String(x)))
     && dictionary(value.drafts, x => v.object(x) && v.text(x.weight) && v.text(x.reps))

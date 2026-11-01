@@ -1,4 +1,4 @@
-import type { ActiveResolution, ApprovalRequest, Session, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
+import type { ActiveResolution, ApprovalRequest, FinishAck, Resolution, Session, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
 import type { LocalWorkout } from './types.ts'
 import { decimalDraft } from '../workout-online/validation.ts'
 import { increment } from './model.ts'
@@ -26,6 +26,35 @@ export function sealSnapshot(w: LocalWorkout) {
   w.pendingSnapshot = { request, requestJson: JSON.stringify(request), localOnlyIds }
   for (const r of records) if (w.presence[r.id] !== 'SERVER_CONFIRMED') w.presence[r.id] = 'UNKNOWN'
   w.syncState = 'UNKNOWN'
+}
+export function intendFinish(w: LocalWorkout, now: number) {
+  if (w.finish) return
+  if (!Number.isSafeInteger(now) || now < Date.parse(w.startedAt) || w.snapshot.performedSets.some(s => Date.parse(s.completedAt) > now)
+    || w.snapshot.cardioResults.some(s => Date.parse(s.occurredAt) > now)) throw new SyncStateConflict('기기 시각과 마지막 수행 시각을 확인해 주세요. 종료 시각을 자동 보정하지 않습니다.')
+  w.finish = { endedAt: new Date(now).toISOString(), snapshot: structuredClone(w.snapshot) }
+}
+export function sealFinish(w: LocalWorkout) {
+  if (!w.finish || w.finish.request) return
+  if (w.pendingSnapshot && !w.pendingSnapshot.rejected || w.pendingResolution && !w.pendingResolution.rejected) throw new SyncStateConflict('앞선 저장 결과를 먼저 확인해 주세요.')
+  // Reuse V13 validation/normalization without issuing an intermediate PUT or inventing a revision.
+  const copy = structuredClone(w)
+  if (Object.values(copy.presence).some(x => x === 'UNKNOWN') || copy.snapshot.performedSets.some(s => s.weightContext.kind === 'UNVERIFIED')) throw new SyncStateConflict()
+  const request = { dataGeneration: w.dataGeneration, editorDeviceId: w.editorDeviceId, writerEpoch: w.writerEpoch, localRevision: w.localRevision,
+    snapshot: copy.snapshot as SnapshotRequest['snapshot'], endedAt: w.finish.endedAt }
+  w.finish.request = request; w.finish.requestJson = JSON.stringify(request)
+  for (const record of [...request.snapshot.performedSets, ...request.snapshot.cardioResults]) if (w.presence[record.id] !== 'SERVER_CONFIRMED') w.presence[record.id] = 'UNKNOWN'
+}
+export function acceptFinish(w: LocalWorkout, ack: FinishAck) {
+  const request = w.finish?.request
+  if (!request || ack.userId !== w.userId || ack.dataGeneration !== w.dataGeneration || ack.sessionId !== w.sessionId || ack.writerEpoch !== w.writerEpoch
+    || ack.acceptedLocalRevision !== request.localRevision || Date.parse(ack.endedAt) !== Date.parse(request.endedAt) || ack.status !== 'FINISHED'
+    || BigInt(ack.currentVersion) < BigInt(ack.version) || request.localRevision !== w.localRevision) throw new SyncStateConflict()
+  for (const r of [...request.snapshot.performedSets, ...request.snapshot.cardioResults]) w.presence[r.id] = 'SERVER_CONFIRMED'
+  w.confirmedDeletedSetIds = [...new Set([...(w.confirmedDeletedSetIds ?? []), ...request.snapshot.deletedPerformedSetIds])]
+  w.confirmedDeletedCardioIds = [...new Set([...(w.confirmedDeletedCardioIds ?? []), ...request.snapshot.deletedCardioResultIds])]
+  w.serverRevision = ack.acceptedLocalRevision
+  if (BigInt(ack.currentVersion) > BigInt(w.serverVersion)) w.serverVersion = ack.currentVersion
+  w.approvalResults = structuredClone(ack.approvalResults); w.finish!.ack = structuredClone(ack); w.syncState = 'CLEAN'
 }
 export function acceptSnapshot(w: LocalWorkout, ack: SnapshotAck) {
   const pending = w.pendingSnapshot
@@ -74,7 +103,7 @@ export function makeResolution(w: LocalWorkout, server: Session, exerciseId: str
   return { ...common, decision, newApprovalRequest: { id: randomId(), sequence: increment(sequence), expectedRoutineVersion: routine.version,
     previousApprovedWeightKg: routine.approvedWeight, nextApprovedWeightKg: decimalDraft(nextWeight) } }
 }
-export function resolutionFact(request: ActiveResolution, server: Session) {
+export function resolutionFact(request: Resolution, server: Session) {
   const results = server.snapshot.approvalResults
   const matched = request.pendingRequestIds.every(id => results.some(r => r.id === id && r.sessionExerciseId === request.sessionExerciseId && r.status === 'NOT_APPLIED'
     && r.reason === (request.decision === 'KEEP_CURRENT' ? 'KEPT_CURRENT' : 'REAPPROVED') && r.resolvedAt !== null
