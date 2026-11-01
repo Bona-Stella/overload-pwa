@@ -46,7 +46,8 @@ export class WorkoutOnlineController {
   private sequence = 0
   private abort: AbortController | null = null
   private needsRevalidation = false
-  constructor(api: WorkoutApi, store: Store = new WorkoutStore()) { this.api = api; this.store = store }
+  private readonly onBoundary?: () => void
+  constructor(api: WorkoutApi, store: Store = new WorkoutStore(), onBoundary?: () => void) { this.api = api; this.store = store; this.onBoundary = onBoundary }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener) }
   private set(patch: Partial<OnlineState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(fn => fn()) }
@@ -80,6 +81,7 @@ export class WorkoutOnlineController {
   private failure(error: unknown) {
     const code = (error as { code?: string })?.code
     if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED'].includes(code ?? '')) {
+      this.onBoundary?.()
       this.set({ ...empty(), userId: this.owner, issue: onlineIssue(error), status: 'ready' }); return
     }
     this.set({ issue: onlineIssue(error) })
@@ -156,6 +158,8 @@ export class WorkoutOnlineController {
       const server = await this.api.takeover(scope, detail.id, fixed.request, context.signal)
       if (!context.current()) return
       await this.store.saveSession(scope, server)
+      // Release the takeover request's lock before publishing/mounting the new epoch editor.
+      await lease.release(); lease = null
       if (context.current()) this.set({ detail: server, active: server.status === 'ACTIVE' ? server : null, copySaved: true, notice: '서버에 저장된 기록으로 이 기기의 편집을 시작합니다. 이전 기기의 미전송 원본은 자동으로 합치지 않았습니다.' })
     } catch (error) {
       if (context.current() && ['EDITOR_OWNERSHIP_LOST', 'SESSION_AUTO_CLOSED', 'SESSION_NOT_ACTIVE'].includes((error as { code?: string }).code ?? '')) {
@@ -164,11 +168,12 @@ export class WorkoutOnlineController {
           if (!context.current()) return
           await this.store.saveSession(scope, server)
           if (fixed && this.store.rejectTakeover) await this.store.rejectTakeover(scope, detail.id, deviceId, fixed.requestJson, server)
+          await lease?.release(); lease = null
           if (context.current()) { this.observeSession(server); this.set({ issue: '편집 기기 또는 운동 상태가 다시 바뀌었습니다. 현재 기록을 확인하고 다시 선택해 주세요.' }) }
         } catch (failure) { if (context.current()) this.failure(failure) }
       } else if (context.current()) this.failure(error)
     }
-    finally { lease?.release(); if (context.current()) this.set({ busy: false }) }
+    finally { await lease?.release(); if (context.current()) this.set({ busy: false }) }
   }
   start = async () => {
     const { scope, selected, deviceId, attempt, localReady, active } = this.state

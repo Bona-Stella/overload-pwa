@@ -9,6 +9,8 @@ import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import './online.css'
 import { ClosedWorkout, WorkoutHistory } from './ClosedWorkout.tsx'
+import { offlineAccess } from '../workout-local/offline.ts'
+import type { LocalWorkout } from '../workout-local/types.ts'
 
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover }: { session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
   const otherEditor = session.editorDeviceId !== deviceId
@@ -33,7 +35,7 @@ export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeo
 export function WorkspaceView({ state, controller }: { state: OnlineState; controller: WorkoutOnlineController }) {
   const [editor, setEditor] = useState<Routine | 'new' | null>(null)
   return <section className="stack workout-online" aria-labelledby="online-title"><div className="section-heading"><h2 id="online-title">내 루틴과 현재 운동</h2><button type="button" className="quiet" disabled={state.busy} onClick={() => void controller.refresh()}>다시 조회</button></div>
-    <p className="muted small">운동 입력·타이머는 이 기기에 보존하고 완료 기록과 적용 계획은 서버에 저장합니다. 완전 오프라인 앱 재실행은 아직 지원하지 않습니다.</p>
+    <p className="muted small">운동 입력·타이머는 이 기기에 보존하고 완료 기록과 적용 계획은 서버에 저장합니다. 앱 준비 후 연결이 끊기면 이 기기의 기존 운동만 명시적으로 이어갈 수 있습니다.</p>
     {state.status === 'loading' && <p role="status">현재 계정의 운동 정보를 확인하고 있습니다.</p>}
     {state.issue && <p className="notice error" role="alert">{state.issue}</p>}{state.notice && <p className="notice" role="status">{state.notice}</p>}
     {state.attempt && <section className="card stack"><h3>시작 결과 확인 필요</h3><p>이 기기에 원래 시작 요청이 남아 있습니다. 새 운동을 만들지 않고 같은 요청을 다시 확인합니다.</p>
@@ -60,11 +62,32 @@ export function WorkspaceView({ state, controller }: { state: OnlineState; contr
 export function WorkoutWorkspace({ onExitGuard }: { onExitGuard?: ExitGuardRegistration } = {}) {
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
-  const [controller] = useState(() => new WorkoutOnlineController(api))
+  const [controller] = useState(() => new WorkoutOnlineController(api, undefined, () => authentication.invalidateLocalWorkoutAccess()))
   const exitGuard = useRef<(() => Promise<boolean>) | null>(null)
   const registerExit = useCallback<ExitGuardRegistration>(guard => { exitGuard.current = guard; onExitGuard?.(guard) }, [onExitGuard])
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
+  const [permissionIssue, setPermissionIssue] = useState(false)
+  const admitOffline = useCallback((workout: LocalWorkout) => {
+    const allowed = () => {
+      const a = authentication.getSnapshot(), s = controller.getSnapshot(), server = s.detail
+      return a.status === 'authenticated' && a.pending === null && a.userId === workout.userId && s.scope?.dataGeneration === workout.dataGeneration
+        && !!server && server.id === workout.sessionId && server.status === 'ACTIVE' && !server.deletedAt && server.writerEpoch === workout.writerEpoch && server.editorDeviceId === workout.editorDeviceId
+    }
+    void offlineAccess.grant(workout, allowed).catch(() => setPermissionIssue(true))
+  }, [authentication, controller])
   useEffect(() => controller.connect(authentication), [controller, authentication])
+  useEffect(() => {
+    if (auth.status !== 'authenticated' || auth.pending !== null || state.scope?.userId !== auth.userId) return
+    void Promise.resolve().then(() => offlineAccess.scope(state.scope!)).catch(() => setPermissionIssue(true))
+    if (state.deviceId && state.detail && (state.detail.status !== 'ACTIVE' || state.detail.deletedAt || state.detail.editorDeviceId !== state.deviceId)) {
+      // Revoke only if this is the permitted workout, never an unrelated history detail.
+      void offlineAccess.source().then(source => {
+        const a = authentication.getSnapshot(), latest = controller.getSnapshot(), detail = latest.detail
+        if (source && a.status === 'authenticated' && a.userId === source.permit.userId && detail?.id === source.permit.sessionId && latest.deviceId
+          && (detail.status !== 'ACTIVE' || detail.deletedAt || detail.editorDeviceId !== latest.deviceId || detail.writerEpoch !== source.permit.writerEpoch)) return offlineAccess.deny()
+      }).catch(() => setPermissionIssue(true))
+    }
+  }, [auth.status, auth.pending, auth.userId, state.scope, state.detail, state.deviceId, authentication, controller])
   const localOnly = !!state.userId && auth.localWorkoutUserId === state.userId
   if ((!localOnly && (auth.status !== 'authenticated' || auth.pending === 'logout' || state.userId !== auth.userId)) || auth.accountOpen) return null
   const session = state.detail
@@ -76,9 +99,10 @@ export function WorkoutWorkspace({ onExitGuard }: { onExitGuard?: ExitGuardRegis
       && (a.status === 'authenticated' && a.userId === session.userId || a.localWorkoutUserId === session.userId)
   }
   return <>{!localOnly && <WorkspaceView key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} />}
+    {permissionIssue && <p className="notice" role="status">오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.</p>}
     {editable && <LocalWorkoutScreen key={[session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')}
-      server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit}
-      sync={{ api, online: () => { const a = authentication.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null} />}
+      server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
+      sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
     {!localOnly && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id

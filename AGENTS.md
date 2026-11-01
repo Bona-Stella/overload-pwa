@@ -110,7 +110,7 @@ Backend V11~V15 계약을 기준으로 Frontend 5A의 온라인 루틴 관리·S
 5B에서 실제 세트·유산소 입력/완료·취소, 현재 계획 변경, 초안/타이머 IndexedDB 저장·복원과 Web Locks 단일 탭 편집을 연결했습니다. [5B 계약·검증 보고서](docs/tasks/task-009-frontend-5b-report.md)를 따릅니다. 로컬 저장은 서버 반영과 구분합니다.
 5C에서 고정 snapshot 전송·ACK 유실 재확인, 명시 중량 승인 해결과 takeover를 연결했습니다. [5C 저장·동기화 검증 보고서](docs/tasks/task-009-frontend-5c-report.md)를 따릅니다. 고정 요청과 미전송 원본을 보존하며 로컬 저장과 서버 반영을 구분합니다.
 5D에서 명시 종료의 고정 요청/ACK 확인, 종료 상세·평가·정정/삭제·승인 해결과 미전송 수행 선택 복구를 연결했습니다. [5D 구현·검증 보고서](docs/tasks/task-009-frontend-5d-report.md)를 따릅니다. 종료 목록은 승인된 최소 Backend 읽기 API를 사용합니다. 구 사본·최초 평가·종료 요청 원문을 자동 덮어쓰지 않습니다.
-Service Worker·설치형 PWA·완전 오프라인 재실행은 아직 미구현입니다. 5E를 승인 없이 시작하지 않습니다.
+5E에서 의존성 추가 없이 Manifest·정적 앱 셸 Service Worker와 명시적 오프라인 운동 이어가기를 연결했습니다. [5E 구현·검증 보고서](docs/tasks/task-009-frontend-5e-report.md)를 따릅니다. API/인증은 캐싱하지 않고, 로그아웃·확실한 인증 거부·계정/세대 경계는 재실행 허용을 해제합니다. 재연결은 인증·세션 확인 뒤 기존 5C/5D 송신을 재개합니다. iPhone/Android 실기기 설치·백그라운드 검증은 남아 있으며, Task 009 전체 완료 문서 정리는 최종 통합 검증 이후입니다.
 Task 006의 운동·인증 정책은 v1.0에서 명시적으로 바꾼 부분을 제외하고 유지합니다.
 
 ### Task 006 Domain and Authentication Design

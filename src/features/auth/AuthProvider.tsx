@@ -4,9 +4,10 @@ import { AuthController } from './controller.ts'
 import { returnFlow } from './controller.ts'
 import type { ReturnFlow } from './controller.ts'
 import { AuthContext } from './context.ts'
+import { offlineAccess } from '../workout-local/offline.ts'
 
 export function AuthProvider({ children, flow = 'none' }: { children: ReactNode; flow?: ReturnFlow }) {
-  const [controller] = useState(() => new AuthController())
+  const [controller] = useState(() => new AuthController(undefined, undefined, undefined, undefined, offlineAccess))
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   useEffect(() => {
     void controller.start(flow)

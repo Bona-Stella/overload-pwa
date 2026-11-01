@@ -5,6 +5,8 @@ import { localKey } from '../workout-local/types.ts'
 import { createLocalWorkout } from '../workout-local/model.ts'
 import { localWorkout } from '../workout-local/validation.ts'
 import type { ClosedWrite } from './closed-model.ts'
+import { offlinePermit } from '../workout-local/offline-access.ts'
+import type { OfflinePermit } from '../workout-local/offline-access.ts'
 
 export const DATABASE_NAME = 'overload.workout.v1'
 export type StartAttempt = Scope & { request: Start; requestJson: string }
@@ -74,6 +76,33 @@ export class WorkoutStore {
       if (existing !== undefined) { if (!uuid(existing)) throw new LocalStoreError(); return existing }
       const id = this.randomId(); if (!uuid(id)) throw new LocalStoreError()
       await request(store.put(id, 'editorDeviceId')); return id
+    })
+  }
+  clearOfflinePermit() {
+    return this.run(['meta'], 'readwrite', async tx => { await request(tx.objectStore('meta').delete('offlineResume')) })
+  }
+  private async offlineDocument(tx: IDBTransaction, permit: OfflinePermit) {
+    const device: unknown = await request(tx.objectStore('meta').get('editorDeviceId'))
+    const workout: unknown = await request(tx.objectStore('localWorkouts').get(localKey(permit)))
+    if (device !== permit.editorDeviceId || !localWorkout(workout) || workout.finish?.ack) return null
+    const copies: SessionCopy[] = await request(tx.objectStore('sessionCopies').index('scope').getAll(scopeKey(permit)))
+    const latest = copies.filter(x => x.sessionId === permit.sessionId).sort((a, b) => BigInt(a.server.version) > BigInt(b.server.version) ? -1 : 1)[0]?.server
+    if (!session(latest) || latest.status !== 'ACTIVE' || latest.deletedAt || latest.userId !== permit.userId || latest.dataGeneration !== permit.dataGeneration
+      || latest.editorDeviceId !== permit.editorDeviceId || latest.writerEpoch !== permit.writerEpoch || JSON.stringify(localKey(workout)) !== JSON.stringify(localKey(permit))
+      || JSON.stringify(latest.initialPlan) !== JSON.stringify(workout.initialPlan) || latest.startedAt !== workout.startedAt) return null
+    return { permit, workout, server: latest }
+  }
+  offlineSource() {
+    return this.run(['meta', 'localWorkouts', 'sessionCopies'], 'readonly', async tx => {
+      const permit: unknown = await request(tx.objectStore('meta').get('offlineResume'))
+      return offlinePermit(permit) ? this.offlineDocument(tx, permit) : null
+    })
+  }
+  saveOfflinePermit(permit: OfflinePermit, allowed: () => boolean) {
+    return this.run(['meta', 'localWorkouts', 'sessionCopies'], 'readwrite', async tx => {
+      if (!offlinePermit(permit) || !allowed() || !await this.offlineDocument(tx, permit) || !allowed()) throw new LocalWriteBlocked()
+      await request(tx.objectStore('meta').put(permit, 'offlineResume'))
+      if (!allowed()) throw new LocalWriteBlocked()
     })
   }
   attempt(scope: Scope) {

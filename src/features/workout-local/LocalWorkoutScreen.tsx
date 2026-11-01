@@ -15,16 +15,19 @@ import './local.css'
 
 const duration = (ms: number) => { const seconds = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }
 type Definition = { id: string; name: string }
-export function LocalWorkoutScreen({ server, policy, definitions, authorized, localOnly = false, onExitGuard, sync, authenticated = false }: {
-  server: Session; policy: RestPolicy; definitions: Definition[]; authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
+export function LocalWorkoutScreen({ server, policy, definitions, authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, offlineRestart = false }: {
+  server: Session; policy: RestPolicy; definitions: Definition[]; authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean; onReady?: (workout: LocalWorkout) => void; offlineRestart?: boolean
 }) {
-  const [initial] = useState(() => ({ server, policy }))
+  const [initial] = useState(() => ({ server, policy, onReady }))
   const [ending, setEnding] = useState(false)
   const [store] = useState(() => new WorkoutStore())
   const [controller] = useState(() => new LocalWorkoutController(store, authorized, undefined, sync))
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   useEffect(() => {
-    void controller.open(initial.server, initial.policy)
+    void controller.open(initial.server, initial.policy).then(() => {
+      const opened = controller.getSnapshot()
+      if (!controller.isStopped() && opened.writable && opened.workout) initial.onReady?.(opened.workout)
+    })
     return () => { controller.stop(); void controller.settled().then(() => { if (controller.isStopped()) return store.close() }) }
     // ACK versions update in place. Only session/writer identity remounts the editor.
   }, [controller, store, initial])
@@ -42,7 +45,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, authorized, lo
   }, [state.pending, state.unsavedDrafts])
   return <section className="local-workout stack" aria-label="실제 운동 로컬 기록">
     <p className="notice warning">입력과 타이머는 이 기기에 보존합니다. 서버에 저장되지 않은 기록은 저장소를 삭제하면 사라질 수 있습니다.</p>
-    {localOnly && <p className="notice">인증 확인이 필요합니다. 이미 열어 둔 같은 계정의 운동만 로컬에 계속 기록할 수 있습니다. 서버 요청은 중단되었습니다. 같은 계정으로 다시 로그인해 주세요.</p>}
+    {localOnly && <p className="notice">{offlineRestart ? '이 기기의 기존 운동을 로컬에서 이어갑니다. 서버 로그인·운동 상태는 아직 확인하지 않았습니다. 연결 후 확인하기 전에는 전송하지 않습니다.' : '인증 확인이 필요합니다. 이미 열어 둔 같은 계정의 운동만 로컬에 계속 기록할 수 있습니다. 서버 요청은 중단되었습니다. 같은 계정으로 다시 로그인해 주세요.'}</p>}
     {state.loading && <p role="status">로컬 운동과 편집 잠금을 확인하고 있습니다.</p>}
     {state.issue && <p className="notice error" role="alert">{state.issue}</p>}
     {state.syncIssue && <p className="notice" role="status">{state.syncIssue}</p>}

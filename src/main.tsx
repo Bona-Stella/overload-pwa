@@ -6,6 +6,9 @@ import App from './App.tsx'
 import { AuthProvider } from './features/auth/AuthProvider'
 import { AuthApp } from './features/auth/AuthApp'
 import { returnFlow } from './features/auth/controller'
+import { registerPwa } from './pwa/registration.ts'
+
+if (import.meta.env.PROD) registerPwa()
 
 // The branch is removed by Vite in production; the preview never mounts useWorkout.
 const AuthPreview = import.meta.env.DEV

@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/TypeScript-6.0.3-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Vite-8.3.5-646CFF?style=flat-square&amp;logo=vite&amp;logoColor=white" alt="Vite">
   <img src="https://img.shields.io/badge/Tailwind_CSS-Planned-06B6D4?style=flat-square&amp;logo=tailwindcss&amp;logoColor=white" alt="Tailwind CSS Planned">
-  <img src="https://img.shields.io/badge/PWA-Planned-5A0FC8?style=flat-square&amp;logo=pwa&amp;logoColor=white" alt="PWA Planned">
+  <img src="https://img.shields.io/badge/PWA-App_Shell-5A0FC8?style=flat-square&amp;logo=pwa&amp;logoColor=white" alt="PWA App Shell">
   <img src="https://img.shields.io/badge/Status-Core_UI_Prototype-6B7280?style=flat-square" alt="Status">
 </div>
 
@@ -40,7 +40,13 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> Task 009 5D: 실제 운동 입력·서버 동기화에 명시 종료와 종료 이력·평가 조회, 사후 정정/삭제·승인 해결·누락 완료 수행 선택 복구를 연결했습니다. 원래 종료 요청과 미전송 사본을 보존하며 한 탭만 편집합니다. **Service Worker·설치형 PWA·완전 오프라인 재실행은 아직 지원하지 않습니다.** 기존 `/demo` 데이터는 실제 계정으로 이전하거나 전송하지 않습니다. [5A](docs/tasks/task-009-frontend-5a-report.md), [5B](docs/tasks/task-009-frontend-5b-report.md), [5C](docs/tasks/task-009-frontend-5c-report.md), [5D 구현·검증 보고서](docs/tasks/task-009-frontend-5d-report.md), [인증 연동 및 로컬 실행](docs/engineering/authentication.md)을 참고하세요.
+> Task 009 5E: 실제 운동 입력·동기화·명시 종료·사후 정정/복구에 설치형 Manifest와 정적 오프라인 앱 셸을 연결했습니다. 온라인에서 연 기존 운동은 앱 준비 후 연결이 끊기면 명시적으로 이어갈 수 있습니다. 최초 오프라인 방문·오프라인 새 운동 시작·영구 보존은 지원하거나 보장하지 않습니다. iPhone/Android 실기기 검증은 남아 있습니다. 기존 `/demo` 기록은 실제 계정으로 이전하거나 전송하지 않습니다. [5A](docs/tasks/task-009-frontend-5a-report.md), [5B](docs/tasks/task-009-frontend-5b-report.md), [5C](docs/tasks/task-009-frontend-5c-report.md), [5D](docs/tasks/task-009-frontend-5d-report.md), [5E 구현·검증 보고서](docs/tasks/task-009-frontend-5e-report.md), [인증 연동 및 로컬 실행](docs/engineering/authentication.md)을 참고하세요.
+
+### PWA 빌드·배포
+
+`npm run build`가 `dist/manifest.webmanifest`, 아이콘, 빌드 파일 목록·SHA-256을 포함한 `dist/sw.js`를 생성합니다. 개발 서버에는 Service Worker를 등록하지 않습니다. 루트 경로(`/`)의 HTTPS 정적 배포가 필요합니다(검증용 loopback HTTP는 브라우저가 secure context로 취급). `/`와 `/account`만 앱 진입 HTML로 연결하고 `/api`·OAuth/인증 복귀 경로는 실제 Backend/인증 라우팅을 유지하세요. `/sw.js`는 JavaScript MIME·재검증 가능한 캐시 정책으로 제공해야 합니다. 해시가 있는 자산과 index를 같은 릴리스로 배포하고, 열려 있는 이전 앱을 위해 이전 자산도 유지하세요. 사용자별 HTML 주입이나 파일 변환으로 원래 빌드 바이트가 바뀌면 오프라인 준비가 실패하도록 설계했습니다.
+
+새 버전은 기존 창을 강제로 새로고침하지 않습니다. 입력의 기기 저장을 확인하고 모든 Overload 창을 닫았다가 다시 열어 적용합니다. API·인증 응답은 Service Worker 캐시에 저장하지 않습니다.
 
 ---
 

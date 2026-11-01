@@ -2,6 +2,7 @@ import { AuthApi, AuthError } from './api.ts'
 import { emptyAccount } from './account.ts'
 import type { AccountState } from './account.ts'
 import type { Identity } from './api.ts'
+import type { AuthBoundary } from '../workout-local/offline-access.ts'
 
 export type AuthIssue = { code: string; message: string }
 export type AuthState = {
@@ -9,6 +10,8 @@ export type AuthState = {
   userId: string | null
   // Memory-only access for an already open workout after expiry. Never admits a cold restart.
   localWorkoutUserId?: string | null
+  // Cold local access is offered only for an actual transport outage, never a definite 401.
+  offlineNetworkFailure?: boolean
   pending: null | 'request' | 'verify' | 'logout' | 'google' | 'restore' | 'account' | 'proof-request' | 'proof-verify' | 'contact' | 'contact-navigation' | 'cancel-registration' | 'identity-change' | 'link' | 'link-navigation'
   challenge: null | { id: string | null; email: string; expiresAt: number }
   resendAt: number
@@ -66,7 +69,9 @@ export class AuthController {
   private resumePending = false
   private resumeFlow: ReturnFlow = 'none'
   private localWorkoutLocked = false
-  constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route = (path: string) => window.history.pushState(null, '', path)) { this.api = api; this.now = now; this.navigate = navigate; this.route = route }
+  private sessionRejected = false
+  private readonly boundary?: AuthBoundary
+  constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route = (path: string) => window.history.pushState(null, '', path), boundary?: AuthBoundary) { this.api = api; this.now = now; this.navigate = navigate; this.route = route; this.boundary = boundary }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   private set(patch: Partial<AuthState>) { this.state = { ...this.state, ...patch, updatedAt: this.now() }; this.listeners.forEach(listener => listener()) }
@@ -86,6 +91,8 @@ export class AuthController {
   private async loadSession(flow: ReturnFlow = 'none', notice = '') {
     const generation = this.generation
     const session = await this.api.session()
+    if (!session) this.sessionRejected = true
+    await this.boundary?.identity(session?.userId ?? null)
     await this.api.refreshCsrf()
     if (generation !== this.generation) throw new AuthError('SESSION_CHANGED', 409)
     if (session) this.localWorkoutLocked = false
@@ -93,11 +100,13 @@ export class AuthController {
       : flow === 'link-failed' ? authIssue(new AuthError('GOOGLE_LINK_FAILED'))
       : flow === 'link-complete' && !session ? authIssue(new AuthError('AUTHENTICATION_REQUIRED', 401))
       : flow === 'complete' && !session ? authIssue(new AuthError('GOOGLE_NOT_CONFIRMED')) : null
-    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null,
+    this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null, offlineNetworkFailure: false,
       localWorkoutUserId: session || this.localWorkoutLocked ? null : this.state.localWorkoutUserId ?? this.state.userId, challenge: null, account: emptyAccount(), accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed', 'link-complete', 'link-failed'].includes(flow)), issue, notice })
   }
   async restore(flow: ReturnFlow = this.state.accountOpen ? 'account' : 'none') {
     if (this.running) return
+    this.sessionRejected = false
+    // Keep the chosen local screen mounted during a connection check; pending still fences sending.
     this.running = true; this.set({ pending: 'restore', issue: null })
     this.generation++; this.set({ account: emptyAccount() })
     try {
@@ -115,7 +124,7 @@ export class AuthController {
     }
     catch (error) {
       if (error instanceof AuthError && error.status === 401 && error.code !== 'OTP_INVALID') this.accountFailure(error)
-      else this.set({ status: 'unavailable', issue: authIssue(error), challenge: null, account: emptyAccount() })
+      else this.set({ status: 'unavailable', offlineNetworkFailure: !this.sessionRejected && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code), issue: authIssue(error), challenge: null, account: emptyAccount() })
     }
     finally { await this.finish() }
   }
@@ -149,11 +158,12 @@ export class AuthController {
       // A consumed OTP is never retried if session restoration or CSRF retrieval fails.
       this.set({ challenge: null })
       const session = await this.api.session()
+      await this.boundary?.identity(session?.userId ?? null)
       if (!session) throw new AuthError('RESPONSE_INVALID')
       await this.api.refreshCsrf()
       if (generation !== this.generation) throw new AuthError('SESSION_CHANGED', 409)
       this.localWorkoutLocked = false
-      this.set({ status: 'authenticated', userId: session.userId, localWorkoutUserId: null, challenge: null, issue: null })
+      this.set({ status: 'authenticated', userId: session.userId, localWorkoutUserId: null, offlineNetworkFailure: false, challenge: null, issue: null })
     } catch (error) {
       const limited = error instanceof AuthError && error.status === 429
       const wait = limited ? Math.max(60, error.retryAfter) * 1000 : 0
@@ -168,8 +178,9 @@ export class AuthController {
   async logout() {
     if (this.running || this.state.status !== 'authenticated') return
     this.localWorkoutLocked = true
-    this.running = true; this.generation++; this.set({ pending: 'logout', localWorkoutUserId: null, issue: null, account: emptyAccount(), accountOpen: false })
+    this.running = true; this.generation++; this.set({ pending: 'logout', localWorkoutUserId: null, offlineNetworkFailure: false, issue: null, account: emptyAccount(), accountOpen: false })
     try {
+      await this.boundary?.deny()
       await this.api.logout()
       if (await this.api.session()) throw new AuthError('RESPONSE_INVALID')
       this.set({ userId: null, challenge: null })
@@ -215,30 +226,46 @@ export class AuthController {
     const generation = this.generation
     const current = () => !signal.aborted && this.generation === generation && this.state.status === 'authenticated'
       && this.state.pending === null && this.state.userId === expected
-    if (!current()) throw new AuthError('SESSION_CHANGED', 409)
+    const obsolete = () => this.generation === generation && this.state.offlineNetworkFailure && this.state.localWorkoutUserId === expected
+      ? new AuthError('NETWORK') : new AuthError('REQUEST_SUPERSEDED')
+    if (!current()) throw obsolete()
     try {
       if (method !== 'GET') await this.prepareWrite(expected, generation)
-      if (!current()) throw new AuthError('SESSION_CHANGED', 409)
+      if (!current()) throw obsolete()
       const result = await this.api.workoutRequest(path, method, body, signal)
-      if (!current()) throw new AuthError('SESSION_CHANGED', 409)
+      if (!current()) throw obsolete()
       return result
     } catch (error) {
-      if (error instanceof AuthError && error.code === 'SESSION_CHANGED') this.localWorkoutLocked = true
-      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) this.set({ status: 'unavailable', account: emptyAccount(), challenge: null,
+      if (signal.aborted || this.generation !== generation) throw obsolete()
+      if (current() && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code)) this.networkUnavailable()
+      // A stale request cancelled by a transport outage is not evidence of another account.
+      if (current() && error instanceof AuthError && error.code === 'SESSION_CHANGED') this.localWorkoutLocked = true
+      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) await this.boundary?.deny()
+      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) this.set({ status: 'unavailable', offlineNetworkFailure: false, account: emptyAccount(), challenge: null,
         localWorkoutUserId: !this.localWorkoutLocked && error.status === 401 && error.code !== 'SESSION_CHANGED' ? expected : null, issue: authIssue(error) })
       throw error
     }
   }
   private accountFailure(error: unknown) {
     const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
+    if (e.code === 'SESSION_CHANGED' || e.status === 401 && e.code !== 'OTP_INVALID') this.denyLocalRestart()
     if (e.code === 'SESSION_CHANGED') this.localWorkoutLocked = true
     if (e.code === 'SESSION_CHANGED') this.set({ status: 'unavailable', localWorkoutUserId: null, account: emptyAccount(), challenge: null })
     else if (e.status === 401 && e.code !== 'OTP_INVALID') this.set({ status: 'anonymous', localWorkoutUserId: this.localWorkoutLocked ? null : this.state.localWorkoutUserId ?? this.state.userId, userId: null, account: emptyAccount(), accountOpen: false })
     this.set({ issue: authIssue(e.status === 401 && e.code !== 'OTP_INVALID' ? new AuthError('AUTHENTICATION_REQUIRED', 401) : error) })
   }
   invalidateLocalWorkoutAccess() {
+    this.denyLocalRestart()
     this.generation++; this.localWorkoutLocked = true
-    this.set({ status: 'unavailable', userId: null, localWorkoutUserId: null, account: emptyAccount(), accountOpen: false, issue: authIssue(new AuthError('SESSION_CHANGED')) })
+    this.set({ status: 'unavailable', userId: null, localWorkoutUserId: null, offlineNetworkFailure: false, account: emptyAccount(), accountOpen: false, issue: authIssue(new AuthError('SESSION_CHANGED')) })
+  }
+  networkUnavailable() {
+    if (this.state.pending !== null || this.state.status !== 'authenticated') return
+    this.set({ status: 'unavailable', offlineNetworkFailure: true, localWorkoutUserId: this.state.userId, account: emptyAccount(), accountOpen: false, issue: authIssue(new AuthError('NETWORK')) })
+  }
+  private denyLocalRestart() {
+    // deny() writes its synchronous fence before yielding; an IDB failure must remain visible.
+    void this.boundary?.deny().catch(() => this.set({ offlineNetworkFailure: false, issue: { code: 'LOCAL_ACCESS_FAILED', message: '로컬 접근 차단을 저장하지 못했습니다. 저장소 설정을 확인해 주세요.' } }))
   }
   async openAccount() {
     if (this.running || this.state.status !== 'authenticated' || !this.state.userId) return
