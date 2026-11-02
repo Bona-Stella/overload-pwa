@@ -3,6 +3,7 @@ import type { Scope } from '../workout-online/types.ts'
 import type { Statistics, StatisticsApi, WeightStats, Overview } from './api.ts'
 import { periodFor } from './api.ts'
 import './statistics.css'
+import { GrowthPanel } from './GrowthPanel.tsx'
 
 const groups: Record<string, string> = { CHEST: '가슴', BACK: '등', SHOULDERS: '어깨', ARMS: '팔', LEGS: '하체', CORE: '코어' }
 const minutes = (ms: string) => (BigInt(ms) / 60000n).toString()
@@ -21,7 +22,7 @@ export function WeightChart({ rows }: { rows: Row[] }) {
       <small>{row.weights.plannedSets === '0' ? '확인된 계획 없음' : `계획 ${row.weights.plannedSets}세트`}{row.weights.setsWithoutVolume !== '0' && ' · 맨몸 세트는 총중량에서 제외'}</small></div>)}
   </div>
 }
-export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHistory }: { data: Statistics; planning?: Overview; screen: string; onScreen: (screen: 'summary' | 'activity' | 'muscles') => void; onOpen: (id: string) => void; onHistory: () => void }) {
+export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHistory }: { data: Statistics; planning?: Overview; screen: string; onScreen: (screen: 'summary' | 'activity' | 'muscles' | 'growth') => void; onOpen: (id: string) => void; onHistory: () => void }) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   return <>
     {screen === 'summary' ? <><div className="statistics-summary"><div><strong>{data.summary.completedSets}</strong><span>완료 웨이트 세트</span></div><div><strong>{minutes(data.cardioActiveMs)}분</strong><span>유산소 시간</span></div></div>
@@ -29,7 +30,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
         : data.plannedWorkoutDays === 0 ? <p>등록된 운동 계획 없음</p>
           : <p>계획 운동일 {planning?.effectiveWorkoutDays ?? '확인 중'} / {data.plannedWorkoutDays}일 · {data.routineAchievementPercent !== null ? `루틴 달성률 ${data.routineAchievementPercent}%` : '유산소 목표 달성 확인 필요'}</p>}
       <p className="muted small">서버에 반영된 종료 기록 기준입니다. 기기의 미전송 기록은 포함되지 않습니다.</p>
-      <div className="row"><button className="outline" onClick={() => onScreen('activity')}>운동 현황</button><button className="outline" onClick={() => onScreen('muscles')}>근육별 통계</button><button className="outline" onClick={onHistory}>운동 이력 전체 보기</button></div>
+      <div className="row"><button className="outline" onClick={() => onScreen('activity')}>운동 현황</button><button className="outline" onClick={() => onScreen('muscles')}>근육별 통계</button><button className="outline" onClick={() => onScreen('growth')}>성장 추적</button><button className="outline" onClick={onHistory}>운동 이력 전체 보기</button></div>
       <h3>최근 운동</h3>{!data.recentSessions.length && <p>운동 이력이 없습니다.</p>}{data.recentSessions.map(s => <button className="outline full" key={s.id} onClick={() => onOpen(s.id)}>{s.workoutDate} · {s.routineName}{s.status === 'AUTO_CLOSED' && ' · 자동 종료'}</button>)}</>
       : screen === 'activity' ? <><h3>운동량 추이</h3><WeightChart rows={data.days.map(d => ({ key: d.date, name: d.date, weights: d.weights }))} />
         <h3>운동 종목별</h3><WeightChart rows={data.exercises.map(e => ({ key: e.standardExerciseId, name: e.name, weights: e.weights }))} />
@@ -46,7 +47,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   </>
 }
 export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid }: { api: StatisticsApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void }) {
-  const [screen, setScreen] = useState<'summary' | 'activity' | 'muscles'>('summary')
+  const [screen, setScreen] = useState<'summary' | 'activity' | 'muscles' | 'growth'>('summary')
   const [mode, setMode] = useState<'week' | 'month'>('week'), [offset, setOffset] = useState(0)
   const [state, setState] = useState<{ data: Overview | null; issue: boolean }>({ data: null, issue: false })
   const [reload, setReload] = useState(0)
@@ -55,6 +56,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid }: {
   const range = periodFor(new Date(), screen === 'summary' ? 'week' : mode, screen === 'summary' ? 0 : offset)
   const { fromDate, toDateExclusive } = range
   useEffect(() => {
+    if (screen === 'growth') return
     const abort = new AbortController()
     void api.overview({ userId: scope.userId, dataGeneration: scope.dataGeneration }, { fromDate, toDateExclusive }, abort.signal).then(data => {
       if (!abort.signal.aborted) setState({ data, issue: false })
@@ -64,8 +66,9 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid }: {
       setState({ data: null, issue: true })
     })
     return () => abort.abort()
-  }, [api, scope.userId, scope.dataGeneration, fromDate, toDateExclusive, refreshKey, reload])
+  }, [api, scope.userId, scope.dataGeneration, fromDate, toDateExclusive, refreshKey, reload, screen])
   const current = state.data?.statistics.fromDate === range.fromDate && state.data?.statistics.toDateExclusive === range.toDateExclusive ? state.data : null
+  if (screen === 'growth') return <section className="card stack statistics"><button className="outline" onClick={() => setScreen('summary')}>이번 주 요약으로</button><GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} /></section>
   return <section className="card stack statistics" aria-labelledby="statistics-title"><div className="section-heading"><h2 id="statistics-title">통계·추적</h2><button className="outline" onClick={() => { setState({ data: null, issue: false }); setReload(n => n + 1) }}>새로고침</button></div>
     {screen !== 'summary' && <><button className="outline" onClick={() => setScreen('summary')}>이번 주 요약으로</button><div className="row"><button className="outline" aria-pressed={mode === 'week'} onClick={() => { setMode('week'); setOffset(0) }}>주간</button><button className="outline" aria-pressed={mode === 'month'} onClick={() => { setMode('month'); setOffset(0) }}>월간</button><button className="outline" onClick={() => setOffset(n => n - 1)}>이전</button><button className="outline" onClick={() => setOffset(n => n + 1)}>다음</button></div></>}
     <p className="muted small">{range.fromDate} ~ {new Date(Date.parse(range.toDateExclusive) - 86400000).toISOString().slice(0, 10)}</p>

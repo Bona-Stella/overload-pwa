@@ -2,6 +2,7 @@ import type { WorkoutTransport } from '../workout-online/api.ts'
 import { WorkoutApiError } from '../workout-online/api.ts'
 import type { Scope } from '../workout-online/types.ts'
 import * as v from '../workout-online/validation.ts'
+import { GrowthApi } from './growth.ts'
 
 export type WeightStats = { plannedSets: string; completedSets: string; reps: string; volumeLoadKg: string | null; setsWithoutVolume: string }
 export type Statistics = Scope & { fromDate: string; toDateExclusive: string; planCoverage: 'STARTED_SESSIONS_ONLY' | 'FULL_SCHEDULE_HISTORY' | 'PARTIAL_SCHEDULE_HISTORY'; plannedWorkoutDays: number | null; routineAchievementPercent: string | null;
@@ -51,7 +52,8 @@ export function overview(x: unknown): x is Overview {
 }
 export class StatisticsApi {
   private readonly transport: WorkoutTransport
-  constructor(transport: WorkoutTransport) { this.transport = transport }
+  readonly growth: GrowthApi
+  constructor(transport: WorkoutTransport) { this.transport = transport; this.growth = new GrowthApi(transport) }
   async read(scope: Scope, period: Period, signal: AbortSignal): Promise<Statistics> {
     if (!v.uuid(scope.userId) || !v.counter(scope.dataGeneration) || !date(period.fromDate) || !date(period.toDateExclusive)) throw new WorkoutApiError('INVALID_REQUEST', 400)
     const result = await this.transport.workoutRequest(scope.userId, '/api/v1/statistics?' + new URLSearchParams(period), 'GET', undefined, signal)

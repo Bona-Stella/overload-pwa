@@ -101,9 +101,11 @@ Required:
 
 ### Task 009 Current Design
 
+승인 중량 성장 2C는 [진행 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2c-report.md)와 [조회 계약](../overload-server/docs/api/approved-weight-growth.md)을 따릅니다. 기존 승인 사건을 routineId+placementId별로 분리하고 과거 수행/승인 이름을 검색하며, 초기/현재 중량으로 과거 점을 생성하지 않습니다. 연결 근거가 없는 점은 선으로 잇지 않습니다. 디로딩 식별/일반 승인 차단의 실제 연결은 후속3단계이며 혼재 검증 완료로 표시하지 않습니다. 개인 DB V18~V20 미적용을 유지합니다.
+
 주간 일정/달성률의 현행 계약은 [2B 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)와 [주간 일정 API](../overload-server/docs/api/weekly-schedule.md)를 따릅니다. 일정 최초 등록은 당일 즉시 적용하고 첫 주 분모는 등록일~일요일 예정일만 포함하며, 기존 일정 변경은 온라인에서 다음 월요일 적용으로 예약합니다. 같은 예정일은 최고 단일 세션의 InitialPlan 달성률만 사용합니다. 통계는 새 overview를 사용하고 이력 없는 과거/실제 유산소 목표 확인 불가는 추정하지 않습니다. 기존2A 읽기 API·IndexedDB3/schema2·고정 snapshot/finish·오프라인 permit은 유지합니다. 개인 DB V18·V19·V20 적용과 운영 카탈로그 검증은 미완료입니다.
 
-2A 당시 계약과 보존된 읽기 endpoint는 [Backend 진행 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2a-report.md)와 [통계 읽기 API](../overload-server/docs/api/statistics.md)를 따릅니다. 실제 계정의 온라인 통계는 서버 종료 기록만 읽으며 종료 세션 InitialPlan 계획을 주간 전체 계획으로 표시하지 않습니다. 주간 전체 달성률의 이후 구현은 2B를 따르며 성장선·유산소 계산 거리 저장·디로딩 연결은 미완료입니다. 기존 DB3/schema2·고정 요청·오프라인 허용을 유지합니다. 개인 DB V18 적용과 운영 카탈로그 분류 검증도 미완료입니다.
+2A 당시 계약과 보존된 읽기 endpoint는 [Backend 진행 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2a-report.md)와 [통계 읽기 API](../overload-server/docs/api/statistics.md)를 따릅니다. 실제 계정의 온라인 통계는 서버 종료 기록만 읽으며 종료 세션 InitialPlan 계획을 주간 전체 계획으로 표시하지 않습니다. 주간 전체 달성률의 이후 구현은2B, 승인 성장선은2C를 따릅니다. 유산소 계산 거리 저장·디로딩 연결은 미완료입니다. 기존 DB3/schema2·고정 요청·오프라인 허용을 유지합니다. 개인 DB V18 적용과 운영 카탈로그 분류 검증도 미완료입니다.
 
 현재 제품 경로는 Backend V17 표준 운동 단일 계약을 사용합니다. [최종 설계](../overload-server/docs/tasks/standard-exercise-catalog-design-analysis.md), [Backend 2단계](../overload-server/docs/tasks/standard-exercise-catalog-backend-phase-2-report.md), [Frontend 3단계 보고서](docs/tasks/standard-exercise-catalog-frontend-phase-3-report.md)를 따릅니다.
 개인 운동 생성/수정·개인 목록 bootstrap 대신 표준 search-data와 제조사를 사용합니다. 루틴·세션은 standardExerciseId와 필수 nullable manufacturerId/loadType, 계획·평가·로컬 문서는 schemaVersion2입니다. 장비 변경은 승인 중량·공식 비교 키를 바꾸지 않으며 완료 세트의 당시 장비는 불변입니다.
