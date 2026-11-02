@@ -37,7 +37,7 @@ export function localWorkout(value: unknown): value is LocalWorkout {
     && dictionary(value.drafts, x => v.object(x) && v.text(x.weight) && v.text(x.reps))
     && dictionary(value.weights, x => v.object(x) && v.text(x.value) && v.object(x.context) && (x.context.kind === 'APPROVAL_REQUEST' ? v.uuid(x.context.requestId) : ['INITIAL_APPROVED', 'TODAY_ONLY'].includes(String(x.context.kind)) && x.context.requestId === null))
     && dictionary(value.timers, x => v.object(x) && v.nullable(x.startedAt, v.instant) && v.nullable(x.runningSince, v.instant) && ms(x.accumulatedMs)
-      && v.array(x.segments, s => v.object(s) && v.instant(s.startedAt) && v.instant(s.stoppedAt)) && v.text(x.distance) && v.text(x.bpm) && v.nullable(x.correctedSeconds, v.text) && typeof x.reviewing === 'boolean')
+      && v.array(x.segments, s => v.object(s) && v.instant(s.startedAt) && v.instant(s.stoppedAt)) && v.text(x.distance) && (x.speed === undefined || v.text(x.speed)) && v.text(x.bpm) && v.nullable(x.correctedSeconds, v.text) && typeof x.reviewing === 'boolean')
     && v.object(value.cancelled) && v.array(value.cancelled.sets, x => v.snapshot({ ...value.snapshot as object, performedSets: [x] }))
     && v.array(value.cancelled.cardio, x => v.snapshot({ ...value.snapshot as object, cardioResults: [x] }))
     && v.text(value.currentExerciseId) && dictionary(value.exerciseNames, v.text) && v.approvalResults(value.approvalResults)

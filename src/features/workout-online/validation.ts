@@ -13,6 +13,7 @@ export const name = (v: unknown): v is string => text(v) && v.trim().length > 0 
 export const status = (v: unknown) => v === 'ACTIVE' || v === 'FINISHED' || v === 'AUTO_CLOSED'
 export const loadType = (v: unknown): v is import('./types.ts').LoadType => typeof v === 'string' && ['PLATE', 'STACK', 'DUMBBELL', 'BODYWEIGHT'].includes(v)
 export const equipment = (v: Record<string, unknown>) => nullable(v.manufacturerId, uuid) && nullable(v.loadType, loadType)
+export const cardioMeasurement = (v: unknown): v is import('./types.ts').CardioMeasurement => object(v) && nullable(v.actualSpeedKmh, decimal) && nullable(v.distanceSource, x => x === 'MANUAL' || x === 'CALCULATED')
 export const targets = (v: Record<string, unknown>) => count(v.setCount) && count(v.minReps) && count(v.maxReps) && v.minReps <= v.maxReps
 export const unique = (values: { id: string }[]) => new Set(values.map(v => v.id)).size === values.length
 export function cardioPlan(v: unknown): v is CardioPlan {
@@ -54,7 +55,7 @@ export function snapshot(v: unknown): v is Snapshot {
     && array(v.cardioResults, x => object(x) && uuid(x.id) && uuid(x.sessionActivityId) && instant(x.occurredAt)
       && (x.status === 'SKIPPED' ? nullable(x.startedAt, instant) && x.result === null : x.status === 'COMPLETED' && instant(x.startedAt) && object(x.result)
         && Number.isSafeInteger(x.result.timerMs) && (x.result.timerMs as number) >= 0 && count(x.result.activeMs) && x.result.activeMs <= 86400000
-        && typeof x.result.corrected === 'boolean' && nullable(x.result.distanceKm, decimal) && nullable(x.result.averageBpm, count)))
+        && typeof x.result.corrected === 'boolean' && nullable(x.result.distanceKm, decimal) && nullable(x.result.averageBpm, count) && (x.result.measurement === undefined || cardioMeasurement(x.result.measurement))))
     && array(v.deletedPerformedSetIds, uuid) && array(v.deletedCardioResultIds, uuid)
     && array(v.approvalRequests, x => object(x) && uuid(x.id) && uuid(x.sessionExerciseId) && counter(x.sequence) && nullable(x.previousRequestId, uuid)
       && counter(x.expectedRoutineVersion) && decimal(x.previousApprovedWeightKg) && decimal(x.nextApprovedWeightKg) && instant(x.occurredAt))

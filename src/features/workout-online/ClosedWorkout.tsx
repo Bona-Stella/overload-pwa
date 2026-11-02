@@ -6,15 +6,16 @@ import { ClosedWorkoutController } from './closed-controller.ts'
 import type { ClosedState } from './closed-controller.ts'
 import type { Manufacturer, CardioResult, ChangeEvents, ClosedPage, CompletionAssessment, PerformedSet, RecordEdit, Scope, Session } from './types.ts'
 import { equipmentLabel } from './equipment.ts'
-import { equipment } from './validation.ts'
+import { equipment, cardioMeasurement } from './validation.ts'
 import { countDraft, decimalDraft } from './validation.ts'
 import { recoveryRows, RECOVERY_LABEL } from './closed-model.ts'
 import { onlineIssue } from './controller.ts'
+import { distanceLabel, measuredCardio } from './cardio-measurement.ts'
 
 const time = (value: string | null) => value ? new Date(value).toLocaleString('ko-KR') : '없음'
 const performance = (record: PerformedSet | CardioResult, manufacturers: Manufacturer[]) => 'ordinal' in record
   ? `${record.ordinal}세트 · ${record.weightKg} kg × ${record.reps}회 · ${time(record.completedAt)} · ${equipmentLabel(record, manufacturers)}`
-  : record.status === 'COMPLETED' ? `${record.result.activeMs / 1000}초 · 거리 ${record.result.distanceKm ?? '미입력'} km · ${time(record.occurredAt)}` : '명시 건너뜀'
+  : record.status === 'COMPLETED' ? `${record.result.activeMs / 1000}초 · ${distanceLabel(record.result)} · ${time(record.occurredAt)}` : '명시 건너뜀'
 const reason: Record<string, string> = { PENDING: '승인 확인 필요', UNVERIFIED: '승인 문맥 확인 불가', AUTO_CLOSED: '서버 자동 종료', SESSION_DELETED: '삭제된 운동', NO_APPROVED_CONTEXT: '수행 당시 승인 문맥 미충족', INCOMPLETE_INITIAL_WEIGHT_PLAN: '최초 웨이트 계획 미완료', INSUFFICIENT_PERFORMED_SETS: '유효 수행 부족', TEMPORARY_WEIGHT: '오늘만 중량', MIXED_WEIGHT: '서로 다른 중량', SET_COUNT_MISMATCH: '최초 세트 수와 다름', INITIAL_EXERCISE_REMOVED: '최초 종목 제외', COMPARISON_CONTEXT_MISMATCH: '최초 목표와 다름' }
 const advice = { INCREASE: '증량 검토', DECREASE: '감량 검토', MAINTAIN: '유지 검토', UNAVAILABLE: '평가 자격 없음' }
 function ChangeEntry({ event: e, manufacturers }: { event: ChangeEvents['events'][number]; manufacturers: Manufacturer[] }) {
@@ -22,7 +23,7 @@ function ChangeEntry({ event: e, manufacturers }: { event: ChangeEvents['events'
     if (!value) return ''
     if (typeof value.weightKg === 'string' && typeof value.reps === 'number') return `${value.ordinal}세트 · ${value.weightKg} kg × ${value.reps}회${equipment(value) ? ' · ' + equipmentLabel(value as PerformedSet, manufacturers) : ''}`
     const r = value.result as Extract<CardioResult, { status: 'COMPLETED' }>['result'] | null
-    return r && typeof r.activeMs === 'number' ? `${r.activeMs / 1000}초 · 거리 ${r.distanceKm ?? '미입력'} km · 심박수 ${r.averageBpm ?? '미입력'}` : ''
+    return r && typeof r.activeMs === 'number' ? `${r.activeMs / 1000}초 · ${distanceLabel({ distanceKm: typeof r.distanceKm === 'string' ? r.distanceKm : null, ...(cardioMeasurement(r.measurement) ? { measurement: r.measurement } : {}) })} · 실제 속도 ${cardioMeasurement(r.measurement) ? r.measurement.actualSpeedKmh ?? '미입력' : '미입력'} km/h · 심박수 ${r.averageBpm ?? '미입력'}` : ''
   }
   return <div><p>{e.recordKind === 'SET' ? '세트' : e.recordKind === 'CARDIO' ? '유산소' : '운동'} · {e.changeKind === 'CORRECTED' ? '수치 정정' : e.changeKind === 'RECOVERED' ? '누락 수행 복구' : '논리 삭제'} · {time(e.recordedAt)}{!!e.changeContext?.claimedWeightContext && <span> · 원래 승인 문맥 보존</span>}</p>
     {e.before && summary(e.before) && <p className="muted small">변경 전 {summary(e.before)}</p>}{e.after && summary(e.after) && <p className="muted small">변경 후 {summary(e.after)}</p>}</div>
@@ -90,7 +91,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [] }: { s
     </section>
     {!server.deletedAt && <>
       <section className="card stack"><h3>완료 수행</h3>{server.snapshot.state.performedSets.map(s => <div key={s.id}><p>{name(s.sessionExerciseId)} · {s.ordinal}세트 · {s.weightKg} kg × {s.reps}회 · {time(s.completedAt)} · {equipmentLabel(s, manufacturers)}</p><p className="muted small">수행 당시 승인: {reason[server.snapshot.recordedContexts.find(c => c.setId === s.id)?.approvalStateAtRecording ?? ''] ?? '서버 확인 문맥'}</p><button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SET', record: s })}>세트 정정·삭제</button></div>)}
-        {server.snapshot.state.cardioResults.map(r => <div key={r.id}><p>{name(r.sessionActivityId)} · {r.status === 'SKIPPED' ? '명시 건너뜀' : `${r.result.activeMs / 1000}초 · 거리 ${r.result.distanceKm ?? '미입력'} km · 심박수 ${r.result.averageBpm ?? '미입력'}`}</p>{r.status === 'COMPLETED' ? <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'CARDIO', record: r })}>유산소 정정·삭제</button> : <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SKIPPED', record: r })}>건너뜀 기록 삭제</button>}</div>)}
+        {server.snapshot.state.cardioResults.map(r => <div key={r.id}><p>{name(r.sessionActivityId)} · {r.status === 'SKIPPED' ? '명시 건너뜀' : `${r.result.activeMs / 1000}초 · ${distanceLabel(r.result)} · 실제 속도 ${r.result.measurement?.actualSpeedKmh ?? '미입력'} km/h · 심박수 ${r.result.averageBpm ?? '미입력'}`}</p>{r.status === 'COMPLETED' ? <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'CARDIO', record: r })}>유산소 정정·삭제</button> : <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SKIPPED', record: r })}>건너뜀 기록 삭제</button>}</div>)}
         <button className="outline" disabled={disabled || !state.copies.length} onClick={() => setDialog('recovery')}>이 기기의 누락 완료 수행 비교·복구</button>
       </section>
       <section className="card stack"><Evaluation value={state.assessment?.completionAssessment ?? null} title="최초 종료 평가 · 변경되지 않음" /><Evaluation value={state.assessment?.currentAssessment.evaluation ?? null} title="현재 기록 기준 평가 · 서버 재계산" />
@@ -116,7 +117,12 @@ function CorrectionDialog({ target, server, controller, busy, onClose }: { targe
   const [initial] = useState(server), [weight, setWeight] = useState(target.kind === 'SET' ? target.record.weightKg : ''), [reps, setReps] = useState(target.kind === 'SET' ? String(target.record.reps) : '')
   const cardio = target.kind === 'CARDIO' ? target.record.result : null
   const [seconds, setSeconds] = useState(cardio ? String(cardio.activeMs / 1000) : ''), [corrected, setCorrected] = useState(cardio?.corrected ?? false)
-  const [distance, setDistance] = useState(cardio?.distanceKm ?? ''), [bpm, setBpm] = useState(cardio?.averageBpm == null ? '' : String(cardio.averageBpm)), [issue, setIssue] = useState('')
+  const [distance, setDistance] = useState(cardio?.measurement?.distanceSource === 'CALCULATED' ? '' : cardio?.distanceKm ?? ''), [bpm, setBpm] = useState(cardio?.averageBpm == null ? '' : String(cardio.averageBpm)), [issue, setIssue] = useState('')
+  const [speed, setSpeed] = useState(cardio?.measurement?.actualSpeedKmh ?? ''), [distanceTouched, setDistanceTouched] = useState(false)
+  const kind = target.kind === 'CARDIO' ? initial.snapshot.state.appliedPlan.cardioActivities.find(p => p.sessionActivityId === target.record.sessionActivityId)?.plan.kind ?? initial.initialPlan.cardioActivities.find(p => p.sessionActivityId === target.record.sessionActivityId)?.plan.kind : undefined
+  const supportsDistance = kind !== undefined && ['TREADMILL', 'BIKE', 'OUTDOOR'].includes(kind)
+  let preview = ''
+  try { preview = distanceLabel(measuredCardio(speed, distance, corrected ? Number(seconds) * 1000 : cardio?.timerMs ?? 0, cardio?.measurement?.distanceSource == null && !distanceTouched)) } catch { /* Invalid draft remains available for correction. */ }
   const submit = async (remove: boolean) => {
     try {
       const body: RecordEdit = { dataGeneration: initial.dataGeneration, expectedVersion: initial.version, setCorrections: [], cardioCorrections: [], deletedPerformedSetIds: [], deletedCardioResultIds: [] }
@@ -128,7 +134,9 @@ function CorrectionDialog({ target, server, controller, busy, onClose }: { targe
         if (activeMs < 1 || activeMs > 86400000) throw Error('활동 시간은 0.001초~24시간이어야 합니다.')
         const averageBpm = bpm.trim() ? countDraft(bpm) : null
         if (averageBpm !== null && (averageBpm < 20 || averageBpm > 300)) throw Error('심박수는 20~300 BPM입니다.')
-        body.cardioCorrections.push({ id: target.record.id, activeMs, corrected, distanceKm: distance.trim() ? decimalDraft(distance) : null, averageBpm })
+        const measured = measuredCardio(speed, distance, activeMs, cardio?.measurement?.distanceSource == null && !distanceTouched)
+        body.cardioCorrections.push({ id: target.record.id, activeMs, corrected, distanceKm: measured.distanceKm, averageBpm,
+          ...(cardio?.measurement !== undefined || speed.trim() || distanceTouched ? { measurement: measured.measurement } : {}) })
       }
       if (window.confirm(remove ? '이 완료 수행을 논리 삭제할까요? 원본과 변경 이력은 보존합니다.' : '입력한 실제 수치로 정정할까요? 최초 계획·평가·승인 문맥은 바뀌지 않습니다.')) {
         if (await controller.edit(body)) onClose()
@@ -138,7 +146,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose }: { targe
   }
   return <Dialog title="완료 수행 정정·삭제" onClose={() => { if (!busy) onClose() }}><div className="stack">{issue && <p role="alert">{issue}</p>}
     {target.kind === 'SET' ? <><label>실제 중량 kg<input inputMode="decimal" value={weight} onChange={e => setWeight(e.target.value)} /></label><label>실제 반복 횟수<input inputMode="numeric" value={reps} onChange={e => setReps(e.target.value)} /></label></>
-      : target.kind === 'CARDIO' ? <><p>원본 타이머 {target.record.result.timerMs / 1000}초</p><label><input type="checkbox" checked={corrected} onChange={e => setCorrected(e.target.checked)} />활동 시간 정정</label><label>실제 활동 시간 초<input inputMode="decimal" value={seconds} disabled={!corrected} onChange={e => setSeconds(e.target.value)} /></label><label>실제 거리 km · 선택<input inputMode="decimal" value={distance} onChange={e => setDistance(e.target.value)} /></label><label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} /></label></> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
+      : target.kind === 'CARDIO' ? <><p>원본 타이머 {target.record.result.timerMs / 1000}초</p><label><input type="checkbox" checked={corrected} onChange={e => setCorrected(e.target.checked)} />활동 시간 정정</label><label>실제 활동 시간 초<input inputMode="decimal" value={seconds} disabled={!corrected} onChange={e => setSeconds(e.target.value)} /></label>{supportsDistance && <><label>직접 입력 거리 km · 선택<input inputMode="decimal" value={distance} onChange={e => { setDistance(e.target.value); setDistanceTouched(true) }} /></label><label>실제 속도 km/h · 선택<input inputMode="decimal" value={speed} onChange={e => setSpeed(e.target.value)} /></label><p className="muted small">{preview} · 직접 입력 거리를 우선하며 목표 속도는 실제값으로 사용하지 않습니다.</p></>}<label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} /></label></> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
     {target.kind !== 'SKIPPED' && <button className="primary" disabled={busy} onClick={() => void submit(false)}>정정 내용 서버 저장</button>}<button className="outline" disabled={busy} onClick={() => void submit(true)}>이 수행 논리 삭제</button></div></Dialog>
 }
 function RecoveryDialog({ state, controller, onClose, manufacturers }: { state: ClosedState; controller: ClosedWorkoutController; manufacturers: Manufacturer[]; onClose: () => void }) {

@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Dialog } from '../../components/Dialog.tsx'
+import { distanceLabel, measuredCardio } from '../workout-online/cardio-measurement.ts'
 import { RepsInput } from '../../components/RepsInput.tsx'
 import { WorkoutStore } from '../workout-online/storage.ts'
 import { ExerciseSearch } from '../workout-online/ExerciseSearch.tsx'
@@ -127,24 +128,28 @@ function WeightDialog({ workout, id, busy, controller, onClose }: { workout: Loc
 }
 function LocalCardio({ workout, id, state, controller, now }: { workout: LocalWorkout; id: string; state: EditorState; controller: LocalWorkoutController; now: number }) {
   const timer = workout.timers[id] ?? model.emptyTimer(), record = workout.snapshot.cardioResults.find(x => x.sessionActivityId === id)
-  const draft = { ...timer, ...state.cardioDrafts[id] }, { distance, bpm, correctedSeconds } = draft
+  const draft = { ...timer, ...state.cardioDrafts[id] }, { distance, speed = '', bpm, correctedSeconds } = draft
   const plan = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)!.plan
   const busy = !state.writable || state.pending > 0 || !!workout.finish
   let timerText: string
   try { timerText = duration(model.elapsed(timer, workout.finish ? Date.parse(workout.finish.endedAt) : now)) } catch (error) { timerText = error instanceof Error ? error.message : '기기 시각 확인 필요' }
-  const saveDraft = (patch: Pick<Partial<typeof timer>, 'distance' | 'bpm' | 'correctedSeconds'>) => controller.cardioDraft(id, patch)
+  const saveDraft = (patch: Pick<Partial<typeof timer>, 'distance' | 'speed' | 'bpm' | 'correctedSeconds'>) => controller.cardioDraft(id, patch)
+  let measurementPreview = ''
+  try { measurementPreview = distanceLabel(measuredCardio(speed, distance, correctedSeconds === null ? model.elapsed(timer, now) : Number(correctedSeconds) * 1000)) } catch { /* Keep invalid drafts intact until explicit completion. */ }
   return <div className="stack cardio-content"><div className="exercise-heading"><p className="eyebrow">CARDIO</p><h2>{plan.name}</h2><p className="badge">현재 목표 {plan.targetSeconds}초</p></div>
     <section className="card cardio-clock"><p>실제 활동 시간 · 일시정지 제외</p><strong>{record?.status === 'COMPLETED' ? duration(record.result.activeMs) : timerText}</strong><p>{record ? '이 기기의 완료 기록' : workout.finish ? '종료 선택 시점의 미완료 원본' : timer.runningSince ? '측정 중' : timer.startedAt ? '일시정지' : '시작 전'}</p></section>
     {!record && <><div className="row"><button className="outline" disabled={busy} onClick={() => void controller.change(w => model.timerAction(w, id, timer.runningSince ? 'pause' : 'start', Date.now()))}>{timer.runningSince ? '일시정지' : timer.startedAt ? '재개' : '유산소 시작'}</button>
       {timer.startedAt && !timer.reviewing && <button className="primary" disabled={busy} onClick={() => void controller.change(w => model.reviewCardio(w, id, Date.now()))}>유산소 완료 기록 확인</button>}</div>
       {timer.reviewing && <p className="notice">측정을 멈췄습니다. 원본 타이머와 실제 입력을 확인한 뒤 기록을 확정해 주세요.</p>}
       {['TREADMILL', 'BIKE', 'OUTDOOR'].includes(plan.kind) && <label>실제 거리 km · 선택<input inputMode="decimal" value={distance} disabled={!state.writable || !!workout.finish} onChange={e => saveDraft({ distance: e.target.value })} /></label>}
+      {['TREADMILL', 'BIKE', 'OUTDOOR'].includes(plan.kind) && <label>실제 속도 km/h · 선택<input inputMode="decimal" value={speed} disabled={!state.writable || !!workout.finish} onChange={e => saveDraft({ speed: e.target.value })} /></label>}
+      {measurementPreview && <p className="muted small">{measurementPreview}</p>}<p className="muted small">직접 입력 거리를 우선합니다. 미입력 시 실제 속도와 활동 시간으로 계산하며 목표 속도는 사용하지 않습니다.</p>
       <label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} disabled={!state.writable || !!workout.finish} onChange={e => saveDraft({ bpm: e.target.value })} /></label>
       <label className="radio-option"><input type="checkbox" disabled={!state.writable || !!workout.finish} checked={correctedSeconds !== null} onChange={e => saveDraft({ correctedSeconds: e.target.checked ? '' : null })} /><span>활동 시간 직접 정정</span></label>
       {correctedSeconds !== null && <label>정정 활동 시간 초<input inputMode="numeric" value={correctedSeconds} disabled={!state.writable || !!workout.finish} onChange={e => saveDraft({ correctedSeconds: e.target.value })} /></label>}
-      <p className="muted small">거리 0.001~1000 km · 심박수 20~300 BPM · 정정 시간 1~86400초. 미입력값은 계획에서 만들지 않습니다.</p>
+      <p className="muted small">직접 입력 거리 0.001~1000 km · 심박수 20~300 BPM · 정정 시간 1~86400초. 미입력값은 계획에서 만들지 않습니다.</p>
       {timer.reviewing && <><button className="primary" disabled={busy} onClick={() => void controller.complete(w => model.completeCardio(w, id, Date.now()))}>유산소 기록 완료</button><button className="quiet" disabled={busy} onClick={() => void controller.change(w => { w.timers[id].reviewing = false })}>확인 취소 · 일시정지로 돌아가기</button></>}</>}
-    {record && <><p className="muted small">원본 타이머 {record.status === 'COMPLETED' ? duration(record.result.timerMs) : '—'} · {record.status === 'COMPLETED' && record.result.corrected ? '시간 정정 있음' : '자동 측정'}</p><button className="outline" disabled={busy} onClick={() => { if (window.confirm('유산소 완료를 취소할까요? 원래 완료 기록과 취소 사실은 보존합니다.')) void controller.change(w => model.undoCardio(w, record.id)) }}>유산소 완료 취소</button></>}
+    {record && <><p className="muted small">원본 타이머 {record.status === 'COMPLETED' ? duration(record.result.timerMs) : '—'} · {record.status === 'COMPLETED' && record.result.corrected ? '시간 정정 있음' : '자동 측정'}</p>{record.status === 'COMPLETED' && <p>{distanceLabel(record.result)}{record.result.measurement?.actualSpeedKmh != null && ` · 실제 속도 ${record.result.measurement.actualSpeedKmh} km/h`}</p>}<button className="outline" disabled={busy} onClick={() => { if (window.confirm('유산소 완료를 취소할까요? 원래 완료 기록과 취소 사실은 보존합니다.')) void controller.change(w => model.undoCardio(w, record.id)) }}>유산소 완료 취소</button></>}
     <p className="muted small">미완료 유산소는 자동으로 건너뜀 처리하지 않습니다.</p>
   </div>
 }

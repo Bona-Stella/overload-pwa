@@ -1,5 +1,7 @@
 # Overload Frontend Engineering Rules
 
+유산소 실제 측정2D는 [공통 API·오프라인 계약](../../../overload-server/docs/api/cardio-actual-measurements.md)을 따른다. CardioResult/RecordEdit의 optional measurement와 타이머 optional speed는 IndexedDB3/schema2·기존 고정 요청을 재작성하지 않는다. 직접 입력/정정 거리가 우선이고 계획 속도를 실제값에 채우지 않는다.
+
 > Frontend Development Guidelines for AI Coding Agents
 >
 > Repository: `overload-app`

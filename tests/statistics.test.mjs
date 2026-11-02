@@ -113,3 +113,11 @@ test('first registration week renders two out of three without inventing plans b
   const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/2 \/ 3일/);assert.match(html,/66\.666667%/);assert.match(html,/최초 등록 전 · 달성률 제외/);assert.doesNotMatch(html,/과거 계획 확인 불가|undefined|null종목/)
 })
+test('cardio totals keep different kinds separate and label manual calculated and unknown legacy distances',()=>{
+  const data=planned();data.cardioByKind=[{kind:'TREADMILL',activeMs:'1800000',distanceKm:'4',manualDistanceKm:null,calculatedDistanceKm:'4',unknownSourceDistanceKm:null,manualRecords:'0',calculatedRecords:'1',unknownSourceRecords:'0',recordsWithoutDistance:'0'},
+    {kind:'BIKE',activeMs:'3600000',distanceKm:'20',manualDistanceKm:'18',calculatedDistanceKm:null,unknownSourceDistanceKm:'2',manualRecords:'1',calculatedRecords:'0',unknownSourceRecords:'1',recordsWithoutDistance:'0'}]
+  assert.equal(overview(data),true)
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  for(const text of ['러닝머신','자전거','계산 거리 4 km','직접 입력 18 km','출처 미확인 2 km'])assert.ok(html.includes(text))
+  assert.doesNotMatch(html,/24 km|총 거리/)
+})

@@ -98,6 +98,15 @@ test('lost ACK reconciles by detail and identical replay without new revision or
   let lose=true;const e=await setup({afterSend:async()=>{if(lose){lose=false;throw Error('lost after commit')}}})
   await e.c.change(w=>complete(w));await e.c.syncSettled();assert.equal(e.writes.length,2);assert.equal(e.writes[0],e.writes[1]);assert.equal(e.remote().snapshot.state.performedSets.length,1);assert.equal(e.read().localRevision,'1');assert.equal(e.read().syncState,'CLEAN');e.c.stop()
 })
+test('offline actual cardio measurements survive ACK loss with byte-identical replay and one remote record',async()=>{
+  let lose=true;const e=await setup({afterSend:async()=>{if(lose){lose=false;throw Error('lost cardio ACK')}}})
+  e.online(false)
+  await e.c.change(w=>{m.addCardio(w,{kind:'TREADMILL',name:'offline run',targetSeconds:1800,targetDistanceKm:null,intensity:{mode:'SPEED',value:'20'},inclinePercent:null,resistance:null});const id=w.currentExerciseId;m.timerAction(w,id,'start',time);w.timers[id].speed='8';m.completeCardio(w,id,time+1800000)})
+  assert.equal(e.writes.length,0);const before=e.read().snapshot.cardioResults[0];assert.equal(before.result.distanceKm,'4')
+  e.online(true);await e.c.retrySync();await e.c.syncSettled()
+  assert.equal(e.writes.length,2);assert.equal(e.writes[0],e.writes[1]);assert.equal(e.remote().snapshot.state.cardioResults.length,1)
+  assert.deepEqual(e.remote().snapshot.state.cardioResults[0].result.measurement,{actualSpeedKmh:'8',distanceSource:'CALCULATED'});assert.equal(e.read().syncState,'CLEAN');e.c.stop()
+})
 test('unconfirmed low revision is retried verbatim once per trigger, never an automatic loop',async()=>{
   let count=0;const e=await setup({api:{snapshot:async()=>{count++;throw Error('offline')}}})
   await e.c.change(w=>complete(w));await e.c.syncSettled();const frozen=e.read().pendingSnapshot.requestJson;assert.equal(count,2)

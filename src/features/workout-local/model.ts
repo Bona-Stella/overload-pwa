@@ -2,6 +2,7 @@ import type { ActiveWeightContext, CardioPlan, Equipment, Session } from '../wor
 import { count, countDraft, counter, decimalDraft, snapshot, targets, cardioPlan, uuid, equipment } from '../workout-online/validation.ts'
 import type { CardioTimer, LocalWorkout, RestPolicy } from './types.ts'
 import { slotKey } from './types.ts'
+import { measuredCardio } from '../workout-online/cardio-measurement.ts'
 
 export function increment(value: string) {
   const next = (BigInt(value) + 1n).toString()
@@ -27,7 +28,7 @@ export function createLocalWorkout(server: Session, restPolicy: RestPolicy): Loc
     drafts: {}, weights, timers: {}, exerciseNames: Object.fromEntries(server.initialPlan.weightExercises.map(x => [x.sessionExerciseId, x.exerciseName])),
     currentExerciseId: state.appliedPlan.weightExercises[0]?.sessionExerciseId ?? state.appliedPlan.cardioActivities[0]?.sessionActivityId ?? '', restPolicy: { ...restPolicy }, rest: null }
 }
-export const emptyTimer = (): CardioTimer => ({ startedAt: null, runningSince: null, accumulatedMs: 0, segments: [], distance: '', bpm: '', correctedSeconds: null, reviewing: false })
+export const emptyTimer = (): CardioTimer => ({ startedAt: null, runningSince: null, accumulatedMs: 0, segments: [], distance: '', speed: '', bpm: '', correctedSeconds: null, reviewing: false })
 function eventTime(workout: LocalWorkout, now: number) {
   if (!Number.isSafeInteger(now) || now < Date.parse(workout.startedAt)) throw new Error('기기 시각이 운동 시작보다 이릅니다. 입력을 보존하고 날짜·시간을 확인해 주세요.')
   return new Date(now).toISOString()
@@ -166,15 +167,14 @@ export function completeCardio(workout: LocalWorkout, id: string, now: number, r
   const timerMs = timer.accumulatedMs, corrected = timer.correctedSeconds !== null
   const activeMs = corrected ? countDraft(timer.correctedSeconds!) * 1000 : timerMs
   if (activeMs < 1 || activeMs > 86400000 || timerMs > now - Date.parse(timer.startedAt)) throw new Error('실제 활동 시간은 1ms~24시간이어야 합니다. 타이머와 정정값을 확인해 주세요.')
-  const distanceKm = timer.distance.trim() ? decimalDraft(timer.distance) : null
-  if (distanceKm !== null && (!['TREADMILL', 'BIKE', 'OUTDOOR'].includes(activity.plan.kind) || compareDistance(distanceKm) < 1000n || compareDistance(distanceKm) > 1000000000n)) throw new Error('거리는 0.001~1000 km이며 러닝머신·자전거·야외 운동에만 입력할 수 있습니다.')
+  const measured = measuredCardio(timer.speed ?? '', timer.distance, activeMs), { distanceKm, measurement } = measured
+  if ((distanceKm !== null || measurement.actualSpeedKmh !== null) && !['TREADMILL', 'BIKE', 'OUTDOOR'].includes(activity.plan.kind)) throw new Error('거리와 속도는 러닝머신·자전거·야외 운동에만 입력할 수 있습니다.')
   const averageBpm = timer.bpm.trim() ? countDraft(timer.bpm) : null
   if (averageBpm !== null && (averageBpm < 20 || averageBpm > 300)) throw new Error('평균 심박수는 20~300 BPM을 입력해 주세요.')
   const result = { id: freshId(workout, randomId), sessionActivityId: id, status: 'COMPLETED' as const, startedAt: timer.startedAt, occurredAt: eventTime(workout, now),
-    result: { timerMs, activeMs, corrected, distanceKm, averageBpm } }
+    result: { timerMs, activeMs, corrected, distanceKm, averageBpm, ...(distanceKm !== null || measurement.actualSpeedKmh !== null ? { measurement } : {}) } }
   workout.snapshot.cardioResults.push(result); workout.presence[result.id] = 'LOCAL_ONLY'
 }
-function compareDistance(value: string) { const [whole, fraction = ''] = value.split('.'); return BigInt(whole) * 1000000n + BigInt(fraction.padEnd(6, '0')) }
 export function undoCardio(workout: LocalWorkout, recordId: string) {
   const record = workout.snapshot.cardioResults.find(x => x.id === recordId)
   if (!record) throw new Error('완료 유산소를 찾지 못했습니다.')

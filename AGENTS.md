@@ -101,6 +101,8 @@ Required:
 
 ### Task 009 Current Design
 
+유산소 실제 측정 2D는 [보고서](../overload-server/docs/tasks/statistics-tracking-phase-2d-report.md)와 [DB/API·오프라인 계약](../overload-server/docs/api/cardio-actual-measurements.md)을 따릅니다. 실제 속도와 활동 시간만으로 거리를 계산하며 직접 입력/정정 거리가 우선입니다. 선택 measurement와 V21은 기존5필드 JSON·고정 요청·미확인 과거 출처를 보존합니다. IndexedDB3/schema2를 변경하지 않고 다른 종류 거리를 하나의 총 km로 합산하지 않습니다. 개인 DB V18~V21 미적용·운영 분류 검증 미완료·디로딩3단계 연결 전 상태를 유지합니다.
+
 승인 중량 성장 2C는 [진행 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2c-report.md)와 [조회 계약](../overload-server/docs/api/approved-weight-growth.md)을 따릅니다. 기존 승인 사건을 routineId+placementId별로 분리하고 과거 수행/승인 이름을 검색하며, 초기/현재 중량으로 과거 점을 생성하지 않습니다. 연결 근거가 없는 점은 선으로 잇지 않습니다. 디로딩 식별/일반 승인 차단의 실제 연결은 후속3단계이며 혼재 검증 완료로 표시하지 않습니다. 개인 DB V18~V20 미적용을 유지합니다.
 
 주간 일정/달성률의 현행 계약은 [2B 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)와 [주간 일정 API](../overload-server/docs/api/weekly-schedule.md)를 따릅니다. 일정 최초 등록은 당일 즉시 적용하고 첫 주 분모는 등록일~일요일 예정일만 포함하며, 기존 일정 변경은 온라인에서 다음 월요일 적용으로 예약합니다. 같은 예정일은 최고 단일 세션의 InitialPlan 달성률만 사용합니다. 통계는 새 overview를 사용하고 이력 없는 과거/실제 유산소 목표 확인 불가는 추정하지 않습니다. 기존2A 읽기 API·IndexedDB3/schema2·고정 snapshot/finish·오프라인 permit은 유지합니다. 개인 DB V18·V19·V20 적용과 운영 카탈로그 검증은 미완료입니다.

@@ -4,7 +4,7 @@ export type LocalKey = Scope & { sessionId: string; editorDeviceId: string; writ
 export type RecordPresence = 'LOCAL_ONLY' | 'SERVER_CONFIRMED' | 'UNKNOWN'
 export type SetDraft = { weight: string; reps: string }
 export type CardioTimer = { startedAt: string | null; runningSince: string | null; accumulatedMs: number;
-  segments: { startedAt: string; stoppedAt: string }[]; distance: string; bpm: string; correctedSeconds: string | null; reviewing: boolean }
+  segments: { startedAt: string; stoppedAt: string }[]; distance: string; speed?: string; bpm: string; correctedSeconds: string | null; reviewing: boolean }
 export type RestPolicy = { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
 export type ExitGuardRegistration = (guard: (() => Promise<boolean>) | null) => void
 export type LocalWorkout = LocalKey & {

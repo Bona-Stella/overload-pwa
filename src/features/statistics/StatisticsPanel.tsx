@@ -6,6 +6,7 @@ import './statistics.css'
 import { GrowthPanel } from './GrowthPanel.tsx'
 
 const groups: Record<string, string> = { CHEST: '가슴', BACK: '등', SHOULDERS: '어깨', ARMS: '팔', LEGS: '하체', CORE: '코어' }
+const cardioKinds: Record<string, string> = { TREADMILL: '러닝머신', BIKE: '자전거', OUTDOOR: '야외 운동', STAIRS: '계단', OTHER: '기타', UNCLASSIFIED: '미분류' }
 const minutes = (ms: string) => (BigInt(ms) / 60000n).toString()
 type Row = { key: string; name: string; weights: WeightStats }
 export function WeightChart({ rows }: { rows: Row[] }) {
@@ -34,7 +35,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
       <h3>최근 운동</h3>{!data.recentSessions.length && <p>운동 이력이 없습니다.</p>}{data.recentSessions.map(s => <button className="outline full" key={s.id} onClick={() => onOpen(s.id)}>{s.workoutDate} · {s.routineName}{s.status === 'AUTO_CLOSED' && ' · 자동 종료'}</button>)}</>
       : screen === 'activity' ? <><h3>운동량 추이</h3><WeightChart rows={data.days.map(d => ({ key: d.date, name: d.date, weights: d.weights }))} />
         <h3>운동 종목별</h3><WeightChart rows={data.exercises.map(e => ({ key: e.standardExerciseId, name: e.name, weights: e.weights }))} />
-        <h3>유산소 시간·거리</h3>{!data.cardio.length && <p>유산소 기록이 없습니다.</p>}{data.cardio.map(c => <p key={c.kind + ':' + c.name}>{c.name} · {minutes(c.activeMs)}분{c.distanceKm !== null && ` · ${c.distanceKm} km`}{c.recordsWithoutDistance !== '0' && ' · 거리 미입력 기록 포함'}</p>)}</>
+        <h3>유산소 시간·거리</h3>{!data.cardio.length && <p>유산소 기록이 없습니다.</p>}{planning?.cardioByKind ? planning.cardioByKind.map(c => <div key={c.kind}><p>{cardioKinds[c.kind] ?? c.kind} · {minutes(c.activeMs)}분{c.distanceKm !== null && ` · ${c.distanceKm} km`}</p><small>{c.manualDistanceKm !== null && `직접 입력 ${c.manualDistanceKm} km · `}{c.calculatedDistanceKm !== null && `계산 거리 ${c.calculatedDistanceKm} km · `}{c.unknownSourceDistanceKm !== null && `출처 미확인 ${c.unknownSourceDistanceKm} km · `}{c.recordsWithoutDistance !== '0' && '거리 미입력 기록 포함'}</small></div>) : data.cardio.map(c => <p key={c.kind + ':' + c.name}>{c.name} · {minutes(c.activeMs)}분{c.distanceKm !== null && ` · ${c.distanceKm} km`}{c.recordsWithoutDistance !== '0' && ' · 거리 미입력 기록 포함'}</p>)}</>
       : <><h3>주동근 세트</h3><p className="muted small">{data.planCoverage === 'FULL_SCHEDULE_HISTORY' ? '미수행 예정일을 포함한 당시 일정과 계획입니다.' : '계획이 확인된 날짜만 표시합니다. 전체 주간 계획과는 다를 수 있습니다.'}</p>
         <WeightChart rows={data.groups.filter(g => g.role === 'PRIMARY').map(g => ({ key: g.groupCode, name: groups[g.groupCode], weights: g.weights }))} />
         <div className="row"><button className="outline" aria-pressed={selectedGroup === null} onClick={() => setSelectedGroup(null)}>전체 부위</button>{data.groups.filter(g => g.role === 'PRIMARY').map(g => <button className="outline" key={g.groupCode} aria-pressed={selectedGroup === g.groupCode} onClick={() => setSelectedGroup(g.groupCode)}>{groups[g.groupCode]} 상세</button>)}</div>

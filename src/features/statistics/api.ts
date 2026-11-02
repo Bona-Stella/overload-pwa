@@ -16,7 +16,8 @@ export type Statistics = Scope & { fromDate: string; toDateExclusive: string; pl
 export type Period = { fromDate: string; toDateExclusive: string }
 export type PlannedDay = { date: string; status: 'UNKNOWN' | 'BEFORE_REGISTRATION' | 'REST' | 'PLANNED' | 'UNVERIFIABLE'; scheduleVersion: string | null;
   plan: import('../workout-online/types.ts').Routine | null; plannedExercises: number | null; completedExercises: number | null; effectiveDay: string | null; selectedSessionId: string | null }
-export type Overview = { statistics: Statistics; effectiveWorkoutDays: string | null; unknownPlanDays: number; unverifiableDays: number; plannedDays: PlannedDay[] }
+export type CardioTotal = { kind: string; activeMs: string; distanceKm: string | null; manualDistanceKm: string | null; calculatedDistanceKm: string | null; unknownSourceDistanceKm: string | null; manualRecords: string; calculatedRecords: string; unknownSourceRecords: string; recordsWithoutDistance: string }
+export type Overview = { statistics: Statistics; effectiveWorkoutDays: string | null; unknownPlanDays: number; unverifiableDays: number; plannedDays: PlannedDay[]; cardioByKind?: CardioTotal[] }
 const nonnegative = (x: unknown): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 2147483647
 const fraction = (x: unknown, maximum: number): x is string => typeof x === 'string' && /^(0|[1-9][0-9]*)(\.[0-9]{0,11}[1-9])?$/.test(x) && Number(x) <= maximum
 export const date = (x: unknown): x is string => typeof x === 'string' && /^(?!0000)\d{4}-\d{2}-\d{2}$/.test(x)
@@ -47,6 +48,7 @@ export function overview(x: unknown): x is Overview {
     && nonnegative(x.unverifiableDays) && x.unverifiableDays <= 366
     && (x.unknownPlanDays === 0 ? x.statistics.planCoverage === 'FULL_SCHEDULE_HISTORY' : x.statistics.planCoverage === 'PARTIAL_SCHEDULE_HISTORY' && x.statistics.plannedWorkoutDays === null && x.statistics.routineAchievementPercent === null && x.effectiveWorkoutDays === null)
     && (x.unverifiableDays === 0 || x.statistics.routineAchievementPercent === null && x.effectiveWorkoutDays === null)
+    && (x.cardioByKind === undefined || v.array(x.cardioByKind, c => v.object(c) && v.name(c.kind) && v.counter(c.activeMs) && v.nullable(c.distanceKm, decimal) && v.nullable(c.manualDistanceKm, decimal) && v.nullable(c.calculatedDistanceKm, decimal) && v.nullable(c.unknownSourceDistanceKm, decimal) && v.counter(c.manualRecords) && v.counter(c.calculatedRecords) && v.counter(c.unknownSourceRecords) && v.counter(c.recordsWithoutDistance)))
     && v.array(x.plannedDays, d => v.object(d) && date(d.date) && ['UNKNOWN', 'BEFORE_REGISTRATION', 'REST', 'PLANNED', 'UNVERIFIABLE'].includes(String(d.status)) && v.nullable(d.scheduleVersion, v.counter)
       && v.nullable(d.plan, v.routine) && v.nullable(d.plannedExercises, nonnegative) && v.nullable(d.completedExercises, nonnegative) && v.nullable(d.effectiveDay, n => fraction(n, 1)) && v.nullable(d.selectedSessionId, v.uuid))
 }
