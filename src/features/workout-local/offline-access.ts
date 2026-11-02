@@ -17,6 +17,7 @@ export class OfflineAccess implements AuthBoundary {
   private readonly store: Port
   private readonly storage: Pick<Storage, 'getItem' | 'setItem'>
   private readonly random: () => string
+  private granting: Promise<void> = Promise.resolve()
   constructor(store: Port, storage: Pick<Storage, 'getItem' | 'setItem'> = { getItem: key => globalThis.localStorage.getItem(key), setItem: (key, value) => globalThis.localStorage.setItem(key, value) }, random: () => string = () => crypto.randomUUID()) {
     this.store = store; this.storage = storage; this.random = random
   }
@@ -50,16 +51,24 @@ export class OfflineAccess implements AuthBoundary {
     const f = this.fence()
     return !!f?.allowed && f.nonce === permit.nonce && f.userId === permit.userId && f.dataGeneration === permit.dataGeneration
   }
-  async grant(key: LocalKey, authorized: () => boolean) {
+  grant(key: LocalKey, authorized: () => boolean): Promise<void> {
+    // IDB commits after its final guard. Publish the paired fence before another grant starts.
+    const next = this.granting.then(() => this.grantCurrent(key, authorized))
+    this.granting = next.catch(() => {})
+    return next
+  }
+  private async grantCurrent(key: LocalKey, authorized: () => boolean) {
     if (!authorized()) return
     const baseline = this.raw(), fence = this.fence()
     if (!fence || fence.userId !== key.userId || fence.dataGeneration !== key.dataGeneration) return
     const { userId, dataGeneration, sessionId, editorDeviceId, writerEpoch } = key
-    const permit = { userId, dataGeneration, sessionId, editorDeviceId, writerEpoch, nonce: this.random(), confirmedAt: new Date().toISOString() }
+    // Reuse this scope's revocation token: refreshing an admitted workout must not rotate
+    // an already durable fence while IDB commits independently of localStorage flushing.
+    const permit = { userId, dataGeneration, sessionId, editorDeviceId, writerEpoch, nonce: fence.nonce, confirmedAt: new Date().toISOString() }
     const allowed = () => authorized() && this.raw() === baseline
     await this.store.saveOfflinePermit(permit, allowed)
     if (!allowed()) return
-    this.write({ nonce: permit.nonce, userId: key.userId, dataGeneration: key.dataGeneration, allowed: true })
+    if (!fence.allowed) this.write({ nonce: permit.nonce, userId: key.userId, dataGeneration: key.dataGeneration, allowed: true })
   }
   async source() {
     const value = await this.store.offlineSource()

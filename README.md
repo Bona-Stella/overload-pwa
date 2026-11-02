@@ -44,7 +44,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 ### PWA 빌드·배포
 
-현재 계정 화면은 Backend V17의 표준 운동명·별칭 검색과 선택형 제조사/부하를 사용합니다. 완료 세트에는 완료 당시 장비를 보존합니다. 계획·평가·로컬 운동 문서는 schema2, IndexedDB는 DB3입니다. 이전 DB1/2의 출시 전 테스트 데이터는 이번 전환에서 한 번만 정리하며, 이미 DB3인 기록은 앱 업데이트마다 초기화하지 않습니다. [Frontend 3단계 구현·검증](docs/tasks/standard-exercise-catalog-frontend-phase-3-report.md)을 참고하세요. 개인 개발 DB를 V17로 적용하거나 카탈로그를 등록하는 작업은 별도입니다.
+현재 계정 화면은 Backend V17의 표준 운동명·별칭 검색과 선택형 제조사/부하를 사용합니다. 완료 세트에는 완료 당시 장비를 보존합니다. 계획·평가·로컬 운동 문서는 schema2, IndexedDB는 DB3입니다. 이전 DB1/2의 출시 전 테스트 데이터는 이번 전환에서 한 번만 정리하며, 이미 DB3인 기록은 앱 업데이트마다 초기화하지 않습니다. [Frontend 3단계](docs/tasks/standard-exercise-catalog-frontend-phase-3-report.md) 이후 [4단계 실제 개발 DB V17 적용·앱 검증](../overload-server/docs/tasks/standard-exercise-catalog-dev-phase-4-report.md)도 완료했습니다. 이 과정에서 접근 허용의 nonce 갱신 경쟁·강제 종료 내구성을 보강했고 로그아웃·계정/세대 차단은 유지합니다.
 
 `npm run build`가 `dist/manifest.webmanifest`, 아이콘, 빌드 파일 목록·SHA-256을 포함한 `dist/sw.js`를 생성합니다. 개발 서버에는 Service Worker를 등록하지 않습니다. 루트 경로(`/`)의 HTTPS 정적 배포가 필요합니다(검증용 loopback HTTP는 브라우저가 secure context로 취급). `/`와 `/account`만 앱 진입 HTML로 연결하고 `/api`·OAuth/인증 복귀 경로는 실제 Backend/인증 라우팅을 유지하세요. `/sw.js`는 JavaScript MIME·재검증 가능한 캐시 정책으로 제공해야 합니다. 해시가 있는 자산과 index를 같은 릴리스로 배포하고, 열려 있는 이전 앱을 위해 이전 자산도 유지하세요. 사용자별 HTML 주입이나 파일 변환으로 원래 빌드 바이트가 바뀌면 오프라인 준비가 실패하도록 설계했습니다.
 

@@ -47,6 +47,41 @@ test('permit write failure or revoked live authorization never enables cold acce
   f.port.saveOfflinePermit=async()=>{throw Error('IDB aborted')}
   await assert.rejects(f.access.grant(key,()=>true));assert.equal(await f.access.source(),null)
 })
+test('concurrent permit commits cannot leave the IDB pointer paired with a different fence nonce',async()=>{
+  const f=permission();await f.access.identity(USER);f.access.scope(scope)
+  const commits=[];let persisted=null
+  f.port.saveOfflinePermit=async(next,allowed)=>{
+    assert.ok(allowed())
+    // Model IDB's last guard passing before its asynchronous commit notification.
+    const commit=deferred();commits.push(commit);await commit.promise;persisted=structuredClone(next)
+  }
+  f.port.offlineSource=async()=>persisted?{permit:persisted,server:session(),workout:createLocalWorkout(session(),{restLowSeconds:180,restMediumSeconds:120,restHighSeconds:90})}:null
+  const first=f.access.grant(key,()=>true),second=f.access.grant(key,()=>true)
+  for(let i=0;i<4;i++)await Promise.resolve()
+  commits[0].resolve();await first
+  for(let i=0;i<4;i++)await Promise.resolve()
+  commits[1].resolve();await second
+  const source=await f.access.source();assert.ok(source)
+  assert.equal(JSON.parse(f.storage.getItem(OFFLINE_FENCE)).nonce,persisted.nonce)
+})
+test('a queued permission refresh rechecks authorization after logout instead of reopening local access',async()=>{
+  const f=permission();await f.access.identity(USER);f.access.scope(scope)
+  const commit=deferred();let authorized=true,writes=0
+  f.port.saveOfflinePermit=async()=>{writes++;await commit.promise}
+  const first=f.access.grant(key,()=>authorized),second=f.access.grant(key,()=>authorized)
+  for(let i=0;i<4;i++)await Promise.resolve()
+  authorized=false;await f.access.deny();commit.resolve();await Promise.all([first,second])
+  assert.equal(writes,1);assert.equal(JSON.parse(f.storage.getItem(OFFLINE_FENCE)).allowed,false)
+})
+test('refreshing an admitted workout survives a crash that retains the previous durable localStorage fence',async()=>{
+  const f=permission();await f.access.identity(USER);f.access.scope(scope);await f.access.grant(key,()=>true)
+  const durable=f.storage.getItem(OFFLINE_FENCE)
+  await f.access.grant(key,()=>true)
+  // Chromium may retain the earlier fence when a newly buffered localStorage write is lost.
+  f.storage.setItem(OFFLINE_FENCE,durable)
+  assert.ok(await new OfflineAccess(f.port,f.storage).source())
+  await f.access.deny();assert.equal(await f.access.source(),null)
+})
 test('either durable logout barrier suffices; failure of BOTH is reported rather than logout success',async()=>{
   const f=permission();f.port.clearOfflinePermit=async()=>{throw Error('IDB unavailable')};await f.access.deny()
   f.block();await assert.rejects(f.access.deny(),/차단/)

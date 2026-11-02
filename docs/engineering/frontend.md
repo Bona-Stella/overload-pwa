@@ -29,6 +29,8 @@ Task 006의 나머지 운동·인증 정책과 기존 Task 008 조회 계약은 
 
 현재 운동 계약은 [Frontend 표준 카탈로그 3단계](../tasks/standard-exercise-catalog-frontend-phase-3-report.md)를 따릅니다. 실제 계정 화면은 standardExerciseId 단일 UUID, 명시 nullable 장비, 계획/평가/로컬 문서 schema2와 IndexedDB3을 사용합니다. search-data의 별도 schemaVersion1은 유지합니다. 장비 편집은 완료 세트·중량 승인·공식 비교 Context를 바꾸지 않습니다. DB1/2 테스트 데이터 정리는 원자 upgrade에서 한 번만 실행하며 DB3 반복 열기·일반 앱 업데이트는 초기화하지 않습니다. PWA waiting·계정/세대·고정 요청 원문과 오프라인 재진입 보호를 유지합니다.
 
+[4단계 실제 개발 환경 검증](../../../overload-server/docs/tasks/standard-exercise-catalog-dev-phase-4-report.md)에서 접근 허용의 두 저장소 nonce 불일치를 수정했습니다. 허용 갱신은 직렬화하고 이미 허용된 같은 계정·세대의 nonce를 유지합니다. deny/identity/scope 경계의 즉시 차단, 현재 인가 재검사, 명시 오프라인 진입은 유지합니다. 새 nonce를 매 재진입마다 발급해 독립적으로 커밋되는 IndexedDB/localStorage 쌍을 불필요하게 교체하지 않습니다.
+
 - React 및 TypeScript 코드 작성 규칙
 - 컴포넌트 설계 및 아키텍처
 - 클라이언트 및 서버 상태 관리
