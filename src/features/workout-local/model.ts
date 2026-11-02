@@ -1,6 +1,6 @@
 import type { ActiveWeightContext, CardioPlan, Equipment, Session } from '../workout-online/types.ts'
 import { count, countDraft, counter, decimalDraft, snapshot, targets, cardioPlan, uuid, equipment } from '../workout-online/validation.ts'
-import type { CardioTimer, LocalWorkout, RestPolicy } from './types.ts'
+import type { CardioTimer, LocalWorkout, RestPolicy, SetDraft } from './types.ts'
 import { slotKey } from './types.ts'
 import { measuredCardio } from '../workout-online/cardio-measurement.ts'
 
@@ -41,7 +41,7 @@ function freshId(workout: LocalWorkout, randomId: () => string) {
 }
 export function restSeconds(policy: RestPolicy, maxReps: number) { return maxReps <= 10 ? policy.restLowSeconds : maxReps <= 12 ? policy.restMediumSeconds : policy.restHighSeconds }
 export function restRemaining(workout: LocalWorkout, now: number) { return workout.rest ? Math.max(0, Math.ceil((Date.parse(workout.rest.endsAt) - now) / 1000)) : 0 }
-export function draftFor(workout: LocalWorkout, id: string, ordinal: number) { return workout.drafts[slotKey(id, ordinal)] ?? { weight: workout.weights[id]?.value ?? '', reps: '' } }
+export function draftFor(workout: LocalWorkout, id: string, ordinal: number): SetDraft { return workout.drafts[slotKey(id, ordinal)] ?? { weight: workout.weights[id]?.value ?? '', reps: '' } }
 export function editDraft(workout: LocalWorkout, id: string, ordinal: number, patch: Partial<ReturnType<typeof draftFor>>) {
   requireWeight(workout, id)
   if (!count(ordinal) || workout.snapshot.performedSets.some(x => x.sessionExerciseId === id && x.ordinal === ordinal)) throw new Error('완료한 세트는 먼저 완료 취소해 주세요.')
@@ -63,7 +63,9 @@ export function completeSet(workout: LocalWorkout, id: string, ordinal: number, 
   if (approved !== weightKg) context = { kind: 'TODAY_ONLY', requestId: null }
   const approval = context.kind === 'APPROVAL_REQUEST' ? workout.snapshot.approvalRequests.find(x => x.id === context.requestId) : null
   if (approval && Date.parse(approval.occurredAt) > now) throw new Error('완료 시각이 승인 요청보다 이릅니다. 기기 시각을 확인해 주세요.')
-  const performed = { id: freshId(workout, randomId), sessionExerciseId: id, ordinal, weightKg, reps, completedAt, weightContext: { ...context }, manufacturerId: plan.manufacturerId, loadType: plan.loadType }
+  const bodyweightLoad = plan.loadType === 'BODYWEIGHT' && draft.additionalWeight?.trim() ? { additionalWeightKg: decimalDraft(draft.additionalWeight) } : undefined
+  const performed = { id: freshId(workout, randomId), sessionExerciseId: id, ordinal, weightKg, reps, completedAt, weightContext: { ...context }, manufacturerId: plan.manufacturerId, loadType: plan.loadType,
+    ...(bodyweightLoad ? { bodyweightLoad } : {}) }
   workout.snapshot.performedSets.push(performed); workout.presence[performed.id] = 'LOCAL_ONLY'
   // Preserve the original input text, including trailing decimal zeros.
   workout.drafts[slotKey(id, ordinal)] = { ...draft }
@@ -79,7 +81,7 @@ export function undoSet(workout: LocalWorkout, recordId: string) {
   if (workout.presence[record.id] !== 'LOCAL_ONLY') workout.snapshot.deletedPerformedSetIds.push(record.id)
   if (!workout.presence[record.id] || workout.presence[record.id] === 'UNKNOWN') { workout.presence[record.id] = 'UNKNOWN'; workout.syncState = 'UNKNOWN' }
   workout.snapshot.performedSets = workout.snapshot.performedSets.filter(x => x.id !== recordId)
-  workout.drafts[slotKey(record.sessionExerciseId, record.ordinal)] ??= { weight: record.weightKg, reps: String(record.reps) }
+  workout.drafts[slotKey(record.sessionExerciseId, record.ordinal)] ??= { weight: record.weightKg, reps: String(record.reps), ...(record.bodyweightLoad ? { additionalWeight: record.bodyweightLoad.additionalWeightKg ?? '' } : {}) }
   if (workout.rest?.sessionExerciseId === record.sessionExerciseId && workout.rest.ordinal === record.ordinal) workout.rest = null
 }
 export function changeWeight(workout: LocalWorkout, id: string, value: string, approve: boolean, now: number, randomId = () => crypto.randomUUID()) {

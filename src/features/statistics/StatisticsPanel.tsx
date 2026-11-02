@@ -20,7 +20,7 @@ export function WeightChart({ rows }: { rows: Row[] }) {
     {!rows.length && <p className="muted">해당 기간의 기록이 없습니다.</p>}
     {rows.map((row, index) => <div className="statistics-row" key={row.key}><div><strong>{row.name}</strong><span>{metric === 'volume' && volumeAvailable ? values[index] === null ? '중량 기록 없음' : `${values[index]} kg` : `${row.weights.completedSets}세트 · ${row.weights.reps}회`}</span></div>
       <div className="statistics-bar" aria-hidden="true"><i style={{ width: `${maximum ? Number(scaled[index] * 100n / maximum) : 0}%` }} /></div>
-      <small>{row.weights.plannedSets === '0' ? '확인된 계획 없음' : `계획 ${row.weights.plannedSets}세트`}{row.weights.setsWithoutVolume !== '0' && ' · 맨몸 세트는 총중량에서 제외'}</small></div>)}
+      <small>{row.weights.plannedSets === '0' ? '확인된 계획 없음' : `계획 ${row.weights.plannedSets}세트`}{row.weights.setsWithoutVolume !== '0' && ' · 추가 중량 근거가 없는 맨몸 세트는 총중량에서 제외'}</small></div>)}
   </div>
 }
 export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHistory }: { data: Statistics; planning?: Overview; screen: string; onScreen: (screen: 'summary' | 'activity' | 'muscles' | 'growth') => void; onOpen: (id: string) => void; onHistory: () => void }) {

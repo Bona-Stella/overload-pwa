@@ -11,17 +11,18 @@ import { countDraft, decimalDraft } from './validation.ts'
 import { recoveryRows, RECOVERY_LABEL } from './closed-model.ts'
 import { onlineIssue } from './controller.ts'
 import { distanceLabel, measuredCardio } from './cardio-measurement.ts'
+import { additionalLoadInput, bodyweightLoadLabel } from './bodyweight-load.ts'
 
 const time = (value: string | null) => value ? new Date(value).toLocaleString('ko-KR') : '없음'
 const performance = (record: PerformedSet | CardioResult, manufacturers: Manufacturer[]) => 'ordinal' in record
-  ? `${record.ordinal}세트 · ${record.weightKg} kg × ${record.reps}회 · ${time(record.completedAt)} · ${equipmentLabel(record, manufacturers)}`
+  ? `${record.ordinal}세트 · ${record.weightKg} kg × ${record.reps}회 · ${time(record.completedAt)} · ${equipmentLabel(record, manufacturers)}${record.loadType === 'BODYWEIGHT' ? ' · ' + bodyweightLoadLabel(record) : ''}`
   : record.status === 'COMPLETED' ? `${record.result.activeMs / 1000}초 · ${distanceLabel(record.result)} · ${time(record.occurredAt)}` : '명시 건너뜀'
 const reason: Record<string, string> = { PENDING: '승인 확인 필요', UNVERIFIED: '승인 문맥 확인 불가', AUTO_CLOSED: '서버 자동 종료', SESSION_DELETED: '삭제된 운동', NO_APPROVED_CONTEXT: '수행 당시 승인 문맥 미충족', INCOMPLETE_INITIAL_WEIGHT_PLAN: '최초 웨이트 계획 미완료', INSUFFICIENT_PERFORMED_SETS: '유효 수행 부족', TEMPORARY_WEIGHT: '오늘만 중량', MIXED_WEIGHT: '서로 다른 중량', SET_COUNT_MISMATCH: '최초 세트 수와 다름', INITIAL_EXERCISE_REMOVED: '최초 종목 제외', COMPARISON_CONTEXT_MISMATCH: '최초 목표와 다름' }
 const advice = { INCREASE: '증량 검토', DECREASE: '감량 검토', MAINTAIN: '유지 검토', UNAVAILABLE: '평가 자격 없음' }
 function ChangeEntry({ event: e, manufacturers }: { event: ChangeEvents['events'][number]; manufacturers: Manufacturer[] }) {
   const summary = (value: Record<string, unknown> | null) => {
     if (!value) return ''
-    if (typeof value.weightKg === 'string' && typeof value.reps === 'number') return `${value.ordinal}세트 · ${value.weightKg} kg × ${value.reps}회${equipment(value) ? ' · ' + equipmentLabel(value as PerformedSet, manufacturers) : ''}`
+    if (typeof value.weightKg === 'string' && typeof value.reps === 'number') return `${value.ordinal}세트 · ${value.weightKg} kg × ${value.reps}회${equipment(value) ? ' · ' + equipmentLabel(value as PerformedSet, manufacturers) + (value.loadType === 'BODYWEIGHT' ? ' · ' + bodyweightLoadLabel(value as PerformedSet) : '') : ''}`
     const r = value.result as Extract<CardioResult, { status: 'COMPLETED' }>['result'] | null
     return r && typeof r.activeMs === 'number' ? `${r.activeMs / 1000}초 · ${distanceLabel({ distanceKm: typeof r.distanceKm === 'string' ? r.distanceKm : null, ...(cardioMeasurement(r.measurement) ? { measurement: r.measurement } : {}) })} · 실제 속도 ${cardioMeasurement(r.measurement) ? r.measurement.actualSpeedKmh ?? '미입력' : '미입력'} km/h · 심박수 ${r.averageBpm ?? '미입력'}` : ''
   }
@@ -90,7 +91,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [] }: { s
       {!server.deletedAt && state.copies.filter(c => c.finish?.request && !c.finish.ack).map((c, i) => <button className="outline" key={i} disabled={state.busy || !state.writable || server.status !== 'FINISHED' || c.writerEpoch !== server.writerEpoch || c.editorDeviceId !== server.editorDeviceId} onClick={() => void controller.confirmFinish(c)}>미확인 종료 요청 결과 확인</button>)}
     </section>
     {!server.deletedAt && <>
-      <section className="card stack"><h3>완료 수행</h3>{server.snapshot.state.performedSets.map(s => <div key={s.id}><p>{name(s.sessionExerciseId)} · {s.ordinal}세트 · {s.weightKg} kg × {s.reps}회 · {time(s.completedAt)} · {equipmentLabel(s, manufacturers)}</p><p className="muted small">수행 당시 승인: {reason[server.snapshot.recordedContexts.find(c => c.setId === s.id)?.approvalStateAtRecording ?? ''] ?? '서버 확인 문맥'}</p><button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SET', record: s })}>세트 정정·삭제</button></div>)}
+      <section className="card stack"><h3>완료 수행</h3>{server.snapshot.state.performedSets.map(s => <div key={s.id}><p>{name(s.sessionExerciseId)} · {performance(s, manufacturers)}</p><p className="muted small">수행 당시 승인: {reason[server.snapshot.recordedContexts.find(c => c.setId === s.id)?.approvalStateAtRecording ?? ''] ?? '서버 확인 문맥'}</p><button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SET', record: s })}>세트 정정·삭제</button></div>)}
         {server.snapshot.state.cardioResults.map(r => <div key={r.id}><p>{name(r.sessionActivityId)} · {r.status === 'SKIPPED' ? '명시 건너뜀' : `${r.result.activeMs / 1000}초 · ${distanceLabel(r.result)} · 실제 속도 ${r.result.measurement?.actualSpeedKmh ?? '미입력'} km/h · 심박수 ${r.result.averageBpm ?? '미입력'}`}</p>{r.status === 'COMPLETED' ? <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'CARDIO', record: r })}>유산소 정정·삭제</button> : <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SKIPPED', record: r })}>건너뜀 기록 삭제</button>}</div>)}
         <button className="outline" disabled={disabled || !state.copies.length} onClick={() => setDialog('recovery')}>이 기기의 누락 완료 수행 비교·복구</button>
       </section>
@@ -115,6 +116,7 @@ function ClosedApproval({ server, id, controller, disabled }: { server: Session;
 }
 function CorrectionDialog({ target, server, controller, busy, onClose }: { target: EditTarget; server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void }) {
   const [initial] = useState(server), [weight, setWeight] = useState(target.kind === 'SET' ? target.record.weightKg : ''), [reps, setReps] = useState(target.kind === 'SET' ? String(target.record.reps) : '')
+  const [additionalWeight, setAdditionalWeight] = useState(target.kind === 'SET' ? target.record.bodyweightLoad?.additionalWeightKg ?? '' : ''), [additionalTouched, setAdditionalTouched] = useState(false)
   const cardio = target.kind === 'CARDIO' ? target.record.result : null
   const [seconds, setSeconds] = useState(cardio ? String(cardio.activeMs / 1000) : ''), [corrected, setCorrected] = useState(cardio?.corrected ?? false)
   const [distance, setDistance] = useState(cardio?.measurement?.distanceSource === 'CALCULATED' ? '' : cardio?.distanceKm ?? ''), [bpm, setBpm] = useState(cardio?.averageBpm == null ? '' : String(cardio.averageBpm)), [issue, setIssue] = useState('')
@@ -127,7 +129,8 @@ function CorrectionDialog({ target, server, controller, busy, onClose }: { targe
     try {
       const body: RecordEdit = { dataGeneration: initial.dataGeneration, expectedVersion: initial.version, setCorrections: [], cardioCorrections: [], deletedPerformedSetIds: [], deletedCardioResultIds: [] }
       if (remove) (target.kind === 'SET' ? body.deletedPerformedSetIds : body.deletedCardioResultIds).push(target.record.id)
-      else if (target.kind === 'SET') body.setCorrections.push({ id: target.record.id, weightKg: decimalDraft(weight), reps: countDraft(reps) })
+      else if (target.kind === 'SET') body.setCorrections.push({ id: target.record.id, weightKg: decimalDraft(weight), reps: countDraft(reps),
+        ...(target.record.loadType === 'BODYWEIGHT' && additionalTouched ? { bodyweightLoad: additionalLoadInput(additionalWeight) } : {}) })
       else if (target.kind === 'CARDIO') {
         if (!/^\d{1,5}(\.\d{1,3})?$/.test(seconds)) throw Error('활동 시간을 소수 세 자리 이내의 초로 입력해 주세요.')
         const [whole, fraction = ''] = seconds.split('.'), activeMs = corrected ? Number(BigInt(whole) * 1000n + BigInt(fraction.padEnd(3, '0'))) : target.record.result.timerMs
@@ -145,7 +148,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose }: { targe
     } catch (error) { setIssue(error instanceof Error ? error.message : '입력을 확인해 주세요.') }
   }
   return <Dialog title="완료 수행 정정·삭제" onClose={() => { if (!busy) onClose() }}><div className="stack">{issue && <p role="alert">{issue}</p>}
-    {target.kind === 'SET' ? <><label>실제 중량 kg<input inputMode="decimal" value={weight} onChange={e => setWeight(e.target.value)} /></label><label>실제 반복 횟수<input inputMode="numeric" value={reps} onChange={e => setReps(e.target.value)} /></label></>
+    {target.kind === 'SET' ? <><label>실제 중량 kg<input inputMode="decimal" value={weight} onChange={e => setWeight(e.target.value)} /></label><label>실제 반복 횟수<input inputMode="numeric" value={reps} onChange={e => setReps(e.target.value)} /></label>{target.record.loadType === 'BODYWEIGHT' && <><label>추가 중량 kg · 선택<input inputMode="decimal" value={additionalWeight} placeholder="추가 중량 없음" onChange={e => { setAdditionalWeight(e.target.value); setAdditionalTouched(true) }} /></label><p className="muted small">총중량에는 명시적 추가 중량만 사용합니다. 비우면 추가 중량을 제거합니다. 체중과 기존 중량을 자동 합산하지 않습니다.</p></>}</>
       : target.kind === 'CARDIO' ? <><p>원본 타이머 {target.record.result.timerMs / 1000}초</p><label><input type="checkbox" checked={corrected} onChange={e => setCorrected(e.target.checked)} />활동 시간 정정</label><label>실제 활동 시간 초<input inputMode="decimal" value={seconds} disabled={!corrected} onChange={e => setSeconds(e.target.value)} /></label>{supportsDistance && <><label>직접 입력 거리 km · 선택<input inputMode="decimal" value={distance} onChange={e => { setDistance(e.target.value); setDistanceTouched(true) }} /></label><label>실제 속도 km/h · 선택<input inputMode="decimal" value={speed} onChange={e => setSpeed(e.target.value)} /></label><p className="muted small">{preview} · 직접 입력 거리를 우선하며 목표 속도는 실제값으로 사용하지 않습니다.</p></>}<label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} /></label></> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
     {target.kind !== 'SKIPPED' && <button className="primary" disabled={busy} onClick={() => void submit(false)}>정정 내용 서버 저장</button>}<button className="outline" disabled={busy} onClick={() => void submit(true)}>이 수행 논리 삭제</button></div></Dialog>
 }

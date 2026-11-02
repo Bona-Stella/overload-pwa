@@ -34,7 +34,7 @@ export function localWorkout(value: unknown): value is LocalWorkout {
     && finish(value.finish, value)
     && (value.confirmedDeletedSetIds === undefined || v.array(value.confirmedDeletedSetIds, v.uuid)) && (value.confirmedDeletedCardioIds === undefined || v.array(value.confirmedDeletedCardioIds, v.uuid))
     && ['CLEAN', 'UNSENT', 'UNKNOWN'].includes(String(value.syncState)) && dictionary(value.presence, x => ['LOCAL_ONLY', 'SERVER_CONFIRMED', 'UNKNOWN'].includes(String(x)))
-    && dictionary(value.drafts, x => v.object(x) && v.text(x.weight) && v.text(x.reps))
+    && dictionary(value.drafts, x => v.object(x) && v.text(x.weight) && v.text(x.reps) && (x.additionalWeight === undefined || v.text(x.additionalWeight)))
     && dictionary(value.weights, x => v.object(x) && v.text(x.value) && v.object(x.context) && (x.context.kind === 'APPROVAL_REQUEST' ? v.uuid(x.context.requestId) : ['INITIAL_APPROVED', 'TODAY_ONLY'].includes(String(x.context.kind)) && x.context.requestId === null))
     && dictionary(value.timers, x => v.object(x) && v.nullable(x.startedAt, v.instant) && v.nullable(x.runningSince, v.instant) && ms(x.accumulatedMs)
       && v.array(x.segments, s => v.object(s) && v.instant(s.startedAt) && v.instant(s.stoppedAt)) && v.text(x.distance) && (x.speed === undefined || v.text(x.speed)) && v.text(x.bpm) && v.nullable(x.correctedSeconds, v.text) && typeof x.reviewing === 'boolean')

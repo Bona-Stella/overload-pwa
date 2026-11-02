@@ -51,7 +51,8 @@ export function snapshot(v: unknown): v is Snapshot {
     && object(v.appliedPlan) && v.appliedPlan.schemaVersion === 2
     && array(v.appliedPlan.weightExercises, x => object(x) && uuid(x.sessionExerciseId) && targets(x) && equipment(x))
     && array(v.appliedPlan.cardioActivities, x => object(x) && uuid(x.sessionActivityId) && cardioPlan(x.plan))
-    && array(v.performedSets, x => object(x) && uuid(x.id) && uuid(x.sessionExerciseId) && count(x.ordinal) && decimal(x.weightKg) && count(x.reps) && instant(x.completedAt) && weightContext(x.weightContext) && equipment(x))
+    && array(v.performedSets, x => object(x) && uuid(x.id) && uuid(x.sessionExerciseId) && count(x.ordinal) && decimal(x.weightKg) && count(x.reps) && instant(x.completedAt) && weightContext(x.weightContext) && equipment(x)
+      && (x.bodyweightLoad === undefined || x.loadType === 'BODYWEIGHT' && object(x.bodyweightLoad) && Object.keys(x.bodyweightLoad).length === 1 && nullable(x.bodyweightLoad.additionalWeightKg, decimal)))
     && array(v.cardioResults, x => object(x) && uuid(x.id) && uuid(x.sessionActivityId) && instant(x.occurredAt)
       && (x.status === 'SKIPPED' ? nullable(x.startedAt, instant) && x.result === null : x.status === 'COMPLETED' && instant(x.startedAt) && object(x.result)
         && Number.isSafeInteger(x.result.timerMs) && (x.result.timerMs as number) >= 0 && count(x.result.activeMs) && x.result.activeMs <= 86400000

@@ -66,6 +66,10 @@ test('bodyweight-only and no-plan rows retain sets and repetitions without a tot
   const html=renderToStaticMarkup(React.createElement(WeightChart,{rows:[{key:'body',name:'푸시업',weights:{plannedSets:'0',completedSets:'3',reps:'30',volumeLoadKg:null,setsWithoutVolume:'3'}}]}))
   assert.match(html,/3세트 · 30회/);assert.match(html,/확인된 계획 없음/);assert.doesNotMatch(html,/>총중량<|0 kg/)
 })
+test('explicit bodyweight load enables total-weight view while unknown sets retain their exclusion note',()=>{
+  const html=renderToStaticMarkup(React.createElement(WeightChart,{rows:[{key:'body',name:'중량 푸시업',weights:{plannedSets:'0',completedSets:'2',reps:'18',volumeLoadKg:'80',setsWithoutVolume:'1'}}]}))
+  assert.match(html,/>총중량</);assert.match(html,/2세트 · 18회/);assert.match(html,/추가 중량 근거가 없는 맨몸 세트는 총중량에서 제외/)
+})
 const planned=()=>({statistics:{...fixture(),planCoverage:'FULL_SCHEDULE_HISTORY',plannedWorkoutDays:4,routineAchievementPercent:'56.25'},effectiveWorkoutDays:'2.25',unknownPlanDays:0,unverifiableDays:0,plannedDays:[]})
 const weekly=()=>({...scope,version:'0',timeZone:'Asia/Seoul',nextEffectiveFrom:'2026-11-09',current:null,pending:null,history:[]})
 test('overview accepts verified weekly rate and rejects fabricated denominators for unknown history',async()=>{

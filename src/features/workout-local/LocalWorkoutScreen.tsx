@@ -100,6 +100,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
               if (record) { if (window.confirm('이 세트의 완료를 취소할까요? 원래 수행 UUID와 삭제 사실은 보존합니다.')) void controller.change(w => model.undoSet(w, record.id)) }
               else void controller.complete(w => model.completeSet(w, id, ordinal, Date.now()))
             }}>{record ? '✓ 완료' : '완료'}</button>{record && <small className="muted local-set-equipment">완료 당시 {equipmentLabel(record, manufacturers)}</small>}
+            {(record ? record.loadType : plan.loadType) === 'BODYWEIGHT' && <label className="local-set-equipment">{ordinal}세트 추가 중량 kg · 선택<input inputMode="decimal" aria-label={`${ordinal}세트 추가 중량 kg`} placeholder="추가 중량 없음" value={record ? record.bodyweightLoad?.additionalWeightKg ?? '' : draft.additionalWeight ?? ''} disabled={!state.writable || !!workout.finish || !!record} onChange={e => controller.draft(id, ordinal, { ...draft, additionalWeight: e.target.value })} /><small>총중량에는 추가 중량만 사용합니다. 체중은 포함하지 않습니다.</small></label>}
           </div>
         })}
       </section>

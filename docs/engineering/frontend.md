@@ -1,5 +1,7 @@
 # Overload Frontend Engineering Rules
 
+맨몸 추가 부하2E는 [공통 DB/API·오프라인 계약](../../../overload-server/docs/api/bodyweight-additional-load.md)을 따른다. PerformedSet/RecordEdit의 optional bodyweightLoad와 SetDraft.additionalWeight를 사용하며 기존 weight에서 채우지 않는다. IndexedDB3/schema2·기존 문서/고정 요청을 재작성하지 않는다. 근거가 없는 총중량은null/숨김이고 승인 평가/중량 변경 기능은 그대로다. 개인 DB V18~V22는 미적용이다.
+
 유산소 실제 측정2D는 [공통 API·오프라인 계약](../../../overload-server/docs/api/cardio-actual-measurements.md)을 따른다. CardioResult/RecordEdit의 optional measurement와 타이머 optional speed는 IndexedDB3/schema2·기존 고정 요청을 재작성하지 않는다. 직접 입력/정정 거리가 우선이고 계획 속도를 실제값에 채우지 않는다.
 
 > Frontend Development Guidelines for AI Coding Agents

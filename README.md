@@ -44,6 +44,8 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 ### PWA 빌드·배포
 
+[통계·추적 2E](../overload-server/docs/tasks/statistics-tracking-phase-2e-report.md)에서 맨몸 운동의 명시적 추가 중량 기록·정정·오프라인 보존과 실제 반복 기반 총중량 계산을 연결했습니다. 기존 숫자 중량이나 체중을 추가 부하로 해석하지 않고, 근거가 없으면 세트·반복만 표시합니다. 승인 평가와 근육 다중 매핑/대분류 중복 제거를 유지합니다. [실제 DB/API 계약](../overload-server/docs/api/bodyweight-additional-load.md)을 따르며 개인 DB V18~V22는 미적용입니다. 운영 분류·디로딩3단계·실기기 검증은 남아 있습니다.
+
 [통계·추적 2D](../overload-server/docs/tasks/statistics-tracking-phase-2d-report.md)에서 실제 유산소 속도·활동 시간, 직접 입력 우선/계산 거리와 출처, 정정·오프라인 기록 및 종류별 누적 거리를 연결했습니다. 목표 속도로 실제값을 만들지 않으며 기존 기록·고정 요청을 보존합니다. V21과 개인 DB V18~V20은 미적용입니다. 실제 계약은 [유산소 측정](../overload-server/docs/api/cardio-actual-measurements.md)을 따르며 디로딩 구분·혼재 연결은3단계입니다.
 
 [통계·추적 2C](../overload-server/docs/tasks/statistics-tracking-phase-2c-report.md)에서 기존 승인 사건의 기간별(1/3/6개월·전체) 검색·루틴 배치 선택·승인 중량 변화 그래프를 연결했습니다. 다른 배치를 하나의 성장선으로 합치지 않으며 기록 없는 기간의 값을 만들지 않습니다. 실제 API·보존/디로딩 한계는 [조회 계약](../overload-server/docs/api/approved-weight-growth.md)을 따릅니다. 개인 DB V18~V20 적용·운영 카탈로그 검증·디로딩3단계 연결은 이번 완료 범위가 아닙니다.

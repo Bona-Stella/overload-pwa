@@ -107,6 +107,18 @@ test('offline actual cardio measurements survive ACK loss with byte-identical re
   assert.equal(e.writes.length,2);assert.equal(e.writes[0],e.writes[1]);assert.equal(e.remote().snapshot.state.cardioResults.length,1)
   assert.deepEqual(e.remote().snapshot.state.cardioResults[0].result.measurement,{actualSpeedKmh:'8',distanceSource:'CALCULATED'});assert.equal(e.read().syncState,'CLEAN');e.c.stop()
 })
+test('offline explicit bodyweight load survives durable storage and lost ACK with identical replay',async()=>{
+  let lose=true;const e=await setup({afterSend:async()=>{if(lose){lose=false;throw Error('lost bodyweight ACK')}}})
+  try {
+    e.online(false)
+    await e.c.change(w=>{m.changeEquipment(w,E,{manufacturerId:null,loadType:'BODYWEIGHT'});m.editDraft(w,E,1,{weight:'80',reps:'8',additionalWeight:'10.000001'});m.completeSet(w,E,1,time)})
+    assert.equal(e.writes.length,0);assert.ok(localWorkout(e.read()));assert.equal(e.read().snapshot.performedSets[0].bodyweightLoad.additionalWeightKg,'10.000001')
+    e.online(true);await e.c.retrySync();await e.c.syncSettled()
+    assert.equal(e.writes.length,2);assert.equal(e.writes[0],e.writes[1]);assert.equal(e.remote().snapshot.state.performedSets.length,1)
+    assert.equal(e.remote().snapshot.state.performedSets[0].bodyweightLoad.additionalWeightKg,'10.000001');assert.equal(e.read().syncState,'CLEAN')
+  } finally { e.c.stop() }
+})
+
 test('unconfirmed low revision is retried verbatim once per trigger, never an automatic loop',async()=>{
   let count=0;const e=await setup({api:{snapshot:async()=>{count++;throw Error('offline')}}})
   await e.c.change(w=>complete(w));await e.c.syncSettled();const frozen=e.read().pendingSnapshot.requestJson;assert.equal(count,2)

@@ -11,8 +11,8 @@ export const RECOVERY_LABEL = { PRESENT: '이미 서버에 저장됨', CANDIDATE
 const context = (v: PerformedSet['weightContext']) => [v.kind, v.requestId]
 const measurement = (r: CardioResult) => r.result?.measurement === undefined ? null : [r.result.measurement.actualSpeedKmh, r.result.measurement.distanceSource]
 export function sameRecord(a: RecordValue, b: RecordValue, claim?: PerformedSet['weightContext']) {
-  if ('ordinal' in a && 'ordinal' in b) return JSON.stringify([a.id, a.sessionExerciseId, a.ordinal, decimalDraft(a.weightKg), a.reps, Date.parse(a.completedAt), context(a.weightContext), a.manufacturerId, a.loadType])
-    === JSON.stringify([b.id, b.sessionExerciseId, b.ordinal, decimalDraft(b.weightKg), b.reps, Date.parse(b.completedAt), context(claim ?? b.weightContext), b.manufacturerId, b.loadType])
+  if ('ordinal' in a && 'ordinal' in b) return JSON.stringify([a.id, a.sessionExerciseId, a.ordinal, decimalDraft(a.weightKg), a.reps, Date.parse(a.completedAt), context(a.weightContext), a.manufacturerId, a.loadType, a.bodyweightLoad ?? null])
+    === JSON.stringify([b.id, b.sessionExerciseId, b.ordinal, decimalDraft(b.weightKg), b.reps, Date.parse(b.completedAt), context(claim ?? b.weightContext), b.manufacturerId, b.loadType, b.bodyweightLoad ?? null])
   if ('status' in a && 'status' in b) return JSON.stringify([a.id, a.sessionActivityId, a.status, a.startedAt && Date.parse(a.startedAt), Date.parse(a.occurredAt), a.result && [a.result.timerMs, a.result.activeMs, a.result.corrected, a.result.distanceKm, a.result.averageBpm, measurement(a)]])
     === JSON.stringify([b.id, b.sessionActivityId, b.status, b.startedAt && Date.parse(b.startedAt), Date.parse(b.occurredAt), b.result && [b.result.timerMs, b.result.activeMs, b.result.corrected, b.result.distanceKm, b.result.averageBpm, measurement(b)]])
   return false
@@ -57,7 +57,7 @@ export function closedWriteFact(write: ClosedWrite, server: Session, changes: Ch
   })
   const b = write.body
   const corrected = (items: (RecordEdit['setCorrections'][number] | RecordEdit['cardioCorrections'][number])[], kind: 'SET' | 'CARDIO') => items.every(c => events.some(e => e.recordKind === kind && e.recordId === c.id && e.changeKind === 'CORRECTED' && e.after
-    && Object.entries(c).every(([key, value]) => e.after![key] === value)))
+    && Object.entries(c).every(([key, value]) => JSON.stringify(e.after![key]) === JSON.stringify(value))))
   const deleted = (ids: string[], kind: 'SET' | 'CARDIO') => ids.every(id => events.some(e => e.recordKind === kind && e.recordId === id && e.changeKind === 'DELETED'))
   return corrected(b.setCorrections, 'SET') && corrected(b.cardioCorrections, 'CARDIO') && deleted(b.deletedPerformedSetIds, 'SET') && deleted(b.deletedCardioResultIds, 'CARDIO')
 }

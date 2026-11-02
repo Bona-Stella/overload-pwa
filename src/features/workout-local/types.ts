@@ -2,7 +2,7 @@ import type { ActiveResolution, ActiveWeightContext, CardioResult, Counter, Fini
 
 export type LocalKey = Scope & { sessionId: string; editorDeviceId: string; writerEpoch: Counter }
 export type RecordPresence = 'LOCAL_ONLY' | 'SERVER_CONFIRMED' | 'UNKNOWN'
-export type SetDraft = { weight: string; reps: string }
+export type SetDraft = { weight: string; reps: string; additionalWeight?: string }
 export type CardioTimer = { startedAt: string | null; runningSince: string | null; accumulatedMs: number;
   segments: { startedAt: string; stoppedAt: string }[]; distance: string; speed?: string; bpm: string; correctedSeconds: string | null; reviewing: boolean }
 export type RestPolicy = { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }

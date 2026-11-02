@@ -60,6 +60,25 @@ test('real completed set is shown only from persisted facts, and read-only tabs 
   const html=render(LocalWorkoutView,{state:{...editorState(w),writable:false},controller:{},definitions:[]})
   assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/revision|epoch|hash/);assert.match(html,/0.000001/);assert.match(html,/disabled="" aria-label="1세트 완료 취소"/)
 })
+
+test('BODYWEIGHT recording offers an empty optional extra field without copying the existing weight',()=>{
+  const w=createLocalWorkout(session(),bootstrap.settings);w.snapshot.appliedPlan.weightExercises[0].loadType='BODYWEIGHT'
+  const html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:[]})
+  assert.match(html,/aria-label="1세트 추가 중량 kg"[^>]*value=""/);assert.match(html,/체중은 포함하지 않습니다/)
+  const ordinary=createLocalWorkout(session(),bootstrap.settings)
+  assert.doesNotMatch(render(LocalWorkoutView,{state:editorState(ordinary),controller:{},definitions:[]}),/세트 추가 중량 kg/)
+})
+
+test('BODYWEIGHT history distinguishes explicit extra from unknown legacy weight in records and correction audit',()=>{
+  const server=session({status:'FINISHED',closedAt:'2026-11-01T01:00:00Z'}),id=server.initialPlan.weightExercises[0].sessionExerciseId
+  const record={id:OTHER,sessionExerciseId:id,ordinal:1,weightKg:'80',reps:8,completedAt:server.startedAt,weightContext:{kind:'TODAY_ONLY',requestId:null},manufacturerId:null,loadType:'BODYWEIGHT',bodyweightLoad:{additionalWeightKg:'10'}}
+  server.snapshot.state.performedSets=[record]
+  const before={...record};delete before.bodyweightLoad
+  const event={id:DEVICE,recordKind:'SET',recordId:OTHER,changeKind:'CORRECTED',recordedAt:server.closedAt,before,after:record,changeContext:{sessionVersion:'2'}}
+  const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[event]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
+  assert.match(html,/명시적 추가 중량 10 kg/);assert.match(html,/추가 중량 근거 없음 · 세트·반복만 집계/)
+  assert.doesNotMatch(html,/명시적 추가 중량 80 kg|체중 80/)
+})
 test('INTEGER-sized planned count renders a bounded pending window rather than allocating planned slots',()=>{
   const w=createLocalWorkout(session(),bootstrap.settings);w.snapshot.appliedPlan.weightExercises[0].setCount=2147483647
   const html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:[]})

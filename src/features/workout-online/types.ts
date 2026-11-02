@@ -26,7 +26,8 @@ export type InitialPlan = { schemaVersion: 2; routineId: UUID; routineName: stri
   cardioActivities: { sessionActivityId: UUID; sourcePlacementId: UUID; plan: CardioPlan }[] }
 export type ActiveWeightContext = { kind: 'INITIAL_APPROVED' | 'TODAY_ONLY'; requestId: null } | { kind: 'APPROVAL_REQUEST'; requestId: UUID }
 export type WeightContext = ActiveWeightContext | { kind: 'UNVERIFIED'; requestId: null }
-export type PerformedSet = Equipment & { id: UUID; sessionExerciseId: UUID; ordinal: number; weightKg: Decimal; reps: number; completedAt: Instant; weightContext: WeightContext }
+export type BodyweightLoad = { additionalWeightKg: Decimal | null }
+export type PerformedSet = Equipment & { id: UUID; sessionExerciseId: UUID; ordinal: number; weightKg: Decimal; reps: number; completedAt: Instant; weightContext: WeightContext; bodyweightLoad?: BodyweightLoad }
 export type CardioMeasurement = { actualSpeedKmh: Decimal | null; distanceSource: 'MANUAL' | 'CALCULATED' | null }
 export type CardioResult = { id: UUID; sessionActivityId: UUID; occurredAt: Instant } & (
   { status: 'COMPLETED'; startedAt: Instant; result: { timerMs: number; activeMs: number; corrected: boolean; distanceKm: Decimal | null; averageBpm: number | null; measurement?: CardioMeasurement } }
@@ -56,7 +57,7 @@ export type Resolution = { dataGeneration: Counter; sessionExerciseId: UUID; pen
   { decision: 'KEEP_CURRENT'; newApprovalRequest: null } | { decision: 'REAPPROVE'; newApprovalRequest: { id: UUID; sequence: Counter; expectedRoutineVersion: Counter; previousApprovedWeightKg: Decimal; nextApprovedWeightKg: Decimal } })
 export type ActiveResolution = Resolution & { editorDeviceId: UUID; writerEpoch: Counter; expectedSessionVersion: Counter; expectedLocalRevision: Counter }
 export type ClosedResolution = Resolution & { expectedVersion: Counter }
-export type RecordEdit = { dataGeneration: Counter; expectedVersion: Counter; setCorrections: { id: UUID; weightKg: Decimal; reps: number }[];
+export type RecordEdit = { dataGeneration: Counter; expectedVersion: Counter; setCorrections: { id: UUID; weightKg: Decimal; reps: number; bodyweightLoad?: BodyweightLoad }[];
   cardioCorrections: { id: UUID; activeMs: number; corrected: boolean; distanceKm: Decimal | null; averageBpm: number | null; measurement?: CardioMeasurement }[]; deletedPerformedSetIds: UUID[]; deletedCardioResultIds: UUID[] }
 export type Recovery = { dataGeneration: Counter; expectedVersion: Counter; confirm: true; origin: { editorDeviceId: UUID; writerEpoch: Counter; localRevision: Counter }; performedSets: PerformedSet[]; cardioResults: Extract<CardioResult, { status: 'COMPLETED' }>[] }
 export type RecordAck = Scope & { sessionId: UUID; status: Session['status']; version: Counter; changed: boolean; changeEventIds: UUID[]; recoveredIds: UUID[]; alreadyPresentIds: UUID[]; deletedAt: Instant | null }
