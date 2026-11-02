@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { StatisticsApi, statistics, periodFor, weightStats } from '../src/features/statistics/api.ts'
+import { StatisticsApi, statistics, overview, periodFor, weightStats } from '../src/features/statistics/api.ts'
+import { WeeklyScheduleApi, weeklySchedule } from '../src/features/statistics/weekly-schedule.ts'
 import { scope, OTHER } from './fixtures/workout-online-data.mjs'
 
 registerHooks({load(url,context,next){
@@ -15,6 +16,7 @@ registerHooks({load(url,context,next){
   return next(url,context)
 }})
 const {StatisticsView,WeightChart}=await import('../src/features/statistics/StatisticsPanel.tsx')
+const {ScheduleEditor}=await import('../src/features/statistics/WeeklySchedulePanel.tsx')
 const weights={plannedSets:'4',completedSets:'3',reps:'28',volumeLoadKg:'2140',setsWithoutVolume:'0'}
 const period={fromDate:'2026-10-26',toDateExclusive:'2026-11-02'}
 const fixture=()=>({...scope,...period,planCoverage:'STARTED_SESSIONS_ONLY',plannedWorkoutDays:null,routineAchievementPercent:null,
@@ -62,5 +64,52 @@ test('muscle detail keeps secondary contribution separate and shows limited init
 })
 test('bodyweight-only and no-plan rows retain sets and repetitions without a total-weight toggle',()=>{
   const html=renderToStaticMarkup(React.createElement(WeightChart,{rows:[{key:'body',name:'푸시업',weights:{plannedSets:'0',completedSets:'3',reps:'30',volumeLoadKg:null,setsWithoutVolume:'3'}}]}))
-  assert.match(html,/3세트 · 30회/);assert.match(html,/시작 계획 없음/);assert.doesNotMatch(html,/>총중량<|0 kg/)
+  assert.match(html,/3세트 · 30회/);assert.match(html,/확인된 계획 없음/);assert.doesNotMatch(html,/>총중량<|0 kg/)
+})
+const planned=()=>({statistics:{...fixture(),planCoverage:'FULL_SCHEDULE_HISTORY',plannedWorkoutDays:4,routineAchievementPercent:'56.25'},effectiveWorkoutDays:'2.25',unknownPlanDays:0,unverifiableDays:0,plannedDays:[]})
+const weekly=()=>({...scope,version:'0',timeZone:'Asia/Seoul',nextEffectiveFrom:'2026-11-09',current:null,pending:null,history:[]})
+test('overview accepts verified weekly rate and rejects fabricated denominators for unknown history',async()=>{
+  const data=planned();assert.equal(overview(data),true)
+  assert.equal(overview({...data,unknownPlanDays:1}),false)
+  assert.equal(overview({...data,unverifiableDays:1}),false)
+  assert.equal(overview({...data,statistics:{...data.statistics,routineAchievementPercent:'101'}}),false)
+  const unknown={...data,unknownPlanDays:7,effectiveWorkoutDays:null,statistics:{...data.statistics,planCoverage:'PARTIAL_SCHEDULE_HISTORY',plannedWorkoutDays:null,routineAchievementPercent:null}}
+  assert.equal(overview(unknown),true)
+  let request
+  const api=new StatisticsApi({workoutRequest:async(...args)=>{request=args;return{status:200,data}}})
+  assert.deepEqual(await api.overview(scope,period,new AbortController().signal),data)
+  assert.match(request[1],/^\/api\/v1\/statistics\/overview\?/)
+})
+test('weekly summary displays 2.25 out of 4 and 56.25 percent without adding extra workouts',()=>{
+  const data=planned(),html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/2\.25 \/ 4일/);assert.match(html,/56\.25%/);assert.doesNotMatch(html,/아직 확인할 수 없습니다/)
+})
+test('schedule reads and versioned online writes preserve scope and never mutate retained draft after failure',async()=>{
+  const state=weekly(),draft=[Object.freeze({dayOfWeek:1,routineId:OTHER})];Object.freeze(draft)
+  let request
+  const api=new WeeklyScheduleApi({workoutRequest:async(...args)=>{request=args;if(args[2]==='PUT')throw Object.assign(new Error('conflict'),{code:'SCHEDULE_VERSION_CONFLICT'});return{status:200,data:state}}})
+  assert.deepEqual(await api.read(scope,'Asia/Seoul',new AbortController().signal),state)
+  assert.equal(request[2],'GET');assert.equal(request[3],undefined)
+  await assert.rejects(api.save(scope,state,draft,new AbortController().signal),error=>error.code==='SCHEDULE_VERSION_CONFLICT')
+  assert.deepEqual(request[3],{dataGeneration:scope.dataGeneration,expectedVersion:'0',timeZone:'Asia/Seoul',assignments:draft})
+  assert.deepEqual(draft,[{dayOfWeek:1,routineId:OTHER}])
+  assert.equal(weeklySchedule({...state,history:[{version:'1',effectiveFrom:'2026-11-09',timeZone:'Asia/Seoul',recordedAt:'2026-11-02T00:00:00Z',assignments:[{dayOfWeek:8,routineId:OTHER}]}]}),false)
+})
+test('schedule editor has seven routine or rest choices and makes immediate first registration explicit',()=>{
+  const html=renderToStaticMarkup(React.createElement(ScheduleEditor,{state:weekly(),routines:[{id:OTHER,name:'routine',version:'0'}],busy:false,onSave(){},onCancel(){}}))
+  assert.equal((html.match(/<select/g)||[]).length,7);assert.match(html,/2026-11-09부터 즉시 적용/);assert.match(html,/등록 전 날짜는 첫 주 달성률에서 제외/);assert.match(html,/일정 예약 저장/)
+})
+
+test('existing schedule editor retains next-Monday application instead of immediate registration',()=>{
+  const state={...weekly(),version:'1',nextEffectiveFrom:'2026-11-16'}
+  const html=renderToStaticMarkup(React.createElement(ScheduleEditor,{state,routines:[],busy:false,onSave(){},onCancel(){}}))
+  assert.match(html,/2026-11-16부터 적용/);assert.doesNotMatch(html,/즉시 적용/)
+})
+
+test('first registration week renders two out of three without inventing plans before registration',()=>{
+  const data=planned();data.statistics.plannedWorkoutDays=3;data.statistics.routineAchievementPercent='66.666667';data.effectiveWorkoutDays='2'
+  data.plannedDays=[{date:'2026-11-09',status:'BEFORE_REGISTRATION',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null}]
+  assert.equal(overview(data),true)
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/2 \/ 3일/);assert.match(html,/66\.666667%/);assert.match(html,/최초 등록 전 · 달성률 제외/);assert.doesNotMatch(html,/과거 계획 확인 불가|undefined|null종목/)
 })
