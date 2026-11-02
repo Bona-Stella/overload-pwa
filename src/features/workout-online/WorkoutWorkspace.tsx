@@ -12,6 +12,8 @@ import './online.css'
 import { ClosedWorkout, WorkoutHistory } from './ClosedWorkout.tsx'
 import { offlineAccess } from '../workout-local/offline.ts'
 import type { LocalWorkout } from '../workout-local/types.ts'
+import { StatisticsApi } from '../statistics/api.ts'
+import { StatisticsPanel } from '../statistics/StatisticsPanel.tsx'
 
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
   const otherEditor = session.editorDeviceId !== deviceId
@@ -65,6 +67,7 @@ export function WorkspaceView({ state, controller }: { state: OnlineState; contr
 export function WorkoutWorkspace({ onExitGuard }: { onExitGuard?: ExitGuardRegistration } = {}) {
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
+  const [statistics] = useState(() => new StatisticsApi(authentication))
   const [controller] = useState(() => new WorkoutOnlineController(api, undefined, () => authentication.invalidateLocalWorkoutAccess()))
   const exitGuard = useRef<(() => Promise<boolean>) | null>(null)
   const registerExit = useCallback<ExitGuardRegistration>(guard => { exitGuard.current = guard; onExitGuard?.(guard) }, [onExitGuard])
@@ -101,7 +104,9 @@ export function WorkoutWorkspace({ onExitGuard }: { onExitGuard?: ExitGuardRegis
       && s.detail.writerEpoch === session.writerEpoch && s.detail.editorDeviceId === session.editorDeviceId && s.detail.status === 'ACTIVE'
       && (a.status === 'authenticated' && a.userId === session.userId || a.localWorkoutUserId === session.userId)
   }
-  return <>{!localOnly && <WorkspaceView key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} />}
+  return <>{!localOnly && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
+      refreshKey={session ? session.id + ':' + session.version : 'home'} onInvalid={controller.invalidateScope} onOpen={id => { void (async () => { if (await (exitGuard.current?.() ?? Promise.resolve(true))) await controller.showDetail(id) })() }} />}
+    {!localOnly && <WorkspaceView key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} />}
     {permissionIssue && <p className="notice" role="status">오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.</p>}
     {editable && <LocalWorkoutScreen key={[session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')}
       server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} manufacturers={localOnly ? [] : state.data!.manufacturers} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}

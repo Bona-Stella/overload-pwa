@@ -101,6 +101,8 @@ Required:
 
 ### Task 009 Current Design
 
+통계 2A는 [Backend 진행 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2a-report.md)와 [통계 읽기 API](../overload-server/docs/api/statistics.md)를 따릅니다. 실제 계정의 온라인 통계는 서버 종료 기록만 읽으며 종료 세션 InitialPlan 계획을 주간 전체 계획으로 표시하지 않습니다. 주간 전체 달성률·성장선·유산소 계산 거리 저장·디로딩 연결은 미완료입니다. 기존 DB3/schema2·고정 요청·오프라인 허용을 유지합니다. 개인 DB V18 적용과 운영 카탈로그 분류 검증도 미완료입니다.
+
 현재 제품 경로는 Backend V17 표준 운동 단일 계약을 사용합니다. [최종 설계](../overload-server/docs/tasks/standard-exercise-catalog-design-analysis.md), [Backend 2단계](../overload-server/docs/tasks/standard-exercise-catalog-backend-phase-2-report.md), [Frontend 3단계 보고서](docs/tasks/standard-exercise-catalog-frontend-phase-3-report.md)를 따릅니다.
 개인 운동 생성/수정·개인 목록 bootstrap 대신 표준 search-data와 제조사를 사용합니다. 루틴·세션은 standardExerciseId와 필수 nullable manufacturerId/loadType, 계획·평가·로컬 문서는 schemaVersion2입니다. 장비 변경은 승인 중량·공식 비교 키를 바꾸지 않으며 완료 세트의 당시 장비는 불변입니다.
 IndexedDB overload.workout.v1은 DB3입니다. DB1/2의 기존 테스트 데이터 폐기는 upgrade 트랜잭션에서 한 번만 실행하며 신규 설치·DB3 재실행은 초기화하지 않습니다. worker waiting·고정 요청 재송신·오프라인 재진입 보호를 유지합니다. 2026-11-02 [4단계 실제 개발 DB 적용·통합 검증](../overload-server/docs/tasks/standard-exercise-catalog-dev-phase-4-report.md)을 완료했습니다. 오프라인 접근 허용 갱신은 직렬화하고, 이미 허용된 같은 계정·세대에서는 nonce를 유지합니다. 로그아웃·계정/세대 변경의 즉시 차단과 별도 명시 재진입은 유지하며 실기기 검증은 별도입니다. 아래 5A~5E 문서는 각 단계의 역사적 구현·검증 기록이며 현재 운동 식별/스키마는 이 단락이 우선합니다.

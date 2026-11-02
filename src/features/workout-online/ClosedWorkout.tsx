@@ -54,7 +54,7 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
       .catch(error => { if (!abort.signal.aborted) failure(error) }).finally(() => { if (!abort.signal.aborted) setBusy(false) })
     return () => abort.abort()
   }, [api, userId, dataGeneration, refreshKey, failure])
-  return <section className="card stack" aria-label="종료 운동 이력"><div className="section-heading"><h2>종료 운동 이력</h2><button className="quiet" disabled={busy} onClick={() => void load()}>이력 다시 조회</button></div>
+  return <section className="card stack" aria-label="종료 운동 이력"><div className="section-heading"><h2 id="workout-history-title">종료 운동 이력</h2><button className="quiet" disabled={busy} onClick={() => void load()}>이력 다시 조회</button></div>
     {issue && <p className="notice" role="alert">{issue}</p>}{busy && <p role="status">이력을 확인 중입니다.</p>}
     {page?.sessions.length === 0 && <p>종료한 운동이 없습니다.</p>}
     {page?.sessions.map(s => <button className="outline full" key={s.id} disabled={busy} onClick={() => onOpen(s.id)}>{s.routineName} · {s.workoutDate} · {s.deletedAt ? '삭제된 운동' : s.status === 'FINISHED' ? '명시 종료 ' + time(s.endedAt) : '서버 자동 종료 ' + time(s.closedAt)}</button>)}
