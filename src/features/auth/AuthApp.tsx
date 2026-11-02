@@ -3,7 +3,6 @@ import { Dialog } from '../../components/Dialog'
 import { useAuth } from './context.ts'
 import { LoginScreens } from './LoginScreens'
 import { AccountSettings } from './AccountSettings'
-import { WorkoutOverview } from '../workout-read/WorkoutOverview'
 import { WorkoutWorkspace } from '../workout-online/WorkoutWorkspace'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import { OfflineResume } from '../workout-local/OfflineResume.tsx'
@@ -51,7 +50,7 @@ export function AuthApp() {
     {state.status === 'unavailable' && state.offlineNetworkFailure && !state.localWorkoutUserId && <OfflineResume onExitGuard={registerExitGuard} />}
     <PwaStatus />
     {localExitIssue && <p className="notice error" role="alert">입력 초안을 이 기기에 저장하지 못해 화면을 유지했습니다. 로컬 저장 오류를 해결한 뒤 다시 시도해 주세요.</p>}
-    {state.status === 'authenticated' && !state.accountOpen && <section className="stack"><WorkoutOverview /><p className="muted small">이 기기의 기존 데모 기록은 계정 데이터가 아니며 서버로 전송되지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.openAccount() }}>계정 설정</button></section>}
+    {state.status === 'authenticated' && !state.accountOpen && <section className="stack"><p className="muted small">이 기기의 기존 데모 기록은 계정 데이터가 아니며 서버로 전송되지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.openAccount() }}>계정 설정</button></section>}
     {dialog && <Dialog title={dialog === 'logout' ? '로그아웃할까요?' : dialog} onClose={() => { if (!busy) setDialog(null) }}>
       {dialog === 'logout' ? <div className="stack"><p>이 브라우저의 로그인을 종료합니다. 서버 미전송 수행·입력 초안·타이머·로컬 사본·미확인 시작 요청은 보존하며, 재인증 전에는 표시하지 않습니다. 기존 데모 기록은 실제 계정과 연결되지 않습니다.</p>{localExitIssue && <p className="notice error" role="alert">초안을 저장하지 못했습니다. 로그아웃을 보류했습니다.</p>}<button className="primary" disabled={busy} onClick={async () => { if (await flushLocal()) { setDialog(null); void controller.logout() } }}>로그아웃 확인</button><button className="quiet" onClick={() => setDialog(null)}>취소</button></div>
         : <div className="stack"><p>서비스 이용 문서를 준비하고 있습니다. 정식 서비스 전에 안내할 예정입니다.</p><button className="outline" onClick={() => setDialog(null)}>닫기</button></div>}

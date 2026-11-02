@@ -96,3 +96,18 @@ test('server strings are escaped, and the local-save warning never claims workou
   const html=render(SessionView,{session:value,deviceId:DEVICE,saved:false,busy:false,onRefresh(){}})
   assert.match(html,/&lt;img/);assert.doesNotMatch(html,/<img/);assert.match(html,/수행 입력을 시작할 수 없습니다/)
 })
+
+test('standard routine UI shows catalog search and optional equipment without personal creation',()=>{
+  const html=render(RoutineForm,{routine:null,generation:scope.dataGeneration,exercises:[],manufacturers:[],busy:false,controller:{},onClose(){}})
+  assert.match(html,/role="combobox"/);assert.match(html,/등록된 표준 운동이 없습니다/)
+  assert.doesNotMatch(html,/내 종목 생성|목록에 없는 내 종목|내 운동 종목/)
+  const edit=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,manufacturers:[],busy:false,controller:{},onClose(){}})
+  assert.match(edit,/제조사 · 선택/);assert.match(edit,/부하 방식 · 선택/);assert.match(edit,/제거한 배치 조회/)
+})
+
+test('closed completed sets display the recorded manufacturer rather than the current plan equipment',()=>{
+  const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'})
+  server.snapshot.state.performedSets=[{id:OTHER,sessionExerciseId:server.initialPlan.weightExercises[0].sessionExerciseId,ordinal:1,weightKg:'60',reps:8,completedAt:server.startedAt,weightContext:{kind:'INITIAL_APPROVED',requestId:null},manufacturerId:DEVICE,loadType:'PLATE'}]
+  const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{},manufacturers:[{id:DEVICE,name:'파나타'}]})
+  assert.match(html,/파나타 · 원판식/)
+})

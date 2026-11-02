@@ -1,4 +1,4 @@
-// Explicit opt-in. Proxies only a verified disposable V15 backend; never the configured developer DB.
+// Explicit opt-in. Proxies only a verified disposable V17 backend; never the configured developer DB.
 import { createServer } from 'vite'
 import { readFile, mkdir, writeFile, appendFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
@@ -6,7 +6,7 @@ const directory=resolve('logs/task-009-5a')
 await mkdir(directory,{recursive:true})
 const isolated=JSON.parse(await readFile(resolve('../overload-server/build/task-008-1c/ready.json'),'utf8'))
 const target=new URL(isolated.backendOrigin)
-if(target.hostname!=='127.0.0.1'||!Number(target.port)||['5432','5433'].includes(target.port)||isolated.initialUsers!==0||isolated.migrations!==15)throw Error('Expected disposable V15 backend')
+if(target.hostname!=='127.0.0.1'||!Number(target.port)||['5432','5433'].includes(target.port)||isolated.initialUsers!==0||isolated.migrations!==17)throw Error('Expected disposable V17 backend')
 let loseStart=false,startRequests=[],workoutWrites=[]
 const audit=resolve(directory,'http.jsonl');await writeFile(audit,'')
 let pending=Promise.resolve()

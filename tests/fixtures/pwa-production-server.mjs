@@ -1,10 +1,10 @@
-// Disposable test host only. Serves the real dist bytes and proxies a verified isolated V15 fixture.
+// Disposable test host only. Serves the real dist bytes and proxies a verified isolated V17 fixture.
 import { createServer, request } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { resolve, extname } from 'node:path'
 export async function productionServer() {
   const isolated=JSON.parse(await readFile(resolve('../overload-server/build/task-008-1c/ready.json'),'utf8'))
-  if(new URL(isolated.backendOrigin).hostname!=='127.0.0.1'||isolated.initialUsers!==0||isolated.migrations!==15||!/^[a-f0-9]{64}$/.test(isolated.containerId))throw Error('Disposable V15 backend required')
+  if(new URL(isolated.backendOrigin).hostname!=='127.0.0.1'||isolated.initialUsers!==0||isolated.migrations!==17||!/^[a-f0-9]{64}$/.test(isolated.containerId))throw Error('Disposable V17 backend required')
   const requests=[],fault={dropSnapshot:0,variant:0,generation:null},origin='http://127.0.0.1:3080'
   const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'}
   const server=createServer(async(req,res)=>{
@@ -19,7 +19,7 @@ export async function productionServer() {
             if(url.pathname.endsWith('/snapshot')&&fault.dropSnapshot>0){fault.dropSnapshot--;res.destroy();return}
             const headers={...up.headers};delete headers['content-length'];delete headers['transfer-encoding']
             let content=Buffer.concat(output)
-            if(fault.generation&&req.method==='GET'&&['/api/v1/routines','/api/v1/exercises','/api/v1/workout-settings','/api/v1/workout-sessions/active'].includes(url.pathname)&&up.statusCode===200){
+            if(fault.generation&&req.method==='GET'&&['/api/v1/routines','/api/v1/workout-settings','/api/v1/workout-sessions/active'].includes(url.pathname)&&up.statusCode===200){
               const value=JSON.parse(content);value.dataGeneration=fault.generation
               if(value.routines)value.routines=[]
               if(value.exercises)value.exercises=[]

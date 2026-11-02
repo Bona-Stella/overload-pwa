@@ -104,7 +104,7 @@ test('editor release can await the browser lock request completion before a new 
 })
 
 const template=readFileSync(new URL('../src/pwa/worker.js',import.meta.url),'utf8')
-function worker({version=2,wrongBytes=false}={}){
+function worker({version=3,wrongBytes=false}={}){
   const events={},writes=[],deletes=[],net=[]
   const bytes='public immutable build bytes',digest=createHash('sha256').update(bytes).digest('hex')
   const config={id:'test',assets:[{path:'/index.html',sha256:digest},{path:'/assets/app.js',sha256:digest}]}
@@ -125,8 +125,8 @@ test('worker precaches only digest-verified public assets with credentials omitt
 test('wrong deployment/personalized bytes abort install BEFORE any cache write',async()=>{
   const w=worker({wrongBytes:true});await assert.rejects(w.install(),/differs/);assert.deepEqual(w.writes,[])
 })
-test('worker aborts absent DB creation, accepts v2 and rejects newer workout schema without writes',async()=>{
-  await worker({version:0}).install();const w=worker({version:3});await assert.rejects(w.install(),/Newer workout storage/);assert.deepEqual(w.writes,[])
+test('worker aborts absent DB creation, accepts v3 and rejects newer workout schema without writes',async()=>{
+  await worker({version:0}).install();await worker({version:2}).install();await worker({version:3}).install();const w=worker({version:4});await assert.rejects(w.install(),/Newer workout storage/);assert.deepEqual(w.writes,[])
 })
 test('worker never claims clients, forces update, or writes workout records',()=>{
   assert.doesNotMatch(template,/self\.skipWaiting\(|clients\.claim\(|objectStore\(|\.put\(.*workout|sync['"]/)

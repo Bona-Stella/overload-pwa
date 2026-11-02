@@ -27,7 +27,7 @@ function finish(value: unknown, owner: Record<string, unknown>) {
     && v.nullable(a.deletedAt, v.instant) && v.approvalResults(a.approvalResults) && v.assessment(a.completionAssessment)
 }
 export function localWorkout(value: unknown): value is LocalWorkout {
-  return v.object(value) && value.schemaVersion === 1 && v.uuid(value.userId) && v.counter(value.dataGeneration) && v.uuid(value.sessionId)
+  return v.object(value) && value.schemaVersion === 2 && v.uuid(value.userId) && v.counter(value.dataGeneration) && v.uuid(value.sessionId)
     && v.uuid(value.editorDeviceId) && v.counter(value.writerEpoch) && v.instant(value.startedAt) && v.initialPlan(value.initialPlan) && v.snapshot(value.snapshot)
     && v.counter(value.editVersion) && v.counter(value.localRevision) && v.counter(value.serverRevision) && v.counter(value.serverVersion)
     && frozen(value.pendingSnapshot, 'snapshot', value) && frozen(value.pendingResolution, 'resolution', value)

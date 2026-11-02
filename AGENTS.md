@@ -101,6 +101,10 @@ Required:
 
 ### Task 009 Current Design
 
+현재 제품 경로는 Backend V17 표준 운동 단일 계약을 사용합니다. [최종 설계](../overload-server/docs/tasks/standard-exercise-catalog-design-analysis.md), [Backend 2단계](../overload-server/docs/tasks/standard-exercise-catalog-backend-phase-2-report.md), [Frontend 3단계 보고서](docs/tasks/standard-exercise-catalog-frontend-phase-3-report.md)를 따릅니다.
+개인 운동 생성/수정·개인 목록 bootstrap 대신 표준 search-data와 제조사를 사용합니다. 루틴·세션은 standardExerciseId와 필수 nullable manufacturerId/loadType, 계획·평가·로컬 문서는 schemaVersion2입니다. 장비 변경은 승인 중량·공식 비교 키를 바꾸지 않으며 완료 세트의 당시 장비는 불변입니다.
+IndexedDB overload.workout.v1은 DB3입니다. DB1/2의 기존 테스트 데이터 폐기는 upgrade 트랜잭션에서 한 번만 실행하며 신규 설치·DB3 재실행은 초기화하지 않습니다. worker waiting·고정 요청 재송신·오프라인 재진입 보호를 유지합니다. 개인 개발 DB 적용과 실기기 검증은 별도입니다. 아래 5A~5E 문서는 각 단계의 역사적 구현·검증 기록이며 현재 운동 식별/스키마는 이 단락이 우선합니다.
+
 Task 009 및 이후 운동 쓰기·진행 세션·복구 작업 시 필수:
 - [Task 009 현행 설계 v1.0](../overload-server/docs/tasks/task-009-redesign-v1.0.md)
 

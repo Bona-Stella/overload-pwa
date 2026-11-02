@@ -10,3 +10,5 @@
 .local-set-row .set-check { min-width: 0; padding: 8px 2px; font-size: .78rem; }
 .local-workout .sets-card { padding-inline: 8px; }
 .local-workout .row > label { min-width: 0; flex: 1; }
+
+.local-set-equipment { grid-column: 1 / -1; overflow-wrap: anywhere; }

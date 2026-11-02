@@ -33,7 +33,7 @@ try{
   const owner=auth.getSnapshot().userId, data=await api.bootstrap(owner,signal), generation=data.scope.dataGeneration
   await api.settings(data.scope,{dataGeneration:generation,restLowSeconds:2,restMediumSeconds:3,restHighSeconds:4},signal)
   const routineId=crypto.randomUUID(), definition=data.exercises[0]
-  const weights=['첫 운동','둘째 운동'].map(()=>({id:crypto.randomUUID(),exerciseDefinitionId:definition.id,setCount:3,minReps:6,maxReps:10,initialWeightKg:'60'}))
+  const weights=['첫 운동','둘째 운동'].map(()=>({manufacturerId:null,loadType:null,id:crypto.randomUUID(),standardExerciseId:definition.id,setCount:3,minReps:6,maxReps:10,initialWeightKg:'60'}))
   await api.createRoutine(data.scope,{id:routineId,dataGeneration:generation,name:'5B 실제 루틴',weightPlacements:weights,cardioPlacements:[{id:crypto.randomUUID(),plan:{kind:'OUTDOOR',name:'5B 실제 유산소',targetSeconds:600,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null}}]},signal)
   const online=new WorkoutOnlineController(api,store), disconnect=online.connect(auth);await wait(()=>online.getSnapshot().status==='ready','online bootstrap');await online.select(routineId);await online.start()
   const server=online.getSnapshot().detail;check(server,'5A START');disconnect()

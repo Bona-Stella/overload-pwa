@@ -11,7 +11,7 @@ import { closedWriteFact, recoveryRows } from '../src/features/workout-online/cl
 import { session, scope, bootstrap, SESSION_EXERCISE as E, OTHER, DEVICE, routine } from './fixtures/workout-online-data.mjs'
 
 const at=Date.parse('2026-11-01T01:00:00Z'),clone=structuredClone
-const assessment=version=>({schemaVersion:1,ruleVersion:'task009-completion-v1',sessionVersion:version,assessedAt:new Date(at).toISOString(),overallWeightPlanComplete:false,exercises:[]})
+const assessment=version=>({schemaVersion:2,ruleVersion:'task009-completion-v1',sessionVersion:version,assessedAt:new Date(at).toISOString(),overallWeightPlanComplete:false,exercises:[]})
 const complete=(w,n)=>{m.editDraft(w,E,n,{weight:'60.000000',reps:'8'});m.completeSet(w,E,n,at+n)}
 const local=()=>m.createLocalWorkout(session(),bootstrap.settings)
 const change=m.applyLocalChange

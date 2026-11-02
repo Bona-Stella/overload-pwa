@@ -1,6 +1,6 @@
 import type { AuthController } from '../auth/controller.ts'
-import type { ExerciseResponse, WorkoutSettingsResponse } from '../workout-read/api.ts'
-import type { Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
+import type { WorkoutSettingsResponse } from '../workout-read/api.ts'
+import type { StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
   ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents, ClosedPage, ClosedCursor } from './types.ts'
 import * as v from './validation.ts'
 
@@ -36,16 +36,29 @@ export class WorkoutApi {
     if (id && result.data.id !== id && result.data.sessionId !== id) throw new WorkoutApiError('RESPONSE_INVALID', result.status)
     return result.data as T
   }
-  async bootstrap(userId: string, signal: AbortSignal): Promise<{ scope: Scope; exercises: ExerciseResponse['exercises']; settings: WorkoutSettingsResponse; routines: RoutineList['routines'] }> {
+  async bootstrap(userId: string, signal: AbortSignal): Promise<{ scope: Scope; exercises: StandardExercise[]; manufacturers: Manufacturer[]; settings: WorkoutSettingsResponse; routines: RoutineList['routines'] }> {
     const result = await this.transport.workoutRequest(userId, '/api/v1/routines', 'GET', undefined, signal)
     if (!v.routineList(result.data)) throw new WorkoutApiError('RESPONSE_INVALID')
     const scope = { userId, dataGeneration: result.data.dataGeneration }
     envelope(result.data, scope)
-    const [exercises, settings] = await Promise.all([
-      this.call<ExerciseResponse>(scope, '/api/v1/exercises', 'GET', undefined, signal, x => v.object(x) && v.array(x.exercises, e => v.object(e) && v.uuid(e.id) && v.name(e.name)) && v.unique(x.exercises as ExerciseResponse['exercises'])),
+    const [catalog, manufacturers, settings] = await Promise.all([
+      this.catalog(userId, signal),
+      this.manufacturers(userId, signal),
       this.call<WorkoutSettingsResponse>(scope, '/api/v1/workout-settings', 'GET', undefined, signal, x => v.object(x) && v.count(x.restLowSeconds) && v.count(x.restMediumSeconds) && v.count(x.restHighSeconds)),
     ])
-    return { scope, exercises: exercises.exercises, settings, routines: result.data.routines }
+    return { scope, exercises: catalog, manufacturers, settings, routines: result.data.routines }
+  }
+  async catalog(userId: string, signal: AbortSignal): Promise<StandardExercise[]> {
+    const result = await this.transport.workoutRequest(userId, '/api/v1/standard-exercises/search-data', 'GET', undefined, signal)
+    const data = result.data
+    if (result.status !== 200 || !v.object(data) || data.schemaVersion !== 1 || !v.array(data.exercises, e => v.object(e) && v.uuid(e.id) && v.name(e.name) && v.array(e.aliases, v.name))) throw new WorkoutApiError('RESPONSE_INVALID')
+    return data.exercises as StandardExercise[]
+  }
+  async manufacturers(userId: string, signal: AbortSignal): Promise<Manufacturer[]> {
+    const result = await this.transport.workoutRequest(userId, '/api/v1/manufacturers', 'GET', undefined, signal)
+    const data = result.data
+    if (result.status !== 200 || !v.object(data) || !v.array(data.manufacturers, e => v.object(e) && v.uuid(e.id) && v.name(e.name)) || !v.unique(data.manufacturers as Manufacturer[])) throw new WorkoutApiError('RESPONSE_INVALID')
+    return data.manufacturers as Manufacturer[]
   }
   routines(scope: Scope, signal: AbortSignal) { return this.call<RoutineList>(scope, '/api/v1/routines', 'GET', undefined, signal, v.routineList) }
   routine(scope: Scope, id: string, signal: AbortSignal) { return this.call<Routine>(scope, idPath('/api/v1/routines', id), 'GET', undefined, signal, v.routine, id) }
@@ -55,12 +68,6 @@ export class WorkoutApi {
   async deleteRoutine(scope: Scope, id: string, expectedVersion: string, signal: AbortSignal) {
     const result = await this.transport.workoutRequest(scope.userId, idPath('/api/v1/routines', id), 'DELETE', { dataGeneration: scope.dataGeneration, expectedVersion }, signal)
     if (result.status !== 204) throw new WorkoutApiError('RESPONSE_INVALID', result.status)
-  }
-  createExercise(scope: Scope, body: { id: string; dataGeneration: string; name: string }, signal: AbortSignal) {
-    return this.call<Scope & { id: string; name: string }>(scope, '/api/v1/exercises', 'POST', body, signal, x => v.object(x) && v.uuid(x.id) && v.name(x.name), body.id, [200, 201])
-  }
-  renameExercise(scope: Scope, id: string, name: string, signal: AbortSignal) {
-    return this.call<Scope & { id: string; name: string }>(scope, idPath('/api/v1/exercises', id), 'PATCH', { dataGeneration: scope.dataGeneration, name }, signal, x => v.object(x) && v.uuid(x.id) && v.name(x.name), id)
   }
   settings(scope: Scope, body: { dataGeneration: string; restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }, signal: AbortSignal) {
     return this.call<WorkoutSettingsResponse>(scope, '/api/v1/workout-settings', 'PATCH', body, signal, x => v.object(x) && v.count(x.restLowSeconds) && v.count(x.restMediumSeconds) && v.count(x.restHighSeconds))

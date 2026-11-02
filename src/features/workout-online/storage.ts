@@ -38,16 +38,27 @@ export class WorkoutStore {
   private open(): Promise<IDBDatabase> {
     if (!this.connection) this.connection = new Promise<IDBDatabase>((resolve, reject) => {
       if (!this.factory) { reject(new LocalStoreError()); return }
-      const opening = this.factory.open(this.databaseName, 2)
+      const opening = this.factory.open(this.databaseName, 3)
       let failed = false
       opening.onupgradeneeded = event => {
-        const db = opening.result
-        if (event.oldVersion < 1) {
-          db.createObjectStore('meta')
-          db.createObjectStore('startAttempts', { keyPath: ['userId', 'dataGeneration'] })
-          db.createObjectStore('sessionCopies', { keyPath: ['userId', 'dataGeneration', 'sessionId', 'editorDeviceId', 'writerEpoch'] }).createIndex('scope', ['userId', 'dataGeneration'])
+        try {
+          const db = opening.result
+          if (failed) { opening.transaction!.abort(); return }
+          if (event.oldVersion < 1) {
+            db.createObjectStore('meta')
+            db.createObjectStore('startAttempts', { keyPath: ['userId', 'dataGeneration'] })
+            db.createObjectStore('sessionCopies', { keyPath: ['userId', 'dataGeneration', 'sessionId', 'editorDeviceId', 'writerEpoch'] }).createIndex('scope', ['userId', 'dataGeneration'])
+          }
+          if (event.oldVersion < 2) db.createObjectStore('localWorkouts', { keyPath: ['userId', 'dataGeneration', 'sessionId', 'editorDeviceId', 'writerEpoch'] })
+          // Reset pre-release schema1 data atomically, once. Fresh installs and DB3 never reset.
+          if (event.oldVersion > 0 && event.oldVersion < 3) {
+            for (const name of ['meta', 'startAttempts', 'sessionCopies', 'localWorkouts']) opening.transaction!.objectStore(name).clear()
+          }
+        } catch {
+          failed = true
+          try { opening.transaction?.abort() } catch { /* transaction already aborted */ }
+          reject(new LocalStoreError())
         }
-        if (event.oldVersion < 2) db.createObjectStore('localWorkouts', { keyPath: ['userId', 'dataGeneration', 'sessionId', 'editorDeviceId', 'writerEpoch'] })
       }
       opening.onerror = opening.onblocked = () => { failed = true; reject(new LocalStoreError()) }
       opening.onsuccess = () => {

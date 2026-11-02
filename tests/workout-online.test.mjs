@@ -32,9 +32,9 @@ test('decimal drafts preserve full backend precision and reject rounding, expone
   for(const value of ['1e2','-0','NaN','0.0000001','100000000000000'])assert.throws(()=>validate.decimalDraft(value))
   assert.equal(validate.countDraft('2147483647'),2147483647);assert.throws(()=>validate.countDraft('2147483648'))
 })
-test('V15 session reader preserves counters, decimals, microseconds and UNVERIFIED without conversion',()=>{
+test('V17 session reader preserves counters, decimals, microseconds and UNVERIFIED without conversion',()=>{
   const value=session();assert.ok(validate.session(value));assert.equal(value.lastWorkoutSyncedAt,'2026-10-31T12:00:00.123456Z')
-  value.snapshot.state.performedSets.push({id:OTHER,sessionExerciseId:value.initialPlan.weightExercises[0].sessionExerciseId,ordinal:4,weightKg:'0.000001',reps:1,completedAt:start.startedAt,weightContext:{kind:'UNVERIFIED',requestId:null}})
+  value.snapshot.state.performedSets.push({manufacturerId:null,loadType:null,id:OTHER,sessionExerciseId:value.initialPlan.weightExercises[0].sessionExerciseId,ordinal:4,weightKg:'0.000001',reps:1,completedAt:start.startedAt,weightContext:{kind:'UNVERIFIED',requestId:null}})
   assert.ok(validate.session(value));value.initialPlan.weightExercises[0].approvedWeightKg=62.5;assert.equal(validate.session(value),false)
 })
 test('auth transport uses existing cookies/CSRF and does not replay failed writes',async()=>{
@@ -139,4 +139,19 @@ test('a generation change in a detail recheck clears all old screen state',async
 test('API rejects an unexpected successful HTTP status instead of accepting a plausible DTO',async()=>{
   const api=new WorkoutApi({workoutRequest:async()=>({status:202,data:session()})})
   await assert.rejects(()=>api.start(scope,start,new AbortController().signal),{code:'RESPONSE_INVALID',status:202})
+})
+
+test('routine deletion binds the selected version, refreshes the list and retains workout copies',async()=>{
+  const calls=[],s=setup({deleteRoutine:async(...args)=>{calls.push(args.slice(0,3))},routines:async()=>({...scope,routines:[]})})
+  await settle();await s.controller.select(ROUTINE);await s.controller.start();const copies=structuredClone(s.getCopies()),active=s.controller.getSnapshot().detail
+  await s.controller.deleteRoutine()
+  assert.deepEqual(calls,[[scope,ROUTINE,routine.version]])
+  assert.equal(s.controller.getSnapshot().selected,null);assert.deepEqual(s.controller.getSnapshot().data.routines,[])
+  assert.deepEqual(s.controller.getSnapshot().detail,active);assert.deepEqual(s.getCopies(),copies);s.disconnect()
+})
+test('routine deletion version conflict preserves selection without automatic rebase or replay',async()=>{
+  let calls=0;const s=setup({deleteRoutine:async()=>{calls++;throw{code:'ROUTINE_VERSION_CONFLICT',status:409}}})
+  await settle();await s.controller.select(ROUTINE);await s.controller.deleteRoutine()
+  assert.equal(calls,1);assert.equal(s.controller.getSnapshot().selected.version,routine.version)
+  assert.ok(s.controller.getSnapshot().issue.includes('다른 곳에서 루틴이 수정'));s.disconnect()
 })

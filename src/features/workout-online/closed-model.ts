@@ -10,8 +10,8 @@ export type RecoveryRow = { kind: 'SET' | 'CARDIO'; record: RecordValue; state: 
 export const RECOVERY_LABEL = { PRESENT: '이미 서버에 저장됨', CANDIDATE: '서버에 없는 복구 후보', VALUE_CONFLICT: '동일 기록의 값 충돌', DELETED: '삭제되거나 이 기기에서 취소된 기록', SLOT_CONFLICT: '같은 세트 또는 유산소 활동 충돌', UNVERIFIED: '승인 문맥 확인 불가', UNAVAILABLE: '종목·시각·원본 확인 필요' }
 const context = (v: PerformedSet['weightContext']) => [v.kind, v.requestId]
 export function sameRecord(a: RecordValue, b: RecordValue, claim?: PerformedSet['weightContext']) {
-  if ('ordinal' in a && 'ordinal' in b) return JSON.stringify([a.id, a.sessionExerciseId, a.ordinal, decimalDraft(a.weightKg), a.reps, Date.parse(a.completedAt), context(a.weightContext)])
-    === JSON.stringify([b.id, b.sessionExerciseId, b.ordinal, decimalDraft(b.weightKg), b.reps, Date.parse(b.completedAt), context(claim ?? b.weightContext)])
+  if ('ordinal' in a && 'ordinal' in b) return JSON.stringify([a.id, a.sessionExerciseId, a.ordinal, decimalDraft(a.weightKg), a.reps, Date.parse(a.completedAt), context(a.weightContext), a.manufacturerId, a.loadType])
+    === JSON.stringify([b.id, b.sessionExerciseId, b.ordinal, decimalDraft(b.weightKg), b.reps, Date.parse(b.completedAt), context(claim ?? b.weightContext), b.manufacturerId, b.loadType])
   if ('status' in a && 'status' in b) return JSON.stringify([a.id, a.sessionActivityId, a.status, a.startedAt && Date.parse(a.startedAt), Date.parse(a.occurredAt), a.result && [a.result.timerMs, a.result.activeMs, a.result.corrected, a.result.distanceKm, a.result.averageBpm]])
     === JSON.stringify([b.id, b.sessionActivityId, b.status, b.startedAt && Date.parse(b.startedAt), Date.parse(b.occurredAt), b.result && [b.result.timerMs, b.result.activeMs, b.result.corrected, b.result.distanceKm, b.result.averageBpm]])
   return false

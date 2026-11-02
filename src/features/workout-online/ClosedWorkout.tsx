@@ -4,21 +4,23 @@ import { WorkoutApi } from './api.ts'
 import { WorkoutStore } from './storage.ts'
 import { ClosedWorkoutController } from './closed-controller.ts'
 import type { ClosedState } from './closed-controller.ts'
-import type { CardioResult, ChangeEvents, ClosedPage, CompletionAssessment, PerformedSet, RecordEdit, Scope, Session } from './types.ts'
+import type { Manufacturer, CardioResult, ChangeEvents, ClosedPage, CompletionAssessment, PerformedSet, RecordEdit, Scope, Session } from './types.ts'
+import { equipmentLabel } from './equipment.ts'
+import { equipment } from './validation.ts'
 import { countDraft, decimalDraft } from './validation.ts'
 import { recoveryRows, RECOVERY_LABEL } from './closed-model.ts'
 import { onlineIssue } from './controller.ts'
 
 const time = (value: string | null) => value ? new Date(value).toLocaleString('ko-KR') : '없음'
-const performance = (record: PerformedSet | CardioResult) => 'ordinal' in record
-  ? `${record.ordinal}세트 · ${record.weightKg} kg × ${record.reps}회 · ${time(record.completedAt)}`
+const performance = (record: PerformedSet | CardioResult, manufacturers: Manufacturer[]) => 'ordinal' in record
+  ? `${record.ordinal}세트 · ${record.weightKg} kg × ${record.reps}회 · ${time(record.completedAt)} · ${equipmentLabel(record, manufacturers)}`
   : record.status === 'COMPLETED' ? `${record.result.activeMs / 1000}초 · 거리 ${record.result.distanceKm ?? '미입력'} km · ${time(record.occurredAt)}` : '명시 건너뜀'
 const reason: Record<string, string> = { PENDING: '승인 확인 필요', UNVERIFIED: '승인 문맥 확인 불가', AUTO_CLOSED: '서버 자동 종료', SESSION_DELETED: '삭제된 운동', NO_APPROVED_CONTEXT: '수행 당시 승인 문맥 미충족', INCOMPLETE_INITIAL_WEIGHT_PLAN: '최초 웨이트 계획 미완료', INSUFFICIENT_PERFORMED_SETS: '유효 수행 부족', TEMPORARY_WEIGHT: '오늘만 중량', MIXED_WEIGHT: '서로 다른 중량', SET_COUNT_MISMATCH: '최초 세트 수와 다름', INITIAL_EXERCISE_REMOVED: '최초 종목 제외', COMPARISON_CONTEXT_MISMATCH: '최초 목표와 다름' }
 const advice = { INCREASE: '증량 검토', DECREASE: '감량 검토', MAINTAIN: '유지 검토', UNAVAILABLE: '평가 자격 없음' }
-function ChangeEntry({ event: e }: { event: ChangeEvents['events'][number] }) {
+function ChangeEntry({ event: e, manufacturers }: { event: ChangeEvents['events'][number]; manufacturers: Manufacturer[] }) {
   const summary = (value: Record<string, unknown> | null) => {
     if (!value) return ''
-    if (typeof value.weightKg === 'string' && typeof value.reps === 'number') return `${value.ordinal}세트 · ${value.weightKg} kg × ${value.reps}회`
+    if (typeof value.weightKg === 'string' && typeof value.reps === 'number') return `${value.ordinal}세트 · ${value.weightKg} kg × ${value.reps}회${equipment(value) ? ' · ' + equipmentLabel(value as PerformedSet, manufacturers) : ''}`
     const r = value.result as Extract<CardioResult, { status: 'COMPLETED' }>['result'] | null
     return r && typeof r.activeMs === 'number' ? `${r.activeMs / 1000}초 · 거리 ${r.distanceKm ?? '미입력'} km · 심박수 ${r.averageBpm ?? '미입력'}` : ''
   }
@@ -59,7 +61,7 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
     {page?.next && <button className="outline" disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</button>}
   </section>
 }
-export function ClosedWorkout({ api, session, authorized, onServer, onInvalid }: { api: WorkoutApi; session: Session; authorized: () => boolean; onServer: (server: Session) => void; onInvalid?: (error: unknown) => void }) {
+export function ClosedWorkout({ api, session, authorized, onServer, onInvalid, manufacturers = [] }: { api: WorkoutApi; session: Session; manufacturers?: Manufacturer[]; authorized: () => boolean; onServer: (server: Session) => void; onInvalid?: (error: unknown) => void }) {
   const [initial] = useState(() => ({ session, authorized, onServer, onInvalid })) // The parent keys this panel by account/generation/session, not version.
   const [view, setView] = useState<{ controller: ClosedWorkoutController; state: ClosedState } | null>(null)
   useEffect(() => {
@@ -68,10 +70,10 @@ export function ClosedWorkout({ api, session, authorized, onServer, onInvalid }:
     void c.open()
     return () => { unsubscribe(); c.stop(); void store.close() }
   }, [api, initial])
-  return view ? <ClosedWorkoutView {...view} /> : <p role="status">종료 기록을 확인 중입니다.</p>
+  return view ? <ClosedWorkoutView {...view} manufacturers={manufacturers} /> : <p role="status">종료 기록을 확인 중입니다.</p>
 }
 type EditTarget = { kind: 'SET'; record: PerformedSet } | { kind: 'CARDIO'; record: Extract<CardioResult, { status: 'COMPLETED' }> } | { kind: 'SKIPPED'; record: Extract<CardioResult, { status: 'SKIPPED' }> }
-export function ClosedWorkoutView({ state, controller }: { state: ClosedState; controller: ClosedWorkoutController }) {
+export function ClosedWorkoutView({ state, controller, manufacturers = [] }: { state: ClosedState; controller: ClosedWorkoutController; manufacturers?: Manufacturer[] }) {
   const [dialog, setDialog] = useState<'delete' | 'recovery' | EditTarget | null>(null)
   const server = state.server, disabled = state.busy || !state.writable || !!server?.deletedAt || state.pending?.status === 'PENDING'
   if (!server) return <section className="card stack">{state.issue && <p role="alert">{state.issue}</p>}<button className="outline" disabled={state.busy} onClick={() => void controller.refresh()}>종료 기록 다시 확인</button></section>
@@ -87,7 +89,7 @@ export function ClosedWorkoutView({ state, controller }: { state: ClosedState; c
       {!server.deletedAt && state.copies.filter(c => c.finish?.request && !c.finish.ack).map((c, i) => <button className="outline" key={i} disabled={state.busy || !state.writable || server.status !== 'FINISHED' || c.writerEpoch !== server.writerEpoch || c.editorDeviceId !== server.editorDeviceId} onClick={() => void controller.confirmFinish(c)}>미확인 종료 요청 결과 확인</button>)}
     </section>
     {!server.deletedAt && <>
-      <section className="card stack"><h3>완료 수행</h3>{server.snapshot.state.performedSets.map(s => <div key={s.id}><p>{name(s.sessionExerciseId)} · {s.ordinal}세트 · {s.weightKg} kg × {s.reps}회 · {time(s.completedAt)}</p><p className="muted small">수행 당시 승인: {reason[server.snapshot.recordedContexts.find(c => c.setId === s.id)?.approvalStateAtRecording ?? ''] ?? '서버 확인 문맥'}</p><button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SET', record: s })}>세트 정정·삭제</button></div>)}
+      <section className="card stack"><h3>완료 수행</h3>{server.snapshot.state.performedSets.map(s => <div key={s.id}><p>{name(s.sessionExerciseId)} · {s.ordinal}세트 · {s.weightKg} kg × {s.reps}회 · {time(s.completedAt)} · {equipmentLabel(s, manufacturers)}</p><p className="muted small">수행 당시 승인: {reason[server.snapshot.recordedContexts.find(c => c.setId === s.id)?.approvalStateAtRecording ?? ''] ?? '서버 확인 문맥'}</p><button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SET', record: s })}>세트 정정·삭제</button></div>)}
         {server.snapshot.state.cardioResults.map(r => <div key={r.id}><p>{name(r.sessionActivityId)} · {r.status === 'SKIPPED' ? '명시 건너뜀' : `${r.result.activeMs / 1000}초 · 거리 ${r.result.distanceKm ?? '미입력'} km · 심박수 ${r.result.averageBpm ?? '미입력'}`}</p>{r.status === 'COMPLETED' ? <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'CARDIO', record: r })}>유산소 정정·삭제</button> : <button className="outline" disabled={disabled} onClick={() => setDialog({ kind: 'SKIPPED', record: r })}>건너뜀 기록 삭제</button>}</div>)}
         <button className="outline" disabled={disabled || !state.copies.length} onClick={() => setDialog('recovery')}>이 기기의 누락 완료 수행 비교·복구</button>
       </section>
@@ -96,9 +98,9 @@ export function ClosedWorkoutView({ state, controller }: { state: ClosedState; c
       {[...new Set(server.snapshot.approvalResults.filter(r => r.status === 'PENDING').map(r => r.sessionExerciseId))].map(id => <ClosedApproval key={id} server={server} id={id} controller={controller} disabled={disabled} />)}
       <button className="outline" disabled={disabled} onClick={() => setDialog('delete')}>운동 전체 논리 삭제</button>
     </>}
-    <details className="card"><summary>기록 변경 이력</summary>{state.changes?.events.map(e => <ChangeEntry key={e.id} event={e} />)}{!state.changes?.events.length && <p>변경 이력이 없습니다.</p>}</details>
+    <details className="card"><summary>기록 변경 이력</summary>{state.changes?.events.map(e => <ChangeEntry key={e.id} event={e} manufacturers={manufacturers} />)}{!state.changes?.events.length && <p>변경 이력이 없습니다.</p>}</details>
     {dialog === 'delete' && <DeleteDialog server={server} controller={controller} busy={state.busy} onClose={() => setDialog(null)} />}
-    {dialog === 'recovery' && state.changes && <RecoveryDialog state={state} controller={controller} onClose={() => setDialog(null)} />}
+    {dialog === 'recovery' && state.changes && <RecoveryDialog state={state} controller={controller} manufacturers={manufacturers} onClose={() => setDialog(null)} />}
     {dialog && typeof dialog === 'object' && <CorrectionDialog target={dialog} server={server} controller={controller} busy={state.busy} onClose={() => setDialog(null)} />}
   </section>
 }
@@ -139,7 +141,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose }: { targe
       : target.kind === 'CARDIO' ? <><p>원본 타이머 {target.record.result.timerMs / 1000}초</p><label><input type="checkbox" checked={corrected} onChange={e => setCorrected(e.target.checked)} />활동 시간 정정</label><label>실제 활동 시간 초<input inputMode="decimal" value={seconds} disabled={!corrected} onChange={e => setSeconds(e.target.value)} /></label><label>실제 거리 km · 선택<input inputMode="decimal" value={distance} onChange={e => setDistance(e.target.value)} /></label><label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} onChange={e => setBpm(e.target.value)} /></label></> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
     {target.kind !== 'SKIPPED' && <button className="primary" disabled={busy} onClick={() => void submit(false)}>정정 내용 서버 저장</button>}<button className="outline" disabled={busy} onClick={() => void submit(true)}>이 수행 논리 삭제</button></div></Dialog>
 }
-function RecoveryDialog({ state, controller, onClose }: { state: ClosedState; controller: ClosedWorkoutController; onClose: () => void }) {
+function RecoveryDialog({ state, controller, onClose, manufacturers }: { state: ClosedState; controller: ClosedWorkoutController; manufacturers: Manufacturer[]; onClose: () => void }) {
   const [initial] = useState(state), [copyIndex, setCopyIndex] = useState(0), [selected, setSelected] = useState<string[]>([])
   const copy = initial.copies[copyIndex], rows = recoveryRows(copy, initial.server!, initial.changes!)
   return <Dialog title="누락 완료 수행 선택 복구" onClose={() => { if (!state.busy) onClose() }}><div className="stack"><p>원래 기기 사본의 완료 기록만 비교합니다. 선택한 항목만 복구하며 계획·초안·진행 타이머는 전송하지 않습니다. 승인 문맥은 서버가 확인하고, 확인 불가는 별도로 보존하여 공식 평가에서 제외합니다.</p>
@@ -147,7 +149,7 @@ function RecoveryDialog({ state, controller, onClose }: { state: ClosedState; co
     {rows.map(row => {
       const records = row.kind === 'SET' ? initial.server!.snapshot.state.performedSets : initial.server!.snapshot.state.cardioResults
       const current = records.find(r => r.id === row.record.id || ('ordinal' in r && 'ordinal' in row.record ? r.sessionExerciseId === row.record.sessionExerciseId && r.ordinal === row.record.ordinal : 'sessionActivityId' in r && 'sessionActivityId' in row.record && r.sessionActivityId === row.record.sessionActivityId))
-      return <label className="radio-option" key={row.record.id}><input type="checkbox" disabled={!row.selectable || state.busy} checked={selected.includes(row.record.id)} onChange={e => setSelected(e.target.checked ? [...selected, row.record.id] : selected.filter(id => id !== row.record.id))} /><span>{RECOVERY_LABEL[row.state]}<br />원본 {performance(row.record)}{current && <><br />서버 {performance(current)}</>}</span></label>
+      return <label className="radio-option" key={row.record.id}><input type="checkbox" disabled={!row.selectable || state.busy} checked={selected.includes(row.record.id)} onChange={e => setSelected(e.target.checked ? [...selected, row.record.id] : selected.filter(id => id !== row.record.id))} /><span>{RECOVERY_LABEL[row.state]}<br />원본 {performance(row.record, manufacturers)}{current && <><br />서버 {performance(current, manufacturers)}</>}</span></label>
     })}
     {!rows.length && <p>비교할 완료 수행이 없습니다.</p>}
     <button className="primary" disabled={state.busy || !selected.length} onClick={async () => { if (window.confirm('선택한 원래 UUID·시각·수치를 그대로 복구할까요? 확인 불가 승인 문맥은 승인으로 바꾸지 않습니다.')) { if (await controller.recover(copy, selected, initial.server!.version)) onClose() } }}>선택한 완료 수행 복구 확인</button></div></Dialog>

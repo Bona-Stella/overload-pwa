@@ -8,7 +8,7 @@ export type CardioTimer = { startedAt: string | null; runningSince: string | nul
 export type RestPolicy = { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
 export type ExitGuardRegistration = (guard: (() => Promise<boolean>) | null) => void
 export type LocalWorkout = LocalKey & {
-  schemaVersion: 1
+  schemaVersion: 2
   startedAt: string
   initialPlan: InitialPlan
   snapshot: Snapshot
@@ -29,7 +29,7 @@ export type LocalWorkout = LocalKey & {
   exerciseNames: Record<string, string>
   restPolicy: RestPolicy
   rest: { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number } | null
-  // Optional on v2 documents written by 5B. One frozen snapshot, never a command queue.
+  // At most one frozen snapshot, never a command queue.
   pendingSnapshot?: { request: SnapshotRequest; requestJson: string; localOnlyIds: string[]; rejected?: boolean } | null
   pendingResolution?: { request: ActiveResolution; requestJson: string; rejected?: boolean; workingBefore?: { value: string; context: ActiveWeightContext } } | null
   confirmedDeletedSetIds?: string[]

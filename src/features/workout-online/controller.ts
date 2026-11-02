@@ -192,6 +192,27 @@ export class WorkoutOnlineController {
     } catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
   }
+  removedRoutine = async () => {
+    const scope = this.state.scope, selected = this.state.selected, context = this.context()
+    if (!scope || !selected || !context) return null
+    this.set({ busy: true, issue: null })
+    try {
+      const removed = await this.api.removedPlacements(scope, selected.id, context.signal)
+      return context.current() ? removed : null
+    } catch (error) { if (context.current()) this.failure(error); return null }
+    finally { if (context.current()) this.set({ busy: false }) }
+  }
+  deleteRoutine = async () => {
+    const scope = this.state.scope, selected = this.state.selected, context = this.context()
+    if (!scope || !selected || !context) return
+    this.set({ busy: true, issue: null })
+    try {
+      await this.api.deleteRoutine(scope, selected.id, selected.version, context.signal)
+      const list = await this.api.routines(scope, context.signal)
+      if (context.current()) this.set({ selected: null, data: this.state.data ? { ...this.state.data, routines: list.routines } : null, notice: '루틴을 삭제했습니다. 기존 운동 기록은 보존합니다.' })
+    } catch (error) { if (context.current()) this.failure(error) }
+    finally { if (context.current()) this.set({ busy: false }) }
+  }
   saveRoutine = async (body: CreateRoutine | UpdateRoutine, id?: string) => {
     const scope = this.state.scope, context = this.context(); if (!scope || !context) return false
     this.set({ busy: true, issue: null, notice: '' })
@@ -214,17 +235,6 @@ export class WorkoutOnlineController {
       this.set({ selected: value, data: this.state.data ? { ...this.state.data, routines: list.routines } : null, notice: this.state.notice || '루틴을 서버에 저장했습니다.' })
       return true
     } catch (error) { if (context.current()) this.failure(error); return false }
-    finally { if (context.current()) this.set({ busy: false }) }
-  }
-  createExercise = async (id: string, name: string) => {
-    const scope = this.state.scope, context = this.context(); if (!scope || !context) return null
-    this.set({ busy: true, issue: null })
-    try {
-      const value = await this.api.createExercise(scope, { id, dataGeneration: scope.dataGeneration, name }, context.signal)
-      if (!context.current()) return null
-      if (this.state.data) this.set({ data: { ...this.state.data, exercises: [...this.state.data.exercises.filter(x => x.id !== id), { id: value.id, name: value.name }] } })
-      return value.id
-    } catch (error) { if (context.current()) this.failure(error); return null }
     finally { if (context.current()) this.set({ busy: false }) }
   }
 }

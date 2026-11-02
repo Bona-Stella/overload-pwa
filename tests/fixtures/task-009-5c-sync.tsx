@@ -66,7 +66,7 @@ async function run(){try{
       const email='snapshot-'+crypto.randomUUID()+'@example.test';await auth.requestOtp(email);const code=(await json('/__fixture/otp')).code;await auth.verifyOtp(code);check(auth.getSnapshot().status==='authenticated','test login')
       const owner=auth.getSnapshot().userId,data=await api.bootstrap(owner,signal),device=await store.deviceId(),routineId=crypto.randomUUID()
       await api.settings(data.scope,{dataGeneration:data.scope.dataGeneration,restLowSeconds:1,restMediumSeconds:1,restHighSeconds:1},signal)
-      const r=await api.createRoutine(data.scope,{id:routineId,dataGeneration:data.scope.dataGeneration,name:'5C 실제 동기화',weightPlacements:[{id:crypto.randomUUID(),exerciseDefinitionId:data.exercises[0].id,setCount:3,minReps:6,maxReps:10,initialWeightKg:'60'}],cardioPlacements:[]},signal)
+      const r=await api.createRoutine(data.scope,{id:routineId,dataGeneration:data.scope.dataGeneration,name:'5C 실제 동기화',weightPlacements:[{manufacturerId:null,loadType:null,id:crypto.randomUUID(),standardExerciseId:data.exercises[0].id,setCount:3,minReps:6,maxReps:10,initialWeightKg:'60'}],cardioPlacements:[]},signal)
       const body=startBody(data.scope,r.id,device,crypto.randomUUID(),new Date(),Intl.DateTimeFormat().resolvedOptions().timeZone),attempt=await store.prepareStart(data.scope,body),server=await api.start(data.scope,attempt.request,signal)
       await store.saveSession(data.scope,server,body.id)
       proof={email,issuedAt:Date.now(),key:keyOf(server),exerciseId:server.initialPlan.weightExercises[0].sessionExerciseId,routineId:r.id,placementId:r.weightPlacements[0].id,settings:{restLowSeconds:1,restMediumSeconds:1,restHighSeconds:1},passed:[],phase:'sealed'}
@@ -93,7 +93,7 @@ async function run(){try{
       const server=await api.detail(proof.key,proof.key.sessionId,signal);await store.saveSession(proof.key,server);await editor(server)
       const w=await read(),remote=await api.detail(proof.key,proof.key.sessionId,signal)
       check(w.syncState==='CLEAN'&&remote.snapshot.state.deletedPerformedSetIds.includes(proof.cancelledId),'unknown deletion confirmed')
-      check(remote.snapshot.state.performedSets.map(x=>x.ordinal).join()==='1,3','coalesced final facts')
+      check(remote.snapshot.state.performedSets.map(x=>x.ordinal).sort((a,b)=>a-b).join()==='1,3','coalesced final facts')
       check(w.confirmedDeletedSetIds.includes(proof.cancelledId)&&w.cancelled.sets.some(x=>x.id===proof.cancelledId),'tombstone original retained')
       passed('ACK 유실 후 실제 새로고침: 기존 고정 요청 재확인 → 최신 전체 snapshot 1회 → UNKNOWN 삭제 확인')
       const put=IDBObjectStore.prototype.put
@@ -116,7 +116,7 @@ async function run(){try{
       check((await json('/__fixture/summary')).snapshots.length===count,'second tab must not upload');passed('같은 브라우저 두 탭 경쟁: 두 번째 제품 controller 읽기 전용·추가 전송 없음')
       // Change the real source routine externally, then retain both explicit approval intents.
       let routine=await api.routine(proof.key,proof.routineId,signal)
-      await api.updateRoutine(proof.key,routine.id,{dataGeneration:proof.key.dataGeneration,expectedVersion:routine.version,name:'외부 수정된 루틴',weightPlacements:routine.weightPlacements.map(x=>({mode:'EXISTING',id:x.id,setCount:x.setCount,minReps:x.minReps,maxReps:x.maxReps})),cardioPlacements:[],weightApprovals:[]},signal)
+      await api.updateRoutine(proof.key,routine.id,{dataGeneration:proof.key.dataGeneration,expectedVersion:routine.version,name:'외부 수정된 루틴',weightPlacements:routine.weightPlacements.map(x=>({mode:'EXISTING',manufacturerId:null,loadType:null,id:x.id,setCount:x.setCount,minReps:x.minReps,maxReps:x.maxReps})),cardioPlacements:[],weightApprovals:[]},signal)
       c.stop();const offline=new LocalWorkoutController(store,()=>true,undefined,{api,online:()=>false});await offline.open(await api.detail(proof.key,proof.key.sessionId,signal),proof.settings)
       await offline.change(x=>m.changeWeight(x,proof.exerciseId,'62.5',true,Date.now()));await offline.change(x=>m.changeWeight(x,proof.exerciseId,'65',true,Date.now()));await offline.change(x=>{m.editDraft(x,proof.exerciseId,5,{weight:'65',reps:'8'});m.completeSet(x,proof.exerciseId,5,Date.now())});offline.stop()
       await editor(await api.detail(proof.key,proof.key.sessionId,signal));w=await read();check(w.approvalResults.filter(r=>r.status==='PENDING').length===2,'real approval chain pending');check(w.snapshot.performedSets.some(r=>r.ordinal===5),'performance retained despite pending')
@@ -194,7 +194,7 @@ async function runEdge(){let disconnect;try{
   await auth.start();await auth.requestOtp('snapshot-edge-'+crypto.randomUUID()+'@example.test');await auth.verifyOtp((await json('/__fixture/otp')).code)
   check(auth.getSnapshot().status==='authenticated','edge login')
   const data=await api.bootstrap(auth.getSnapshot().userId,signal),device=await store.deviceId(),settings={restLowSeconds:1,restMediumSeconds:1,restHighSeconds:1}
-  const routine=await api.createRoutine(data.scope,{id:crypto.randomUUID(),dataGeneration:data.scope.dataGeneration,name:'5C 유산소 인수 경계',weightPlacements:[{id:crypto.randomUUID(),exerciseDefinitionId:data.exercises[0].id,setCount:1,minReps:6,maxReps:10,initialWeightKg:'60'}],cardioPlacements:[{id:crypto.randomUUID(),plan:{kind:'OUTDOOR',name:'야외',targetSeconds:60,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null}}]},signal)
+  const routine=await api.createRoutine(data.scope,{id:crypto.randomUUID(),dataGeneration:data.scope.dataGeneration,name:'5C 유산소 인수 경계',weightPlacements:[{manufacturerId:null,loadType:null,id:crypto.randomUUID(),standardExerciseId:data.exercises[0].id,setCount:1,minReps:6,maxReps:10,initialWeightKg:'60'}],cardioPlacements:[{id:crypto.randomUUID(),plan:{kind:'OUTDOOR',name:'야외',targetSeconds:60,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null}}]},signal)
   const server=await api.start(data.scope,startBody(data.scope,routine.id,device,crypto.randomUUID(),new Date(),Intl.DateTimeFormat().resolvedOptions().timeZone),signal),key=keyOf(server),id=server.initialPlan.cardioActivities[0].sessionActivityId
   await store.saveSession(key,server);c=new LocalWorkoutController(store,()=>auth.getSnapshot().status==='authenticated',undefined,{api,online:()=>true});await c.open(server,settings);await settle()
   const count=(await json('/__fixture/summary')).snapshots.length

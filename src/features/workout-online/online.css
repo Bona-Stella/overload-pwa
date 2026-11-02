@@ -7,3 +7,7 @@
 .workout-online time { overflow-wrap: anywhere; font-size: .85rem; }
 .workout-online summary { cursor: pointer; padding-block: .7rem; }
 .workout-online [aria-pressed="true"] { border-color: #3b82f6; }
+
+.exercise-search-results { list-style: none; padding: 0; margin: 0; max-height: 18rem; overflow-y: auto; }
+.exercise-search-results button { width: 100%; text-align: left; min-height: 44px; overflow-wrap: anywhere; }
+.exercise-search-results [aria-selected="true"] { outline: 2px solid var(--accent, #c9f37a); outline-offset: -2px; }

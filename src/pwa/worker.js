@@ -14,7 +14,7 @@ async function compatibleDatabase() {
     opening.onsuccess = () => {
       const db = opening.result, version = db.version
       db.close()
-      version <= 2 ? resolve() : reject(Error('Newer workout storage: keep the installed app'))
+      version <= 3 ? resolve() : reject(Error('Newer workout storage: keep the installed app'))
     }
   })
 }

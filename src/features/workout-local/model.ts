@@ -1,5 +1,5 @@
-import type { ActiveWeightContext, CardioPlan, Session } from '../workout-online/types.ts'
-import { count, countDraft, counter, decimalDraft, snapshot, targets, cardioPlan, uuid } from '../workout-online/validation.ts'
+import type { ActiveWeightContext, CardioPlan, Equipment, Session } from '../workout-online/types.ts'
+import { count, countDraft, counter, decimalDraft, snapshot, targets, cardioPlan, uuid, equipment } from '../workout-online/validation.ts'
 import type { CardioTimer, LocalWorkout, RestPolicy } from './types.ts'
 import { slotKey } from './types.ts'
 
@@ -19,7 +19,7 @@ export function createLocalWorkout(server: Session, restPolicy: RestPolicy): Loc
       context: last?.weightContext.kind === 'UNVERIFIED' ? { kind: 'TODAY_ONLY', requestId: null }
         : last?.weightContext ?? { kind: initial ? 'INITIAL_APPROVED' : 'TODAY_ONLY', requestId: null } }
   }
-  return { schemaVersion: 1, userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, editorDeviceId: server.editorDeviceId,
+  return { schemaVersion: 2, userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, editorDeviceId: server.editorDeviceId,
     writerEpoch: server.writerEpoch, startedAt: server.startedAt, initialPlan: structuredClone(server.initialPlan), snapshot: state,
     editVersion: '0', localRevision: server.localRevision, serverRevision: server.localRevision, serverVersion: server.version, syncState: 'CLEAN',
     recordedContexts: structuredClone(server.snapshot.recordedContexts), approvalResults: structuredClone(server.snapshot.approvalResults),
@@ -62,7 +62,7 @@ export function completeSet(workout: LocalWorkout, id: string, ordinal: number, 
   if (approved !== weightKg) context = { kind: 'TODAY_ONLY', requestId: null }
   const approval = context.kind === 'APPROVAL_REQUEST' ? workout.snapshot.approvalRequests.find(x => x.id === context.requestId) : null
   if (approval && Date.parse(approval.occurredAt) > now) throw new Error('완료 시각이 승인 요청보다 이릅니다. 기기 시각을 확인해 주세요.')
-  const performed = { id: freshId(workout, randomId), sessionExerciseId: id, ordinal, weightKg, reps, completedAt, weightContext: { ...context } }
+  const performed = { id: freshId(workout, randomId), sessionExerciseId: id, ordinal, weightKg, reps, completedAt, weightContext: { ...context }, manufacturerId: plan.manufacturerId, loadType: plan.loadType }
   workout.snapshot.performedSets.push(performed); workout.presence[performed.id] = 'LOCAL_ONLY'
   // Preserve the original input text, including trailing decimal zeros.
   workout.drafts[slotKey(id, ordinal)] = { ...draft }
@@ -107,10 +107,15 @@ export function updateTargets(workout: LocalWorkout, id: string, setCount: numbe
   if (!targets({ setCount, minReps, maxReps })) throw new Error('세트와 반복 목표 범위를 확인해 주세요.')
   Object.assign(requireWeight(workout, id), { setCount, minReps, maxReps })
 }
-export function addWeight(workout: LocalWorkout, definitionId: string, name: string, randomId = () => crypto.randomUUID()) {
+export function changeEquipment(workout: LocalWorkout, id: string, settings: Equipment) {
+  if (!equipment(settings)) throw new Error('장비 설정을 확인해 주세요.')
+  Object.assign(requireWeight(workout, id), settings)
+}
+export function addWeight(workout: LocalWorkout, standardExerciseId: string, name: string, randomId = () => crypto.randomUUID(), settings: Equipment = { manufacturerId: null, loadType: null }) {
+  if (!uuid(standardExerciseId) || !equipment(settings)) throw new Error('표준 운동과 장비 설정을 확인해 주세요.')
   const id = freshId(workout, randomId)
-  workout.snapshot.sessionExercises.push({ id, kind: 'WEIGHT', exerciseDefinitionId: definitionId })
-  workout.snapshot.appliedPlan.weightExercises.push({ sessionExerciseId: id, setCount: 3, minReps: 6, maxReps: 10 })
+  workout.snapshot.sessionExercises.push({ id, kind: 'WEIGHT', standardExerciseId })
+  workout.snapshot.appliedPlan.weightExercises.push({ sessionExerciseId: id, setCount: 3, minReps: 6, maxReps: 10, ...settings })
   workout.weights[id] = { value: '0', context: { kind: 'TODAY_ONLY', requestId: null } }; workout.exerciseNames[id] = name; workout.currentExerciseId = id
 }
 export function updateCardioPlan(workout: LocalWorkout, id: string, plan: CardioPlan) {
@@ -122,7 +127,7 @@ export function updateCardioPlan(workout: LocalWorkout, id: string, plan: Cardio
 export function addCardio(workout: LocalWorkout, plan: CardioPlan, randomId = () => crypto.randomUUID()) {
   if (!cardioPlan(plan) || plan.name.length > 100) throw new Error('유산소 이름(100자 이내)과 계획을 확인해 주세요.')
   const id = freshId(workout, randomId)
-  workout.snapshot.sessionExercises.push({ id, kind: 'CARDIO', exerciseDefinitionId: null })
+  workout.snapshot.sessionExercises.push({ id, kind: 'CARDIO', standardExerciseId: null })
   workout.snapshot.appliedPlan.cardioActivities.push({ sessionActivityId: id, plan: structuredClone(plan) }); workout.currentExerciseId = id
 }
 export function removeExercise(workout: LocalWorkout, id: string) {
@@ -187,6 +192,10 @@ export function exerciseList(workout: LocalWorkout) {
 }
 export function applyLocalChange(previous: LocalWorkout, transform: (next: LocalWorkout) => void): LocalWorkout {
   const next = structuredClone(previous); transform(next)
+  for (const record of previous.snapshot.performedSets) {
+    const current = next.snapshot.performedSets.find(s => s.id === record.id)
+    if (current && (current.manufacturerId !== record.manufacturerId || current.loadType !== record.loadType)) throw new Error('완료 당시 장비는 변경할 수 없습니다.')
+  }
   if (!snapshot(next.snapshot)) throw new Error('운동 저장 형식을 확인하지 못했습니다.')
   if (JSON.stringify(previous.snapshot) !== JSON.stringify(next.snapshot) || !previous.finish && next.finish) {
     next.localRevision = increment(previous.localRevision)

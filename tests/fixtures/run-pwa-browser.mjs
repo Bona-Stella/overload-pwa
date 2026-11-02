@@ -59,8 +59,8 @@ try{
     const owner=(await api('/api/v1/auth/session')).userId
     assert.ok(!oldOwners.has(owner));assert.ok(!(await text()).includes('5E 오프라인 운동'));assert.equal(JSON.stringify((await saved()).workouts),previousBytes)
     pass('real OTP account switch never exposes or retags the previous account workout sources')
-    const data=await api('/api/v1/exercises'),generation=data.dataGeneration
-    const routine=await api('/api/v1/routines','POST',{id:crypto.randomUUID(),dataGeneration:generation,name:'5E 경계 운동',weightPlacements:[{id:crypto.randomUUID(),exerciseDefinitionId:data.exercises[0].id,setCount:2,minReps:6,maxReps:10,initialWeightKg:'0'}],cardioPlacements:[]})
+    const data=await api('/api/v1/standard-exercises/search-data'),generation=(await api('/api/v1/routines')).dataGeneration
+    const routine=await api('/api/v1/routines','POST',{id:crypto.randomUUID(),dataGeneration:generation,name:'5E 경계 운동',weightPlacements:[{manufacturerId:null,loadType:null,id:crypto.randomUUID(),standardExerciseId:data.exercises[0].id,setCount:2,minReps:6,maxReps:10,initialWeightKg:'0'}],cardioPlacements:[]})
     await click('다시 조회');await click(routine.name);await click('온라인으로 운동 시작')
     const local=await wait(async()=>{const v=await saved();return v.permit?.userId===owner&&v.workouts.find(w=>w.userId===owner)},'new owner permitted workout')
     await wait(()=>cdp.eval("JSON.parse(localStorage.getItem('overload.offline.access.v1')).allowed"),'new owner fence committed')
@@ -92,11 +92,11 @@ try{
   const otp=await wait(async()=>{try{return JSON.parse(await readFile(resolve('../overload-server/build/task-008-1c/otp.json'),'utf8')).code}catch{return null}},'OTP')
   await input('input[autocomplete="one-time-code"]',otp);await click('코드 확인')
   await wait(async()=>(await text()).includes('로그인되었습니다.'),'real login')
-  const routines=await api('/api/v1/routines'),exercises=await api('/api/v1/exercises'),generation=routines.dataGeneration
+  const routines=await api('/api/v1/routines'),exercises=await api('/api/v1/standard-exercises/search-data'),generation=routines.dataGeneration
   await api('/api/v1/workout-settings','PATCH',{dataGeneration:generation,restLowSeconds:10,restMediumSeconds:10,restHighSeconds:10})
-  const routine=await api('/api/v1/routines','POST',{id:crypto.randomUUID(),dataGeneration:generation,name:'5E 오프라인 운동',weightPlacements:[{id:crypto.randomUUID(),exerciseDefinitionId:exercises.exercises[0].id,setCount:3,minReps:6,maxReps:10,initialWeightKg:'60'}],cardioPlacements:[{id:crypto.randomUUID(),plan:{kind:'OUTDOOR',name:'야외 걷기',targetSeconds:60,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null}}]})
+  const routine=await api('/api/v1/routines','POST',{id:crypto.randomUUID(),dataGeneration:generation,name:'5E 오프라인 운동',weightPlacements:[{manufacturerId:null,loadType:null,id:crypto.randomUUID(),standardExerciseId:exercises.exercises[0].id,setCount:3,minReps:6,maxReps:10,initialWeightKg:'60'}],cardioPlacements:[{id:crypto.randomUUID(),plan:{kind:'OUTDOOR',name:'야외 걷기',targetSeconds:60,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null}}]})
   await click('다시 조회');await click(routine.name);await click('온라인으로 운동 시작')
-  const permissionReady=async()=>{const v=await saved(),f=JSON.parse(await cdp.eval("localStorage.getItem('overload.offline.access.v1')")??'null');return v.permit&&f?.allowed&&v.permit.nonce===f.nonce&&v.workouts.length===1}
+  const permissionReady=async()=>{const v=await saved();assert.equal(v.version,3);const f=JSON.parse(await cdp.eval("localStorage.getItem('overload.offline.access.v1')")??'null');return v.permit&&f?.allowed&&v.permit.nonce===f.nonce&&v.workouts.length===1}
   await wait(permissionReady,'committed workout and offline permission')
   await wait(()=>cdp.eval('navigator.serviceWorker.ready.then(()=>true)'),'installed shell')
   const previousPage=await cdp.eval('performance.timeOrigin');await cdp.send('Page.reload');await wait(async()=>(await cdp.eval('performance.timeOrigin'))!==previousPage,'new document');await wait(()=>cdp.eval('!!navigator.serviceWorker.controller'),'controlled production page');await wait(permissionReady,'reload offline permission');await wait(()=>cdp.eval(`!!document.querySelector('input[aria-label="1세트 중량 kg"]')`),'workout')
