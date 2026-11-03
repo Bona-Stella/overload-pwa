@@ -44,6 +44,8 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 ### PWA 빌드·배포
 
+아래 단계별 DB 적용 표기는 당시 검증 기록입니다. 개인 개발 DB의 마지막 확인 기록은V17 적용/V18~V22 미적용이며6A에서는 접속·재확인하지 않았습니다. 현재 앱·테스트 구현과 실제 DB 적용·브라우저·실기기 검증을 구분합니다.
+
 [통계·추적 2E](../overload-server/docs/tasks/statistics-tracking-phase-2e-report.md)에서 맨몸 운동의 명시적 추가 중량 기록·정정·오프라인 보존과 실제 반복 기반 총중량 계산을 연결했습니다. 기존 숫자 중량이나 체중을 추가 부하로 해석하지 않고, 근거가 없으면 세트·반복만 표시합니다. 승인 평가와 근육 다중 매핑/대분류 중복 제거를 유지합니다. [실제 DB/API 계약](../overload-server/docs/api/bodyweight-additional-load.md)을 따르며 개인 DB V18~V22는 미적용입니다. 운영 분류·디로딩3단계·실기기 검증은 남아 있습니다.
 
 [통계·추적 2D](../overload-server/docs/tasks/statistics-tracking-phase-2d-report.md)에서 실제 유산소 속도·활동 시간, 직접 입력 우선/계산 거리와 출처, 정정·오프라인 기록 및 종류별 누적 거리를 연결했습니다. 목표 속도로 실제값을 만들지 않으며 기존 기록·고정 요청을 보존합니다. V21과 개인 DB V18~V20은 미적용입니다. 실제 계약은 [유산소 측정](../overload-server/docs/api/cardio-actual-measurements.md)을 따르며 디로딩 구분·혼재 연결은3단계입니다.
@@ -377,20 +379,26 @@ overload-pwa/
 /api/v1
 ```
 
-### 주요 API (개발 예정)
+### 현재 주요 API
 
 | Method | Endpoint | Description |
 |:---|:---|:---|
-| GET | `/api/v1/exercises` | 운동 종목 조회 |
-| POST | `/api/v1/workouts` | 운동 세션 생성 |
-| GET | `/api/v1/workouts` | 운동 이력 조회 |
-| GET | `/api/v1/workouts/{id}` | 운동 상세 기록 조회 |
-| POST | `/api/v1/workouts/{id}/sets` | 운동 세트 추가 |
+| GET | `/api/v1/standard-exercises/search-data`, `/api/v1/manufacturers` | 표준 운동·제조사 조회 |
+| GET / PATCH | `/api/v1/workout-settings` | 현재 사용자 휴식 설정 |
+| POST | `/api/v1/workout-sessions` | 운동 시작 |
+| GET | `/api/v1/workout-sessions/active`, `/api/v1/workout-sessions/closed`, `/api/v1/workout-sessions/{id}` | 진행·종료 목록·상세 |
 | GET | `/api/v1/routines` | 운동 루틴 조회 |
 | POST | `/api/v1/routines` | 운동 루틴 생성 |
-| GET | `/api/v1/statistics/volume` | 운동 볼륨 통계 |
+| GET | `/api/v1/statistics/overview` | 기간별 통계·계획 근거 |
+| GET | `/api/v1/statistics/growth/exercises` | 성장 종목 검색 |
+| GET | `/api/v1/statistics/growth/exercises/{standardId}` | 루틴 배치 선택 |
+| GET | `/api/v1/statistics/growth/exercises/{standardId}/placements/{placementId}` | 승인 중량 이력 |
+| GET / PUT | `/api/v1/weekly-schedule` | 주간 일정 조회·저장 |
+| GET | `/api/v1/weekly-schedule/history` | 일정 이력 |
 
-> API 경로는 초기 설계 예시입니다. 실제 API 명세는 백엔드 구현에 맞춰 변경될 수 있습니다.
+요청·응답·query·인증·CSRF 조건은 Backend의 [통계·화면 계약](../overload-server/docs/api/statistics.md), [성장 조회](../overload-server/docs/api/approved-weight-growth.md), [주간 일정](../overload-server/docs/api/weekly-schedule.md), [세션](../overload-server/docs/api/workout-sessions.md), [휴식 설정](../overload-server/docs/api/workout-online-write.md)을 따릅니다. 개인 운동 GET과 이전 `/api/v1/statistics`는 제거됐으며 개인 운동 POST/PATCH는 차단 경계만 유지합니다. `/workouts`와 통계 volume 경로는 초기 예시이고 현재 호출하지 않습니다.
+
+통계·일정은 기존 AuthController/AuthApi의 실제 온라인 transport를 통과합니다. 활동·근육 상세의 기간은 독립적으로 유지되고, 유산소 실제/계획 시간은 활동 상세의 같은 선택 기간을 비교합니다. 이 구현과 자동 테스트를 최신 Backend 연결·브라우저·PWA·실기기 검증 완료로 간주하지 않으며 종합 확인은6B에 남아 있습니다.
 
 ### 개발 환경 Proxy
 

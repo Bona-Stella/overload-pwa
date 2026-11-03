@@ -99,7 +99,7 @@ GET `/api/v1/auth/reauth/email/contact`의 VERIFIED/REQUIRED와 `maskedEmail`만
 - 검증: 각 경로의 `/verify`에 `{challengeId,code}`, 등록만 candidateId 추가 → 204.
 - 등록 취소: POST `/api/v1/auth/reauth/email/registration/cancel` `{}` → 204 후 서버 상태 재조회.
 
-수신 주소/userId/선택적 legacy EMAIL identityId는 OTP 본문에 넣지 않는다.
+일반 이메일 재인증은 서버의 현재 VERIFIED 대표 연락처를 사용한다. 발급은 `{}`, 검증은 `{challengeId,code}`만 받으며 수신 주소/userId/identityId를 보내지 않는다. identityId는 null이어도400 INVALID_REQUEST다. 아래 Google CONTACT form과 EMAIL/Google unlink에서 사용하는 identityId는 별도 현행 계약이다.
 모든 쓰기 전에 같은 UUID의 서버 세션·새 CSRF·서버 연락처/후보를 확인한다.
 검증 성공 후 회전된 세션 UUID가 같은지 다시 확인하고 CSRF와 계정 데이터를 새로 조회한다.
 204 이후 조회 실패/네트워크·5xx 등 결과 불확실은 challenge를 버리고 연결 확인 상태로 전환한다.
