@@ -4,6 +4,7 @@ export type Counter = string
 export type Decimal = string
 export type Instant = string
 export type Scope = { userId: UUID; dataGeneration: Counter }
+export type WorkoutSettingsResponse = Scope & { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
 export type CardioPlan = { kind: 'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'; name: string; targetSeconds: number;
   targetDistanceKm: Decimal | null; intensity: { mode: 'SPEED' | 'PACE'; value: Decimal } | null; inclinePercent: Decimal | null; resistance: Decimal | null }
 export type LoadType = 'PLATE' | 'STACK' | 'DUMBBELL' | 'BODYWEIGHT'

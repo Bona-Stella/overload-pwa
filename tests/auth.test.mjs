@@ -31,6 +31,26 @@ test('session 401 is anonymous with credentialed uncached fetch, not a fabricate
   assert.equal(await api.session(), null)
   assert.equal(options.credentials, 'include'); assert.equal(options.cache, 'no-store'); assert.equal(options.redirect, 'error')
 })
+test('workout transport rejects retired personal routes and preserves current reads and CSRF-protected settings writes', async () => {
+  const calls = [], signal = new AbortController().signal
+  const api = new AuthApi(async (path, init) => { calls.push({ path, init }); return json(path.endsWith('/csrf') ? csrf : {}) })
+  for (const path of ['/api/v1/exercises', '/api/v1/exercises/20000000-1111-4222-8333-000000000002', 'https://untrusted.test/api/v1/workout-settings']) {
+    await assert.rejects(api.workoutRequest(path, 'GET', undefined, signal), { code: 'INVALID_REQUEST', status: 400 })
+  }
+  assert.equal(calls.length, 0)
+  for (const path of ['/api/v1/workout-settings', '/api/v1/standard-exercises/search-data', '/api/v1/manufacturers']) {
+    assert.equal((await api.workoutRequest(path, 'GET', undefined, signal)).status, 200)
+    assert.equal(calls.at(-1).init.credentials, 'include'); assert.equal(calls.at(-1).init.cache, 'no-store')
+  }
+  const count = calls.length, body = { dataGeneration: '0', restLowSeconds: 17, restMediumSeconds: 29, restHighSeconds: 43 }
+  await assert.rejects(api.workoutRequest('/api/v1/workout-settings', 'PATCH', body, signal), { code: 'CSRF_INVALID', status: 403 })
+  assert.equal(calls.length, count)
+  await api.refreshCsrf()
+  await api.workoutRequest('/api/v1/workout-settings', 'PATCH', body, signal)
+  assert.equal(calls.at(-1).init.headers[csrf.headerName], csrf.token)
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), body)
+})
+
 test('default browser fetch is called without binding AuthApi as its native receiver', async t => {
   t.mock.method(globalThis, 'fetch', function () { assert.ok(!(this instanceof AuthApi)); return Promise.resolve(json({ userId: USER })) })
   assert.equal((await new AuthApi().session()).userId, USER)

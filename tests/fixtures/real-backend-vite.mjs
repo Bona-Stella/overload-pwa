@@ -42,7 +42,7 @@ const server = await createServer({
         const event = { sequence: ++sequence, method: request.method, path, status: response.statusCode, sentSessionCookie: Boolean(cookie), cookieSha256: cookie ? hash(cookie) : null,
           requestId: response.headers['x-request-id'] ?? null, cacheControl: response.headers['cache-control'] ?? null,
           contentType: response.headers['content-type'] ?? null, nosniff: response.headers['x-content-type-options'] ?? null, frameOptions: response.headers['x-frame-options'] ?? null, setCookies }
-        const collect = ['/api/v1/exercises', '/api/v1/workout-settings', '/api/v1/auth/session'].includes(path)
+        const collect = ['/api/v1/workout-settings', '/api/v1/auth/session'].includes(path)
         const chunks = []
         if (collect) response.on('data', chunk => chunks.push(chunk))
         response.on('end', () => {

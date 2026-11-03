@@ -104,18 +104,18 @@ test('logout revokes local access BEFORE a failing network request; no fake logo
 test('warm transport loss suspends authenticated sending and requires a fresh session before resume',async()=>{
   let count=0
   const c=auth({session:async()=>{count++;return{userId:USER}},workoutRequest:async()=>{throw new AuthError('NETWORK')}},{identity:async()=>{},deny:async()=>{}})
-  await c.start();await assert.rejects(c.workoutRequest(USER,'/api/v1/exercises','GET',undefined,new AbortController().signal))
+  await c.start();await assert.rejects(c.workoutRequest(USER,'/api/v1/workout-settings','GET',undefined,new AbortController().signal))
   assert.equal(c.getSnapshot().status,'unavailable');assert.equal(c.getSnapshot().localWorkoutUserId,USER)
   await c.restore();assert.equal(count,2);assert.equal(c.getSnapshot().status,'authenticated')
 })
 test('401 revokes durable cold permission while existing in-memory workout policy stays explicit',async()=>{
   const calls=[],c=auth({session:async()=>({userId:USER}),workoutRequest:async()=>{throw new AuthError('AUTHENTICATION_REQUIRED',401)}},{identity:async()=>{},deny:async()=>{calls.push('deny')}})
-  await c.start();await assert.rejects(c.workoutRequest(USER,'/api/v1/exercises','GET',undefined,new AbortController().signal))
+  await c.start();await assert.rejects(c.workoutRequest(USER,'/api/v1/workout-settings','GET',undefined,new AbortController().signal))
   assert.deepEqual(calls,['deny']);assert.equal(c.getSnapshot().offlineNetworkFailure,false)
 })
 test('a concurrent stale GET cancelled after transport loss cannot revoke the offline permission',async()=>{
   const calls=[],gate=deferred(),c=auth({session:async()=>({userId:USER}),workoutRequest:async()=>{await gate.promise;return{status:200,data:{}}}},{identity:async()=>{},deny:async()=>{calls.push('deny')}})
-  await c.start();const request=c.workoutRequest(USER,'/api/v1/exercises','GET',undefined,new AbortController().signal)
+  await c.start();const request=c.workoutRequest(USER,'/api/v1/workout-settings','GET',undefined,new AbortController().signal)
   c.networkUnavailable();gate.resolve();await assert.rejects(request,error=>error.code==='NETWORK')
   assert.deepEqual(calls,[]);assert.equal(c.getSnapshot().offlineNetworkFailure,true)
 })
@@ -128,7 +128,7 @@ test('a reconnect check retains local consent eligibility while pending, then a 
 })
 test('an old in-flight request completed during reauthentication cannot invalidate the verified new context',async()=>{
   const calls=[],gate=deferred(),c=auth({session:async()=>({userId:USER}),workoutRequest:async()=>gate.promise},{identity:async()=>{},deny:async()=>{calls.push('deny')}})
-  await c.start();const request=c.workoutRequest(USER,'/api/v1/exercises','GET',undefined,new AbortController().signal)
+  await c.start();const request=c.workoutRequest(USER,'/api/v1/workout-settings','GET',undefined,new AbortController().signal)
   await c.restore();gate.resolve({status:200,data:{}})
   await assert.rejects(request,{code:'REQUEST_SUPERSEDED'});assert.deepEqual(calls,[]);assert.equal(c.getSnapshot().status,'authenticated')
 })

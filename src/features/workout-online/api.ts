@@ -1,6 +1,5 @@
 import type { AuthController } from '../auth/controller.ts'
-import type { WorkoutSettingsResponse } from '../workout-read/api.ts'
-import type { StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
+import type { WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
   ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents, ClosedPage, ClosedCursor } from './types.ts'
 import * as v from './validation.ts'
 

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { StatisticsApi, statistics, overview, periodFor, weightStats } from '../src/features/statistics/api.ts'
+import { StatisticsApi, overview, periodFor, weightStats } from '../src/features/statistics/api.ts'
 import { WeeklyScheduleApi, weeklySchedule } from '../src/features/statistics/weekly-schedule.ts'
 import { scope, OTHER } from './fixtures/workout-online-data.mjs'
 
@@ -19,32 +19,51 @@ const {StatisticsView,WeightChart}=await import('../src/features/statistics/Stat
 const {ScheduleEditor}=await import('../src/features/statistics/WeeklySchedulePanel.tsx')
 const weights={plannedSets:'4',completedSets:'3',reps:'28',volumeLoadKg:'2140',setsWithoutVolume:'0'}
 const period={fromDate:'2026-10-26',toDateExclusive:'2026-11-02'}
-const fixture=()=>({...scope,...period,planCoverage:'STARTED_SESSIONS_ONLY',plannedWorkoutDays:null,routineAchievementPercent:null,
+const fixture=()=>({...scope,...period,planCoverage:'PARTIAL_SCHEDULE_HISTORY',plannedWorkoutDays:null,routineAchievementPercent:null,
   summary:{...weights},cardioActiveMs:'1800000',unmappedCompletedSets:'0',days:[{date:'2026-11-01',weights:{...weights},cardioActiveMs:'1800000'}],
   exercises:[{standardExerciseId:OTHER,name:'스쿼트',weights:{...weights}}],muscles:[{id:OTHER,name:'대퇴사두근',groupCode:'LEGS',role:'PRIMARY',weights:{...weights}},
     {id:scope.userId,name:'보조근',groupCode:'LEGS',role:'SECONDARY',weights:{...weights}}],groups:[{groupCode:'LEGS',role:'PRIMARY',weights:{...weights}}],
   cardio:[{kind:'TREADMILL',name:'달리기',activeMs:'1800000',distanceKm:'3.8',recordsWithoutDistance:'0'}],recentSessions:[]})
 
-test('statistics uses authenticated GET with no write body and preserves the original abort signal',async()=>{
+test('overview uses authenticated GET with no write body and preserves the original abort signal',async()=>{
   let request
-  const api=new StatisticsApi({workoutRequest:async(...args)=>{request=args;return{status:200,data:fixture()}}})
-  const signal=new AbortController().signal,result=await api.read(scope,period,signal)
-  assert.equal(result.summary.volumeLoadKg,'2140');assert.equal(request[0],scope.userId)
-  assert.equal(request[1],'/api/v1/statistics?fromDate=2026-10-26&toDateExclusive=2026-11-02')
+  const api=new StatisticsApi({workoutRequest:async(...args)=>{request=args;return{status:200,data:planned()}}})
+  const signal=new AbortController().signal,result=await api.overview(scope,period,signal)
+  assert.equal(result.statistics.summary.volumeLoadKg,'2140');assert.equal(request[0],scope.userId)
+  assert.equal(request[1],'/api/v1/statistics/overview?fromDate=2026-10-26&toDateExclusive=2026-11-02')
   assert.equal(request[2],'GET');assert.equal(request[3],undefined);assert.equal(request[4],signal)
 })
-test('statistics rejects other owners, generations and mismatched date ranges before rendering',async()=>{
-  for(const [patch,code] of [[{userId:OTHER},'OWNER_MISMATCH'],[{dataGeneration:'9'},'DATA_GENERATION_MISMATCH'],[{fromDate:'2026-10-27'},'RESPONSE_INVALID']]){
-    const api=new StatisticsApi({workoutRequest:async()=>({status:200,data:{...fixture(),...patch}})})
-    await assert.rejects(api.read(scope,period,new AbortController().signal),error=>error.code===code)
+test('overview rejects other owners, generations and mismatched date ranges before rendering',async()=>{
+  for(const [patch,code] of [[{userId:OTHER},'OWNER_MISMATCH'],[{dataGeneration:'9'},'DATA_GENERATION_MISMATCH'],[{fromDate:'2026-10-27'},'RESPONSE_INVALID'],[{toDateExclusive:'2026-11-03'},'RESPONSE_INVALID']]){
+    const api=new StatisticsApi({workoutRequest:async()=>({status:200,data:{...planned(),statistics:{...planned().statistics,...patch}}})})
+    await assert.rejects(api.overview(scope,period,new AbortController().signal),error=>error.code===code)
   }
 })
-test('aggregate decimals retain values above Number precision and malformed or inferred denominators are rejected',()=>{
-  const data=fixture();data.summary.volumeLoadKg='9007199254740993.500001';assert.equal(statistics(data),true)
-  for(const patch of [{volumeLoadKg:2140},{volumeLoadKg:'2e3'},{volumeLoadKg:'1.0000001'},{completedSets:'3',setsWithoutVolume:'4'}])assert.equal(weightStats({...weights,...patch}),false)
-  assert.equal(statistics({...data,plannedWorkoutDays:4,routineAchievementPercent:'75'}),false)
-  assert.equal(statistics({...data,fromDate:'2026-02-30'}),false)
+test('overview retains exact aggregate decimals and valid nulls while rejecting malformed facts',()=>{
+  const data=planned();data.statistics.summary.volumeLoadKg='9007199254740993.500001';assert.equal(overview(data),true)
+  for(const patch of [{volumeLoadKg:2140},{volumeLoadKg:'2e3'},{volumeLoadKg:'1.0000001'},{completedSets:'3',setsWithoutVolume:'4'}]){
+    assert.equal(weightStats({...weights,...patch}),false)
+    assert.equal(overview({...data,statistics:{...data.statistics,summary:{...weights,...patch}}}),false)
+  }
+  assert.equal(overview({...data,statistics:{...data.statistics,fromDate:'2026-02-30'}}),false)
+  const unknown=partial()
+  unknown.statistics.summary.volumeLoadKg=null;unknown.statistics.summary.setsWithoutVolume='3'
+  unknown.statistics.cardio[0].distanceKm=null
+  Object.assign(unknown.cardioByKind[0],{distanceKm:null,manualDistanceKm:null,manualRecords:'0',recordsWithoutDistance:'1'})
+  assert.equal(overview(unknown),true)
+  assert.equal(overview({...unknown,statistics:{...unknown.statistics,plannedWorkoutDays:4,routineAchievementPercent:'75'}}),false)
 })
+
+test('overview forwards cancellation to an in-flight transport request',async()=>{
+  const controller=new AbortController(),failure=new DOMException('Cancelled','AbortError')
+  const api=new StatisticsApi({workoutRequest:(_owner,_path,_method,_body,signal)=>new Promise((_resolve,reject)=>{
+    signal.addEventListener('abort',()=>reject(signal.reason),{once:true})
+  })})
+  const pending=api.overview(scope,period,controller.signal)
+  controller.abort(failure)
+  await assert.rejects(pending,error=>error===failure)
+})
+
 test('week periods are Monday to Sunday and month periods keep true calendar length',()=>{
   assert.deepEqual(periodFor(new Date(2026,10,1,23,30),'week',0),period)
   assert.deepEqual(periodFor(new Date(2026,10,1),'week',1),{fromDate:'2026-11-02',toDateExclusive:'2026-11-09'})
@@ -52,13 +71,13 @@ test('week periods are Monday to Sunday and month periods keep true calendar len
   assert.deepEqual(periodFor(new Date(2024,1,29),'month',0),{fromDate:'2024-02-01',toDateExclusive:'2024-03-01'})
 })
 test('summary distinguishes confirmed server records from unsent local facts and does not invent a weekly achievement',()=>{
-  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:fixture(),screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:partial().statistics,planning:partial(),screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/완료 웨이트 세트/);assert.match(html,/30분/);assert.match(html,/미전송 기록은 포함되지 않습니다/)
   assert.match(html,/아직 확인할 수 없습니다/);assert.doesNotMatch(html,/75%|100%/)
   assert.match(html,/운동 이력 전체 보기/);assert.match(html,/운동 현황/)
 })
-test('muscle detail keeps secondary contribution separate and shows limited initial-plan coverage',()=>{
-  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:fixture(),screen:'muscles',onScreen(){},onOpen(){},onHistory(){}}))
+test('muscle detail keeps secondary contribution separate and shows partial schedule-history coverage',()=>{
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:partial().statistics,planning:partial(),screen:'muscles',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/주동근 세트/);assert.match(html,/보조근 참여 · 주동근과 별도/)
   assert.match(html,/전체 주간 계획과는 다를 수 있습니다/);assert.doesNotMatch(html,/0\.5세트/)
 })
@@ -70,7 +89,8 @@ test('explicit bodyweight load enables total-weight view while unknown sets reta
   const html=renderToStaticMarkup(React.createElement(WeightChart,{rows:[{key:'body',name:'중량 푸시업',weights:{plannedSets:'0',completedSets:'2',reps:'18',volumeLoadKg:'80',setsWithoutVolume:'1'}}]}))
   assert.match(html,/>총중량</);assert.match(html,/2세트 · 18회/);assert.match(html,/추가 중량 근거가 없는 맨몸 세트는 총중량에서 제외/)
 })
-const planned=()=>({statistics:{...fixture(),planCoverage:'FULL_SCHEDULE_HISTORY',plannedWorkoutDays:4,routineAchievementPercent:'56.25'},effectiveWorkoutDays:'2.25',unknownPlanDays:0,unverifiableDays:0,plannedDays:[]})
+const planned=()=>({statistics:{...fixture(),planCoverage:'FULL_SCHEDULE_HISTORY',plannedWorkoutDays:4,routineAchievementPercent:'56.25'},effectiveWorkoutDays:'2.25',unknownPlanDays:0,unverifiableDays:0,plannedDays:[],cardioByKind:[{kind:'TREADMILL',activeMs:'1800000',distanceKm:'3.8',manualDistanceKm:'3.8',calculatedDistanceKm:null,unknownSourceDistanceKm:null,manualRecords:'1',calculatedRecords:'0',unknownSourceRecords:'0',recordsWithoutDistance:'0'}]})
+const partial=()=>({...planned(),statistics:fixture(),effectiveWorkoutDays:null,unknownPlanDays:7})
 const weekly=()=>({...scope,version:'0',timeZone:'Asia/Seoul',nextEffectiveFrom:'2026-11-09',current:null,pending:null,history:[]})
 test('overview accepts verified weekly rate and rejects fabricated denominators for unknown history',async()=>{
   const data=planned();assert.equal(overview(data),true)
@@ -124,4 +144,54 @@ test('cardio totals keep different kinds separate and label manual calculated an
   const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
   for(const text of ['러닝머신','자전거','계산 거리 4 km','직접 입력 18 km','출처 미확인 2 km'])assert.ok(html.includes(text))
   assert.doesNotMatch(html,/24 km|총 거리/)
+})
+
+test('overview exercise names are escaped when rendered in the current statistics view',()=>{
+  const data=planned();data.statistics.exercises[0].name='<img src=x onerror=alert(1)>'
+  assert.equal(overview(data),true)
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/)
+  assert.doesNotMatch(html,/<img|<script/)
+})
+
+
+test('overview rejects missing or malformed required cardio totals instead of accepting old responses',async()=>{
+  const absent=planned();delete absent.cardioByKind
+  for(const data of [absent,...[null,{},[{}]].map(cardioByKind=>({...planned(),cardioByKind}))]){
+    assert.equal(overview(data),false)
+    const api=new StatisticsApi({workoutRequest:async()=>({status:200,data})})
+    await assert.rejects(api.overview(scope,period,new AbortController().signal),error=>error.code==='RESPONSE_INVALID')
+  }
+  const empty={...planned(),cardioByKind:[]}
+  assert.equal(overview(empty),true)
+  const api=new StatisticsApi({workoutRequest:async()=>({status:200,data:empty})})
+  assert.deepEqual(await api.overview(scope,period,new AbortController().signal),empty)
+})
+
+test('activity uses cardioByKind for both content and empty state without legacy cardio fallback',()=>{
+  const data=planned();data.statistics.cardio[0].name='LEGACY_CARDIO_SENTINEL'
+  const render=()=>renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  data.cardioByKind=[]
+  assert.match(render(),/유산소 기록이 없습니다/);assert.doesNotMatch(render(),/LEGACY_CARDIO_SENTINEL/)
+  data.cardioByKind=planned().cardioByKind;data.statistics.cardio=[]
+  const html=render()
+  assert.match(html,/러닝머신 · 30분 · 3.8 km/);assert.match(html,/직접 입력 3.8 km/)
+  assert.doesNotMatch(html,/유산소 기록이 없습니다|LEGACY_CARDIO_SENTINEL/)
+})
+
+test('overview requires planning fields while preserving null evidence and unknown cardio measurements',()=>{
+  for(const key of ['plannedDays','effectiveWorkoutDays','unknownPlanDays','unverifiableDays']){
+    const data=planned();delete data[key];assert.equal(overview(data),false)
+  }
+  const data=partial();data.cardioByKind=[{...planned().cardioByKind[0],distanceKm:null,manualDistanceKm:null,manualRecords:'0',recordsWithoutDistance:'1'}]
+  data.plannedDays=[{date:period.fromDate,status:'UNKNOWN',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null}]
+  assert.equal(overview(data),true)
+  const activity=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(activity,/러닝머신 · 30분/);assert.match(activity,/거리 미입력 기록 포함/);assert.doesNotMatch(activity,/ km/)
+  const summary=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(summary,/과거 계획 확인 불가/);assert.doesNotMatch(summary,/0%|100%|null종목|undefined/)
+  const unverifiable=planned();unverifiable.unverifiableDays=1;unverifiable.effectiveWorkoutDays=null;unverifiable.statistics.routineAchievementPercent=null
+  assert.equal(overview(unverifiable),true)
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:unverifiable.statistics,planning:unverifiable,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/확인 중/);assert.match(html,/유산소 목표 달성 확인 필요/)
 })

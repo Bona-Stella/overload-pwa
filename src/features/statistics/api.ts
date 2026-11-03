@@ -5,7 +5,7 @@ import * as v from '../workout-online/validation.ts'
 import { GrowthApi } from './growth.ts'
 
 export type WeightStats = { plannedSets: string; completedSets: string; reps: string; volumeLoadKg: string | null; setsWithoutVolume: string }
-export type Statistics = Scope & { fromDate: string; toDateExclusive: string; planCoverage: 'STARTED_SESSIONS_ONLY' | 'FULL_SCHEDULE_HISTORY' | 'PARTIAL_SCHEDULE_HISTORY'; plannedWorkoutDays: number | null; routineAchievementPercent: string | null;
+export type Statistics = Scope & { fromDate: string; toDateExclusive: string; planCoverage: 'FULL_SCHEDULE_HISTORY' | 'PARTIAL_SCHEDULE_HISTORY'; plannedWorkoutDays: number | null; routineAchievementPercent: string | null;
   summary: WeightStats; cardioActiveMs: string; unmappedCompletedSets: string;
   days: { date: string; weights: WeightStats; cardioActiveMs: string }[];
   exercises: { standardExerciseId: string; name: string; weights: WeightStats }[];
@@ -17,7 +17,7 @@ export type Period = { fromDate: string; toDateExclusive: string }
 export type PlannedDay = { date: string; status: 'UNKNOWN' | 'BEFORE_REGISTRATION' | 'REST' | 'PLANNED' | 'UNVERIFIABLE'; scheduleVersion: string | null;
   plan: import('../workout-online/types.ts').Routine | null; plannedExercises: number | null; completedExercises: number | null; effectiveDay: string | null; selectedSessionId: string | null }
 export type CardioTotal = { kind: string; activeMs: string; distanceKm: string | null; manualDistanceKm: string | null; calculatedDistanceKm: string | null; unknownSourceDistanceKm: string | null; manualRecords: string; calculatedRecords: string; unknownSourceRecords: string; recordsWithoutDistance: string }
-export type Overview = { statistics: Statistics; effectiveWorkoutDays: string | null; unknownPlanDays: number; unverifiableDays: number; plannedDays: PlannedDay[]; cardioByKind?: CardioTotal[] }
+export type Overview = { statistics: Statistics; effectiveWorkoutDays: string | null; unknownPlanDays: number; unverifiableDays: number; plannedDays: PlannedDay[]; cardioByKind: CardioTotal[] }
 const nonnegative = (x: unknown): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 2147483647
 const fraction = (x: unknown, maximum: number): x is string => typeof x === 'string' && /^(0|[1-9][0-9]*)(\.[0-9]{0,11}[1-9])?$/.test(x) && Number(x) <= maximum
 export const date = (x: unknown): x is string => typeof x === 'string' && /^(?!0000)\d{4}-\d{2}-\d{2}$/.test(x)
@@ -37,9 +37,6 @@ function facts(x: unknown): x is Statistics {
     && v.array(x.cardio, c => v.object(c) && v.name(c.kind) && v.name(c.name) && v.counter(c.activeMs) && v.nullable(c.distanceKm, decimal) && v.counter(c.recordsWithoutDistance))
     && v.array(x.recentSessions, s => v.object(s) && v.uuid(s.id) && v.name(s.routineName) && date(s.workoutDate) && v.instant(s.startedAt) && ['FINISHED', 'AUTO_CLOSED'].includes(String(s.status)))
 }
-export function statistics(x: unknown): x is Statistics {
-  return facts(x) && x.planCoverage === 'STARTED_SESSIONS_ONLY' && x.plannedWorkoutDays === null && x.routineAchievementPercent === null
-}
 export function overview(x: unknown): x is Overview {
   return v.object(x) && facts(x.statistics) && ['FULL_SCHEDULE_HISTORY', 'PARTIAL_SCHEDULE_HISTORY'].includes(x.statistics.planCoverage)
     && v.nullable(x.statistics.plannedWorkoutDays, n => nonnegative(n) && n <= 366)
@@ -48,7 +45,7 @@ export function overview(x: unknown): x is Overview {
     && nonnegative(x.unverifiableDays) && x.unverifiableDays <= 366
     && (x.unknownPlanDays === 0 ? x.statistics.planCoverage === 'FULL_SCHEDULE_HISTORY' : x.statistics.planCoverage === 'PARTIAL_SCHEDULE_HISTORY' && x.statistics.plannedWorkoutDays === null && x.statistics.routineAchievementPercent === null && x.effectiveWorkoutDays === null)
     && (x.unverifiableDays === 0 || x.statistics.routineAchievementPercent === null && x.effectiveWorkoutDays === null)
-    && (x.cardioByKind === undefined || v.array(x.cardioByKind, c => v.object(c) && v.name(c.kind) && v.counter(c.activeMs) && v.nullable(c.distanceKm, decimal) && v.nullable(c.manualDistanceKm, decimal) && v.nullable(c.calculatedDistanceKm, decimal) && v.nullable(c.unknownSourceDistanceKm, decimal) && v.counter(c.manualRecords) && v.counter(c.calculatedRecords) && v.counter(c.unknownSourceRecords) && v.counter(c.recordsWithoutDistance)))
+    && v.array(x.cardioByKind, c => v.object(c) && v.name(c.kind) && v.counter(c.activeMs) && v.nullable(c.distanceKm, decimal) && v.nullable(c.manualDistanceKm, decimal) && v.nullable(c.calculatedDistanceKm, decimal) && v.nullable(c.unknownSourceDistanceKm, decimal) && v.counter(c.manualRecords) && v.counter(c.calculatedRecords) && v.counter(c.unknownSourceRecords) && v.counter(c.recordsWithoutDistance))
     && v.array(x.plannedDays, d => v.object(d) && date(d.date) && ['UNKNOWN', 'BEFORE_REGISTRATION', 'REST', 'PLANNED', 'UNVERIFIABLE'].includes(String(d.status)) && v.nullable(d.scheduleVersion, v.counter)
       && v.nullable(d.plan, v.routine) && v.nullable(d.plannedExercises, nonnegative) && v.nullable(d.completedExercises, nonnegative) && v.nullable(d.effectiveDay, n => fraction(n, 1)) && v.nullable(d.selectedSessionId, v.uuid))
 }
@@ -56,15 +53,6 @@ export class StatisticsApi {
   private readonly transport: WorkoutTransport
   readonly growth: GrowthApi
   constructor(transport: WorkoutTransport) { this.transport = transport; this.growth = new GrowthApi(transport) }
-  async read(scope: Scope, period: Period, signal: AbortSignal): Promise<Statistics> {
-    if (!v.uuid(scope.userId) || !v.counter(scope.dataGeneration) || !date(period.fromDate) || !date(period.toDateExclusive)) throw new WorkoutApiError('INVALID_REQUEST', 400)
-    const result = await this.transport.workoutRequest(scope.userId, '/api/v1/statistics?' + new URLSearchParams(period), 'GET', undefined, signal)
-    if (result.status !== 200 || !statistics(result.data)) throw new WorkoutApiError('RESPONSE_INVALID', result.status)
-    if (result.data.userId !== scope.userId) throw new WorkoutApiError('OWNER_MISMATCH')
-    if (result.data.dataGeneration !== scope.dataGeneration) throw new WorkoutApiError('DATA_GENERATION_MISMATCH', 409)
-    if (result.data.fromDate !== period.fromDate || result.data.toDateExclusive !== period.toDateExclusive) throw new WorkoutApiError('RESPONSE_INVALID')
-    return result.data
-  }
   async overview(scope: Scope, period: Period, signal: AbortSignal): Promise<Overview> {
     if (!v.uuid(scope.userId) || !v.counter(scope.dataGeneration) || !date(period.fromDate) || !date(period.toDateExclusive)) throw new WorkoutApiError('INVALID_REQUEST', 400)
     const result = await this.transport.workoutRequest(scope.userId, '/api/v1/statistics/overview?' + new URLSearchParams(period), 'GET', undefined, signal)

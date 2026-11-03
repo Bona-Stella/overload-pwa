@@ -21,33 +21,30 @@ function get(path, userId, occurrence = 0) {
   assert.ok(found, `Missing successful ${path}`)
   return found
 }
-check('real PostgreSQL seed: 20 exercises and 1 settings row', () => {
-  assert.equal(seed.users.length, 1); assert.equal(seed.exercises.length, 20); assert.equal(seed.settings.length, 1)
+check('real PostgreSQL account initialization has 1 settings row with default rest values', () => {
+  assert.equal(seed.users.length, 1); assert.equal(seed.settings.length, 1)
   assert.deepEqual(seed.settings.map(row => [row.rest_low_seconds, row.rest_medium_seconds, row.rest_high_seconds]), [[180, 120, 90]])
-  assert.deepEqual(get('/api/v1/exercises', ownerA).body.exercises, seed.exercises.map(row => ({ id: row.id, name: row.name })))
+  const settings = get('/api/v1/workout-settings', ownerA).body
+  assert.deepEqual([settings.restLowSeconds, settings.restMediumSeconds, settings.restHighSeconds], [180, 120, 90])
 })
 check('every successful workout response matches the authenticated session owner and generation string', () => {
   let owner
   for (const event of events) {
     if (event.path === '/api/v1/auth/session') owner = event.status === 200 ? event.body.userId : undefined
-    if (event.status === 200 && ['/api/v1/exercises', '/api/v1/workout-settings'].includes(event.path)) {
+    if (event.status === 200 && event.path === '/api/v1/workout-settings') {
       assert.equal(event.body.userId, owner); assert.equal(event.body.dataGeneration, '0')
       assert.equal(typeof event.body.dataGeneration, 'string'); assert.equal(event.sentSessionCookie, true)
-      if (event.path.endsWith('/exercises')) assert.equal(event.body.exercises.length, 20)
     }
   }
 })
-check('stored edits survive reload and relogin with identical UUIDs and timestamps', () => {
-  assert.deepEqual(reloaded.exercises, edited.exercises); assert.deepEqual(reloaded.settings, edited.settings)
-  assert.deepEqual(owned(relogin.exercises, ownerA), edited.exercises)
+check('stored settings survive reload and relogin with identical owner and timestamps', () => {
+  assert.deepEqual(reloaded.settings, edited.settings)
   assert.deepEqual(owned(relogin.settings, ownerA), edited.settings)
-  const lastExercises = events.filter(event => event.path === '/api/v1/exercises' && event.status === 200).at(-1).body.exercises
-  assert.deepEqual(lastExercises, edited.exercises.map(row => ({ id: row.id, name: row.name })))
 })
-check('A and B have disjoint UUIDs and independent stored settings', () => {
-  const aIds = new Set(owned(activeB.exercises, ownerA).map(row => row.id))
-  const bRows = owned(activeB.exercises, ownerB)
-  assert.equal(bRows.length, 20); assert.ok(bRows.every(row => !aIds.has(row.id) && row.name !== '격리 검증 A 전용 종목'))
+check('A and B have distinct user IDs and independent stored settings', () => {
+  assert.notEqual(ownerA, ownerB)
+  assert.deepEqual(owned(activeB.settings, ownerA), edited.settings)
+  assert.equal(owned(activeB.settings, ownerB).length, 1)
   assert.deepEqual(owned(activeB.settings, ownerB).map(row => [row.rest_low_seconds, row.rest_medium_seconds, row.rest_high_seconds]), [[180, 120, 90]])
   const lastSettings = events.filter(event => event.path === '/api/v1/workout-settings' && event.status === 200).at(-1).body
   assert.deepEqual([lastSettings.restLowSeconds, lastSettings.restMediumSeconds, lastSettings.restHighSeconds], [17, 29, 43])
@@ -77,18 +74,17 @@ check('actual request cookies match JDBC session rows for A and B', () => {
   for (const [state, owner] of [[seed, ownerA], [activeB, ownerB], [relogin, ownerA]]) {
     const session = state.sessions.find(session => session.userId === owner)
     assert.ok(session)
-    assert.ok(events.some(event => event.path === '/api/v1/exercises' && event.body?.userId === owner && event.cookieSha256 === session.cookieSha256))
+    assert.ok(events.some(event => event.path === '/api/v1/workout-settings' && event.body?.userId === owner && event.cookieSha256 === session.cookieSha256))
   }
 })
 check('logout and server-side revocation leave no authenticated JDBC session', () => {
   assert.equal(loggedOut.sessions.filter(session => session.userId).length, 0)
   assert.equal(revoked.sessions.filter(session => session.userId).length, 0)
   assert.equal(final.sessions.filter(session => session.userId).length, 0)
-  for (const path of ['/api/v1/exercises', '/api/v1/workout-settings']) assert.ok(events.some(event => event.path === path && event.status === 401))
+  assert.ok(events.some(event => event.path === '/api/v1/workout-settings' && event.status === 401))
   assert.equal(events.filter(event => event.path === '/api/v1/auth/logout' && event.status === 204).length, 2)
 })
 check('all actual responses carry unique UUID request IDs and security/cache headers', () => {
-  assert.equal(events.length, 52)
   assert.equal(new Set(events.map(event => event.requestId)).size, events.length)
   for (const event of events) {
     assert.match(event.requestId, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
@@ -96,9 +92,9 @@ check('all actual responses carry unique UUID request IDs and security/cache hea
   }
 })
 check('final data preserved without duplicate provisioning or workout writes', () => {
-  assert.equal(final.users.length, 2); assert.equal(final.exercises.length, 40); assert.equal(final.settings.length, 2)
+  assert.equal(final.users.length, 2); assert.equal(final.settings.length, 2)
   assert.equal(final.identities.length, 2)
-  assert.deepEqual(final.exercises, activeB.exercises); assert.deepEqual(final.settings, activeB.settings)
+  assert.deepEqual(final.settings, activeB.settings)
   assert.ok(events.every(event => event.method === 'GET' || event.path.startsWith('/api/v1/auth/')))
 })
 // Exclude session cookie hashes as well as all OTP/CSRF bodies and request bodies from retained evidence.
