@@ -24,6 +24,27 @@ function closedWorkoutPage(path: string, method: string, body: unknown) {
     || typeof at === 'string' && /^(?!0000)[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]{1,6})?Z$/.test(at) && Number.isFinite(Date.parse(at)) && uuid(id))
 }
 
+function statisticsOrScheduleRequest(path: string, method: string, body: unknown) {
+  if (method === 'PUT') return path === '/api/v1/weekly-schedule' && body !== undefined
+  if (method !== 'GET' || body !== undefined || /[\s\\#]/.test(path)) return false
+  const queryStart = path.indexOf('?')
+  if (queryStart === -1) return false
+  const pathname = path.slice(0, queryStart), query = new URLSearchParams(path.slice(queryStart + 1))
+  let required: string[], optional: string[] = []
+  if (pathname === '/api/v1/statistics/overview') required = ['fromDate', 'toDateExclusive']
+  else if (pathname === '/api/v1/weekly-schedule') required = ['timeZone']
+  else if (pathname === '/api/v1/weekly-schedule/history') required = ['beforeVersion']
+  else {
+    const growth = /^\/api\/v1\/statistics\/growth\/exercises(?:\/([^/]+)(?:\/placements\/([^/]+))?)?$/.exec(pathname)
+    if (!growth || growth[1] !== undefined && !uuid(growth[1]) || growth[2] !== undefined && !uuid(growth[2])) return false
+    required = ['period', 'timeZone']
+    optional = growth[1] === undefined ? ['q', 'offset'] : growth[2] === undefined ? [] : ['offset']
+  }
+  const keys = [...query.keys()]
+  return new Set(keys).size === keys.length && required.every(key => query.has(key))
+    && keys.every(key => required.includes(key) || optional.includes(key))
+}
+
 export class AuthApi {
   private csrf: Csrf | null = null
   private readonly fetcher: typeof fetch
@@ -60,7 +81,7 @@ export class AuthApi {
   }
   /** Uses the existing in-memory CSRF token; the controller prepares writes and fences the account. */
   async workoutRequest(path: string, method: string, body: unknown, signal: AbortSignal) {
-    if (!/^\/api\/v1\/(workout-settings|routines|workout-sessions)(\/[-a-zA-Z0-9]+)*$/.test(path) && !(method === 'GET' && body === undefined && ['/api/v1/standard-exercises/search-data', '/api/v1/manufacturers'].includes(path)) && !closedWorkoutPage(path, method, body)
+    if (!/^\/api\/v1\/(workout-settings|routines|workout-sessions)(\/[-a-zA-Z0-9]+)*$/.test(path) && !(method === 'GET' && body === undefined && ['/api/v1/standard-exercises/search-data', '/api/v1/manufacturers'].includes(path)) && !closedWorkoutPage(path, method, body) && !statisticsOrScheduleRequest(path, method, body)
       || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new AuthError('INVALID_REQUEST', 400)
     if (method !== 'GET' && !this.csrf) throw new AuthError('CSRF_INVALID', 403)
     const result = await this.call(path, method, body, method === 'GET' ? undefined : this.csrf!, signal)

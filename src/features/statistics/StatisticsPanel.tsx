@@ -8,7 +8,24 @@ import { GrowthPanel } from './GrowthPanel.tsx'
 const groups: Record<string, string> = { CHEST: '가슴', BACK: '등', SHOULDERS: '어깨', ARMS: '팔', LEGS: '하체', CORE: '코어' }
 const cardioKinds: Record<string, string> = { TREADMILL: '러닝머신', BIKE: '자전거', OUTDOOR: '야외 운동', STAIRS: '계단', OTHER: '기타', UNCLASSIFIED: '미분류' }
 const minutes = (ms: string) => (BigInt(ms) / 60000n).toString()
+function cardioTime(ms: string) {
+  const value = BigInt(ms), remainder = value % 60000n
+  if (remainder === 0n) return `${minutes(ms)}분`
+  const fraction = (remainder % 1000n).toString().padStart(3, '0').replace(/0+$/, '')
+  return `${value >= 60000n ? `${minutes(ms)}분 ` : ''}${remainder / 1000n}${fraction ? '.' + fraction : ''}초`
+}
+function plannedCardioMs(planning: Overview) {
+  if (planning.statistics.planCoverage !== 'FULL_SCHEDULE_HISTORY') return null
+  let total = 0n
+  for (const day of planning.plannedDays) {
+    if (day.status === 'REST' || day.status === 'BEFORE_REGISTRATION') continue
+    if (day.status === 'UNKNOWN' || day.plan === null) return null
+    for (const activity of day.plan.cardioPlacements) total += BigInt(activity.plan.targetSeconds) * 1000n
+  }
+  return total
+}
 type Row = { key: string; name: string; weights: WeightStats }
+type DetailPeriod = { mode: 'week' | 'month'; offset: number }
 export function WeightChart({ rows }: { rows: Row[] }) {
   const [metric, setMetric] = useState<'sets' | 'volume'>('sets')
   const volumeAvailable = rows.some(r => r.weights.volumeLoadKg !== null)
@@ -25,6 +42,7 @@ export function WeightChart({ rows }: { rows: Row[] }) {
 }
 export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHistory }: { data: Statistics; planning: Overview; screen: string; onScreen: (screen: 'summary' | 'activity' | 'muscles' | 'growth') => void; onOpen: (id: string) => void; onHistory: () => void }) {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+  const plannedMs = screen === 'activity' ? plannedCardioMs(planning) : null
   return <>
     {screen === 'summary' ? <><div className="statistics-summary"><div><strong>{data.summary.completedSets}</strong><span>완료 웨이트 세트</span></div><div><strong>{minutes(data.cardioActiveMs)}분</strong><span>유산소 시간</span></div></div>
       {data.plannedWorkoutDays === null ? <p className="muted small">주간 계획 운동일과 루틴 달성률은 아직 확인할 수 없습니다. 과거 계획을 확인할 근거가 없는 날짜는 추정하지 않습니다.</p>
@@ -35,7 +53,9 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
       <h3>최근 운동</h3>{!data.recentSessions.length && <p>운동 이력이 없습니다.</p>}{data.recentSessions.map(s => <button className="outline full" key={s.id} onClick={() => onOpen(s.id)}>{s.workoutDate} · {s.routineName}{s.status === 'AUTO_CLOSED' && ' · 자동 종료'}</button>)}</>
       : screen === 'activity' ? <><h3>운동량 추이</h3><WeightChart rows={data.days.map(d => ({ key: d.date, name: d.date, weights: d.weights }))} />
         <h3>운동 종목별</h3><WeightChart rows={data.exercises.map(e => ({ key: e.standardExerciseId, name: e.name, weights: e.weights }))} />
-        <h3>유산소 시간·거리</h3>{!planning.cardioByKind.length && <p>유산소 기록이 없습니다.</p>}{planning.cardioByKind.map(c => <div key={c.kind}><p>{cardioKinds[c.kind] ?? c.kind} · {minutes(c.activeMs)}분{c.distanceKm !== null && ` · ${c.distanceKm} km`}</p><small>{c.manualDistanceKm !== null && `직접 입력 ${c.manualDistanceKm} km · `}{c.calculatedDistanceKm !== null && `계산 거리 ${c.calculatedDistanceKm} km · `}{c.unknownSourceDistanceKm !== null && `출처 미확인 ${c.unknownSourceDistanceKm} km · `}{c.recordsWithoutDistance !== '0' && '거리 미입력 기록 포함'}</small></div>)}</>
+        <h3>유산소 시간·거리</h3><p>실제 누적 {cardioTime(data.cardioActiveMs)}{plannedMs === null ? ' · 계획 시간 확인 불가' : plannedMs === 0n ? ' · 계획 없음' : ` / 계획 ${cardioTime(plannedMs.toString())}`}</p>
+        <p className="muted small">선택 기간 전체의 누적 시간입니다. 실제 시간에는 계획 외 유산소도 포함됩니다.</p>
+        {!planning.cardioByKind.length && <p>유산소 기록이 없습니다.</p>}{planning.cardioByKind.map(c => <div key={c.kind}><p>{cardioKinds[c.kind] ?? c.kind} · {cardioTime(c.activeMs)}{c.distanceKm !== null && ` · ${c.distanceKm} km`}</p><small>{c.manualDistanceKm !== null && `직접 입력 ${c.manualDistanceKm} km · `}{c.calculatedDistanceKm !== null && `계산 거리 ${c.calculatedDistanceKm} km · `}{c.unknownSourceDistanceKm !== null && `출처 미확인 ${c.unknownSourceDistanceKm} km · `}{c.recordsWithoutDistance !== '0' && '거리 미입력 기록 포함'}</small></div>)}</>
       : <><h3>주동근 세트</h3><p className="muted small">{data.planCoverage === 'FULL_SCHEDULE_HISTORY' ? '미수행 예정일을 포함한 당시 일정과 계획입니다.' : '계획이 확인된 날짜만 표시합니다. 전체 주간 계획과는 다를 수 있습니다.'}</p>
         <WeightChart rows={data.groups.filter(g => g.role === 'PRIMARY').map(g => ({ key: g.groupCode, name: groups[g.groupCode], weights: g.weights }))} />
         <div className="row"><button className="outline" aria-pressed={selectedGroup === null} onClick={() => setSelectedGroup(null)}>전체 부위</button>{data.groups.filter(g => g.role === 'PRIMARY').map(g => <button className="outline" key={g.groupCode} aria-pressed={selectedGroup === g.groupCode} onClick={() => setSelectedGroup(g.groupCode)}>{groups[g.groupCode]} 상세</button>)}</div>
@@ -49,7 +69,10 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
 }
 export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid }: { api: StatisticsApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void }) {
   const [screen, setScreen] = useState<'summary' | 'activity' | 'muscles' | 'growth'>('summary')
-  const [mode, setMode] = useState<'week' | 'month'>('week'), [offset, setOffset] = useState(0)
+  const [activityPeriod, setActivityPeriod] = useState<DetailPeriod>({ mode: 'week', offset: 0 })
+  const [musclePeriod, setMusclePeriod] = useState<DetailPeriod>({ mode: 'week', offset: 0 })
+  const { mode, offset } = screen === 'muscles' ? musclePeriod : activityPeriod
+  const setPeriod = screen === 'muscles' ? setMusclePeriod : setActivityPeriod
   const [state, setState] = useState<{ data: Overview | null; issue: boolean }>({ data: null, issue: false })
   const [reload, setReload] = useState(0)
   const invalid = useRef(onInvalid)
@@ -71,7 +94,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid }: {
   const current = state.data?.statistics.fromDate === range.fromDate && state.data?.statistics.toDateExclusive === range.toDateExclusive ? state.data : null
   if (screen === 'growth') return <section className="card stack statistics"><button className="outline" onClick={() => setScreen('summary')}>이번 주 요약으로</button><GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} /></section>
   return <section className="card stack statistics" aria-labelledby="statistics-title"><div className="section-heading"><h2 id="statistics-title">통계·추적</h2><button className="outline" onClick={() => { setState({ data: null, issue: false }); setReload(n => n + 1) }}>새로고침</button></div>
-    {screen !== 'summary' && <><button className="outline" onClick={() => setScreen('summary')}>이번 주 요약으로</button><div className="row"><button className="outline" aria-pressed={mode === 'week'} onClick={() => { setMode('week'); setOffset(0) }}>주간</button><button className="outline" aria-pressed={mode === 'month'} onClick={() => { setMode('month'); setOffset(0) }}>월간</button><button className="outline" onClick={() => setOffset(n => n - 1)}>이전</button><button className="outline" onClick={() => setOffset(n => n + 1)}>다음</button></div></>}
+    {screen !== 'summary' && <><button className="outline" onClick={() => setScreen('summary')}>이번 주 요약으로</button><div className="row"><button className="outline" aria-pressed={mode === 'week'} onClick={() => setPeriod({ mode: 'week', offset: 0 })}>주간</button><button className="outline" aria-pressed={mode === 'month'} onClick={() => setPeriod({ mode: 'month', offset: 0 })}>월간</button><button className="outline" onClick={() => setPeriod(p => ({ ...p, offset: p.offset - 1 }))}>이전</button><button className="outline" onClick={() => setPeriod(p => ({ ...p, offset: p.offset + 1 }))}>다음</button></div></>}
     <p className="muted small">{range.fromDate} ~ {new Date(Date.parse(range.toDateExclusive) - 86400000).toISOString().slice(0, 10)}</p>
     {state.issue ? <p className="notice" role="alert">통계를 불러오지 못했습니다. 연결을 확인하고 다시 시도해 주세요.</p> : !current ? <p role="status">통계 불러오는 중…</p> : <StatisticsView data={current.statistics} planning={current} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={() => document.getElementById('workout-history-title')?.scrollIntoView({ behavior: 'smooth' })} />}
   </section>

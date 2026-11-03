@@ -8,7 +8,7 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { StatisticsApi, overview, periodFor, weightStats } from '../src/features/statistics/api.ts'
 import { WeeklyScheduleApi, weeklySchedule } from '../src/features/statistics/weekly-schedule.ts'
-import { scope, OTHER } from './fixtures/workout-online-data.mjs'
+import { scope, OTHER, routine } from './fixtures/workout-online-data.mjs'
 
 registerHooks({load(url,context,next){
   if(url.endsWith('.css'))return{format:'module',source:'export default ""',shortCircuit:true}
@@ -194,4 +194,124 @@ test('overview requires planning fields while preserving null evidence and unkno
   assert.equal(overview(unverifiable),true)
   const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:unverifiable.statistics,planning:unverifiable,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/확인 중/);assert.match(html,/유산소 목표 달성 확인 필요/)
+})
+
+function cardioTimeData(activeMs, plans = [{ date: period.fromDate, targets: [{ kind: 'TREADMILL', seconds: 1800 }] }], range = period) {
+  const data = planned()
+  const kind = plans[0]?.targets[0]?.kind ?? 'TREADMILL'
+  Object.assign(data.statistics, range, { cardioActiveMs: activeMs, cardio: activeMs === '0' ? [] : [{ kind, name: kind, activeMs, distanceKm: null, recordsWithoutDistance: '1' }], plannedWorkoutDays: plans.length, routineAchievementPercent: null })
+  data.effectiveWorkoutDays = '0'
+  data.cardioByKind = activeMs === '0' ? [] : [{ kind, activeMs, distanceKm: null, manualDistanceKm: null, calculatedDistanceKm: null, unknownSourceDistanceKm: null,
+    manualRecords: '0', calculatedRecords: '0', unknownSourceRecords: '0', recordsWithoutDistance: '1' }]
+  data.plannedDays = []
+  for (let at = Date.parse(range.fromDate); at < Date.parse(range.toDateExclusive); at += 86400000) {
+    const date = new Date(at).toISOString().slice(0, 10), entry = plans.find(p => p.date === date)
+    data.plannedDays.push({ date, status: entry ? 'PLANNED' : 'REST', scheduleVersion: '1',
+      plan: entry ? { ...scope, id: OTHER, version: '1', name: '당시 유산소 계획', weightPlacements: [],
+        cardioPlacements: entry.targets.map((target, index) => ({ id: index === 0 ? scope.userId : OTHER, deletedAt: null,
+          plan: { kind: target.kind, name: target.kind, targetSeconds: target.seconds, targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null },
+        })),
+      } : null, plannedExercises: entry?.targets.length ?? 0, completedExercises: 0, effectiveDay: '0', selectedSessionId: null,
+    })
+  }
+  return data
+}
+function renderCardioTime(data) {
+  assert.equal(overview(data), true)
+  return renderToStaticMarkup(React.createElement(StatisticsView, { data: data.statistics, planning: data, screen: 'activity', onScreen() {}, onOpen() {}, onHistory() {} }))
+}
+
+for (const [label, activeMs, text] of [['longer', '2400000', '40분'], ['shorter', '1200000', '20분'], ['equal', '1800000', '30분']]) {
+  test(`cardio detail shows actual / planned period time when actual is ${label} without inventing achievement metrics`, () => {
+    const html = renderCardioTime(cardioTimeData(activeMs))
+    assert.ok(html.includes(`실제 누적 ${text} / 계획 30분`))
+    assert.match(html, /계획 외 유산소도 포함/)
+    assert.doesNotMatch(html, /NaN|Infinity|유산소 달성률/)
+  })
+}
+
+test('cardio period comparison sums each dated plan once across kinds while preserving kind-specific distances and sources', () => {
+  const data = cardioTimeData('5400000', [
+    { date: period.fromDate, targets: [{ kind: 'TREADMILL', seconds: 1200 }, { kind: 'BIKE', seconds: 1800 }] },
+    { date: '2026-10-30', targets: [{ kind: 'TREADMILL', seconds: 600 }] },
+  ])
+  data.cardioByKind = [
+    { ...planned().cardioByKind[0], activeMs: '1800000' },
+    { kind: 'BIKE', activeMs: '3600000', distanceKm: '20', manualDistanceKm: null, calculatedDistanceKm: '20', unknownSourceDistanceKm: null, manualRecords: '0', calculatedRecords: '1', unknownSourceRecords: '0', recordsWithoutDistance: '0' },
+  ]
+  const html = renderCardioTime(data)
+  assert.match(html, /실제 누적 90분 \/ 계획 60분/)
+  for (const text of ['러닝머신 · 30분 · 3.8 km', '자전거 · 60분 · 20 km', '직접 입력 3.8 km', '계산 거리 20 km']) assert.ok(html.includes(text))
+  assert.doesNotMatch(html, /23.8 km|총 거리/)
+})
+
+test('known absence of cardio plans is distinct from unknown historical planning and never becomes a zero denominator', () => {
+  const none = cardioTimeData('900000', [])
+  let html = renderCardioTime(none)
+  assert.match(html, /실제 누적 15분 · 계획 없음/); assert.doesNotMatch(html, /계획 0분|NaN|Infinity/)
+  // A known weight-only plan also has no cardio goal.
+  const weightOnly = cardioTimeData('900000')
+  weightOnly.plannedDays[0].plan.cardioPlacements = []
+  weightOnly.plannedDays[0].plan.weightPlacements = routine.weightPlacements
+  html = renderCardioTime(weightOnly); assert.match(html, /계획 없음/)
+  const unknown = cardioTimeData('900000')
+  Object.assign(unknown.statistics, { planCoverage: 'PARTIAL_SCHEDULE_HISTORY', plannedWorkoutDays: null, routineAchievementPercent: null })
+  unknown.unknownPlanDays = 1; unknown.effectiveWorkoutDays = null
+  Object.assign(unknown.plannedDays[1], { status: 'UNKNOWN', plan: null, plannedExercises: null, completedExercises: null, effectiveDay: null })
+  html = renderCardioTime(unknown)
+  assert.match(html, /실제 누적 15분 · 계획 시간 확인 불가/); assert.doesNotMatch(html, /계획 없음|계획 0분|\/ 계획 30분/)
+})
+
+test('first-registration exclusions and unverifiable intensity do not erase known time goals', () => {
+  const data = cardioTimeData('1800000', [{ date: '2026-10-29', targets: [{ kind: 'TREADMILL', seconds: 1800 }] }])
+  for (const day of data.plannedDays.slice(0, 3)) Object.assign(day, { status: 'BEFORE_REGISTRATION', scheduleVersion: null, plannedExercises: null, completedExercises: null, effectiveDay: null })
+  Object.assign(data.plannedDays[3], { status: 'UNVERIFIABLE', completedExercises: null, effectiveDay: null })
+  data.plannedDays[3].plan.cardioPlacements[0].plan.intensity = { mode: 'SPEED', value: '8' }
+  data.unverifiableDays = 1; data.effectiveWorkoutDays = null
+  assert.match(renderCardioTime(data), /실제 누적 30분 \/ 계획 30분/)
+})
+
+test('an explicit zero cumulative actual time and empty performed arrays retain known goals', () => {
+  const data = cardioTimeData('0')
+  assert.deepEqual(data.cardioByKind, []); assert.deepEqual(data.statistics.cardio, [])
+  const html = renderCardioTime(data)
+  assert.match(html, /실제 누적 0분 \/ 계획 30분/); assert.match(html, /유산소 기록이 없습니다/)
+})
+
+test('cardio comparison preserves milliseconds and large counter precision instead of rounding positive goals to zero minutes', () => {
+  const plans = [{ date: period.fromDate, targets: [{ kind: 'OTHER', seconds: 1 }] }]
+  assert.match(renderCardioTime(cardioTimeData('1', plans)), /실제 누적 0.001초 \/ 계획 1초/)
+  assert.match(renderCardioTime(cardioTimeData('1', plans)), /기타 · 0.001초/)
+  assert.match(renderCardioTime(cardioTimeData('59999', plans)), /실제 누적 59.999초 \/ 계획 1초/)
+  assert.match(renderCardioTime(cardioTimeData('60001', plans)), /실제 누적 1분 0.001초 \/ 계획 1초/)
+  assert.match(renderCardioTime(cardioTimeData('9007199254740993', plans)), /실제 누적 150119987579분 0.993초 \/ 계획 1초/)
+})
+
+test('missing or null actual time and unsupported zero/missing/null plan targets are rejected by the unchanged API validator', async () => {
+  const invalid = []
+  for (const value of [null, undefined]) {
+    const data = cardioTimeData('0'); data.statistics.cardioActiveMs = value; invalid.push(data)
+  }
+  for (const value of [0, null, undefined]) {
+    const data = cardioTimeData('0'); data.plannedDays[0].plan.cardioPlacements[0].plan.targetSeconds = value; invalid.push(data)
+  }
+  for (const data of invalid) {
+    const api = new StatisticsApi({ workoutRequest: async () => ({ status: 200, data }) })
+    await assert.rejects(api.overview(scope, period, new AbortController().signal), { code: 'RESPONSE_INVALID' })
+  }
+})
+
+test('cardio comparison uses only the selected week/month overview returned through the current API query', async () => {
+  const ranges = [periodFor(new Date(2026, 10, 3), 'week', -1), periodFor(new Date(2026, 10, 3), 'month', -1)]
+  for (const [index, range] of ranges.entries()) {
+    const expectedMinutes = (index + 1) * 20
+    const data = cardioTimeData(String(expectedMinutes * 60000), [{ date: range.fromDate, targets: [{ kind: 'BIKE', seconds: (index + 1) * 600 }] }], range)
+    const api = new StatisticsApi({ workoutRequest: async (userId, path, method, body) => {
+      assert.equal(userId, scope.userId); assert.equal(method, 'GET'); assert.equal(body, undefined)
+      assert.equal(path, '/api/v1/statistics/overview?' + new URLSearchParams(range))
+      return { status: 200, data }
+    } })
+    const result = await api.overview(scope, range, new AbortController().signal)
+    assert.ok(renderCardioTime(result).includes(`실제 누적 ${expectedMinutes}분 / 계획 ${(index + 1) * 10}분`))
+  }
 })
