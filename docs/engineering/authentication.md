@@ -6,6 +6,8 @@ Google/이메일 로그인 수단 연결·해제·대표 이메일 변경·운�
 
 ## 디자인 기준
 
+[UI v0.9](../product/ui-ux.md#310-기록-및-설정--history--settings)의 목표 배치는 설정 메인 마지막에 로그아웃, 설정 → 데이터 및 앱에 앱 설치·오프라인 준비다. 현재 `AuthApp`은 인증 영역에서 로그아웃 확인을 열고 공통 `PwaStatus`를 렌더링한다. 종료 전 초안 저장을 기다리며, 실패하면 화면을 유지한다. 미전송 원본은 로그아웃 뒤 같은 계정 재인증 전까지 접근을 막는다. [계정 정책](../product/auth-preview.md)에 정의된 동기화 후 로그아웃/로컬 유지 후 로그아웃/취소 중 현재 확인창은 로컬 보존 확인과 취소를 제공한다. 동기화 후 로그아웃 선택지는 후속 연동 범위다.
+
 Task 005.5의 `src/features/auth-preview/AuthScreens.tsx`, `auth-preview.css` 및
 `docs/tasks/evidence/task-0055-entry-375.jpg`를 확인했다. 기존 목업의 워드마크·제목·Google 우선 배치·구분선·폼·OTP 카드,
 타이포그래피·버튼/입력창 크기를 유지한다. 현재 앱의 `index.css`/`App.css` 색상을 우선해 파란 primary를 사용한다.
@@ -80,7 +82,7 @@ npm run build
 테스트는 기존 Node test·React SSR을 사용한다. `tests/fixtures/auth-server.mjs`는 브라우저 검증 전용 loopback HTTP 가짜 서버이며,
 메일·Google·DB에 접속하지 않고 생산 코드에서 import하지 않는다. 테스트 OTP는 이 fixture에만 존재한다.
 서명된 OIDC와 실제 PostgreSQL은 백엔드 Testcontainers 회귀에서 별도로 검증한다.
-설치형 PWA·오프라인 서비스 워커·실제 iPhone 및 실서비스 Google/Resend 브라우저 검증은 별도 후속 작업이다.
+Task 007 검증 당시 설치형 PWA와 오프라인 Service Worker는 후속 범위였다. 현재 연결된 앱 셸과 명시적 오프라인 이어가기는 [5E 보고서](../tasks/task-009-frontend-5e-report.md)를 따른다. 실기기와 실서비스 Google/Resend 브라우저 검증은 각각의 검증 범위를 확인한다.
 
 공식 참고: [React 외부 상태 구독](https://react.dev/reference/react/useSyncExternalStore),
 [Vite 프록시 설정](https://vite.dev/config/server-options.html#server-proxy),

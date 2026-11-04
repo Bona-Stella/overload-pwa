@@ -379,6 +379,8 @@ overload-pwa/
 /api/v1
 ```
 
+[UI v0.9 화면 명세](docs/product/ui-ux.md)와 [디로딩 v1.6](docs/product/Overload_Deloading_Design_Specification_v1.6.md)은 후속 적용 기준입니다. 현재 계약과 신규 연동 범위는 [백엔드 연동 설계](docs/engineering/backend-ui-v0.9.md)에 정리했습니다.
+
 ### 현재 주요 API
 
 | Method | Endpoint | Description |
