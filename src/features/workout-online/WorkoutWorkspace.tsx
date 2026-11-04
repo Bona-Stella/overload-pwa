@@ -108,7 +108,7 @@ export function WorkoutWorkspace({ onExitGuard }: { onExitGuard?: ExitGuardRegis
       && s.detail.writerEpoch === session.writerEpoch && s.detail.editorDeviceId === session.editorDeviceId && s.detail.status === 'ACTIVE'
       && (a.status === 'authenticated' && a.userId === session.userId || a.localWorkoutUserId === session.userId)
   }
-  return <>{!localOnly && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
+  return <>{!localOnly && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
       refreshKey={(session ? session.id + ':' + session.version : 'home') + ':' + scheduleRefresh + ':' + state.data?.routines.map(r => r.id + ':' + r.version).join(',')} onInvalid={controller.invalidateScope} onOpen={id => { void (async () => { if (await (exitGuard.current?.() ?? Promise.resolve(true))) await controller.showDetail(id) })() }} />}
     {!localOnly && state.status === 'ready' && state.scope && state.data && session?.status !== 'ACTIVE' && <WeeklySchedulePanel key={'schedule:' + state.scope.userId + ':' + state.scope.dataGeneration} api={weekly} scope={state.scope} routines={state.data.routines} onSaved={() => setScheduleRefresh(n => n + 1)} onInvalid={controller.invalidateScope} />}
     {!localOnly && <WorkspaceView key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} />}
