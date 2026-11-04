@@ -40,7 +40,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 - iPhone 및 Android 홈 화면 설치 지원
 - 네트워크가 불안정한 환경에서도 운동 기록 유지
 
-> Task 009 5E: 실제 운동 입력·동기화·명시 종료·사후 정정/복구에 설치형 Manifest와 정적 오프라인 앱 셸을 연결했습니다. 온라인에서 연 기존 운동은 앱 준비 후 연결이 끊기면 명시적으로 이어갈 수 있습니다. 최초 오프라인 방문·오프라인 새 운동 시작·영구 보존은 지원하거나 보장하지 않습니다. iPhone/Android 실기기 검증은 남아 있습니다. 기존 `/demo` 기록은 실제 계정으로 이전하거나 전송하지 않습니다. [5A](docs/tasks/task-009-frontend-5a-report.md), [5B](docs/tasks/task-009-frontend-5b-report.md), [5C](docs/tasks/task-009-frontend-5c-report.md), [5D](docs/tasks/task-009-frontend-5d-report.md), [5E 구현·검증 보고서](docs/tasks/task-009-frontend-5e-report.md), [인증 연동 및 로컬 실행](docs/engineering/authentication.md)을 참고하세요.
+> Task 009 5E에서 설치형 Manifest와 정적 오프라인 앱 셸을 연결했습니다. 현재 지원 범위와 검증 결과는 [오프라인 기록 관리](#오프라인-기록-관리)를 참고하세요. 단계별 기록은 [5A](docs/tasks/task-009-frontend-5a-report.md), [5B](docs/tasks/task-009-frontend-5b-report.md), [5C](docs/tasks/task-009-frontend-5c-report.md), [5D](docs/tasks/task-009-frontend-5d-report.md), [5E 구현·검증 보고서](docs/tasks/task-009-frontend-5e-report.md), [인증 연동 및 로컬 실행](docs/engineering/authentication.md)에 있습니다.
 
 ### PWA 빌드·배포
 
@@ -112,13 +112,12 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 ### 📱 PWA 지원
 
-- [ ] 모바일 홈 화면 설치
-- [ ] 앱 아이콘 및 스플래시 화면 구성
-- [ ] 독립 실행형(Standalone) 화면 지원
-- [ ] Service Worker 기반 정적 리소스 캐싱
-- [ ] 오프라인 운동 기록 임시 저장
-- [ ] 네트워크 복구 후 서버 데이터 동기화
-- [ ] 앱 업데이트 안내
+- [x] 앱 아이콘과 독립 실행형(Standalone) Manifest 설정
+- [x] Service Worker 기반 정적 앱 셸 캐싱
+- [x] 진행 중 운동의 오프라인 저장·복원
+- [x] 네트워크 복구 후 서버 동기화
+- [x] 새 버전 대기 상태 안내
+- [ ] 실제 모바일 홈 화면 설치·실행 및 Service Worker 버전 교체 검증
 
 ---
 
@@ -133,7 +132,7 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 | Language | TypeScript | 6.0.3 |
 | UI Library | React | 19.3.1 |
 | Build Tool | Vite | 8.3.5 |
-| PWA | vite-plugin-pwa | 도입 예정 |
+| PWA | Web App Manifest + Service Worker | Vite 빌드에서 생성 |
 
 ### UI & Styling (도입 예정)
 
@@ -181,12 +180,12 @@ Overload는 **모바일 퍼스트(Mobile First)** 방식을 기반으로 설계�
 | Service Worker | 정적 리소스 캐싱 및 오프라인 지원 |
 | Standalone Mode | 브라우저 UI 없이 앱처럼 실행 |
 | Responsive UI | 모바일, 태블릿, PC 화면 대응 |
-| Local Storage | 오프라인 데이터 임시 보관 |
+| IndexedDB | 진행 운동과 고정 요청을 사용자·세대별로 보관 |
 | Data Synchronization | 로컬 데이터와 서버 데이터 동기화 |
 
 ### iPhone 설치 방법
 
-PWA 배포 완료 후 다음 방법으로 설치할 수 있습니다.
+배포 후 홈 화면 설치를 검증할 때 사용하는 절차입니다.
 
 1. iPhone에서 Safari 실행
 2. 배포된 Overload 웹사이트 접속
@@ -198,13 +197,14 @@ PWA 배포 완료 후 다음 방법으로 설치할 수 있습니다.
 
 ### 오프라인 기록 관리
 
-개발 전용 `/demo`의 Task 002 `localStorage` 저장과 운영 운동의 저장을 구분합니다. Task 009 5B~5D는 `overload.workout.v1` IndexedDB version 2에 실제 수행·초안·타이머, 고정 Snapshot/종료 요청과 사후 요청 결과 확인 메타를 저장합니다. 완료는 트랜잭션 완료 후에 표시하며 실패 시 원래 입력을 보존합니다. 서버 ACK 또는 허용된 서버 사실 확인을 로컬에 저장한 뒤 서버 반영을 표시합니다. 앱 리소스의 오프라인 로딩과 영구 백업은 보장하지 않습니다.
+실제 계정의 운동은 `overload.workout.v1` IndexedDB 버전 3에 로컬 운동 문서 schema 2로 저장합니다. 사용자·세대별로 데이터를 격리하며, 명시적 로그아웃 후에는 같은 계정으로 재인증하기 전까지 해당 로컬 운동을 표시하지 않습니다. 개발 전용 `/demo` 기록은 별도의 `localStorage`에 저장하며 실제 계정으로 이전하거나 전송하지 않습니다.
 
-Task 009 v1.0에 따라 새 운동 시작·종목/루틴/설정 관리·로그아웃은 온라인 기능입니다.
-진행 운동의 입력 초안·타이머는 IndexedDB에 보존하고, 의미 있는 완료·취소·계획·승인 요청 변경과 재연결 때 전체 확정 스냅샷을 전송합니다. 초안·타이머 tick은 전송하지 않습니다.
+최초 접속과 앱 셸 준비는 온라인에서 이루어집니다. 새 운동 START, 종료 후 기록 정정·복구, 종목/루틴/설정 관리와 로그아웃도 온라인 기능입니다. 오프라인에서는 이미 시작한 운동의 수행·입력 초안·타이머·종료 의도를 보존하고, 사용자가 명시적으로 이어갈 수 있습니다. 진행 운동의 확정 변경은 전체 스냅샷으로 동기화하며 초안과 타이머 tick은 전송하지 않습니다.
 한 사용자당 진행 운동 하나, 명시적 편집 권한 이전, epoch/revision 검사를 적용하며 자동 병합은 하지 않습니다.
 24시간 서버 미갱신 시 마지막 서버 완료 기록을 자동 종료·보존합니다.
-5D에서는 오프라인 종료 선택의 원래 시각·최종 상태를 보존하고, 재연결 시 선행 요청 확인 후 FINISH합니다. AUTO_CLOSED·다른 편집권·삭제가 확인되면 자동 전송을 중단하며, 종료 후 복구는 원래 사본에서 사용자가 선택한 완료 수행만 보냅니다. 최초 평가와 현재 평가는 구분합니다. 완전 오프라인 재실행은 후속 단계입니다. 명시 로그아웃 후에는 재인증 전 로컬 운동을 표시하지 않습니다.
+오프라인 종료 선택의 원래 시각과 최종 상태를 보존하고, 재연결 시 선행 요청을 확인한 뒤 FINISH를 처리합니다. AUTO_CLOSED·다른 편집권·삭제가 확인되면 자동 전송을 중단합니다. 종료 후 복구는 원래 사본에서 사용자가 선택한 완료 수행만 보냅니다. 최초 평가와 현재 평가는 구분합니다.
+
+6B의 실제 데스크톱 Chrome 검증에서 Service Worker의 정적 앱 셸 캐시, 오프라인 앱 셸 복구, 브라우저 재시작 후 수행·초안 등 로컬 운동 복원, 재연결 후 Backend 동기화와 계정 격리를 확인했습니다. 서버 커밋 후 snapshot·FINISH ACK가 유실돼도 동일한 고정 요청을 재전송하며, 서버는 중복 기록 없이 처리합니다. 서버 반영은 유효한 ACK 또는 계약이 허용하는 서버 확인 결과를 로컬에 저장한 뒤 표시합니다.
 
 ---
 
@@ -303,7 +303,7 @@ Task 009 v1.0에 따라 새 운동 시작·종목/루틴/설정 관리·로그�
 
 | Repository | Description |
 |:---|:---|
-| `overload-pwa` | React 프론트엔드 저장소 (npm 패키지명: `overload-app`, PWA 도입 예정) |
+| `overload-pwa` | React PWA 프론트엔드 저장소 (npm 패키지명: `overload-app`) |
 | `overload-server` | Spring Boot 기반 REST API 서버 |
 
 ---
@@ -398,7 +398,7 @@ overload-pwa/
 
 요청·응답·query·인증·CSRF 조건은 Backend의 [통계·화면 계약](../overload-server/docs/api/statistics.md), [성장 조회](../overload-server/docs/api/approved-weight-growth.md), [주간 일정](../overload-server/docs/api/weekly-schedule.md), [세션](../overload-server/docs/api/workout-sessions.md), [휴식 설정](../overload-server/docs/api/workout-online-write.md)을 따릅니다. 개인 운동 GET과 이전 `/api/v1/statistics`는 제거됐으며 개인 운동 POST/PATCH는 차단 경계만 유지합니다. `/workouts`와 통계 volume 경로는 초기 예시이고 현재 호출하지 않습니다.
 
-통계·일정은 기존 AuthController/AuthApi의 실제 온라인 transport를 통과합니다. 활동·근육 상세의 기간은 독립적으로 유지되고, 유산소 실제/계획 시간은 활동 상세의 같은 선택 기간을 비교합니다. 이 구현과 자동 테스트를 최신 Backend 연결·브라우저·PWA·실기기 검증 완료로 간주하지 않으며 종합 확인은6B에 남아 있습니다.
+통계·일정은 기존 AuthController/AuthApi의 실제 온라인 transport를 통과합니다. 활동·근육 상세의 기간은 독립적으로 유지되고, 유산소 실제/계획 시간은 활동 상세의 같은 선택 기간을 비교합니다. 6B에서 격리 Backend에 연결한 실제 데스크톱 Chrome으로 이 흐름을 검증했습니다.
 
 ### 개발 환경 Proxy
 
@@ -496,7 +496,7 @@ npm test
 npm run preview
 ```
 
-실제 PWA 설치 동작과 오프라인 기능은 배포 환경 또는 HTTPS 테스트 환경에서 검증할 예정입니다.
+실제 PWA 설치·홈 화면 실행, Service Worker 버전 교체, iPhone Safari·Android Chrome 실기기, Firefox는 아직 검증하지 않았습니다. IndexedDB 1/2 → 3의 실제 브라우저 업그레이드와 운영 환경의 장기 데이터 보존 검증도 남아 있습니다.
 
 ---
 
@@ -581,15 +581,15 @@ Local Development
 
 ### Phase 5. PWA 및 배포
 
-- [ ] Web App Manifest 설정
-- [ ] Service Worker 적용
-- [ ] PWA 아이콘 및 실행 화면 구성
-- [ ] 오프라인 데이터 저장
-- [ ] 서버 동기화 로직 구현
+- [x] Web App Manifest 및 PWA 아이콘 구성
+- [x] Service Worker 정적 앱 셸 적용
+- [x] 진행 중 운동의 오프라인 저장 및 서버 동기화
 - [ ] iPhone Safari 사용성 테스트
 - [ ] Cloudflare Pages 배포
 
 ### Phase 6. 안정화 및 개선
+
+**디로딩(Deloading)은 V1 출시 필수 기능입니다.** 현재 제품에 연결되지 않았으며, Backend·Frontend 구현과 통합 검증을 모두 완료한 뒤 V1을 출시합니다. 그때까지 출시 준비는 미완료입니다.
 
 - [ ] 단위 및 컴포넌트 테스트
 - [ ] 모바일 UI/UX 개선
