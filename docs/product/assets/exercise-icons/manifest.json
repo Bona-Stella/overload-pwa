@@ -1,0 +1,57 @@
+{
+  "source": "../../Overload_UI_Baseline_Wireframe_v0.9.html",
+  "sourceObject": "v9Icons",
+  "format": "image/png",
+  "displaySizeCssPx": 32,
+  "transformation": "none; decoded embedded PNG bytes preserved",
+  "icons": [
+    {
+      "label": "가슴",
+      "file": "chest.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 12356,
+      "sha256": "3c55a644afe12ea4921493451b63bb175a8d68d4fb8ec4117b7d416b7a376839"
+    },
+    {
+      "label": "등",
+      "file": "back.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 11802,
+      "sha256": "547321cf23249e3e8c1d78204e2e1c0ff988d6bfb11484f3f47312a3e9aceac3"
+    },
+    {
+      "label": "하체",
+      "file": "legs.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 9860,
+      "sha256": "01a9e6e20e47cf93257627d070fcf931cff9c1cdc4b43a12c41f49bdd41c87ba"
+    },
+    {
+      "label": "러닝",
+      "file": "running.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 9256,
+      "sha256": "e188d7885aa944603be182552284ee7e52ad278cdf86765a1aa3c29094b5f3b9"
+    },
+    {
+      "label": "걷기",
+      "file": "walking.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 9141,
+      "sha256": "e1392f020c93eda69f20c8d67d782abde846de2cc83659d3957be67817a1ab1b"
+    },
+    {
+      "label": "사이클",
+      "file": "cycling.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 11325,
+      "sha256": "ceb7ed8238023777256af0e9bd21cb8711b96c8e6b8346aba367aa9055a98c79"
+    }
+  ]
+}
