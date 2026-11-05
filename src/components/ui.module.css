@@ -1,0 +1,12 @@
+.button { min-height: 44px; padding: 11px 16px; transition: background-color .15s, border-color .15s; }
+.card { min-width: 0; display: grid; gap: 12px; padding: var(--space-card); background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); }
+.hero { background: var(--hero-gradient); border-color: var(--hero-border); }
+.heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
+.heading h1 { font-size: 24px; margin: 4px 0 0; }
+.eyebrow { font-size: 10px; color: var(--text-muted); letter-spacing: .14em; }
+.field { display: grid; gap: 8px; color: var(--text-muted); }
+.metadata { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
+.help { position: relative; display: inline-flex; flex: 0 0 auto; }
+.help .helpTrigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; background: transparent; }
+.helpTrigger > span { width: 16px; height: 16px; border: 1px solid var(--text-muted); border-radius: 50%; color: var(--text-muted); font-size: 11px; line-height: 14px; font-weight: 400; }
+.popover { position: absolute; top: 100%; right: 0; z-index: 12; width: min(260px, calc(100vw - 40px)); padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control); background: var(--surface-input); color: var(--text-primary); font-size: 12px; font-weight: 400; box-shadow: 0 8px 24px #0006; }

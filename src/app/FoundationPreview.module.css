@@ -1,0 +1,3 @@
+.icons { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.accent { color: var(--accent); font-size: 11px; letter-spacing: .1em; }
+.metadata { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }

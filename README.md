@@ -16,9 +16,8 @@
   <img src="https://img.shields.io/badge/React-19.3.1-61DAFB?style=flat-square&amp;logo=react&amp;logoColor=black" alt="React">
   <img src="https://img.shields.io/badge/TypeScript-6.0.3-3178C6?style=flat-square&amp;logo=typescript&amp;logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/Vite-8.3.5-646CFF?style=flat-square&amp;logo=vite&amp;logoColor=white" alt="Vite">
-  <img src="https://img.shields.io/badge/Tailwind_CSS-Planned-06B6D4?style=flat-square&amp;logo=tailwindcss&amp;logoColor=white" alt="Tailwind CSS Planned">
   <img src="https://img.shields.io/badge/PWA-App_Shell-5A0FC8?style=flat-square&amp;logo=pwa&amp;logoColor=white" alt="PWA App Shell">
-  <img src="https://img.shields.io/badge/Status-Core_UI_Prototype-6B7280?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Status-UI_v0.9_Foundation-6B7280?style=flat-square" alt="Status">
 </div>
 
 ---
@@ -65,6 +64,8 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 ---
 
 ## ✨ 주요 기능
+
+아래 기능 체크리스트는 초기 제품 로드맵이며, 미체크 항목이 모두 현재 미구현이라는 뜻은 아닙니다. 현재 구현과 후속 범위는 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 따릅니다. [T01](docs/tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 홈/루틴/기록/설정 4탭, Onyx 토큰·CSS Modules, 공통 컴포넌트와 아이콘 자산 경로를 구현했습니다. 기존 API 패널을 재사용하며 화면별 전체 전환은 T02 이후입니다. 운영 디로딩 상태는 연결하지 않았습니다.
 
 ### 🏠 홈 대시보드
 
@@ -134,35 +135,37 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 | Build Tool | Vite | 8.3.5 |
 | PWA | Web App Manifest + Service Worker | Vite 빌드에서 생성 |
 
-### UI & Styling (도입 예정)
+### UI & Styling (UI v0.9 적용 기준)
 
 | Category | Technology | Description |
 |:---|:---|:---|
-| Styling | Tailwind CSS | 유틸리티 기반 스타일링 |
-| UI Components | shadcn/ui | 재사용 가능한 UI 컴포넌트 |
-| Icons | [추출 원본 PNG 6종](docs/product/assets/exercise-icons/README.md) | 운동 검색·선택, 32 CSS px |
-| Charts | Recharts | 운동 기록 및 통계 시각화 |
+| Styling | CSS Custom Properties + CSS Modules | 일반·디로딩 공통 테마 토큰 |
+| UI Components | 자체 컴포넌트 | 기존 컴포넌트 우선 |
+| Icons | [추출 원본 PNG 6종](docs/product/assets/exercise-icons/README.md) | 32 CSS px 공통 표시·번들 포함, 검색 분류 매핑은 후속 |
+| Charts | Recharts | 채택 완료, 실제 통계 UI 구현 단계에서 설치 |
 
-### State Management & Networking (도입 예정)
+적용 범위와 현재 구현의 구분은 [프론트엔드 개발 규칙](docs/engineering/frontend.md#8-ui-및-스타일링-규칙)을 따릅니다.
 
-| Category | Technology | Description |
-|:---|:---|:---|
-| Routing | React Router | 페이지 라우팅 |
-| Server State | TanStack Query | 서버 데이터 및 캐싱 |
-| Client State | Zustand | 클라이언트 상태 관리 |
-| HTTP Client | Axios | REST API 통신 |
-| Local Database | Dexie.js | IndexedDB 기반 로컬 데이터 관리 |
-
-### Testing & Deployment (도입 예정)
+### State Management & Networking (현재 구현 / 검토 도구)
 
 | Category | Technology | Description |
 |:---|:---|:---|
-| Unit Test | Vitest | 단위 테스트 |
-| Component Test | React Testing Library | 컴포넌트 테스트 |
-| E2E Test | Playwright | 브라우저 테스트 |
-| Hosting | Cloudflare Pages | 정적 웹 애플리케이션 배포 |
+| Routing | React 화면 상태 | React Router 미도입, 채택 검토 |
+| Server State | 기능별 controller | TanStack Query 미도입, 채택 검토 |
+| Client State | React 상태·useSyncExternalStore | Zustand 미도입, 채택 검토 |
+| HTTP Client | fetch | 쿠키·CSRF·취소·계정 경계 적용. Axios 미도입 |
+| Local Database | native IndexedDB | 진행 운동 DB3/schema2. Dexie.js 미도입 |
 
-> 현재 React, TypeScript, Vite, ESLint와 Node.js 내장 테스트 러너를 사용하며, 스타일은 일반 CSS입니다. 버전 표는 `package-lock.json` 기준입니다. 미도입 라이브러리는 현재 필수 도구가 아니며 채택 여부를 별도로 검토합니다. 실제 구성은 `package.json`과 [프론트엔드 개발 규칙](docs/engineering/frontend.md)을 확인합니다. 운동 쓰기·진행 세션·복구의 현행 기준은 [Task 009 v1.0](../overload-server/docs/tasks/task-009-redesign-v1.0.md)입니다. 온라인 관리·START, IndexedDB·snapshot 동기화, FINISH·사후 정정/선택 복구까지 연결했습니다. 범용 Outbox와 Dexie.js는 도입하지 않았습니다.
+### Testing & Deployment (현재 구현 / 검토 도구)
+
+| Category | Technology | Description |
+|:---|:---|:---|
+| Unit Test | Node.js 내장 test | Vitest 미도입 |
+| Component Test | TypeScript 변환 + React SSR | React Testing Library 미도입 |
+| Browser Test | 격리 Chrome/CDP 검증 | Playwright 미도입, 실제 iPhone 검증은 별도 |
+| Hosting | Cloudflare Pages | 배포 예정 |
+
+> 현재 React, TypeScript, Vite, ESLint와 Node.js 내장 테스트 러너를 사용하며, 계정 셸·공통 표현은 CSS Custom Properties + CSS Modules, 기존 기능 패널은 일반 CSS를 함께 사용합니다. 버전 표는 `package-lock.json` 기준입니다. 미도입 라이브러리는 현재 필수 도구가 아니며 채택 여부를 별도로 검토합니다. 실제 구성은 `package.json`과 [프론트엔드 개발 규칙](docs/engineering/frontend.md)을 확인합니다. 운동 쓰기·진행 세션·복구의 현행 기준은 [Task 009 v1.0](../overload-server/docs/tasks/task-009-redesign-v1.0.md)입니다. 온라인 관리·START, IndexedDB·snapshot 동기화, FINISH·사후 정정/선택 복구까지 연결했습니다. 범용 Outbox와 Dexie.js는 도입하지 않았습니다.
 
 ---
 
@@ -310,7 +313,7 @@ Overload는 **모바일 퍼스트(Mobile First)** 방식을 기반으로 설계�
 
 ## 📁 프로젝트 구조
 
-Git 저장소 루트가 npm·Vite 프로젝트 루트입니다. 현재 구조는 다음과 같습니다.
+Git 저장소 루트가 npm·Vite 프로젝트 루트입니다. 주요 구조는 다음과 같습니다.
 
 ```text
 overload-pwa/
@@ -322,20 +325,28 @@ overload-pwa/
 │       └── vite-template.md
 ├── public/
 │   ├── favicon.svg
-│   └── icons.svg
+│   ├── manifest.webmanifest
+│   └── icons/
 ├── src/
+│   ├── app/                     # 계정 4탭 셸, 테마·개발 검증 화면
 │   ├── assets/
-│   ├── components/Dialog.tsx
+│   ├── components/              # 기존 입력·Dialog, 공통 UI·운동 아이콘
+│   ├── features/auth/           # 실제 인증·계정 관리
+│   ├── features/auth-preview/   # 개발 전용 인증 Mock
 │   ├── features/health/          # 기존 API 및 진단 패널
-│   ├── features/routine/         # 종목 선택, 루틴 편집
-│   ├── features/workout/         # 상태 전이, 저장 어댑터, 운동 화면
-│   ├── features/history/         # 완료 기록 상세
+│   ├── features/routine/        # 데모 루틴 편집
+│   ├── features/workout/        # 개발 데모 운동
+│   ├── features/history/        # 데모 완료 기록 상세
+│   ├── features/workout-online/ # 계정 API·루틴·기록·IndexedDB
+│   ├── features/workout-local/  # 진행 운동 입력·타이머·동기화
+│   ├── features/statistics/     # 실제 통계·성장·일정
+│   ├── pwa/                    # 정적 앱 셸·설치·업데이트
 │   ├── App.css
 │   ├── App.tsx
 │   ├── index.css
 │   └── main.tsx
 ├── eslint.config.js
-├── tests/                      # Health, 도메인, 서버 렌더링 테스트
+├── tests/                      # 도메인·인증·SSR·브라우저 검증
 ├── index.html
 ├── package.json
 ├── package-lock.json
@@ -347,13 +358,13 @@ overload-pwa/
 └── README.md
 ```
 
-기존 하위 `overload-app/dist/`는 이전 빌드 결과 보존용이며 현재 실행 경로가 아닙니다. 기존 `node_modules/`는 저장소 루트로 이동해 재사용합니다. npm 패키지명 `overload-app`은 유지합니다.
+실행·빌드는 저장소 루트에서 수행하며 npm 패키지명 `overload-app`은 유지합니다.
 
 ### 향후 디렉터리 역할
 
 | Directory | Description |
 |:---|:---|
-| `app` | 라우터 및 전역 Provider |
+| `app` | 현재 계정 셸·테마·개발 검증 화면. React Router 미도입 |
 | `assets` | 이미지 및 정적 리소스 |
 | `components` | 공통 UI 컴포넌트 |
 | `features` | 도메인별 화면과 기능 |
@@ -363,13 +374,13 @@ overload-pwa/
 | `types` | TypeScript 타입 정의 |
 | `utils` | 공통 유틸리티 함수 |
 
-> 위 역할 표는 향후 설계안입니다. 현재 `features/health`에 기존 Health API와 진단 패널이 있으며, `routine`, `workout`, `history`에 로컬 프로토타입을 구현했습니다. React 상태와 일반 CSS를 사용하며 추가 프레임워크를 설치하지 않았습니다.
+> 역할 표의 미생성 디렉터리는 향후 참고안이며, 사용하지 않는 계층을 미리 추가하지 않습니다. 실제 계정 API·상태·저장은 기능별 모듈에 있고, `routine`, `workout`, `history`는 개발 데모와 구분합니다. T01에서 새 프레임워크를 설치하지 않았습니다.
 
 ---
 
 ## 🔗 Backend API 연동
 
-`overload-app`의 설정 → 서버 연결 진단은 `fetch`로 기존 `overload-server`의 `GET /api/v1/health`를 호출합니다. HTTP 200과 JSON의 `status: "UP"`를 확인한 경우에만 연결 성공으로 표시합니다. HTTP 오류, 네트워크 오류, 잘못된 응답 및 5초 시간 초과는 연결 실패로 표시하며, **다시 확인** 버튼으로 재시도할 수 있습니다. 확인 중에는 버튼을 비활성화하고, 화면이 해제되면 진행 중인 요청을 취소합니다. 응답은 캐시하지 않습니다.
+개발 전용 `/demo`의 설정 → 서버 연결 진단은 `fetch`로 기존 `overload-server`의 `GET /api/v1/health`를 호출합니다. HTTP 200과 JSON의 `status: "UP"`를 확인한 경우에만 연결 성공으로 표시합니다. HTTP 오류, 네트워크 오류, 잘못된 응답 및 5초 시간 초과는 연결 실패로 표시하며, **다시 확인** 버튼으로 재시도할 수 있습니다. 확인 중에는 버튼을 비활성화하고, 화면이 해제되면 진행 중인 요청을 취소합니다. 응답은 캐시하지 않습니다.
 
 이 검사는 애플리케이션의 HTTP 응답 여부만 확인하며 데이터베이스와 외부 서비스 상태를 보장하지 않습니다.
 
@@ -423,7 +434,7 @@ React → http://127.0.0.1:3000/api/v1/health
    ```
 
 2. 다른 터미널에서 `overload-pwa` 루트의 `npm run dev`를 실행하고 개발 데모 `http://localhost:3000/demo`를 엽니다. 실제 인증 진입은 `http://localhost:3000/`입니다.
-3. 홈의 **설정 → 서버 연결 진단 열기**에서 **서버 연결 성공**, **UP**를 확인합니다. `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 프록시 응답의 HTTP 200과 `{"status":"UP"}`도 확인할 수 있습니다.
+3. 개발 전용 `/demo`의 **설정 → 서버 연결 진단 열기**에서 **서버 연결 성공**, **UP**를 확인합니다. `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 프록시 응답의 HTTP 200과 `{"status":"UP"}`도 확인할 수 있습니다.
 4. 백엔드를 `Ctrl+C`로 종료한 뒤 **다시 확인**을 눌러 연결 실패를 확인합니다. 백엔드 재실행 후 같은 버튼으로 연결 성공 복구를 확인합니다.
 5. 검증 후 각 서버 터미널에서 `Ctrl+C`로 종료합니다.
 
@@ -546,14 +557,15 @@ Local Development
 
 ## 🗺 개발 로드맵
 
+초기 단계 구분을 보존한 로드맵입니다. 현재 기능별 구현 상태는 위 현황 문서와 T01 보고서를 따르며, 미체크를 현재 기능 부재로 해석하지 않습니다.
+
 ### Phase 1. 프로젝트 기반 구축
 
 - [x] React + TypeScript + Vite 프로젝트 생성
-- [ ] Tailwind CSS 설정
-- [ ] 기본 레이아웃 및 테마 구성
-- [ ] React Router 설정
-- [ ] 공통 컴포넌트 구성
-- [ ] Spring Boot API 통신 환경 구성
+- [x] 계정 4탭 기본 레이아웃 및 Onyx 테마 구성 (T01)
+- [ ] React Router 채택 검토 (현재 상태 기반 전환)
+- [x] 공통 컴포넌트 기반 구성 (T01)
+- [x] Spring Boot API 통신 환경 구성
 
 ### Phase 2. 운동 기록 MVP
 
@@ -619,7 +631,6 @@ HTML의 흰색·회색을 실제 PWA 컬러로 옮기지 않습니다. 아이콘
 - [React 공식 문서](https://react.dev/)
 - [TypeScript 공식 문서](https://www.typescriptlang.org/)
 - [Vite 공식 문서](https://vite.dev/)
-- [Tailwind CSS 공식 문서](https://tailwindcss.com/)
 - [Vite PWA 공식 문서](https://vite-pwa-org.netlify.app/)
 - [TanStack Query 공식 문서](https://tanstack.com/query/latest)
 - [Zustand 공식 문서](https://zustand.docs.pmnd.rs/)

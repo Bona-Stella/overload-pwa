@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import type { StandardExercise } from './types.ts'
 import { searchExercises } from './catalog.ts'
+import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 
 export function ExerciseSearch({ exercises, onSelect, disabled = false }: {
   exercises: StandardExercise[]; onSelect: (exercise: StandardExercise) => void; disabled?: boolean
@@ -27,7 +28,7 @@ export function ExerciseSearch({ exercises, onSelect, disabled = false }: {
     {open && <ul id={id + '-results'} role="listbox" aria-label="표준 운동 후보" className="exercise-search-results">
       {results.map((exercise, index) => <li key={exercise.id} role="presentation"><button id={id + '-' + index} type="button" role="option"
         aria-selected={index === active} disabled={disabled} onPointerDown={event => { event.preventDefault() }}
-        onClick={() => choose(exercise)}>{exercise.name}</button></li>)}
+        onClick={() => choose(exercise)}><ExerciseIcon /><span>{exercise.name}</span></button></li>)}
     </ul>}
     {open && exercises.length > 0 && results.length === 0 && <p role="status">일치하는 운동이 없습니다.</p>}
   </div>

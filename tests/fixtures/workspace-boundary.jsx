@@ -27,7 +27,7 @@ window.renderBoundary = (owner = 'A', generation = '0', active = false) => {
   const detail = active ? session({ ...scope, editorDeviceId: DEVICE }) : null
   window.boundaryState = { userId, scope, data: { ...bootstrap, scope, routines: [] }, selected: null, active: detail, detail, deviceId: DEVICE,
     attempt: null, status: 'ready', busy: false, localReady: true, copySaved: false, issue: null, notice: '' }
-  root.render(<AuthContext value={{ state: window.boundaryAuth, controller: authentication }}><WorkoutWorkspace /></AuthContext>)
+  root.render(<AuthContext value={{ state: window.boundaryAuth, controller: authentication }}><WorkoutWorkspace tab="history" /></AuthContext>)
 }
 window.resetBoundary = () => { root.unmount(); host.replaceChildren(); root = createRoot(host); window.boundaryRequests.length = 0; held.length = 0 }
 window.renderBoundary()

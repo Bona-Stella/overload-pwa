@@ -2,6 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react'
 import { Dialog } from '../../components/Dialog.tsx'
 import { distanceLabel, measuredCardio } from '../workout-online/cardio-measurement.ts'
 import { RepsInput } from '../../components/RepsInput.tsx'
+import { Metadata } from '../../components/ui.tsx'
 import { WorkoutStore } from '../workout-online/storage.ts'
 import { ExerciseSearch } from '../workout-online/ExerciseSearch.tsx'
 import { EquipmentFields } from '../workout-online/EquipmentFields.tsx'
@@ -87,7 +88,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     {plan && <>
       <div className="exercise-heading"><p className="eyebrow">WORKING SETS</p><h2>{workout.exerciseNames[id] ?? '추가된 세션 종목'}</h2><span className="badge">현재 계획 {plan.setCount}세트 · {plan.minReps}~{plan.maxReps}회</span></div>
       <p className="muted small">현재 작업 중량 {workout.weights[id]?.value} kg · 완료 시 실제 입력값을 저장합니다. 계획과 다른 중량 입력은 오늘만 수행입니다.</p>
-      <p className="muted small">현재 장비: {equipmentLabel(plan, manufacturers)}</p>
+      <p><Metadata>현재 장비: {equipmentLabel(plan, manufacturers)}</Metadata></p>
       <button className="outline" disabled={busy} onClick={() => setWeightOpen(true)}>작업 중량 변경</button>
       <section className="sets-card card" aria-label="본세트 기록">
         <div className="local-set-row set-header"><span>세트</span><span>중량 kg</span><span>이번 반복</span><span>상태</span></div>

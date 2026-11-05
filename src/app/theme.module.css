@@ -1,0 +1,69 @@
+:global(body):has(.theme) { background: #111216; }
+.theme {
+  --surface-page: #111216;
+  --surface-card: #1B1D22;
+  --surface-input: #25282E;
+  --text-primary: #F0F1F4;
+  --text-muted: #A9ADB7;
+  --accent: #6C93C6;
+  --on-accent: #111820;
+  --accent-soft: #6C93C615;
+  --border-subtle: #353941;
+  --border-focus: #6C93C6;
+  --status-done: #74A68A;
+  --status-missed: #B17B83;
+  --status-warning: #D6BC65;
+  --status-danger-text: #F0B7BF;
+  --surface-danger: #302127;
+  --surface-warning: #302B20;
+  --hero-gradient: linear-gradient(142deg, #272D37 0%, #222832 50%, #1C212A 100%);
+  --hero-border: #3B4453;
+  --space-page: 20px;
+  --space-card: 18px;
+  --radius-card: 18px;
+  --radius-control: 10px;
+  --font-metadata: 11px;
+  --chart-primary: var(--accent);
+  /* Existing feature panels consume these names while their UI moves to Modules. */
+  --bg: var(--surface-page);
+  --card: var(--surface-card);
+  --surface: var(--surface-input);
+  --line: var(--border-subtle);
+  --border: var(--border-subtle);
+  --muted: var(--text-muted);
+  --blue: var(--accent);
+  color-scheme: dark;
+}
+.theme[data-theme='deload'] {
+  --accent: #78B89A;
+  --accent-soft: #78B89A15;
+  --border-focus: #78B89A;
+  --hero-gradient: linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
+  --hero-border: #3B4A40;
+}
+.theme :global([hidden]) { display: none !important; }
+.theme :global(button) { min-height: 44px; background: var(--surface-input); color: var(--text-primary); border-radius: var(--radius-control); }
+.theme :global(button.primary) { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.theme :global(button.outline) { background: transparent; border-color: var(--border-subtle); color: var(--text-primary); }
+.theme :global(button.quiet), .theme :global(button.icon-button) { background: transparent; color: var(--text-muted); }
+.theme :global(button.danger) { color: var(--status-danger-text); }
+.theme :global(button.auth-google) { color: #242125; background: #F0F1F4; }
+.theme :global(button:focus-visible), .theme :global(input:focus-visible), .theme :global(select:focus-visible), .theme :global(textarea:focus-visible), .theme :global(summary:focus-visible) { outline: 2px solid var(--border-focus); outline-offset: 3px; }
+.theme :global(input), .theme :global(select), .theme :global(textarea) { background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary); accent-color: var(--accent); }
+.theme :global(input::placeholder) { color: var(--text-muted); }
+.theme :global(label), .theme :global(.muted), .theme :global(.eyebrow), .theme :global(.auth-divider) { color: var(--text-muted); }
+.theme :global(.brand-dot), .theme :global(.auth-wordmark span) { color: var(--accent); }
+.theme :global(.card) { background: var(--surface-card); border-color: var(--border-subtle); border-radius: var(--radius-card); }
+.theme :global(.notice) { background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary); }
+.theme :global(.notice.error) { background: var(--surface-danger); border-color: var(--status-missed); color: var(--status-danger-text); }
+.theme :global(.notice.warning) { background: var(--surface-warning); border-color: var(--status-warning); }
+.theme :global(.timer-bar) { background: var(--surface-card); border-color: var(--border-subtle); }
+.theme :global(.timer-bar span) { color: var(--text-muted); }
+.theme :global(.online-session-badge), .theme :global(.badge) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.theme :global(.workout-online [aria-pressed='true']) { border-color: var(--accent); }
+.theme :global(dialog) { background: var(--surface-card); color: var(--text-primary); border-color: var(--border-subtle); }
+.theme :global(.local-set-equipment) { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
+.theme :global(a) { color: var(--accent); }
+.theme :global(summary) { cursor: pointer; }
+@media (max-width: 374px) { .theme { --space-page: 14px; --space-card: 14px; } }
+@media (prefers-reduced-motion: reduce) { .theme *, .theme *::before, .theme *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

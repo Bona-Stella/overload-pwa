@@ -12,7 +12,7 @@ export function AccountSettings({ state, controller, now }: { state: AuthState; 
   const remaining = challenge ? Math.max(0, Math.ceil((challenge.expiresAt - clock) / 1000)) : 0
   const clear = () => setCode('')
   return <section className="stack auth-account">
-    <button className="quiet auth-back" disabled={busy} onClick={() => { clear(); controller.closeAccount() }}>‹ 로그인된 화면으로</button>
+    <button className="quiet auth-back" disabled={busy} onClick={() => { clear(); controller.closeAccount() }}>‹ 설정으로</button>
     <p className="eyebrow">YOUR ACCOUNT</p><h1>계정 설정<span className="brand-dot">.</span></h1>
     <p className="muted">로그인되어 있습니다. 로그인 수단과 재인증 이메일을 확인하세요.</p>
     {!account.loaded ? <section className="card stack" role="status"><p>{busy ? '계정 정보를 확인하고 있어요.' : '계정 정보를 불러오지 못했습니다.'}</p>
