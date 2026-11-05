@@ -1,5 +1,5 @@
 import type { CardioActivity, CardioKind, CardioPlan, WorkoutSession, WorkoutState } from './types.ts'
-import { newId } from './id.ts'
+import { newId } from '../../id.ts'
 
 export const CARDIO_NAMES: Record<CardioKind, string> = { treadmill: '러닝머신', bike: '실내 자전거', outdoor: '야외 러닝', stairs: '계단 운동', other: '기타 유산소' }
 export const CARDIO_STATUS: Record<CardioActivity['status'], string> = { ready: '유산소 준비', running: '유산소 진행 중', paused: '유산소 일시정지', review: '유산소 완료 확인', completed: '유산소 완료', skipped: '유산소 건너뜀' }

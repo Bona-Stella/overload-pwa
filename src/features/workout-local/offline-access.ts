@@ -1,4 +1,5 @@
 import type { Session, Scope } from '../workout-online/types.ts'
+import { newId } from '../../id.ts'
 import { counter, instant, object, uuid } from '../workout-online/validation.ts'
 import type { LocalKey, LocalWorkout } from './types.ts'
 
@@ -18,7 +19,7 @@ export class OfflineAccess implements AuthBoundary {
   private readonly storage: Pick<Storage, 'getItem' | 'setItem'>
   private readonly random: () => string
   private granting: Promise<void> = Promise.resolve()
-  constructor(store: Port, storage: Pick<Storage, 'getItem' | 'setItem'> = { getItem: key => globalThis.localStorage.getItem(key), setItem: (key, value) => globalThis.localStorage.setItem(key, value) }, random: () => string = () => crypto.randomUUID()) {
+  constructor(store: Port, storage: Pick<Storage, 'getItem' | 'setItem'> = { getItem: key => globalThis.localStorage.getItem(key), setItem: (key, value) => globalThis.localStorage.setItem(key, value) }, random: () => string = newId) {
     this.store = store; this.storage = storage; this.random = random
   }
   private raw() { try { return this.storage.getItem(OFFLINE_FENCE) } catch { return null } }

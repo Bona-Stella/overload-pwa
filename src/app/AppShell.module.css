@@ -13,6 +13,7 @@
   min-width: 0;
 }
 .content > * { min-width: 0; }
+.shell .homeContent { padding-top: calc(18px + env(safe-area-inset-top)); padding-inline: 15px; }
 .content > :global(#auth-feedback:empty) { position: absolute; width: 1px; height: 1px; overflow: hidden; }
 .shell .withTabs { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
 .tabs {

@@ -1,5 +1,5 @@
-import { newId } from './id.ts'
-export { newId } from './id.ts'
+import { newId } from '../../id.ts'
+export { newId } from '../../id.ts'
 import type { Benchmark, ProgressChange, Routine, RoutineExercise, WorkoutExercise, WorkoutSession, WorkoutState, WorkoutTimer } from './types.ts'
 import { validReps } from './reps.ts'
 import { cardioCounts, cardioPending, createCardio, isCardioPlan, skipCardio } from './cardio.ts'

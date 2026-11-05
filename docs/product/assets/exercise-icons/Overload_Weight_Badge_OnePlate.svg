@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="웨이트">
+  <defs>
+    <radialGradient id="badge" cx="44%" cy="38%" r="72%">
+      <stop offset="0%" stop-color="#EBEBEC"/>
+      <stop offset="84%" stop-color="#DEDEDF"/>
+      <stop offset="100%" stop-color="#CBCDD1"/>
+    </radialGradient>
+  </defs>
+  <circle cx="16" cy="16" r="15" fill="url(#badge)" stroke="#E8E8EB" stroke-width="0.8"/>
+  <g fill="#202533">
+    <!-- one weight plate at each end; no duplicate inner discs -->
+    <rect x="6.2" y="11.4" width="5.1" height="9.2" rx="1.55"/>
+    <rect x="20.7" y="11.4" width="5.1" height="9.2" rx="1.55"/>
+    <rect x="10" y="14.5" width="12" height="3" rx="1.25"/>
+  </g>
+</svg>

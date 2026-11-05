@@ -66,7 +66,7 @@ try {
   assert.equal(await evaluate('document.body.innerText.includes("앱 설치·오프라인 준비")'), false)
   await screenshot('login-393'); passed.push('Anonymous login retains its controls; no account tabs or install panel')
   await evaluate('window.t01.login()')
-  await wait(() => evaluate('document.querySelectorAll("nav button").length===4 && document.body.innerText.includes("나의 루틴으로 시작하세요")'), 'authenticated home')
+  await wait(() => evaluate('document.querySelectorAll("nav button").length===4 && document.body.innerText.includes("첫 루틴을 준비해 보세요")'), 'authenticated home')
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".app-shell")).backgroundColor'), 'rgb(17, 18, 22)')
   await screenshot('home-393')
   await click('기록'); await wait(() => evaluate('document.body.innerText.includes("통계·추적")'), 'statistics under records')

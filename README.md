@@ -65,7 +65,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 ## ✨ 주요 기능
 
-아래 기능 체크리스트는 초기 제품 로드맵이며, 미체크 항목이 모두 현재 미구현이라는 뜻은 아닙니다. 현재 구현과 후속 범위는 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 따릅니다. [T01](docs/tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 홈/루틴/기록/설정 4탭, Onyx 토큰·CSS Modules, 공통 컴포넌트와 아이콘 자산 경로를 구현했습니다. 기존 API 패널을 재사용하며 화면별 전체 전환은 T02 이후입니다. 운영 디로딩 상태는 연결하지 않았습니다.
+아래 기능 체크리스트는 초기 제품 로드맵이며, 미체크 항목이 모두 현재 미구현이라는 뜻은 아닙니다. 현재 구현과 후속 범위는 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 따릅니다. [T01](docs/tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 4탭과 Onyx 공통 기반을 구현했고, [T02-A](docs/tasks/ui-v09-t02a-home-report.md)에서 실제 API 홈·오늘만 루틴 선택·주간 일정·최근 기록을 연결했습니다. [홈 설계 일치·iPhone 검토 개선](docs/tasks/ui-v09-t02a-design-review-report.md) 이후 [홈 세부 개선](docs/tasks/ui-v09-t02a-home-details-report.md)에서 공식 달 헤더·글자 크기·선택 자동 닫힘·최초 계획 기준 종목 달성 수와 무수행 홈 필터를 적용했습니다. [최종 시각 보완](docs/tasks/ui-v09-t02a-home-final-visual-report.md)에서 브랜드·아령을 다듬고 격리 검토 DB에 혼합 달리기 완료 기록을 추가했습니다. 2026-11-06 사용자 iPhone 실기기 최종 승인을 받았습니다. 현재 마감 상태·DB 보존·재개 절차는 [T02-A 마감 기록](docs/tasks/ui-v09-t02a-closeout.md)을 따릅니다. T02-B 1차 UI 구현 완료 전에는 검토 서버를 자동 시작하지 않습니다. 루틴·운동 진행·기록·설정의 전체 UI 전환과 운영 디로딩 연동은 후속입니다.
 
 ### 🏠 홈 대시보드
 
@@ -569,7 +569,7 @@ Local Development
 
 ### Phase 2. 운동 기록 MVP
 
-- [ ] 홈 화면 구현
+- [x] 일반 모드 홈 화면 및 실제 API 연동 (T02-A, 디로딩 제외)
 - [ ] 운동 종목 조회 화면
 - [ ] 운동 세션 생성
 - [ ] 중량 및 반복 횟수 입력 UI
@@ -619,7 +619,7 @@ UI v0.9의 공식 개발 기준은 아래 자료로 구분합니다. [UI/UX 요�
 
 | 공식 자료 | 역할 |
 |---|---|
-| [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md) | 확정 UI/UX 결정·상호작용. 충돌 시 10.11절 우선 |
+| [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md) | 확정 UI/UX 결정·상호작용. 충돌 시 10.12절 우선 |
 | [Wireframe](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html) | 무채색 화면 구조·사용자 흐름·기능 배치 |
 | [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md) | 실제 PWA의 Onyx 테마·컬러·그라데이션·토큰·시각적 위계 |
 | [Deloading Design v1.6](docs/product/Overload_Deloading_Design_Specification_v1.6.md) | 디로딩 정책·상태와 관련 기능 |

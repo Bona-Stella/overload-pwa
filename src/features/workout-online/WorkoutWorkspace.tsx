@@ -17,7 +17,8 @@ import { StatisticsPanel } from '../statistics/StatisticsPanel.tsx'
 import { WeeklyScheduleApi } from '../statistics/weekly-schedule.ts'
 import { WeeklySchedulePanel } from '../statistics/WeeklySchedulePanel.tsx'
 import type { AppTab } from '../../app/types.ts'
-import { Button, Card, Help, Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
+import { Button, Card, Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
+import { HomePanel } from '../home/HomePanel.tsx'
 
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
   const otherEditor = session.editorDeviceId !== deviceId
@@ -80,6 +81,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   const [dismissedWorkout, setDismissedWorkout] = useState<string | null>(null)
   const [editingRoutine, setEditingRoutine] = useState(false)
   const [navigationIssue, setNavigationIssue] = useState(false)
+  const [homeStartIssue, setHomeStartIssue] = useState<string | null>(null)
+  const homeStarting = useRef(false)
   const admitOffline = useCallback((workout: LocalWorkout) => {
     const allowed = () => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot(), server = s.detail
@@ -139,19 +142,29 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   }
   return <>
     {navigationIssue && <StatusNotice error>입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.</StatusNotice>}
-    {!localOnly && !focused && tab === 'home' && <section className="stack" aria-label="홈">
-      <SectionHeading title="오늘의 운동" eyebrow="OVERLOAD"><Help label="운동 저장 안내">진행 중 입력은 이 기기에 먼저 저장합니다. 서버 저장 확인과 미전송 상태는 운동 화면에서 확인하세요.</Help></SectionHeading>
-      {state.status === 'loading' && <StatusNotice>현재 계정의 운동 정보를 확인하고 있습니다.</StatusNotice>}
-      {state.issue && <StatusNotice error>{state.issue}</StatusNotice>}
-      {state.active ? <Card hero><h2>진행 중인 운동</h2><p>{state.active.initialPlan.routineName}</p><Button variant="primary" disabled={state.busy} onClick={() => void resume()}>운동 이어가기</Button></Card>
-        : <Card hero><h2>나의 루틴으로 시작하세요</h2><p className="muted small">저장된 루틴을 선택하고 운동을 시작할 수 있습니다.</p><Button variant="primary" disabled={state.busy} onClick={() => void navigate('routines')}>루틴 선택</Button></Card>}
-      {state.attempt && <Card><h2>시작 결과 확인 필요</h2><p>이 기기에 보존한 같은 시작 요청을 다시 확인합니다.</p><Button disabled={state.busy || !state.localReady} onClick={() => void controller.start()}>기존 시작 요청 다시 확인</Button></Card>}
-      {session && session.status !== 'ACTIVE' && <Button onClick={() => void navigate('history')}>최근 확인한 운동 기록 보기</Button>}
-    </section>}
+    <div hidden={focused || tab !== 'home'}>{!localOnly && (state.status === 'ready' && state.scope && state.data ? <HomePanel
+      key={'home:' + state.scope.userId + ':' + state.scope.dataGeneration} scope={state.scope} routines={state.data.routines} api={api} weekly={weekly} statistics={statistics}
+      refreshKey={scheduleRefresh + ':' + (session ? session.id + ':' + session.version : '')} active={state.active} attempt={state.attempt !== null} busy={state.busy} localReady={state.localReady}
+      issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void resume()} onRetry={() => void controller.start()}
+      onStart={async routine => {
+        if (homeStarting.current) return
+        homeStarting.current = true
+        try {
+          const before = controller.getSnapshot()
+          if (before.busy || before.active || before.attempt || !await flush()) return
+          setHomeStartIssue(null)
+          await controller.select(routine.id)
+          const latest = controller.getSnapshot(), account = authentication.getSnapshot()
+          if (latest.scope?.userId !== routine.userId || latest.scope.dataGeneration !== routine.dataGeneration || account.status !== 'authenticated' || account.pending !== null || account.userId !== routine.userId || latest.active || latest.attempt) return
+          if (latest.selected?.id !== routine.id) return
+          if (latest.selected.version !== routine.version) { setHomeStartIssue('루틴이 변경되었습니다. 홈을 새로고침하여 최신 계획을 확인한 뒤 시작하세요.'); return }
+          await controller.start()
+        } finally { homeStarting.current = false }
+      }} /> : <StatusNotice error={!!state.issue}>{state.issue ?? '현재 계정의 운동 정보를 확인하고 있습니다.'}</StatusNotice>)}</div>
     {!localOnly && <div hidden={focused || tab !== 'routines'}>
       <WorkspaceView key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} />
     </div>}
-    <div hidden={focused || tab !== 'home' && tab !== 'routines'}>{!localOnly && state.status === 'ready' && state.scope && state.data && session?.status !== 'ACTIVE' && <WeeklySchedulePanel key={'schedule:' + state.scope.userId + ':' + state.scope.dataGeneration} api={weekly} scope={state.scope} routines={state.data.routines} onSaved={() => setScheduleRefresh(n => n + 1)} onInvalid={controller.invalidateScope} />}</div>
+    <div hidden={focused || tab !== 'routines'}>{!localOnly && state.status === 'ready' && state.scope && state.data && session?.status !== 'ACTIVE' && <WeeklySchedulePanel key={'schedule:' + state.scope.userId + ':' + state.scope.dataGeneration} api={weekly} scope={state.scope} routines={state.data.routines} onSaved={() => setScheduleRefresh(n => n + 1)} onInvalid={controller.invalidateScope} />}</div>
     {!localOnly && !focused && tab === 'history' && <SectionHeading title="운동 기록·분석" eyebrow="YOUR TRAINING" />}
     <div hidden={focused || tab !== 'history'}>{!localOnly && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
       refreshKey={(session ? session.id + ':' + session.version : 'home') + ':' + scheduleRefresh + ':' + state.data?.routines.map(r => r.id + ':' + r.version).join(',')} onInvalid={controller.invalidateScope} onOpen={id => void openRecord(id)} />}</div>

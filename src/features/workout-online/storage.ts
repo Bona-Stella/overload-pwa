@@ -1,4 +1,5 @@
 import type { Scope, Session, Start } from './types.ts'
+import { newId } from '../../id.ts'
 import { counter, object, session, uuid, instant } from './validation.ts'
 import type { LocalKey, LocalWorkout, RestPolicy } from '../workout-local/types.ts'
 import { localKey } from '../workout-local/types.ts'
@@ -32,7 +33,7 @@ export class WorkoutStore {
   private readonly factory: IDBFactory
   private readonly randomId: () => string
   private readonly databaseName: string
-  constructor(factory: IDBFactory = globalThis.indexedDB, randomId = () => crypto.randomUUID(), databaseName = DATABASE_NAME) {
+  constructor(factory: IDBFactory = globalThis.indexedDB, randomId = newId, databaseName = DATABASE_NAME) {
     this.factory = factory; this.randomId = randomId; this.databaseName = databaseName
   }
   private open(): Promise<IDBDatabase> {

@@ -1,5 +1,7 @@
 # Logs
 logs
+# Private durable review dumps, DB credentials and local lifecycle state.
+.local-backups/
 *.log
 npm-debug.log*
 yarn-debug.log*

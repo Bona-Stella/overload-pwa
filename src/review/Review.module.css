@@ -1,0 +1,8 @@
+.gauge { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }
+.gauge b { white-space: nowrap; font-size: 12px; font-weight: 500; }
+.off { justify-content: flex-end; }
+.track { flex: 1; min-width: 20px; height: 5px; background: #353941; border-radius: 20px; overflow: hidden; }
+.track i { display: block; height: 100%; border-radius: 20px; }
+.login { width: min(100%, 520px); margin: auto; padding: 16px; display: grid; gap: 8px; font: 12px system-ui,sans-serif; background: #1B1D22; color: #F0F1F4; }
+.login button { min-height: 44px; background: #6C93C6; color: #111820; border: 0; border-radius: 5px; font-weight: 700; }
+.login small { color: #A9ADB7; }

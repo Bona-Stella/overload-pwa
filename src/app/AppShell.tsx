@@ -14,7 +14,7 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
   children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; busy?: boolean; displayTheme?: DisplayTheme
 }) {
   return <div className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme}>
-    <main className={`${styles.content} ${authenticated && !focused ? styles.withTabs : ''} page`}>{children}</main>
+    <main className={`${styles.content} ${authenticated && !focused ? styles.withTabs : ''} ${authenticated && !focused && tab === 'home' ? styles.homeContent : ''} page`}>{children}</main>
     {authenticated && !focused && <nav className={styles.tabs} aria-label="기본 탐색">
       {tabs.map(item => <button type="button" key={item.id} aria-current={tab === item.id ? 'page' : undefined} disabled={busy} onClick={() => onNavigate(item.id)}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={item.path} /></svg>

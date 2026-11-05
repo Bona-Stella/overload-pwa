@@ -620,15 +620,21 @@ iPhone의 화면 구조를 고려합니다.
 
 ### 8.7 v0.9 적용 범위와 구현 상태
 
-[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.11절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
+[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.12절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
 [T01 공통 기반](../tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 홈/루틴/기록/설정 4탭과 Onyx 토큰·CSS Modules, 공통 표현을 적용했습니다. 인증·운동 controller와 저장·동기화 계약은 재사용합니다. 운동 집중 화면과 루틴 편집에서는 탭을 숨기며, 운동 홈 복귀와 탭 이동은 초안 저장 결과 및 계정 경계를 확인합니다. 운동 편집기는 탭 숨김으로 재마운트하지 않습니다. 운영 셸은 일반 테마이며, 개발 전용 `/ui-foundation`에서만 두 테마·입력·타이머·아이콘을 검증합니다. 이 화면은 프로덕션 번들에서 제외됩니다.
 
-| 영역 | T01 이후 현재 계정 경로의 구현 | T02 이후 구현할 내용 |
+[T02-A 홈 설계 일치 수정](../tasks/ui-v09-t02a-design-review-report.md)에 이은 [홈 세부 개선](../tasks/ui-v09-t02a-home-details-report.md)은 Decision Log 10.12절의 공식 달 헤더·날짜·글자 크기·선택 자동 닫힘·종목 달성 표시를 반영한다. 최근 운동은 종료 목록을 최대3페이지(60건), 상세 동시4개로 읽고 무수행을 홈에서만 제외한다. 분모는 InitialPlan, 분자는 기존 주간 달성 계약의 현재 유효 수행이며 승인 eligible과 구분한다. 태그는 선택형 표현만 준비하고 저장은 T02-B 계약 대상이다. 실제 루틴/일정/기록은 기존 API를 읽고, 디로딩 게이지의 대표 표시값은 명시적으로 실행한 개발 검토 앱의 `HomeReviewContext`에만 주입한다. `DEV && VITE_HOME_REVIEW` 진입점은 production build에서 제거되며 시안 값을 운동/자격/권한/통계·IndexedDB에 사용하지 않는다. 검토 서버만 전용 계정의 실제 OTP 메일 전달을 자동화한다. HTTP LAN의 로그인·기기 식별은 기존 CSPRNG UUID 함수를 공통화해 지원하지만, Web Locks가 없는 홈에서는 새 운동 START를 비활성화한다. 기존 편집 잠금·고정 요청·ACK·오프라인 경계는 유지한다. 설치형 PWA는 별도 production/HTTPS 검증 대상이다.
+
+[최종 시각 보완](../tasks/ui-v09-t02a-home-final-visual-report.md)에서 브랜드18px/700/자간0.06em을 적용하고, 동일 격리 검토 DB에 기존 루틴의 혼합 달리기 완료 기록1건을 실제 API로 추가했다. 이후 [최종 디테일](../tasks/ui-v09-t02a-home-polish-report.md)에서 공식 원형 아령 SVG·아이콘–수치 gap5px·제목 아래 구분선을 적용했다. 실제 계정의 태그 저장 기능은 여전히 T02-B 대상이다.
+
+2026-11-06 사용자의 iPhone 실기기 검토로 T02-A 일반 홈을 최종 승인했다. 디로딩 운영 API·T02-B 루틴 전체 UI는 후속이다. 검토 환경은 [마감·데이터 보존·수동 재개](../tasks/ui-v09-t02a-closeout.md)를 따르며 T02-B 1차 UI 구현이 끝나기 전에는 검토 서버를 자동 시작하지 않는다.
+
+| 영역 | 현재 계정 경로의 구현 | 후속 구현할 내용 |
 |---|---|---|
-| 홈·루틴 | `AppShell` 4탭에 기존 패널을 배치했습니다. 홈의 루틴 선택 경로·진행 운동 이어가기·미확인 시작 재확인, 루틴 탭의 온라인 관리·운동 시작과 `WeeklySchedulePanel` 일정·이력을 제공합니다. | [UI/UX 홈](../product/ui-ux.md#31-홈--home)의 상태별 헤더, 오늘 카드의 WEIGHT/CARDIO, 두 줄 루틴 선택·일정 날짜를 구성합니다. 일반 모드는 실제 적용 일정과 선택 ID, 디로딩 모드는 서버 기간과 임시 일정으로 렌더링합니다. 미조회·로딩·실패를 분석 OFF나 0주로 대체하지 않습니다. |
+| 홈·루틴 | [T02-A](../tasks/ui-v09-t02a-home-report.md)의 `HomePanel`이 실제 루틴 상세·주간 일정·통계 overview·세션 상세로 오늘 카드의 WEIGHT/CARDIO, 카드 밖 START, 두 줄 오늘만 선택, 월~일 상태, 최근 기록을 표시합니다. 날짜는 일정의 시간대를 사용하고 UNKNOWN/UNVERIFIABLE은 미수행으로 추정하지 않습니다. 상세는 버전별 재사용하며 새로고침 때 목록과 일정을 재조회합니다. START는 기존 controller에서 처리하며 직전 루틴 버전 변경은 재확인을 요구합니다. 루틴 탭의 온라인 관리와 `WeeklySchedulePanel` 일정 편집은 유지합니다. | 루틴 관리 전체 UI 전환, 서버 분석 설정·디로딩 상태 계약 이후 상태별 헤더·게이지 및 디로딩 일정 연동. 미조회·로딩·실패를 분석 OFF나 0주로 대체하지 않습니다. |
 | 운동 진행 | `LocalWorkoutScreen`의 세트 완료·취소, 타이머·임시 편집·유산소 입력, 공통 `RepsInput`의 ±1과 직접 입력. | 기존 기록/이번 기록 배치를 재사용합니다. 공통 3열 가운데는 현재 탐색 위치와 표시 대상 종목 수로 파생합니다. 종목 이동·임시 계획 변경 때 갱신하며 완료율이나 별도 저장 필드로 다루지 않습니다. 반복 조작은 초안에만 적용하고 기존 완료 검증·타이머를 보존합니다. |
 | 운동 결과·기록 | 기록 탭에서 `ClosedWorkout`의 서버 종료 기록, 당시 장비, 정정·논리 삭제·선택 복구 및 평가에 접근합니다. | 결과와 과거 상세의 공통 수행 영역을 WEIGHT/CARDIO로 나누고 세트별·종목별 볼륨을 표시합니다. 당시 계획과 현재 유효한 실제 수행, 최초 평가와 현재 평가를 구분합니다. 데이터 갱신은 기존 세션 확인과 ACK 흐름을 사용합니다. |
 | 카탈로그·통계 | `ExerciseSearch`의 표준 검색, 기록 탭의 `StatisticsPanel` 기간/집계·근육 상세와 `GrowthPanel` 종목·배치 검색을 유지합니다. 근육 화면은 대분류가 기본입니다. 공통 `ExerciseIcon`은 원본 6종을 32px로 제공하며, 현재 분류가 없는 검색 결과는 중립 표시입니다. | 카탈로그 분류 계약 후 대표 아이콘을 매핑합니다. 전체 세부 PRIMARY 기본 표시 및 부위 필터·SECONDARY 펼침을 적용합니다. 운동 현황 필터를 막대와 합계에 일관되게 전달하고, 성장 별칭 검색과 제조사별 참고 집계의 API 범위는 [백엔드 연동 설계](backend-ui-v0.9.md)를 확인합니다. |
