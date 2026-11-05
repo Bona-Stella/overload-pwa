@@ -105,8 +105,20 @@ docker exec <새컨테이너> pg_restore -U overload_test -d overload_v22_isolat
 
 - PWA `npm test`533/533, build/TypeScript, lint 성공
 - 분리된 T01 브라우저8개 보호 회귀 성공; 실제 iPhone 시각 검토는 사용자 최종 승인으로 완료
-- Backend `gradlew test homeReviewClasspath` 성공(도메인 변경 없는 test-classpath 준비/단위 테스트). 별도 전체 PostgreSQL integrationTest는 이번 마감에서 재실행하지 않았고, 보존 DB의 실제 전체 복원 검증을 수행
+- Backend `gradlew test homeReviewClasspath`320개 테스트 및 test-classpath 컴파일 성공. 별도 전체 PostgreSQL integrationTest는 이번 마감에서 재실행하지 않았고, 보존 DB의 실제 전체 복원 검증을 수행
 - 시작 차단 gate, Node/PowerShell 구문, 공식 HTML 구문, Git diff·공식 자산 보존·백업 Git 제외 확인
 - 재개 진입점은 컴파일/정적 검증했으며 실제 재기동 API 스모크는 사용자 지시에 따라 T02-B1차 후에 수행
 
-최종 마감 커밋에서 구현 커밋 해시와 실제 종료 확인을 아래에 기록한다. 현재 HEAD는 `git log -1 --oneline`, 구현 기준은 `git log --all --grep='complete v0.9 home integration'`로 확인할 수 있다.
+## 실제 종료·커밋 확인
+
+- PWA 기능/공식 문서·자산 커밋: `60a6dce9707c861926b0690e47a421db21c91ae2` — `feat(ui): complete v0.9 home integration`(60파일)
+- 서버 검토 fixture·보존/재개 커밋: `80327ca3b7db52e9cdedbbca8a153a667f021752` — `test(review): preserve and resume approved home data`(5파일)
+- 이어지는 마감 커밋에는 이 종료 기록과 Windows inspector의 변형 URL 대신 실제 PID/실행 경로를 확인하는 보완을 포함한다. 기능 구현 해시는 위 값이며 현재 마감 HEAD는 `git log -1 --oneline` 또는 백업 폴더의 `handoff.json`에서 확인한다(문서가 자신의 커밋 해시를 포함하는 순환 참조를 피함).
+- 2026-11-06 03:17 KST: Vite PID284252·Backend PID265828 모두 없음. Spring `applicationStopped=true`, `containerPreserved=true` 확인
+- 원래 `strange_darwin` 및 영구 `overload-home-review-b4972e78` 모두 **exited**, AutoRemove=false·Restart=no. 원래 DB 컨테이너 삭제 없음
+- 영구 DB의 마지막 로그: 체크포인트 완료 및 `database system is shut down`. named volume과 PC dump/해시 유지
+- 포트3000/6818/2744/2746/32800/11793/9229에서 검토 프로세스 listener0개. 다른 프로젝트 컨테이너는 유지
+- 종료 후 어떤 검토 서버도 재시작하지 않았고 자동 시작 등록도 하지 않음. 두 저장소 모두 main, push하지 않음
+- 공식 달·아령 SVG/PNG4개는 커밋 blob과 원본 작업 파일의 바이트 동일성을 확인. 백업·설정은 Git 제외
+
+이제 PC를 정상 종료해도 PC dump와 Docker 영구 볼륨을 이용해 기존 검토 데이터를 이어 사용할 수 있다. 재개는 반드시 T02-B1차 UI가 끝난 뒤 위 수동 명령을 실행한다.

@@ -84,14 +84,17 @@ if(action==='prepare'){
   if(response.status!==204){
     // The already-running pre-archive Vite process has no shutdown endpoint. Enable its local
     // Node inspector once, verify the script identity, then invoke its EXISTING SIGINT handler.
-    let occupied=false;try{await fetch('http://127.0.0.1:9229/json/list',{signal:AbortSignal.timeout(500)});occupied=true}catch{ }
-    ensure(!occupied,'Leave an existing unrelated inspector untouched')
-    process._debugProcess(front.pid)
-    let targets;const until=Date.now()+10000
+    let targets;try{targets=await(await fetch('http://127.0.0.1:9229/json/list',{signal:AbortSignal.timeout(500)})).json()}catch{ }
+    if(!targets)process._debugProcess(front.pid)
+    const until=Date.now()+10000
     while(!targets){try{targets=await(await fetch('http://127.0.0.1:9229/json/list')).json()}catch{ensure(Date.now()<until,'Node inspector did not open');await new Promise(r=>setTimeout(r,100))}}
-    const target=targets.find(t=>t.url?.replaceAll('\\','/').endsWith('/scripts/home-review-server.mjs'));ensure(target,'Wrong inspector target')
+    const target=targets.find(t=>t.type==='node'&&t.title==='scripts/home-review-server.mjs');ensure(target,'Wrong inspector target')
     const ws=new WebSocket(target.webSocketDebuggerUrl);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j})
-    ws.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:"process.emit('SIGINT')"}}));await new Promise(r=>setTimeout(r,500));ws.close()
+    const identity=new Promise((r,j)=>{ws.onmessage=event=>{const m=JSON.parse(event.data);if(m.id===1)m.error?j(Error('Inspector identity failed')):r(m.result.result.value)}})
+    ws.send(JSON.stringify({id:1,method:'Runtime.evaluate',params:{expression:'({pid:process.pid,script:process.argv[1]})',returnByValue:true}}))
+    const actual=await identity
+    if(actual.pid!==front.pid||resolve(actual.script)!==resolve('scripts/home-review-server.mjs')){ws.close();fail('Leave an unrelated inspector untouched')}
+    ws.send(JSON.stringify({id:2,method:'Runtime.evaluate',params:{expression:"process.emit('SIGINT')"}}));await new Promise(r=>setTimeout(r,500));ws.close()
   }
   const java=process.env.REVIEW_JAVA_HOME??'C:/Users/Home/.jdks/temurin-25.0.5',server=resolve('../overload-server'),directory=resolve(server,'build/verification-v22',c.sourceRun)
   const classes=resolve(server,'build/review-shutdown-agent');await mkdir(classes,{recursive:true})
