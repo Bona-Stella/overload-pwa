@@ -140,7 +140,7 @@ React와 TypeScript를 기반으로 모바일 중심의 웹 애플리케이션�
 |:---|:---|:---|
 | Styling | Tailwind CSS | 유틸리티 기반 스타일링 |
 | UI Components | shadcn/ui | 재사용 가능한 UI 컴포넌트 |
-| Icons | Lucide React | UI 아이콘 |
+| Icons | [추출 원본 PNG 6종](docs/product/assets/exercise-icons/README.md) | 운동 검색·선택, 32 CSS px |
 | Charts | Recharts | 운동 기록 및 통계 시각화 |
 
 ### State Management & Networking (도입 예정)
@@ -602,6 +602,19 @@ Local Development
 ---
 
 ## 📚 참고 문서
+
+UI v0.9의 공식 개발 기준은 아래 자료로 구분합니다. [UI/UX 요약](docs/product/ui-ux.md)은 적용 지점을 안내하며 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 현재 구현과 후속 작업을 구분합니다.
+
+| 공식 자료 | 역할 |
+|---|---|
+| [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md) | 확정 UI/UX 결정·상호작용. 충돌 시 10.11절 우선 |
+| [Wireframe](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html) | 무채색 화면 구조·사용자 흐름·기능 배치 |
+| [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md) | 실제 PWA의 Onyx 테마·컬러·그라데이션·토큰·시각적 위계 |
+| [Deloading Design v1.6](docs/product/Overload_Deloading_Design_Specification_v1.6.md) | 디로딩 정책·상태와 관련 기능 |
+| [Exercise Icons](docs/product/assets/exercise-icons/README.md) | 검색·선택 화면의 확정 원본 6종과 manifest |
+
+HTML의 흰색·회색을 실제 PWA 컬러로 옮기지 않습니다. 아이콘은 추출 원본을 재사용해 32 CSS px로 표시합니다. 테마 표시는 실제 디로딩 상태·권한과 구분하며 인증·기록·오프라인·동기화 계약은 기존 기준을 유지합니다.
+
 
 - [React 공식 문서](https://react.dev/)
 - [TypeScript 공식 문서](https://www.typescriptlang.org/)

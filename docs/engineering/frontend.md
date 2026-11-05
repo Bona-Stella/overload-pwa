@@ -18,7 +18,7 @@
 
 ## 1. 목적 및 적용 범위
 
-UI를 변경할 때는 [UI/UX 명세](../product/ui-ux.md)와 [v0.9 적용 범위](#87-v09-적용-범위와-구현-상태)를 확인합니다. 디로딩 도메인·데이터 경계는 [제품 v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)과 [백엔드 연동 설계](backend-ui-v0.9.md)를 따릅니다.
+UI를 변경할 때는 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)의 실제 컬러·시각 위계와 [추출 아이콘 원본](../product/assets/exercise-icons/README.md)을 먼저 확인하고 [UI/UX 명세](../product/ui-ux.md)와 [v0.9 적용 범위](#87-v09-적용-범위와-구현-상태)를 확인합니다. 디로딩 도메인·데이터 경계는 [제품 v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)과 [백엔드 연동 설계](backend-ui-v0.9.md)를 따릅니다.
 
 이 문서는 Overload 프론트엔드의 기술별 개발 규칙을 정의합니다.
 
@@ -624,7 +624,9 @@ iPhone의 화면 구조를 고려합니다.
 
 ### 8.7 v0.9 적용 범위와 구현 상태
 
-[와이어프레임 v0.9](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 독립 HTML이며 [결정 로그](../product/Overload_UI_Decision_Log_v0.9.md) 10.10절과 함께 적용합니다. 예시 값과 버튼 시연을 React 상태, 서버 응답, IndexedDB 또는 인증 결과로 가져오지 않습니다.
+[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.11절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
+
+게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
 | 영역 | 현재 계정 경로에서 확인한 구현 | v0.9 적용 시 구현할 내용 |
 |---|---|---|
@@ -638,6 +640,8 @@ iPhone의 화면 구조를 고려합니다.
 **상태 소유권.** 분석 설정·시작 자격·기간·세션 소속은 서버 응답에서 읽습니다. `일반 보기 / 디로딩 복귀`는 홈에서만 바꾸는 조회 상태이며 루틴·기록 탭 이동 동안 유지합니다. 진행 중 일반 보기에서는 원본 실행·정정·수정·삭제를 제공하지 않습니다. 서버 권한 검증은 별도로 적용됩니다. 미리보기 선택과 편집 초안은 로컬 UI 상태이고, 기간 시작·완료·취소는 서버 확인 이후 표시합니다.
 
 **실패·오프라인.** 새 디로딩 시작과 기간/임시 일정 변경은 서버 자격과 상태 확인이 필요합니다. 이미 시작한 운동은 기존 명시적 오프라인 이어가기, 계정·세대 경계, DB3/schema2, 고정 요청과 재연결 검사를 재사용합니다. 미전송과 서버 저장, 자격 미달과 조회 실패를 각각 표시합니다. 저장 실패·재인증·상태 충돌에서는 초안을 보존하고 기존 저장·복구 경로를 사용합니다. 8~10일차 안내는 운동 수행 중 표시하지 않으며, 종료 시점과 미동기화 수행의 조정은 백엔드 연동 설계의 검증 대상입니다.
+
+**실험 종료.** A/B 기술 비교는 종료되었으며 테스트 브랜치·worktree·프로토타입·산출물은 삭제했습니다. 과거 실험 참고 문구의 경로·측정값은 당시 기록이며 현재 파일 존재를 뜻하지 않습니다. 실제 구현은 위 공식 설계 자료와 현재 계정 경로의 계약을 기준으로 진행합니다.
 
 **수용 확인.** 분석 ON/OFF·진행·일반 보기·완료 당일의 헤더와 탭 전환, 시작 직전 자격 변화, 완전 휴식, 8~10일차, 미전송 보존을 확인합니다. 세트 취소·재완료, 장비 원본, 숫자 키패드와 터치 영역, 작은 화면의 두 줄 목록·주간 일정, 초점 복귀와 팝오버 닫기를 검증합니다. iPhone/Android에서 설치·백그라운드 복귀와 안전 영역을 별도로 확인합니다.
 
