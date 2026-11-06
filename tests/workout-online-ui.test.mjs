@@ -90,7 +90,7 @@ test('failed local write is never labeled as successful local saving',()=>{
 })
 test('new account shows empty routines without demo seeds or workout input controls',()=>{
   const html=render(WorkspaceView,{state:{...state,data:{...bootstrap,routines:[]}},controller:{}})
-  assert.match(html,/아직 루틴이 없습니다/);assert.match(html,/새 루틴 만들기/)
+  assert.match(html,/아직 루틴이 없습니다/);assert.match(html,/새 루틴/)
   assert.doesNotMatch(html,/PUSH|PULL|LEGS|세트 완료|운동 종료<|타이머 시작/)
 })
 test('selected server routine preserves exact decimals and START is blocked without durable storage or while another active session exists',()=>{
@@ -108,7 +108,7 @@ test('other editor is read only; AUTO_CLOSED does not claim a user finish or off
 test('routine form keeps original weight separate and requires explicit approval; schedule and evaluation algorithms are absent',()=>{
   const html=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,busy:false,controller:{},onClose(){}})
   assert.match(html,/최초 0 kg/);assert.match(html,/현재 승인 99999999999999.999999 kg/);assert.match(html,/루틴 저장으로 새 중량 승인/)
-  assert.doesNotMatch(html,/운동 요일|structureModified|자동 증량|새 승인 중량 \(kg\)/)
+  assert.doesNotMatch(html,/structureModified|자동 증량|새 승인 중량 \(kg\)/)
 })
 test('server strings are escaped, and the local-save warning never claims workout recording is ready',()=>{
   const value=session();value.initialPlan.routineName='<img src=x onerror=alert(1)>'
@@ -118,7 +118,7 @@ test('server strings are escaped, and the local-save warning never claims workou
 
 test('standard routine UI shows catalog search and optional equipment without personal creation',()=>{
   const html=render(RoutineForm,{routine:null,generation:scope.dataGeneration,exercises:[],manufacturers:[],busy:false,controller:{},onClose(){}})
-  assert.match(html,/role="combobox"/);assert.match(html,/등록된 표준 운동이 없습니다/)
+  assert.match(html,/aria-expanded="false"/);assert.match(html,/웨이트 종목 추가/);assert.doesNotMatch(html,/role="combobox"/)
   assert.doesNotMatch(html,/내 종목 생성|목록에 없는 내 종목|내 운동 종목/)
   const edit=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,manufacturers:[],busy:false,controller:{},onClose(){}})
   assert.match(edit,/제조사 · 선택/);assert.match(edit,/부하 방식 · 선택/);assert.match(edit,/제거한 배치 조회/)

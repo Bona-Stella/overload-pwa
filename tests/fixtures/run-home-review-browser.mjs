@@ -1,3 +1,4 @@
+import { runRoutineReview } from './routine-review-checks.mjs'
 // Real API browser checks. --design uses the opt-in Vite review app; no response fixture for its data.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
@@ -8,15 +9,16 @@ import { runHomeDesign } from './home-design-checks.mjs'
 import { runHomeDetails } from './home-details-checks.mjs'
 import { runHomeFinal } from './home-final-checks.mjs'
 import { runHomePolish } from './home-polish-checks.mjs'
+const routines = process.argv.includes('--routines')
 const polish = process.argv.includes('--polish')
 const final = process.argv.includes('--final')
 const details = process.argv.includes('--details')
-const design = process.argv.includes('--design') || details || final || polish
+const design = process.argv.includes('--design') || details || final || polish || routines
 const { runId } = JSON.parse(await readFile('logs/home-review/current.json', 'utf8'))
 const evidence = JSON.parse(await readFile(resolve('../overload-server/build/verification-v22', runId, 'home-review.json'), 'utf8'))
 await verifyV22Ownership(evidence)
 assert.equal((await (await fetch('http://127.0.0.1:3000/__home_review')).json()).runId, runId)
-const directory = resolve('logs/home-review', runId, ...(design ? [polish ? 'home-polish-20261106' : final ? 'home-final-20261106' : details ? 'home-details-20261106' : 'design-review'] : []))
+const directory = resolve('logs/home-review', runId, ...(design ? [routines ? 'routine-review-20261106' : polish ? 'home-polish-20261106' : final ? 'home-final-20261106' : details ? 'home-details-20261106' : 'design-review'] : []))
 await mkdir(directory, { recursive: true })
 const resumePath = resolve(directory, 'test-profile.json')
 let profileName = 'profile-' + crypto.randomUUID()
@@ -89,7 +91,7 @@ try {
   await send('Emulation.setTimezoneOverride', { timezoneId: 'Asia/Seoul' })
   await send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true })
   if (design) {
-    await (polish ? runHomePolish : final ? runHomeFinal : details ? runHomeDetails : runHomeDesign)({ send, evaluate, click, api, screenshot, wait, passed, directory, evidence, requests })
+    await (routines ? runRoutineReview : polish ? runHomePolish : final ? runHomeFinal : details ? runHomeDetails : runHomeDesign)({ send, evaluate, click, api, screenshot, wait, passed, directory, evidence, requests })
   } else {
   await send('Page.navigate', { url: 'http://127.0.0.1:3000/' })
   await login(evidence.reviewEmail)

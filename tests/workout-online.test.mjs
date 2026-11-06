@@ -120,7 +120,7 @@ test('a routine POST response loss is reconciled by the same UUID GET without cr
   s.api.routine=async()=>{if(!created)throw{status:404};return structuredClone(routine)}
   s.api.createRoutine=async()=>{posts++;created=true;throw Error('committed response lost')}
   s.api.routines=async()=>({...scope,routines:bootstrap.routines})
-  const body={id:ROUTINE,dataGeneration:scope.dataGeneration,name:routine.name,weightPlacements:[],cardioPlacements:[]}
+  const body={id:ROUTINE,dataGeneration:scope.dataGeneration,name:routine.name,weightPlacements:routine.weightPlacements.map(({id,standardExerciseId,manufacturerId,loadType,setCount,minReps,maxReps,initialWeightKg})=>({id,standardExerciseId,manufacturerId,loadType,setCount,minReps,maxReps,initialWeightKg})),cardioPlacements:[]}
   assert.equal(await s.controller.saveRoutine(body),false);assert.equal(await s.controller.saveRoutine(body),true)
   assert.equal(posts,1);assert.equal(s.controller.getSnapshot().selected.id,ROUTINE);s.disconnect()
 })

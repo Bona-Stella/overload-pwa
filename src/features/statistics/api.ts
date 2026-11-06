@@ -14,8 +14,8 @@ export type Statistics = Scope & { fromDate: string; toDateExclusive: string; pl
   cardio: { kind: string; name: string; activeMs: string; distanceKm: string | null; recordsWithoutDistance: string }[];
   recentSessions: { id: string; routineName: string; workoutDate: string; startedAt: string; status: 'FINISHED' | 'AUTO_CLOSED' }[] }
 export type Period = { fromDate: string; toDateExclusive: string }
-export type PlannedDay = { date: string; status: 'UNKNOWN' | 'BEFORE_REGISTRATION' | 'REST' | 'PLANNED' | 'UNVERIFIABLE'; scheduleVersion: string | null;
-  plan: import('../workout-online/types.ts').Routine | null; plannedExercises: number | null; completedExercises: number | null; effectiveDay: string | null; selectedSessionId: string | null }
+export type PlannedDay = { date: string; status: 'UNKNOWN' | 'BEFORE_REGISTRATION' | 'REST' | 'PLANNED' | 'UNVERIFIABLE' | 'PENDING'; scheduleVersion: string | null;
+  plan: import('../workout-online/types.ts').Routine | null; plannedExercises: number | null; completedExercises: number | null; effectiveDay: string | null; selectedSessionId: string | null; reviewStatus: string | null; reviewRevision: string | null }
 export type CardioTotal = { kind: string; activeMs: string; distanceKm: string | null; manualDistanceKm: string | null; calculatedDistanceKm: string | null; unknownSourceDistanceKm: string | null; manualRecords: string; calculatedRecords: string; unknownSourceRecords: string; recordsWithoutDistance: string }
 export type Overview = { statistics: Statistics; effectiveWorkoutDays: string | null; unknownPlanDays: number; unverifiableDays: number; plannedDays: PlannedDay[]; cardioByKind: CardioTotal[] }
 const nonnegative = (x: unknown): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 2147483647
@@ -46,8 +46,8 @@ export function overview(x: unknown): x is Overview {
     && (x.unknownPlanDays === 0 ? x.statistics.planCoverage === 'FULL_SCHEDULE_HISTORY' : x.statistics.planCoverage === 'PARTIAL_SCHEDULE_HISTORY' && x.statistics.plannedWorkoutDays === null && x.statistics.routineAchievementPercent === null && x.effectiveWorkoutDays === null)
     && (x.unverifiableDays === 0 || x.statistics.routineAchievementPercent === null && x.effectiveWorkoutDays === null)
     && v.array(x.cardioByKind, c => v.object(c) && v.name(c.kind) && v.counter(c.activeMs) && v.nullable(c.distanceKm, decimal) && v.nullable(c.manualDistanceKm, decimal) && v.nullable(c.calculatedDistanceKm, decimal) && v.nullable(c.unknownSourceDistanceKm, decimal) && v.counter(c.manualRecords) && v.counter(c.calculatedRecords) && v.counter(c.unknownSourceRecords) && v.counter(c.recordsWithoutDistance))
-    && v.array(x.plannedDays, d => v.object(d) && date(d.date) && ['UNKNOWN', 'BEFORE_REGISTRATION', 'REST', 'PLANNED', 'UNVERIFIABLE'].includes(String(d.status)) && v.nullable(d.scheduleVersion, v.counter)
-      && v.nullable(d.plan, v.routine) && v.nullable(d.plannedExercises, nonnegative) && v.nullable(d.completedExercises, nonnegative) && v.nullable(d.effectiveDay, n => fraction(n, 1)) && v.nullable(d.selectedSessionId, v.uuid))
+    && v.array(x.plannedDays, d => v.object(d) && date(d.date) && ['UNKNOWN', 'BEFORE_REGISTRATION', 'REST', 'PLANNED', 'UNVERIFIABLE', 'PENDING'].includes(String(d.status)) && v.nullable(d.scheduleVersion, v.counter)
+      && v.nullable(d.plan, v.routine) && v.nullable(d.plannedExercises, nonnegative) && v.nullable(d.completedExercises, nonnegative) && v.nullable(d.effectiveDay, n => fraction(n, 1)) && v.nullable(d.selectedSessionId, v.uuid) && v.nullable(d.reviewStatus, s => typeof s === 'string' && ['PENDING','PENDING_ACTIVE','UNKNOWN','MISSED','PERFORMED','EMPTY'].includes(s)) && v.nullable(d.reviewRevision, v.counter))
 }
 export class StatisticsApi {
   private readonly transport: WorkoutTransport

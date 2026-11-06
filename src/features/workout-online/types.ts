@@ -1,3 +1,4 @@
+import type { RoutineTag } from '../home/tags.ts'
 // Wire types follow the Backend V17 contract. Counters/decimals never pass through Number.
 export type UUID = string
 export type Counter = string
@@ -5,19 +6,21 @@ export type Decimal = string
 export type Instant = string
 export type Scope = { userId: UUID; dataGeneration: Counter }
 export type WorkoutSettingsResponse = Scope & { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
-export type CardioPlan = { kind: 'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'; name: string; targetSeconds: number;
+export type CardioActivity = { id: UUID; category: 'RUNNING'|'WALKING'|'CYCLING'; name:string; kind:CardioPlan['kind'] }
+export type CardioPlan = { activityId?:UUID; kind: 'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'; name: string; targetSeconds: number;
   targetDistanceKm: Decimal | null; intensity: { mode: 'SPEED' | 'PACE'; value: Decimal } | null; inclinePercent: Decimal | null; resistance: Decimal | null }
 export type LoadType = 'PLATE' | 'STACK' | 'DUMBBELL' | 'BODYWEIGHT'
 export type Equipment = { manufacturerId: UUID | null; loadType: LoadType | null }
-export type StandardExercise = { id: UUID; name: string; aliases: string[] }
+export type StandardExercise = { id: UUID; name: string; aliases: string[]; muscles?: {id:UUID;groupCode:string;name:string;role:'PRIMARY'|'SECONDARY'}[] }
 export type Manufacturer = { id: UUID; name: string }
 export type WeightNew = Equipment & { id: UUID; standardExerciseId: UUID; setCount: number; minReps: number; maxReps: number; initialWeightKg: Decimal }
 export type WeightPlacement = WeightNew & { exerciseName: string; approvedWeightKg: Decimal; deletedAt: Instant | null }
 export type CardioPlacement = { id: UUID; plan: CardioPlan; deletedAt: Instant | null }
-export type Routine = Scope & { id: UUID; version: Counter; name: string; weightPlacements: WeightPlacement[]; cardioPlacements: CardioPlacement[] }
-export type RoutineList = Scope & { routines: { id: UUID; name: string; version: Counter }[] }
-export type CreateRoutine = { id: UUID; dataGeneration: Counter; name: string; weightPlacements: WeightNew[]; cardioPlacements: { id: UUID; plan: CardioPlan }[] }
-export type UpdateRoutine = { dataGeneration: Counter; expectedVersion: Counter; name: string;
+export type RoutineMeta = { tag?: RoutineTag | null; createdAt?: Instant | null }
+export type Routine = Scope & RoutineMeta & { id: UUID; version: Counter; name: string; weightPlacements: WeightPlacement[]; cardioPlacements: CardioPlacement[] }
+export type RoutineList = Scope & { routines: ({ id: UUID; name: string; version: Counter } & RoutineMeta)[] }
+export type CreateRoutine = { tag?:RoutineTag|null; id: UUID; dataGeneration: Counter; name: string; weightPlacements: WeightNew[]; cardioPlacements: { id: UUID; plan: CardioPlan }[] }
+export type UpdateRoutine = { tag?:RoutineTag|null; dataGeneration: Counter; expectedVersion: Counter; name: string;
   weightPlacements: ((WeightNew & { mode: 'NEW' }) | (Equipment & { mode: 'EXISTING' | 'RESTORE'; id: UUID; setCount: number; minReps: number; maxReps: number }))[];
   cardioPlacements: { mode: 'NEW' | 'EXISTING' | 'RESTORE'; id: UUID; plan: CardioPlan }[];
   weightApprovals: { placementId: UUID; nextApprovedWeightKg: Decimal; occurredAt: Instant }[] }

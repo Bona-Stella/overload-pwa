@@ -1,5 +1,5 @@
 import type { AuthController } from '../auth/controller.ts'
-import type { WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
+import type { CardioActivity, WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
   ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents, ClosedPage, ClosedCursor } from './types.ts'
 import * as v from './validation.ts'
 
@@ -50,9 +50,10 @@ export class WorkoutApi {
   async catalog(userId: string, signal: AbortSignal): Promise<StandardExercise[]> {
     const result = await this.transport.workoutRequest(userId, '/api/v1/standard-exercises/search-data', 'GET', undefined, signal)
     const data = result.data
-    if (result.status !== 200 || !v.object(data) || data.schemaVersion !== 1 || !v.array(data.exercises, e => v.object(e) && v.uuid(e.id) && v.name(e.name) && v.array(e.aliases, v.name))) throw new WorkoutApiError('RESPONSE_INVALID')
+    if (result.status !== 200 || !v.object(data) || data.schemaVersion !== 1 || !v.array(data.exercises, e => v.object(e) && v.uuid(e.id) && v.name(e.name) && v.array(e.aliases, v.name) && (e.muscles===undefined || v.array(e.muscles,m=>v.object(m)&&v.uuid(m.id)&&v.name(m.groupCode)&&v.name(m.name)&&['PRIMARY','SECONDARY'].includes(String(m.role)))))) throw new WorkoutApiError('RESPONSE_INVALID')
     return data.exercises as StandardExercise[]
   }
+  async cardioActivities(userId:string,signal:AbortSignal):Promise<CardioActivity[]>{const r=await this.transport.workoutRequest(userId,'/api/v1/cardio-activities','GET',undefined,signal);if(r.status!==200||!v.object(r.data)||!v.array(r.data.activities,a=>v.object(a)&&v.uuid(a.id)&&['RUNNING','WALKING','CYCLING'].includes(String(a.category))&&v.name(a.name)&&['TREADMILL','BIKE','OUTDOOR','STAIRS','OTHER'].includes(String(a.kind))))throw new WorkoutApiError('RESPONSE_INVALID');return r.data.activities as CardioActivity[]}
   async manufacturers(userId: string, signal: AbortSignal): Promise<Manufacturer[]> {
     const result = await this.transport.workoutRequest(userId, '/api/v1/manufacturers', 'GET', undefined, signal)
     const data = result.data

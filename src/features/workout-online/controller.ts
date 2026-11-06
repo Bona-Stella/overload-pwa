@@ -1,5 +1,6 @@
+import { routineMatches } from './routine-match.ts'
 import type { AuthController, AuthState } from '../auth/controller.ts'
-import { WorkoutApi } from './api.ts'
+import { WorkoutApi, WorkoutApiError } from './api.ts'
 import { WorkoutStore, LocalStoreError } from './storage.ts'
 import type { StartAttempt, SessionCopy } from './storage.ts'
 import type { Scope, Session, Routine, RoutineList, CreateRoutine, UpdateRoutine } from './types.ts'
@@ -218,12 +219,20 @@ export class WorkoutOnlineController {
     this.set({ busy: true, issue: null, notice: '' })
     try {
       let value: Routine
-      if (id) value = await this.api.updateRoutine(scope, id, body as UpdateRoutine, context.signal)
+      if (id) {
+        try{value=await this.api.updateRoutine(scope,id,body as UpdateRoutine,context.signal)}catch(error){
+          if(!context.current())throw error
+          const latest=await this.api.routine(scope,id,context.signal)
+          if(BigInt(latest.version)!==BigInt((body as UpdateRoutine).expectedVersion)+1n||!routineMatches(latest,body))throw error
+          value=latest
+        }
+      }
       else {
         const creation = body as CreateRoutine
         // A prior creation may have committed without its response. Re-read its fixed UUID first.
         try {
           value = await this.api.routine(scope, creation.id, context.signal)
+          if(!routineMatches(value,body))throw new WorkoutApiError('ROUTINE_ID_CONFLICT',409)
           if (context.current()) this.set({ notice: '같은 요청의 기존 루틴을 조회했습니다. 현재 서버 내용을 확인해 주세요.' })
         } catch (error) {
           if ((error as { status?: number }).status !== 404) throw error

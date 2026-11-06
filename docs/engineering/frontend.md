@@ -620,6 +620,8 @@ iPhone의 화면 구조를 고려합니다.
 
 ### 8.7 v0.9 적용 범위와 구현 상태
 
+[T02-B 1차 루틴 UI](../tasks/ui-v09-t02b-first-ui-report.md)는 목록·편집·검색·태그/요일 초안을 구현한 미커밋 검토 단계다. 태그 저장과 편집기 요일 결합 저장은 미연동이며 선택을 저장 성공처럼 처리하지 않는다. 실제 API/iPhone 검토 및 검토 서버 재개는 사용자 승인 후 진행한다.
+
 [Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.12절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
@@ -1495,3 +1497,17 @@ Overload 프론트엔드의 핵심은
 AI 에이전트는 기존 구조를 이해하고,
 사용자 데이터를 보호하며,
 검증 가능한 프론트엔드 코드를 작성해야 합니다.
+
+## T02-B 2차 연동 (2026-11-06)
+
+루틴 목록은 생성일 최신순, 현재 주간 배정과 필터를 사용한다. 태그는 서버 nullable 필드이며 UI 임시 상태가 아니다. 카탈로그 근육은 실제 PRIMARY 매핑만 표시한다. 공통 CardioPlanFields와 cardio-draft는 기존 CardioPlan 및 세션 addCardio/updateCardioPlan 입력을 사용하며 IndexedDB 버전과 고정 요청을 변경하지 않는다. 루틴 저장/일정 저장은 별도 단계이고 일정 실패 시 루틴 중복 저장 없이 재시도한다. 계정·세대·일정 version과 기존 적용일을 확인한다. 상세 결과는 [2차 보고서](../tasks/ui-v09-t02b-second-report.md)를 따른다.
+
+사용자는 이번 요청에서 정적 검증 후 **기존 보존 검토 환경의 안전 재개 및 격리 DB V23 추가 마이그레이션**을 승인했다. 개인 DB(5433)에는 적용하지 않는다. 예전 1차의 서버 실행 금지는 당시 단계의 제한이다. 실제 iPhone T02-B 최종 승인은 아직 진행하지 않았다.
+
+## G2~G3 일정 계약 전환 (2026-11-06)
+
+주간 일정은 현재 version/timeZone/appliedAt/assignments를 사용하고 PUT에 contractVersion=immediate-v1을 보낸다. current/pending/nextEffectiveFrom과 예약 표시를 제거했다. 저장 응답과 재조회가 version/정확한 배정/시각에서 일치해야 성공하며, 루틴 성공·일정 실패는 기존 고정 입력으로 일정만 재확인한다. ACTIVE 오류는 종료/저장 확인 안내와 함께 입력을 유지한다.
+
+홈과 루틴 목록은 같은 현재 배정을 재조회한다. 과거 계획·첫 예정 START는 서버 overview의 고정 근거를 사용하고 현재 템플릿으로 덮지 않는다. PENDING과 미검사/재검사0은 미수행 확정 표시를 하지 않는다. 일반 통계의 계획 미달과 실제 무수행을 구분한다. 정책은 [통계 v1.4](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md), API는 [일정 계약](../../../overload-server/docs/api/weekly-schedule.md)을 따른다. 기존 UI v0.9 원본은 역사적 레이아웃 기준으로 보존하며 해당 예약 의미만 후속 계약이 대체한다.
+
+IndexedDB/ACK/writerEpoch/dataGeneration/타 기기 읽기 전용과 개발용 디로딩 샘플은 유지한다. 이번 단계는 실제 개발·검토 DB migration과 서버 운영 전환을 허용하지 않는다. 기존 V23 전용 재개 도구는 V24를 임의 적용하도록 변경하지 않았다.

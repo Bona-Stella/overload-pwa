@@ -1,94 +1,117 @@
-import { useState } from 'react'
-import type { CardioPlan, CreateRoutine, Manufacturer, StandardExercise, Routine, UpdateRoutine } from './types.ts'
-import { countDraft, decimalDraft, name as validName } from './validation.ts'
+import { useEffect, useRef, useState } from 'react'
+import { boundaryError } from '../home/load.ts'
+import { newId } from '../../id.ts'
+import { TagPicker } from './TagPicker.tsx'
+import { Dialog } from '../../components/Dialog.tsx'
+import { exerciseDescription } from './catalog-label.ts'
+import { CardioPlanFields } from './CardioPlanFields.tsx'
+import { cardioPlan, draftCardio, emptyCardio, adjust } from './cardio-draft.ts'
+import type { CardioDraft as PlanDraft } from './cardio-draft.ts'
+import { dayNames, plannedAssignments, routineAssignments, sameAssignments, saveSchedule } from './routine-schedule.ts'
+import { scheduleIssue } from '../statistics/weekly-schedule.ts'
+import type { WeeklySchedule, WeeklyScheduleApi } from '../statistics/weekly-schedule.ts'
+import type { RoutineTag } from '../home/tags.ts'
+import styles from './Routine.module.css'
+import type { CardioActivity, Scope, CreateRoutine, Manufacturer, StandardExercise, Routine, UpdateRoutine } from './types.ts'
+import { decimalDraft, name as validName } from './validation.ts'
 import type { WorkoutOnlineController } from './controller.ts'
 import { ExerciseSearch } from './ExerciseSearch.tsx'
 import { EquipmentFields } from './EquipmentFields.tsx'
 
 import { newWeights, updatedWeights } from './routine-weights.ts'
 import type { WeightDraft } from './routine-weights.ts'
-type CardioDraft = { id: string; existing: boolean; restore?: boolean; kind: CardioPlan['kind']; name: string; seconds: string; distance: string;
-  intensityMode: 'SPEED' | 'PACE'; intensity: string; incline: string; resistance: string }
-const optional = (value: string) => value.trim() === '' ? null : decimalDraft(value)
-const inRange = (value: string | null, min: string, max: string) => {
-  const units = (v: string) => { const [whole, fraction = ''] = v.split('.'); return BigInt(whole) * 1000000n + BigInt(fraction.padEnd(6, '0')) }
-  return value === null || units(value) >= units(min) && units(value) <= units(max)
-}
-function cardioPlan(draft: CardioDraft): CardioPlan {
-  const targetSeconds = countDraft(draft.seconds)
-  const targetDistanceKm = optional(draft.distance), inclinePercent = optional(draft.incline), resistance = optional(draft.resistance), intensity = optional(draft.intensity)
-  if (!validName(draft.name) || draft.name.length > 100 || targetSeconds > 86400) throw new Error('유산소 이름과 1~86400초의 목표 시간을 확인해 주세요.')
-  if (!inRange(targetDistanceKm, '0.001', '1000') || !inRange(inclinePercent, '0', '50') || !inRange(resistance, '1', '100')
-    || !inRange(intensity, '0.1', draft.intensityMode === 'SPEED' ? '100' : '120')) throw new Error('유산소 선택값의 허용 범위를 확인해 주세요.')
-  if (!['TREADMILL', 'BIKE', 'OUTDOOR'].includes(draft.kind) && (targetDistanceKm !== null || intensity !== null)
-    || draft.kind !== 'TREADMILL' && inclinePercent !== null || draft.kind !== 'BIKE' && resistance !== null) throw new Error('이 유산소 종류에 사용할 수 없는 선택값을 비워 주세요.')
-  return { kind: draft.kind, name: draft.name, targetSeconds, targetDistanceKm, intensity: intensity === null ? null : { mode: draft.intensityMode, value: intensity }, inclinePercent, resistance }
-}
-export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose }: {
-  routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: WorkoutOnlineController; onClose: () => void
+type CardioDraft = PlanDraft & {id:string;existing:boolean;restore?:boolean}
+export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, weekly, scheduleState, scope, activities = [], onSaved }: {
+  weekly?:WeeklyScheduleApi; scheduleState?:WeeklySchedule; scope?:Scope; activities?:CardioActivity[]; onSaved?:()=>void; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: WorkoutOnlineController; onClose: () => void
 }) {
-  const [id] = useState(() => routine?.id ?? crypto.randomUUID())
+  const [id] = useState(() => routine?.id ?? newId())
+  const [tag, setTag] = useState<RoutineTag | ''>(routine?.tag??'')
+  const [picker, setPicker] = useState(false)
+  const [scheduleBase] = useState(scheduleState)
+  const [days,setDays] = useState<number[]>(()=>scheduleState?plannedAssignments(scheduleState).filter(a=>a.routineId===routine?.id).map(a=>a.dayOfWeek):[])
+  const [conflict,setConflict]=useState(false),[saving,setSaving]=useState(false),[routineSaved,setRoutineSaved]=useState(false)
+  const guard=useRef(false),abort=useRef(new AbortController())
+  useEffect(()=>{abort.current=new AbortController();return()=>abort.current.abort()},[])
+  const conflicts=scheduleBase?plannedAssignments(scheduleBase).filter(a=>days.includes(a.dayOfWeek)&&a.routineId!==id):[]
+  const locked=busy||saving
+  const move = <T,>(values: T[], index: number, delta: number) => { const next = [...values], target = index + delta; if(target<0 || target>=next.length)return values; [next[index],next[target]]=[next[target],next[index]];return next }
   const [name, setName] = useState(routine?.name ?? '')
   const [weights, setWeights] = useState<WeightDraft[]>(() => routine?.weightPlacements.map(p => ({ id: p.id, standardExerciseId: p.standardExerciseId, exerciseName: p.exerciseName, manufacturerId: p.manufacturerId, loadType: p.loadType,
     setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), initialWeightKg: p.initialWeightKg, approvedWeightKg: p.approvedWeightKg, approve: false, nextWeightKg: p.approvedWeightKg })) ?? [])
-  const [cardio, setCardio] = useState<CardioDraft[]>(() => routine?.cardioPlacements.map(p => ({ id: p.id, existing: true, kind: p.plan.kind, name: p.plan.name,
-    seconds: String(p.plan.targetSeconds), distance: p.plan.targetDistanceKm ?? '', intensityMode: p.plan.intensity?.mode ?? 'SPEED', intensity: p.plan.intensity?.value ?? '', incline: p.plan.inclinePercent ?? '', resistance: p.plan.resistance ?? '' })) ?? [])
+  const [cardio, setCardio] = useState<CardioDraft[]>(() => routine?.cardioPlacements.map(p => ({id:p.id,existing:true,...draftCardio(p.plan)})) ?? [])
   const [removed, setRemoved] = useState<Routine | null>(null)
   const [error, setError] = useState('')
   const [submitted, setSubmitted] = useState<CreateRoutine | UpdateRoutine | null>(null)
+  const [initialDraft] = useState(()=>JSON.stringify({name,weights,cardio,tag,days}))
+  const close = () => { if(JSON.stringify({name,weights,cardio,tag,days})===initialDraft || window.confirm('작성 중인 변경을 버리고 닫을까요?')) onClose() }
   const changeWeight = (id: string, patch: Partial<WeightDraft>) => setWeights(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
   const changeCardio = (id: string, patch: Partial<CardioDraft>) => setCardio(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
-  async function save() {
+  async function save(confirmed=false) {
+    if(guard.current)return
+    if(conflicts.length&&!confirmed&&!routineSaved){setConflict(true);return}
+    guard.current=true;setSaving(true)
     try {
+      if(!scheduleBase||!weekly||!scope)throw new Error('주간 일정을 확인한 뒤 저장해 주세요. 입력은 유지됩니다.')
       let body = submitted
       if (!body) {
         if (!validName(name) || weights.length + cardio.length === 0) throw new Error('루틴 이름과 한 개 이상의 운동을 입력해 주세요.')
         const weightPlacements = newWeights(weights)
         const cardioPlacements = cardio.map(c => ({ id: c.id, plan: cardioPlan(c) }))
-        body = routine ? { dataGeneration: generation, expectedVersion: routine.version, name,
+        body = routine ? { dataGeneration: generation, expectedVersion: routine.version, name, tag:tag||null,
           weightPlacements: updatedWeights(weights),
           cardioPlacements: cardioPlacements.map(c => ({ ...c, mode: cardio.find(x => x.id === c.id)!.restore ? 'RESTORE' as const : cardio.find(x => x.id === c.id)!.existing ? 'EXISTING' as const : 'NEW' as const })),
           weightApprovals: weights.filter(w => w.approve && w.approvedWeightKg !== null).map(w => ({ placementId: w.id, nextApprovedWeightKg: decimalDraft(w.nextWeightKg), occurredAt: new Date().toISOString() })) }
-          : { id, dataGeneration: generation, name, weightPlacements, cardioPlacements }
+          : { id, dataGeneration: generation, name, tag:tag||null, weightPlacements, cardioPlacements }
         setSubmitted(body)
       }
       setError('')
-      if (await controller.saveRoutine(body, routine?.id)) onClose()
-    } catch (error) { setError(error instanceof Error ? error.message : '입력값을 확인해 주세요.') }
+      if(!routineSaved){if(!await controller.saveRoutine(body,routine?.id))return;setRoutineSaved(true)}
+      const desired=routineAssignments(plannedAssignments(scheduleBase),id,days)
+      if(!sameAssignments(plannedAssignments(scheduleBase),desired))await saveSchedule(weekly,scope,scheduleBase,desired,abort.current.signal)
+      if(!abort.current.signal.aborted){onSaved?.();onClose()}
+    } catch (error) { if(boundaryError(error))controller.invalidateScope(error);if(!abort.current.signal.aborted)setError(scheduleIssue(error)) }
+    finally{guard.current=false;if(!abort.current.signal.aborted)setSaving(false)}
   }
-  return <form className="stack online-routine" noValidate onSubmit={event => { event.preventDefault(); void save() }}>
-    <div className="section-heading"><h2>{routine ? '루틴 편집' : '새 루틴'}</h2><button type="button" className="quiet" disabled={busy} onClick={onClose}>닫기</button></div>
+  return <form className={`${styles.editor} stack online-routine`} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
+    <div className="section-heading"><h2>{routine ? '루틴 편집' : '새 루틴'}</h2><button type="button" className="quiet" disabled={locked} onClick={close}>닫기</button></div>
     <p className="muted small">온라인에서 저장합니다. 기존 배치의 승인 중량은 아래에서 명시적으로 선택한 경우에만 변경됩니다. 진행 중인 운동의 시작 계획은 유지됩니다.</p>
-    <fieldset disabled={busy || submitted !== null} className="stack online-fieldset">
+    <fieldset disabled={locked || submitted !== null} className="stack online-fieldset">
       {routine && <button type="button" className="outline" onClick={() => void controller.removedRoutine().then(value => { if (value) { if (value.version !== routine.version) setError('루틴이 변경되었습니다. 닫은 뒤 최신 루틴을 다시 조회해 주세요.'); else setRemoved(value) } })}>제거한 배치 조회</button>}
       {removed?.weightPlacements.filter(p => !weights.some(w => w.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setWeights(values => [...values, { ...p, restore: true, standardExerciseId: p.standardExerciseId, setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), approve: false, nextWeightKg: p.approvedWeightKg }])}>{p.exerciseName} 배치 복원</button>)}
-      {removed?.cardioPlacements.filter(p => !cardio.some(c => c.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setCardio(values => [...values, { id: p.id, existing: true, restore: true, kind: p.plan.kind, name: p.plan.name, seconds: String(p.plan.targetSeconds), distance: p.plan.targetDistanceKm ?? '', intensityMode: p.plan.intensity?.mode ?? 'SPEED', intensity: p.plan.intensity?.value ?? '', incline: p.plan.inclinePercent ?? '', resistance: p.plan.resistance ?? '' }])}>{p.plan.name} 배치 복원</button>)}
-      <label>루틴 이름<input value={name} onChange={e => setName(e.target.value)} /></label>
+      {removed?.cardioPlacements.filter(p => !cardio.some(c => c.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setCardio(values => [...values, {id:p.id,existing:true,restore:true,...draftCardio(p.plan)}])}>{p.plan.name} 배치 복원</button>)}
+      <section className={styles.formbox}><label>루틴 이름<input placeholder="나의 루틴" value={name} onChange={e => setName(e.target.value)} /></label>
+      <TagPicker value={tag} onChange={setTag}/></section>
+      <section className={styles.formbox}><span>운동 요일 · 복수 선택</span><div className={styles.days}>{dayNames.map((day,i)=><button type="button" key={day} aria-pressed={days.includes(i+1)} onClick={()=>setDays(v=>v.includes(i+1)?v.filter(d=>d!==i+1):[...v,i+1])}>{day}</button>)}</div><p className="muted small">{scheduleBase?'저장 즉시 적용 · '+scheduleBase.timeZone:'일정을 조회하지 못했습니다. 저장을 보류합니다.'}</p></section>
+      <h3 className={styles.group}>WEIGHT <small>웨이트 운동 · {weights.length}종목</small></h3>
+      {!weights.length && <p className="muted small">등록된 웨이트 종목 없음</p>}
+
       {weights.map((w, index) => <section className="card stack" key={w.id} aria-label={`웨이트 ${index + 1}`}>
         <div className="section-heading"><h3>{index + 1}. {w.exerciseName}</h3><button type="button" className="quiet danger" onClick={() => setWeights(values => values.filter(x => x.id !== w.id))}>배치 제거</button></div>
-        <EquipmentFields value={w} manufacturers={manufacturers} onChange={value => changeWeight(w.id, value)} />
-        <div className="form-grid">{([['setCount', '세트 수'], ['minReps', '최소 반복'], ['maxReps', '최대 반복']] as const).map(([key, label]) => <label key={key}>{label}<input inputMode="numeric" value={w[key]} onChange={e => changeWeight(w.id, { [key]: e.target.value })} /></label>)}</div>
-        {w.approvedWeightKg === null ? <label>최초 중량 (kg)<input inputMode="decimal" value={w.initialWeightKg} onChange={e => changeWeight(w.id, { initialWeightKg: e.target.value })} /></label>
+        <small className="muted">{exercises.find(e=>e.id===w.standardExerciseId)?exerciseDescription(exercises.find(e=>e.id===w.standardExerciseId)!):'부위·근육 미분류'}</small>
+        <div className={styles.targets}>{([['setCount', '세트 수'], ['minReps', '최소 반복'], ['maxReps', '최대 반복']] as const).map(([key, label]) => <label key={key}>{label}<input inputMode="numeric" value={w[key]} onChange={e => changeWeight(w.id, { [key]: e.target.value })} /></label>)}</div>
+        {w.approvedWeightKg === null ? <div className={styles.weightAdjust}><button type="button" onClick={()=>{try{const next=adjust(w.initialWeightKg,-1);changeWeight(w.id,{initialWeightKg:next})}catch(e){setError((e as Error).message)}}}>−2.5</button><label>최초 중량 (kg)<input inputMode="decimal" value={w.initialWeightKg} onChange={e=>changeWeight(w.id,{initialWeightKg:e.target.value})}/></label><button type="button" onClick={()=>{try{changeWeight(w.id,{initialWeightKg:adjust(w.initialWeightKg,1)})}catch(e){setError((e as Error).message)}}}>+2.5</button></div>
           : <><p>최초 {w.initialWeightKg} kg · 현재 승인 {w.approvedWeightKg} kg</p><label className="online-check"><input type="checkbox" checked={w.approve} onChange={e => changeWeight(w.id, { approve: e.target.checked })} />루틴 저장으로 새 중량 승인</label>
             {w.approve && <label>새 승인 중량 (kg)<input inputMode="decimal" value={w.nextWeightKg} onChange={e => changeWeight(w.id, { nextWeightKg: e.target.value })} /></label>}</>}
+        <EquipmentFields value={w} manufacturers={manufacturers} onChange={value=>changeWeight(w.id,value)}/><div className={styles.actions}><button type="button" disabled={index===0} onClick={()=>setWeights(v=>move(v,index,-1))}>↑ 위로</button><button type="button" disabled={index===weights.length-1} onClick={()=>setWeights(v=>move(v,index,1))}>↓ 아래로</button></div>
       </section>)}
-      <section className="card stack"><ExerciseSearch exercises={exercises} onSelect={exercise => {
-        setWeights(values => [...values, { id: crypto.randomUUID(), standardExerciseId: exercise.id, exerciseName: exercise.name, manufacturerId: null, loadType: null, setCount: '3', minReps: '6', maxReps: '10', initialWeightKg: '', approvedWeightKg: null, approve: false, nextWeightKg: '' }])
-      }} /></section>
+      <button type="button" className="outline" aria-expanded={picker} onClick={()=>setPicker(v=>!v)}>{picker?'종목 선택 닫기':'+ 웨이트 종목 추가'}</button>
+      {picker && <section className="card stack"><ExerciseSearch exercises={exercises} onSelect={exercise => {
+        setWeights(values => [...values, { id: newId(), standardExerciseId: exercise.id, exerciseName: exercise.name, manufacturerId: null, loadType: null, setCount: '3', minReps: '6', maxReps: '10', initialWeightKg: '', approvedWeightKg: null, approve: false, nextWeightKg: '' }])
+        setPicker(false)
+      }} /></section>}
+      <h3 className={styles.group}>CARDIO <small>유산소 운동 · {cardio.length}종목</small></h3>
+      {!cardio.length && <p className="muted small">등록된 유산소 계획 없음</p>}
       {cardio.map((c, index) => <section className="card stack" key={c.id} aria-label={`유산소 ${index + 1}`}>
         <div className="section-heading"><h3>유산소 {index + 1}</h3><button type="button" className="quiet danger" onClick={() => setCardio(values => values.filter(x => x.id !== c.id))}>유산소 제거</button></div>
-        <label>종류<select value={c.kind} onChange={e => changeCardio(c.id, { kind: e.target.value as CardioPlan['kind'] })}>{([['TREADMILL', '러닝머신'], ['BIKE', '실내 자전거'], ['OUTDOOR', '야외'], ['STAIRS', '계단'], ['OTHER', '기타']] as const).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-        <label>유산소 이름<input value={c.name} onChange={e => changeCardio(c.id, { name: e.target.value })} /></label><label>목표 시간 (초)<input inputMode="numeric" value={c.seconds} onChange={e => changeCardio(c.id, { seconds: e.target.value })} /></label>
-        <label>목표 거리 (km, 선택)<input inputMode="decimal" value={c.distance} onChange={e => changeCardio(c.id, { distance: e.target.value })} /></label>
-        <label>강도 단위<select value={c.intensityMode} onChange={e => changeCardio(c.id, { intensityMode: e.target.value as 'SPEED' | 'PACE' })}><option value="SPEED">속도 (km/h)</option><option value="PACE">페이스 (분/km)</option></select></label>
-        <label>목표 강도 (선택)<input inputMode="decimal" value={c.intensity} onChange={e => changeCardio(c.id, { intensity: e.target.value })} /></label>
-        <label>경사 (%, 러닝머신만)<input inputMode="decimal" value={c.incline} onChange={e => changeCardio(c.id, { incline: e.target.value })} /></label>
-        <label>저항 (자전거만)<input inputMode="decimal" value={c.resistance} onChange={e => changeCardio(c.id, { resistance: e.target.value })} /></label>
+        <div className={styles.actions}><button type="button" disabled={index===0} onClick={()=>setCardio(v=>move(v,index,-1))}>↑ 위로</button><button type="button" disabled={index===cardio.length-1} onClick={()=>setCardio(v=>move(v,index,1))}>↓ 아래로</button></div>
+        <CardioPlanFields value={c} onChange={v=>changeCardio(c.id,v)} activities={activities}/>
       </section>)}
-      <button type="button" className="outline" onClick={() => setCardio(values => [...values, { id: crypto.randomUUID(), existing: false, kind: 'TREADMILL', name: '', seconds: '', distance: '', intensityMode: 'SPEED', intensity: '', incline: '', resistance: '' }])}>유산소 추가</button>
+      <button type="button" className="outline" onClick={() => setCardio(values => [...values, {id:newId(),existing:false,...emptyCardio()}])}>유산소 추가</button>
     </fieldset>
+    {conflict&&<Dialog title="요일 배정 교체" onClose={()=>setConflict(false)}><p>다음 요일을 {name}으로 교체할까요? 기존 루틴과 다른 요일은 유지합니다.</p><ul>{conflicts.map(a=><li key={a.dayOfWeek}>{dayNames[a.dayOfWeek-1]}요일 · {controller.getSnapshot().data?.routines.find(r=>r.id===a.routineId)?.name??'기존 루틴'}</li>)}</ul><button type="button" onClick={()=>setConflict(false)}>취소</button><button type="button" className="primary" onClick={()=>{setConflict(false);void save(true)}}>교체 확인</button></Dialog>}
+    {routineSaved&&<p className="notice" role="status">루틴은 저장되었습니다. 일정 반영을 확인 중입니다. 실패하면 아래 버튼으로 일정만 다시 확인합니다.</p>}
     {error && <p className="notice error" role="alert">{error}</p>}
     {submitted && <p className="muted small">제출 내용을 고정했습니다. 응답이 확인되지 않았다면 같은 내용으로 확인하거나, 닫은 뒤 서버의 최신 루틴을 조회해 주세요.</p>}
-    <button className="primary full" disabled={busy}>{busy ? '서버 확인 중…' : submitted ? '고정된 저장 요청 다시 확인' : '루틴 저장'}</button>
+    <button className="primary full" disabled={locked}>{locked ? '서버 확인 중…' : routineSaved ? '일정 반영 다시 확인' : submitted ? '고정된 저장 요청 다시 확인' : '루틴 저장'}</button>
   </form>
 }

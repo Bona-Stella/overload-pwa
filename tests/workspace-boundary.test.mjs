@@ -9,14 +9,14 @@ import react from '@vitejs/plugin-react'
 test('real React reconciliation removes statistics across workout, account, generation and late-response boundaries', { timeout: 60000 }, async () => {
   const directory = resolve('logs/workspace-boundary'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
   await mkdir(profile, { recursive: true })
-  const stub = `export class WorkoutApi {};
+  const stub = `export class WorkoutApi {cardioActivities=async()=>[];};
     export class WorkoutOnlineController { getSnapshot=()=>window.boundaryState; subscribe=()=>()=>{}; connect=()=>()=>{}; invalidateScope=()=>{}; }
     export class StatisticsApi { overview=(scope,period,signal)=>window.boundaryOverview(scope,period,signal); }
-    export class WeeklyScheduleApi {};
+    export class WeeklyScheduleApi { read=async(scope,timeZone)=>({...scope,version:'0',timeZone,appliedAt:null,assignments:[]}) };
     export const WeeklySchedulePanel=()=>null,LocalWorkoutScreen=()=>null,ClosedWorkout=()=>null,WorkoutHistory=()=>null;
     export const offlineAccess={scope:async()=>{},source:async()=>null};`
   const replaced = new Set(['./api.ts', './controller.ts', '../statistics/api.ts', '../statistics/weekly-schedule.ts', '../statistics/WeeklySchedulePanel.tsx', '../workout-local/LocalWorkoutScreen.tsx', './ClosedWorkout.tsx', '../workout-local/offline.ts'])
-  const server = await createServer({ configFile: false, envDir: false, plugins: [{ name: 'workspace-component-only', enforce: 'pre',
+  const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'workspace-component-only', enforce: 'pre',
     resolveId(id, importer) { if (importer?.endsWith('/WorkoutWorkspace.tsx') && replaced.has(id)) return '\0workspace-boundary-stub' },
     load(id) { if (id === '\0workspace-boundary-stub') return stub },
     configureServer(vite) { vite.middlewares.use('/boundary', async (_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(await vite.transformIndexHtml('/boundary', '<!doctype html><html><head></head><body><div id="root"></div><script type="module" src="/tests/fixtures/workspace-boundary.jsx"></script></body></html>')) }) },
@@ -56,7 +56,7 @@ test('real React reconciliation removes statistics across workout, account, gene
     await render('A', '1'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0\\n완료 웨이트 세트")'))
     assert.equal(await count(), 1); await render('expired'); assert.equal(await count(), 0)
     await send('Page.reload'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7\\n완료 웨이트 세트")')); assert.equal(await count(), 1)
-  } finally {
+  } catch(error){if(ws?.readyState===1){try{console.error('Boundary DOM:',await evaluate('document.body.innerText'));console.error('Boundary requests:',await evaluate('window.boundaryRequests'))}catch{}}throw error} finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))
     ws?.close(); await server.close()

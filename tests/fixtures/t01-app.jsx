@@ -35,7 +35,7 @@ async function fetcher(path, options = {}) {
   if (url.pathname === '/api/v1/standard-exercises/search-data') return response({ schemaVersion: 1, exercises: bootstrap.exercises })
   if (url.pathname === '/api/v1/manufacturers') return response({ manufacturers: [] })
   if (url.pathname === '/api/v1/workout-settings') return response({ ...bootstrap.settings, ...currentScope() })
-  if (url.pathname === '/api/v1/weekly-schedule') return response({ ...currentScope(), version: '0', timeZone: 'Asia/Seoul', nextEffectiveFrom: new Date().toISOString().slice(0, 10), current: null, pending: null, history: [] })
+  if (url.pathname === '/api/v1/weekly-schedule') return response({ ...currentScope(), version: '0', timeZone: 'Asia/Seoul', appliedAt: null, assignments: [] })
   if (url.pathname === '/api/v1/statistics/overview') return response({ statistics: { ...currentScope(), fromDate: url.searchParams.get('fromDate'), toDateExclusive: url.searchParams.get('toDateExclusive'), planCoverage: 'PARTIAL_SCHEDULE_HISTORY', plannedWorkoutDays: null, routineAchievementPercent: null, summary: weights, cardioActiveMs: '0', unmappedCompletedSets: '0', days: [], exercises: [], muscles: [], groups: [], cardio: [], recentSessions: [] }, effectiveWorkoutDays: null, unknownPlanDays: 1, unverifiableDays: 0, plannedDays: [], cardioByKind: [] })
   if (url.pathname === '/api/v1/workout-sessions/closed') return response({ ...currentScope(), sessions: [], next: null })
   if (url.pathname === '/api/v1/workout-sessions/active') return response({ ...currentScope(), session: active })

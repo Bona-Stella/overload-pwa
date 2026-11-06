@@ -91,7 +91,7 @@ test('explicit bodyweight load enables total-weight view while unknown sets reta
 })
 const planned=()=>({statistics:{...fixture(),planCoverage:'FULL_SCHEDULE_HISTORY',plannedWorkoutDays:4,routineAchievementPercent:'56.25'},effectiveWorkoutDays:'2.25',unknownPlanDays:0,unverifiableDays:0,plannedDays:[],cardioByKind:[{kind:'TREADMILL',activeMs:'1800000',distanceKm:'3.8',manualDistanceKm:'3.8',calculatedDistanceKm:null,unknownSourceDistanceKm:null,manualRecords:'1',calculatedRecords:'0',unknownSourceRecords:'0',recordsWithoutDistance:'0'}]})
 const partial=()=>({...planned(),statistics:fixture(),effectiveWorkoutDays:null,unknownPlanDays:7})
-const weekly=()=>({...scope,version:'0',timeZone:'Asia/Seoul',nextEffectiveFrom:'2026-11-09',current:null,pending:null,history:[]})
+const weekly=()=>({...scope,version:'0',timeZone:'Asia/Seoul',appliedAt:null,assignments:[]})
 test('overview accepts verified weekly rate and rejects fabricated denominators for unknown history',async()=>{
   const data=planned();assert.equal(overview(data),true)
   assert.equal(overview({...data,unknownPlanDays:1}),false)
@@ -115,24 +115,24 @@ test('schedule reads and versioned online writes preserve scope and never mutate
   assert.deepEqual(await api.read(scope,'Asia/Seoul',new AbortController().signal),state)
   assert.equal(request[2],'GET');assert.equal(request[3],undefined)
   await assert.rejects(api.save(scope,state,draft,new AbortController().signal),error=>error.code==='SCHEDULE_VERSION_CONFLICT')
-  assert.deepEqual(request[3],{dataGeneration:scope.dataGeneration,expectedVersion:'0',timeZone:'Asia/Seoul',assignments:draft})
+  assert.deepEqual(request[3],{contractVersion:'immediate-v1',dataGeneration:scope.dataGeneration,expectedVersion:'0',timeZone:'Asia/Seoul',assignments:draft})
   assert.deepEqual(draft,[{dayOfWeek:1,routineId:OTHER}])
-  assert.equal(weeklySchedule({...state,history:[{version:'1',effectiveFrom:'2026-11-09',timeZone:'Asia/Seoul',recordedAt:'2026-11-02T00:00:00Z',assignments:[{dayOfWeek:8,routineId:OTHER}]}]}),false)
+  assert.equal(weeklySchedule({...state,version:'1',appliedAt:'2026-11-02T00:00:00Z',assignments:[{dayOfWeek:8,routineId:OTHER}]}),false)
 })
 test('schedule editor has seven routine or rest choices and makes immediate first registration explicit',()=>{
   const html=renderToStaticMarkup(React.createElement(ScheduleEditor,{state:weekly(),routines:[{id:OTHER,name:'routine',version:'0'}],busy:false,onSave(){},onCancel(){}}))
-  assert.equal((html.match(/<select/g)||[]).length,7);assert.match(html,/2026-11-09부터 즉시 적용/);assert.match(html,/등록 전 날짜는 첫 주 달성률에서 제외/);assert.match(html,/일정 예약 저장/)
+  assert.equal((html.match(/<select/g)||[]).length,7);assert.match(html,/저장 즉시 적용/);assert.match(html,/일정 저장/)
 })
 
-test('existing schedule editor retains next-Monday application instead of immediate registration',()=>{
-  const state={...weekly(),version:'1',nextEffectiveFrom:'2026-11-16'}
+test('existing schedule editor applies immediately without reservation controls',()=>{
+  const state={...weekly(),version:'1',appliedAt:'2026-11-06T00:00:00Z'}
   const html=renderToStaticMarkup(React.createElement(ScheduleEditor,{state,routines:[],busy:false,onSave(){},onCancel(){}}))
-  assert.match(html,/2026-11-16부터 적용/);assert.doesNotMatch(html,/즉시 적용/)
+  assert.match(html,/저장 즉시 적용/);assert.doesNotMatch(html,/예약|다음 월요일/)
 })
 
 test('first registration week renders two out of three without inventing plans before registration',()=>{
   const data=planned();data.statistics.plannedWorkoutDays=3;data.statistics.routineAchievementPercent='66.666667';data.effectiveWorkoutDays='2'
-  data.plannedDays=[{date:'2026-11-09',status:'BEFORE_REGISTRATION',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null}]
+  data.plannedDays=[{date:'2026-11-09',status:'BEFORE_REGISTRATION',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}]
   assert.equal(overview(data),true)
   const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/2 \/ 3일/);assert.match(html,/66\.666667%/);assert.match(html,/최초 등록 전 · 달성률 제외/);assert.doesNotMatch(html,/과거 계획 확인 불가|undefined|null종목/)
@@ -184,7 +184,7 @@ test('overview requires planning fields while preserving null evidence and unkno
     const data=planned();delete data[key];assert.equal(overview(data),false)
   }
   const data=partial();data.cardioByKind=[{...planned().cardioByKind[0],distanceKm:null,manualDistanceKm:null,manualRecords:'0',recordsWithoutDistance:'1'}]
-  data.plannedDays=[{date:period.fromDate,status:'UNKNOWN',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null}]
+  data.plannedDays=[{date:period.fromDate,status:'UNKNOWN',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}]
   assert.equal(overview(data),true)
   const activity=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(activity,/러닝머신 · 30분/);assert.match(activity,/거리 미입력 기록 포함/);assert.doesNotMatch(activity,/ km/)
@@ -211,7 +211,7 @@ function cardioTimeData(activeMs, plans = [{ date: period.fromDate, targets: [{ 
         cardioPlacements: entry.targets.map((target, index) => ({ id: index === 0 ? scope.userId : OTHER, deletedAt: null,
           plan: { kind: target.kind, name: target.kind, targetSeconds: target.seconds, targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null },
         })),
-      } : null, plannedExercises: entry?.targets.length ?? 0, completedExercises: 0, effectiveDay: '0', selectedSessionId: null,
+      } : null, plannedExercises: entry?.targets.length ?? 0, completedExercises: 0, effectiveDay: '0', selectedSessionId: null, reviewStatus: null, reviewRevision: null,
     })
   }
   return data
@@ -315,3 +315,11 @@ test('cardio comparison uses only the selected week/month overview returned thro
     assert.ok(renderCardioTime(result).includes(`실제 누적 ${expectedMinutes}분 / 계획 ${(index + 1) * 10}분`))
   }
 })
+
+test('immediate schedule save sends its contract marker and confirms the authoritative state by GET',async()=>{
+  const state=weekly(),saved={...state,version:'1',appliedAt:'2026-11-06T00:00:00Z',assignments:[{dayOfWeek:1,routineId:OTHER}]},calls=[];
+  const api=new WeeklyScheduleApi({workoutRequest:async(...args)=>{calls.push(args);return{status:200,data:saved}}});
+  assert.deepEqual(await api.save(scope,state,saved.assignments,new AbortController().signal),saved);
+  assert.deepEqual(calls.map(c=>c[2]),['PUT','GET']);assert.equal(calls[0][3].contractVersion,'immediate-v1');
+  assert.equal(weeklySchedule({...state,appliedAt:undefined,current:null,pending:null}),false);
+});

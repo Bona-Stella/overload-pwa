@@ -13,6 +13,7 @@ export function addDays(date: string, days: number) {
 export const dayOfWeek = (date: string) => (new Date(date + 'T12:00:00Z').getUTCDay() + 6) % 7 + 1
 export const weekDates = (date: string) => Array.from({ length: 7 }, (_, i) => addDays(date, i + 1 - dayOfWeek(date)))
 export function dayStatus(day: PlannedDay | undefined, date: string, today: string) {
+  if (day?.status === 'PENDING') return { mark: '?', label: '운동 진행 중 · 판정 대기', kind: 'unknown' }
   if (!day || day.status === 'UNKNOWN' || day.status === 'UNVERIFIABLE') return { mark: '?', label: '확인 불가', kind: 'unknown' }
   if (day.status === 'BEFORE_REGISTRATION') return { mark: '·', label: '일정 등록 전', kind: 'unknown' }
   if (day.status === 'REST') return { mark: '–', label: '휴식', kind: 'rest' }
@@ -20,8 +21,9 @@ export function dayStatus(day: PlannedDay | undefined, date: string, today: stri
   if (day.effectiveDay === '1') return { mark: '✓', label: '완료', kind: 'complete' }
   if (day.effectiveDay === null) return { mark: '?', label: '달성 확인 불가', kind: 'unknown' }
   if (day.effectiveDay !== '0') return { mark: '△', label: '일부 달성', kind: 'partial' }
+  if (day.reviewStatus !== 'PERFORMED' && day.reviewStatus !== 'MISSED') return { mark: '?', label: '검사 대기', kind: 'unknown' }
   // Zero achievement can include performed sets below the plan's threshold.
-  return { mark: '×', label: day.selectedSessionId ? '계획 미달' : '미수행', kind: 'missed' }
+  return { mark: '×', label: day.reviewStatus === 'PERFORMED' ? '계획 미달' : '미수행', kind: 'missed' }
 }
 export const activeWeights = (routine: Routine) => routine.weightPlacements.filter(p => p.deletedAt === null)
 export const activeCardio = (routine: Routine) => routine.cardioPlacements.filter(p => p.deletedAt === null)

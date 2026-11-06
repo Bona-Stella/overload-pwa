@@ -11,7 +11,7 @@ const period = { fromDate: '2026-10-26', toDateExclusive: '2026-11-02' }
 const zone = 'Asia/Seoul'
 const signal = () => new AbortController().signal
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...headers } })
-const schedule = () => ({ ...scope, version: '0', timeZone: zone, nextEffectiveFrom: '2026-11-03', current: null, pending: null, history: [] })
+const schedule = () => ({ ...scope, version: '0', timeZone: zone, appliedAt: null, assignments: [] })
 const envelope = () => ({ ...scope, period: '3', range: { fromDate: '2026-08-03', toDateExclusive: '2026-11-04', timeZone: zone } })
 const placement = { routineId: ROUTINE, placementId: PLACEMENT, routineName: '운동 루틴', deleted: false, lastApprovalAt: '2026-11-01T00:00:00Z' }
 const overview = () => ({ statistics: {
@@ -64,16 +64,17 @@ test('all growth routes traverse real transport without changing encoded search,
 
 test('weekly read/save/history use exact methods, CSRF owner checks and unmodified body/cursor', async () => {
   const state = schedule(), page = { ...scope, history: [], nextBeforeVersion: null }
-  const f = await connected(path => json(path.startsWith('/api/v1/weekly-schedule/history?') ? page : state))
+  let current = state
+  const f = await connected((path,init) => { if(init.method === 'PUT') current = {...state,version:'1',appliedAt:'2026-11-06T00:00:00Z',assignments:JSON.parse(init.body).assignments}; return json(path.startsWith('/api/v1/weekly-schedule/history?') ? page : current) })
   assert.deepEqual(await f.weekly.read(scope, zone, signal()), state)
   assert.equal(f.calls.at(-1).path, '/api/v1/weekly-schedule?' + new URLSearchParams({ timeZone: zone }))
   const assignments = [{ dayOfWeek: 2, routineId: ROUTINE }], count = f.calls.length
-  assert.deepEqual(await f.weekly.save(scope, state, assignments, signal()), state)
-  assert.deepEqual(f.calls.slice(count).map(c => c.path), ['/api/v1/auth/session', '/api/v1/auth/csrf', '/api/v1/auth/session', '/api/v1/weekly-schedule'])
-  const { init } = f.calls.at(-1)
+  assert.deepEqual(await f.weekly.save(scope, state, assignments, signal()), {...state,version:'1',appliedAt:'2026-11-06T00:00:00Z',assignments})
+  assert.deepEqual(f.calls.slice(count).map(c => c.path), ['/api/v1/auth/session', '/api/v1/auth/csrf', '/api/v1/auth/session', '/api/v1/weekly-schedule', '/api/v1/weekly-schedule?' + new URLSearchParams({timeZone:zone})])
+  const { init } = f.calls.findLast(c=>c.init.method==='PUT')
   assert.equal(init.method, 'PUT'); assert.equal(init.headers[csrf.headerName], csrf.token)
   assert.equal(init.headers['Content-Type'], 'application/json'); assert.equal(init.credentials, 'include'); assert.equal(init.cache, 'no-store')
-  assert.deepEqual(JSON.parse(init.body), { dataGeneration: scope.dataGeneration, expectedVersion: '0', timeZone: zone, assignments })
+  assert.deepEqual(JSON.parse(init.body), { contractVersion: 'immediate-v1', dataGeneration: scope.dataGeneration, expectedVersion: '0', timeZone: zone, assignments })
   assert.deepEqual(await f.weekly.history(scope, '9007199254740994', signal()), page)
   assert.equal(f.calls.at(-1).path, '/api/v1/weekly-schedule/history?beforeVersion=9007199254740994')
   assert.equal(f.calls.at(-1).init.method, 'GET'); assert.equal(f.calls.at(-1).init.body, undefined)

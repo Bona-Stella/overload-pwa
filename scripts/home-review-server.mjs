@@ -12,7 +12,7 @@ if (!/^[0-9a-f-]{36}$/.test(runId ?? '')) throw Error('Explicit review UUID requ
 const directory = resolve('../overload-server/build/verification-v22', runId)
 const evidence = JSON.parse(await readFile(resolve(directory, 'home-review.json'), 'utf8'))
 if (evidence.runId !== runId || evidence.database !== 'overload_v22_isolated' || !(evidence.freshDatabase || evidence.storageMode === 'persistent-restored') || evidence.freshDatabase && evidence.activeSessions !== 0
-  || JSON.stringify(evidence.actualMigrations) !== JSON.stringify(Array.from({ length: 22 }, (_, i) => String(i + 1)))) throw Error('Prepared isolated review DB required')
+  || JSON.stringify(evidence.actualMigrations) !== JSON.stringify(Array.from({ length: 23 }, (_, i) => String(i + 1)))) throw Error('Prepared isolated review DB required')
 await verifyV22Ownership(evidence)
 const lanAddress = process.argv[3]
 const lan = Object.values(networkInterfaces()).flat().find(n => n.family === 'IPv4' && !n.internal && n.address === lanAddress)

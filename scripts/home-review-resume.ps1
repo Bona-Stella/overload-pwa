@@ -1,4 +1,4 @@
-param([ValidateSet('Status','Start','Stop')][string]$Action='Status',[switch]$AfterT02BFirstUi,[string]$JavaHome='C:\Users\Home\.jdks\temurin-25.0.5',[string]$LanAddress='')
+param([ValidateSet('Status','Start','Stop')][string]$Action='Status',[switch]$AfterT02BFirstUi,[switch]$MigrateT02BV23,[string]$JavaHome='C:\Users\Home\.jdks\temurin-25.0.5',[string]$LanAddress='')
 $ErrorActionPreference='Stop'
 $frontendRoot=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $backendRoot=(Resolve-Path (Join-Path $frontendRoot '../overload-server')).Path
@@ -24,7 +24,8 @@ try{
     try{& ./gradlew.bat --no-daemon -I scripts/home-review.gradle homeReviewClasspath *> (Join-Path $frontendRoot 'logs/home-review/resume-compile.log');if($LASTEXITCODE -ne 0){throw 'Review compile failed'}}finally{Pop-Location}
     $classPath=(Get-Content -LiteralPath (Join-Path $backendRoot 'build/home-review/classpath.txt') -Raw).Replace('\','/')
     $argFile=Join-Path $archiveRoot "$($pointer.sourceRun)/resume.args"
-    @('-cp',('"'+$classPath+'"'),'com.overload.testfixture.HomeReviewResumeEnvironment',('"'+$configPath.Replace('\','/')+'"'),'--after-t02b-first-ui') | Set-Content -LiteralPath $argFile -Encoding utf8NoBOM
+    $javaArgs=@('-cp',('"'+$classPath+'"'),'com.overload.testfixture.HomeReviewResumeEnvironment',('"'+$configPath.Replace('\','/')+'"'),'--after-t02b-first-ui');if($MigrateT02BV23){$javaArgs+='--migrate-t02b-v23'}
+    $javaArgs | Set-Content -LiteralPath $argFile -Encoding utf8NoBOM
     $removed=@{}
     try{
       Get-ChildItem Env: | Where-Object Name -Match '^(SPRING_|OTP_|RESEND_|GOOGLE_|AUTH_|OVERLOAD_)' | ForEach-Object {$removed[$_.Name]=$_.Value;Remove-Item -LiteralPath ('Env:'+$_.Name)}
@@ -41,7 +42,7 @@ try{
     if(!$LanAddress){throw 'Supply current private LAN IPv4; do not replace existing processes'}
     @{runId=$config.resumeRun} | ConvertTo-Json | Set-Content -LiteralPath 'logs/home-review/current.json' -Encoding utf8NoBOM
     Start-Process -FilePath (Get-Command node.exe).Source -ArgumentList @('scripts/home-review-server.mjs',$config.resumeRun,$LanAddress) -WorkingDirectory $frontendRoot -WindowStyle Hidden -RedirectStandardOutput 'logs/home-review/resume-frontend.out.log' -RedirectStandardError 'logs/home-review/resume-frontend.err.log' | Out-Null
-    Write-Output 'Manually resumed existing data without seed/migrate/reset. Review frontend uses port3000; inspect logs for readiness.'
+    Write-Output 'Manually resumed existing data without seed/reset (V23 only when explicitly requested). Review frontend uses port3000; inspect logs for readiness.'
   }else{
     try{$front=Invoke-RestMethod 'http://127.0.0.1:3000/__home_review' -TimeoutSec 2}catch{$front=$null}
     if($front){if($front.runId -ne $config.resumeRun){throw 'Another run is active; keep it'};Invoke-WebRequest 'http://127.0.0.1:3000/__review/shutdown' -Method Post -Headers @{'X-Review-Run'=$config.resumeRun} | Out-Null}

@@ -1,0 +1,4 @@
+import type { StandardExercise } from './types.ts';
+export const groupNames: Record<string, string> = { CHEST: '가슴', BACK: '등', SHOULDERS: '어깨', ARMS: '팔', LEGS: '하체', CORE: '코어' };
+export function exerciseDescription(e: StandardExercise) { const primary = e.muscles?.filter(m => m.role === 'PRIMARY') ?? []; return primary.length ? [...new Set(primary.map(m => groupNames[m.groupCode] ?? m.groupCode))].join('·') + ' · ' + primary.map(m => m.name).join('·') : '부위·근육 미분류'; }
+export function exerciseIcon(e: StandardExercise): 'chest' | 'back' | 'legs' | undefined { const groups = [...new Set(e.muscles?.filter(m => m.role === 'PRIMARY').map(m => m.groupCode) ?? [])]; return groups.length === 1 ? ({ CHEST: 'chest', BACK: 'back', LEGS: 'legs' } as Record<string, 'chest' | 'back' | 'legs'>)[groups[0]] : undefined; }

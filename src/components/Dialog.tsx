@@ -10,7 +10,7 @@ export function Dialog({ title, onClose, children }: { title: string; onClose: (
     return () => { dialog?.close(); if (previous instanceof HTMLElement) previous.focus() }
   }, [])
   return <dialog ref={ref} onCancel={event => { event.preventDefault(); onClose() }} aria-labelledby="dialog-title">
-    <div className="section-heading"><h2 id="dialog-title">{title}</h2><button className="icon-button" aria-label="닫기" onClick={onClose}>×</button></div>
+    <div className="section-heading"><h2 id="dialog-title">{title}</h2><button type="button" className="icon-button" aria-label="닫기" onClick={onClose}>×</button></div>
     {children}
   </dialog>
 }

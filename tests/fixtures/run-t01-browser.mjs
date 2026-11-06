@@ -76,7 +76,7 @@ try {
   await click('계정 설정'); await wait(() => evaluate('document.body.innerText.includes("대표 재인증 이메일")'), 'account settings')
   await click('‹ 설정으로'); await wait(() => evaluate('document.body.innerText.includes("데이터 및 앱")'), 'settings return')
   await click('루틴'); await wait(() => evaluate('document.body.innerText.includes("실제 계정 루틴 Ω")'), 'routines')
-  await click('새 루틴 만들기'); await wait(() => evaluate('document.querySelectorAll("nav").length===0'), 'routine edit hides tabs')
+  await click('+ 새 루틴'); await wait(() => evaluate('document.querySelectorAll("nav").length===0'), 'routine edit hides tabs')
   await click('닫기'); await wait(() => evaluate('document.querySelectorAll("nav button").length===4'), 'routine editor close')
   passed.push('Four tabs expose existing routine, statistics, account and PWA features; routine editing hides tabs')
   await evaluate('window.t01.activate()'); await click('다시 조회')

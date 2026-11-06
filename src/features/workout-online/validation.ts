@@ -1,3 +1,4 @@
+import { routineTags } from '../home/tags.ts'
 import type { CardioPlan, CompletionAssessment, InitialPlan, Routine, RoutineList, Session, Snapshot, ApprovalResult } from './types.ts'
 
 export const object = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v)
@@ -17,16 +18,17 @@ export const cardioMeasurement = (v: unknown): v is import('./types.ts').CardioM
 export const targets = (v: Record<string, unknown>) => count(v.setCount) && count(v.minReps) && count(v.maxReps) && v.minReps <= v.maxReps
 export const unique = (values: { id: string }[]) => new Set(values.map(v => v.id)).size === values.length
 export function cardioPlan(v: unknown): v is CardioPlan {
-  return object(v) && ['TREADMILL', 'BIKE', 'OUTDOOR', 'STAIRS', 'OTHER'].includes(String(v.kind)) && name(v.name) && count(v.targetSeconds) && v.targetSeconds <= 86400
+  return object(v) && (v.activityId===undefined || uuid(v.activityId)) && ['TREADMILL', 'BIKE', 'OUTDOOR', 'STAIRS', 'OTHER'].includes(String(v.kind)) && name(v.name) && count(v.targetSeconds) && v.targetSeconds <= 86400
     && nullable(v.targetDistanceKm, decimal) && nullable(v.inclinePercent, decimal) && nullable(v.resistance, decimal)
     && nullable(v.intensity, x => object(x) && ['SPEED', 'PACE'].includes(String(x.mode)) && decimal(x.value))
 }
 export function routineList(v: unknown): v is RoutineList {
-  return object(v) && uuid(v.userId) && counter(v.dataGeneration) && array(v.routines, x => object(x) && uuid(x.id) && name(x.name) && counter(x.version))
+  return object(v) && uuid(v.userId) && counter(v.dataGeneration) && array(v.routines, x => object(x) && uuid(x.id) && name(x.name) && counter(x.version) && meta(x))
     && unique(v.routines as RoutineList['routines'])
 }
+const meta=(v:Record<string,unknown>)=>(v.tag===undefined||v.tag===null||routineTags.includes(v.tag as typeof routineTags[number]))&&(v.createdAt===undefined||v.createdAt===null||instant(v.createdAt))
 export function routine(v: unknown): v is Routine {
-  return object(v) && uuid(v.userId) && counter(v.dataGeneration) && uuid(v.id) && counter(v.version) && name(v.name)
+  return object(v) && uuid(v.userId) && counter(v.dataGeneration) && uuid(v.id) && counter(v.version) && name(v.name) && meta(v)
     && array(v.weightPlacements, x => object(x) && uuid(x.id) && uuid(x.standardExerciseId) && name(x.exerciseName) && targets(x) && equipment(x)
       && decimal(x.initialWeightKg) && decimal(x.approvedWeightKg) && nullable(x.deletedAt, instant))
     && array(v.cardioPlacements, x => object(x) && uuid(x.id) && cardioPlan(x.plan) && nullable(x.deletedAt, instant))
