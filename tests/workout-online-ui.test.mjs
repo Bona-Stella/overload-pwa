@@ -23,6 +23,7 @@ registerHooks({
 })
 const {WorkspaceView,SessionView}=await import('../src/features/workout-online/WorkoutWorkspace.tsx')
 const {RoutineForm}=await import('../src/features/workout-online/RoutineForm.tsx')
+const {RoutineCards}=await import('../src/features/workout-online/RoutineCards.tsx')
 const {LocalWorkoutView}=await import('../src/features/workout-local/LocalWorkoutScreen.tsx')
 const {ClosedWorkoutView}=await import('../src/features/workout-online/ClosedWorkout.tsx')
 const {createLocalWorkout,applyLocalChange,editDraft,completeSet}=await import('../src/features/workout-local/model.ts')
@@ -93,11 +94,30 @@ test('new account shows empty routines without demo seeds or workout input contr
   assert.match(html,/아직 루틴이 없습니다/);assert.match(html,/새 루틴/)
   assert.doesNotMatch(html,/PUSH|PULL|LEGS|세트 완료|운동 종료<|타이머 시작/)
 })
-test('selected server routine preserves exact decimals and START is blocked without durable storage or while another active session exists',()=>{
-  for(const patch of [{localReady:false},{active:session()},{attempt:{...scope,request:start,requestJson:JSON.stringify(start)}}]){
-    const html=render(WorkspaceView,{state:{...state,selected:routine,...patch},controller:{}})
-    assert.match(html,/99999999999999.999999/);assert.match(html,/<button[^>]*disabled=""[^>]*>온라인으로 운동 시작/)
-  }
+test('compact routine cards show only active exercise summaries and keep detail separate from the action menu',()=>{
+  const detail={...routine,weightPlacements:[...routine.weightPlacements,{...routine.weightPlacements[0],id:OTHER,exerciseName:'제거된 종목',deletedAt:'2026-11-06T00:00:00Z'},{...routine.weightPlacements[0],id:DEVICE,exerciseName:'추가 종목'}]}
+  const html=render(RoutineCards,{summaries:bootstrap.routines,details:new Map([[routine.id,detail]]),busy:false,onSelect(){},onNew(){},onEdit(){},onDelete(){}})
+  assert.match(html,/벤치프레스 외 1/);assert.doesNotMatch(html,/제거된 종목|추가 종목/)
+  assert.match(html,/ROUTINE 01/);assert.match(html,/CARDIO/);assert.match(html,/없음/)
+  assert.match(html,/aria-label="실제 계정 루틴 Ω 상세"/);assert.match(html,/aria-label="실제 계정 루틴 Ω 메뉴"/)
+  assert.match(html,/>수정<\/button>/);assert.match(html,/>삭제<\/button>/)
+})
+
+test('routine weekly tiles distinguish unregistered, explicit rest and an unavailable assigned routine',()=>{
+  const props={summaries:[],details:new Map(),busy:false,onSelect(){},onNew(){}}
+  const week={...scope,version:'0',timeZone:'Asia/Seoul',appliedAt:null,assignments:[]}
+  const unregistered=render(RoutineCards,{...props,week})
+  assert.match(unregistered,/미등록/);assert.doesNotMatch(unregistered,/휴식/)
+  const rest=render(RoutineCards,{...props,week:{...week,version:'1',appliedAt:'2026-11-06T00:00:00Z'}})
+  assert.match(rest,/휴식/);assert.doesNotMatch(rest,/미등록/)
+  const unavailable=render(RoutineCards,{...props,week:{...week,version:'1',assignments:[{dayOfWeek:1,routineId:OTHER}]}})
+  assert.match(unavailable,/월요일 · 루틴 확인 필요/)
+})
+
+test('routine detail reuses the read-only form with exact values and no editing or save actions',()=>{
+  const html=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,busy:false,readOnly:true,controller:{},onClose(){}})
+  assert.match(html,/99999999999999.999999/);assert.match(html,/루틴 상세/);assert.match(html,/<fieldset disabled=""/)
+  assert.doesNotMatch(html,/루틴 저장|배치 제거|제거한 배치|웨이트 종목 추가|유산소 추가|새 중량 승인|↑ 위로|↓ 아래로|>변경</)
 })
 test('other editor is read only; AUTO_CLOSED does not claim a user finish or offer recovery yet',()=>{
   const html=render(SessionView,{session:session({editorDeviceId:OTHER}),deviceId:DEVICE,saved:true,busy:false,onRefresh(){}})

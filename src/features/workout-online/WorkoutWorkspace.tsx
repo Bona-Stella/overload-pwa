@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useAuth } from '../auth/context.ts'
 import { WorkoutApi } from './api.ts'
@@ -44,8 +43,9 @@ export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeo
     <button type="button" className="outline full" disabled={busy} onClick={onRefresh}>세션 상세 다시 확인</button>
   </section>
 }
-export function WorkspaceView({ state, controller, onEditingChange, api, schedule, weekly, refreshKey, onScheduleSaved }: { weekly?:WeeklyScheduleApi; refreshKey?:number; onScheduleSaved?:()=>void; schedule?: ReactNode; api?: WorkoutApi; state: OnlineState; controller: WorkoutOnlineController; onEditingChange?: (editing: boolean) => void }) {
-  const [editor, setEditor] = useState<Routine | 'new' | null>(null)
+export function WorkspaceView({ state, controller, onEditingChange, api, weekly, refreshKey, onScheduleSaved }: { weekly?:WeeklyScheduleApi; refreshKey?:number; onScheduleSaved?:()=>void; api?: WorkoutApi; state: OnlineState; controller: WorkoutOnlineController; onEditingChange?: (editing: boolean) => void }) {
+  const [editor, setEditor] = useState<{ routine: Routine | null; readOnly: boolean } | null>(null)
+  const [scheduleEditing, setScheduleEditing] = useState(false)
   const [week,setWeek]=useState<{key:string;value:WeeklySchedule}|null>(null),[activities,setActivities]=useState<CardioActivity[]>([])
   const weekKey=JSON.stringify([state.scope,state.data?.routines,refreshKey])
   const currentWeek=week?.key===weekKey?week.value:undefined
@@ -53,25 +53,27 @@ export function WorkspaceView({ state, controller, onEditingChange, api, schedul
   const previewKey=JSON.stringify([state.scope,state.data?.routines])
   const [previews,setPreviews]=useState<{key:string;values:Map<string,Routine>}|null>(null)
   useEffect(()=>{const abort=new AbortController();if(api&&state.scope&&state.data){const scope=state.scope,list=state.data.routines;void (async()=>{const values=new Map<string,Routine>();let index=0;await Promise.all(Array.from({length:Math.min(4,list.length)},async()=>{while(index<list.length&&!abort.signal.aborted){const r=list[index++];try{values.set(r.id,await api.routine(scope,r.id,abort.signal))}catch(error){ if(boundaryError(error))controller.invalidateScope(error) }}}));if(!abort.signal.aborted)setPreviews({key:previewKey,values})})()}return()=>abort.abort()},[api,previewKey,state.scope,state.data,controller])
-  const cards=new Map(previews?.key===previewKey?previews.values:[]);if(state.selected)cards.set(state.selected.id,state.selected)
+  const cards=new Map(previews?.key===previewKey?previews.values:[]);if(state.selected&&state.data?.routines.some(r=>r.id===state.selected?.id&&r.version===state.selected.version))cards.set(state.selected.id,state.selected)
 
-  useEffect(() => { onEditingChange?.(editor !== null); return () => onEditingChange?.(false) }, [editor, onEditingChange])
-  return <section className="stack workout-online" aria-labelledby="online-title"><div className="section-heading"><span id="online-title" className="muted small">ROUTINES</span><button type="button" className="quiet" disabled={state.busy} onClick={() => void controller.refresh()}>다시 조회</button></div>
+  const schedule = weekly && state.scope && state.data ? <WeeklySchedulePanel key={state.scope.userId + ":" + state.scope.dataGeneration} api={weekly} scope={state.scope} routines={state.data.routines} refreshKey={weekKey} readOnly={!!state.active || !!state.attempt} onEditingChange={setScheduleEditing} onSaved={() => onScheduleSaved?.()} onInvalid={controller.invalidateScope} /> : null
+  const managementBlocked = state.busy || !!state.attempt || !!state.active
+  async function deleteRoutine(id: string) {
+    if (managementBlocked) return
+    await controller.select(id)
+    const current = controller.getSnapshot()
+    if (current.active || current.attempt || current.selected?.id !== id || !window.confirm('이 루틴을 삭제할까요? 기존 운동 기록은 보존합니다.')) return
+    await controller.deleteRoutine()
+    if (!controller.getSnapshot().selected) setEditor(null)
+  }
+  useEffect(() => { onEditingChange?.(editor !== null || scheduleEditing); return () => onEditingChange?.(false) }, [editor, scheduleEditing, onEditingChange])
+  return <section className="stack workout-online" aria-labelledby="online-title"><div className="section-heading"><span id="online-title" className="muted small">ROUTINES</span><button type="button" className="quiet" disabled={state.busy || editor !== null || scheduleEditing} onClick={() => void controller.refresh()}>다시 조회</button></div>
     {state.status === 'loading' && <p role="status">현재 계정의 운동 정보를 확인하고 있습니다.</p>}
     {state.issue && <p className="notice error" role="alert">{state.issue}</p>}{state.notice && <p className="notice" role="status">{state.notice}</p>}
     {state.data && <>
-      <div hidden={editor!==null}><RoutineCards week={currentWeek} schedule={schedule} onEdit={id=>{void controller.select(id).then(()=>{const selected=controller.getSnapshot().selected;if(selected?.id===id)setEditor(selected)})}} onDelete={id=>{void controller.select(id).then(()=>{if(controller.getSnapshot().selected?.id===id&&window.confirm('이 루틴을 삭제할까요? 기존 운동 기록은 보존합니다.'))void controller.deleteRoutine()})}} summaries={state.data.routines} details={cards} busy={state.busy||!currentWeek} onNew={()=>setEditor('new')} onSelect={id=>{setEditor(null);void controller.select(id)}} /></div>
-      {state.selected && !editor && <section className="card stack"><h3>{state.selected.name}</h3>
-        {state.selected.weightPlacements.map(w => <p key={w.id}>{w.exerciseName} · {w.setCount}세트 · {w.minReps}~{w.maxReps}회 · 승인 {w.approvedWeightKg} kg · <Metadata>{equipmentLabel(w, state.data?.manufacturers)}</Metadata></p>)}
-        {state.selected.cardioPlacements.map(c => <p key={c.id}>{c.plan.name} · 목표 {c.plan.targetSeconds}초</p>)}
-        <button type="button" className="outline" disabled={state.busy} onClick={() => setEditor(state.selected)}>이 루틴 편집</button>
-        <button type="button" className="quiet danger" disabled={state.busy} onClick={() => { if (window.confirm('이 루틴을 삭제할까요? 기존 운동 기록은 보존합니다.')) void controller.deleteRoutine() }}>루틴 삭제</button>
-        <p className="muted small">시작 후 입력과 타이머를 이 기기에 보존하고 완료 기록을 서버에 저장합니다.</p>
-        <button type="button" className="primary" disabled={state.busy || !state.localReady || state.attempt !== null || state.active !== null} onClick={() => void controller.start()}>온라인으로 운동 시작</button>
-        {state.active && <p className="muted small">진행 중인 운동이 있어 새 운동을 시작할 수 없습니다.</p>}
-      </section>}
-      {editor && state.scope && <RoutineForm key={state.userId + ':' + state.scope.dataGeneration + ':' + (editor === 'new' ? 'new' : editor.id + ':' + editor.version)} routine={editor === 'new' ? null : editor}
-        scope={state.scope} weekly={weekly} scheduleState={currentWeek} activities={activities} onSaved={onScheduleSaved} generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers} busy={state.busy} controller={controller} onClose={() => setEditor(null)} />}
+      <div hidden={editor!==null}><RoutineCards week={currentWeek} schedule={schedule} scheduleEditing={scheduleEditing} onEdit={id=>{void controller.select(id).then(()=>{const selected=controller.getSnapshot().selected;if(selected?.id===id)setEditor({routine:selected,readOnly:false})})}} onDelete={id=>void deleteRoutine(id)} summaries={state.data.routines} details={cards} busy={state.busy||!currentWeek} managementBlocked={managementBlocked} onNew={()=>setEditor({routine:null,readOnly:false})} onSelect={id=>{void controller.select(id).then(()=>{const selected=controller.getSnapshot().selected;if(selected?.id===id)setEditor({routine:selected,readOnly:true})})}} /></div>
+      {editor && state.scope && <><RoutineForm key={state.userId + ':' + state.scope.dataGeneration + ':' + (editor.routine ? editor.routine.id + ':' + editor.routine.version : 'new') + ':' + editor.readOnly} routine={editor.routine} readOnly={editor.readOnly}
+        scope={state.scope} weekly={weekly} scheduleState={currentWeek} activities={activities} onSaved={onScheduleSaved} generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers} busy={managementBlocked} controller={controller} onClose={() => setEditor(null)} managementBlocked={managementBlocked} onEdit={() => { if(!managementBlocked) setEditor({...editor,readOnly:false}) }} onDelete={() => { if(editor.routine) void deleteRoutine(editor.routine.id) }} />
+        {editor.readOnly && <button type="button" className="primary" disabled={state.busy || !state.localReady || state.attempt !== null || state.active !== null} onClick={() => void controller.start()}>온라인으로 운동 시작</button>}</>}
     </>}
   </section>
 }
@@ -172,7 +174,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
         } finally { homeStarting.current = false }
       }} /> : <StatusNotice error={!!state.issue}>{state.issue ?? '현재 계정의 운동 정보를 확인하고 있습니다.'}</StatusNotice>)}</div>
     {!localOnly && <div hidden={focused || tab !== 'routines'}>
-      <WorkspaceView weekly={weekly} refreshKey={scheduleRefresh} onScheduleSaved={()=>setScheduleRefresh(n=>n+1)} schedule={state.status==='ready'&&state.scope&&state.data&&session?.status!=='ACTIVE'?<WeeklySchedulePanel key={'schedule:' + state.scope.userId + ':' + state.scope.dataGeneration} api={weekly} scope={state.scope} routines={state.data.routines} refreshKey={scheduleRefresh + ":" + JSON.stringify(state.data.routines)} onSaved={() => setScheduleRefresh(n => n + 1)} onInvalid={controller.invalidateScope} />:null} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} />
+      <WorkspaceView weekly={weekly} refreshKey={scheduleRefresh} onScheduleSaved={()=>setScheduleRefresh(n=>n+1)} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} />
     </div>}
 
     {!localOnly && !focused && tab === 'history' && <SectionHeading title="운동 기록·분석" eyebrow="YOUR TRAINING" />}

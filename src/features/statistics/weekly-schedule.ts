@@ -48,4 +48,9 @@ export class WeeklyScheduleApi {
   }
 }
 
-export const scheduleIssue = (error: unknown) => error instanceof Error && 'code' in error && error.code === 'ACTIVE_SESSION_EXISTS' ? '진행 중인 운동을 종료하고 저장 상태를 확인한 뒤 루틴과 일정을 변경해 주세요. 입력은 유지됩니다.' : error instanceof Error ? error.message : '일정을 저장하지 못했습니다. 입력은 유지됩니다.'
+export function scheduleIssue(error: unknown) {
+  const code = error instanceof Error && 'code' in error ? error.code : null
+  if (code === 'ACTIVE_SESSION_EXISTS') return '진행 중인 운동을 종료하고 저장 상태를 확인한 뒤 루틴과 일정을 변경해 주세요. 입력은 유지됩니다.'
+  if (code === 'SCHEDULE_VERSION_CONFLICT' || code === 'SCHEDULE_TIME_ZONE_CONFLICT') return '일정이 다른 화면에서 변경되었습니다. 입력은 유지됩니다. 닫은 뒤 최신 일정을 확인해 주세요.'
+  return error instanceof Error ? error.message : '일정을 저장하지 못했습니다. 입력은 유지됩니다.'
+}

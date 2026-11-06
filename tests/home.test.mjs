@@ -38,11 +38,37 @@ test('past-day marks require server evidence and distinguish partial, missed, un
   assert.match(classify({status:'PENDING'}).label, /진행 중/)
   assert.equal(classify({ selectedSessionId: OTHER, reviewStatus:'PERFORMED' }).label, '계획 미달')
   assert.equal(classify({ effectiveDay: '0.5' }).label, '일부 달성')
-  for (const status of ['UNKNOWN','UNVERIFIABLE']) assert.equal(classify({ status }).mark, '?')
-  assert.equal(classify({ effectiveDay: null }).mark, '?')
+  for (const status of ['UNKNOWN','UNVERIFIABLE','PENDING']) {
+    assert.equal(classify({ status }).mark, '월')
+    assert.equal(classify({ status }).kind, 'unknown')
+  }
+  for (const fields of [{effectiveDay:null},{reviewStatus:null},{reviewStatus:'PENDING'}]) {
+    assert.equal(classify(fields).mark,'월')
+    assert.equal(classify(fields).kind,'unknown')
+  }
   assert.equal(classify({ status: 'REST' }).label, '휴식')
+  assert.equal(classify({ status: 'REST' }).mark, '-')
+  assert.equal(classify({}).mark, 'X')
+  assert.equal(classify({reviewStatus:'PERFORMED'}).mark,'X')
+  assert.equal(classify({effectiveDay:'0.5'}).mark,'X')
+  assert.equal(classify({status:'BEFORE_REGISTRATION'}).mark,'월')
   assert.equal(classify({ status: 'BEFORE_REGISTRATION' }).label, '일정 등록 전')
   assert.equal(dayStatus({ status: 'PLANNED', effectiveDay: '0' }, '2026-11-06', '2026-11-05').label, '예정')
+})
+test('weekday occupies the status slot until a server result replaces it, including same-day completion',()=>{
+  const planned={status:'PLANNED',effectiveDay:'0',reviewStatus:null}
+  const mark=(day,date,today)=>dayStatus(day,date,today).mark
+  assert.equal(mark(planned,'2026-11-02','2026-11-02'),'월')
+  assert.equal(mark({...planned,effectiveDay:'1',reviewStatus:'PERFORMED'},'2026-11-02','2026-11-02'),'✓')
+  assert.equal(mark({...planned,reviewStatus:'MISSED'},'2026-11-02','2026-11-03'),'X')
+  assert.equal(mark({...planned,status:'REST'},'2026-11-02','2026-11-02'),'-')
+  assert.equal(mark({...planned,status:'REST'},'2026-11-03','2026-11-02'),'-')
+  assert.equal(mark({...planned,effectiveDay:'0.5',reviewStatus:'PERFORMED'},'2026-11-02','2026-11-02'),'X')
+  assert.equal(mark(planned,'2026-11-03','2026-11-02'),'화')
+  assert.equal(mark(planned,'2026-11-04','2026-11-06'),'수')
+  for(const status of ['UNKNOWN','PENDING','UNVERIFIABLE'])assert.equal(mark({...planned,status},'2026-11-05','2026-11-06'),'목')
+  for(const reviewStatus of ['PENDING','PENDING_ACTIVE','UNKNOWN'])assert.equal(mark({...planned,effectiveDay:'1',reviewStatus},'2026-11-05','2026-11-06'),'목')
+  assert.equal(mark(undefined,'2026-11-05','2026-11-06'),'목')
 })
 test('saved plan strings retain precision and WEIGHT/CARDIO have independent lists and totals', () => {
   const mixed = { ...routine, cardioPlacements: [{ id: OTHER, plan: cardio, deletedAt: null }] }

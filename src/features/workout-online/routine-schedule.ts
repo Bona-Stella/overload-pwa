@@ -12,6 +12,6 @@ export async function saveSchedule(api: WeeklyScheduleApi, scope: Scope, base: W
     if (latest.version !== '0' && sameAssignments(plannedAssignments(latest), desired) && latest.timeZone === base.timeZone && (latest.version === base.version || BigInt(latest.version) === BigInt(base.version) + 1n && latest.appliedAt !== null && (base.appliedAt === null || latest.appliedAt >= base.appliedAt)))
         return latest;
     if (latest.version !== base.version || latest.timeZone !== base.timeZone)
-        throw new Error('일정이 다른 화면에서 변경되었습니다. 루틴은 저장되어 있습니다. 편집을 닫고 최신 일정을 조회한 뒤 요일과 교체 대상을 다시 확인해 주세요.');
+        throw new Error('일정이 다른 화면에서 변경되었습니다. 입력은 유지됩니다. 편집을 닫고 최신 일정을 조회한 뒤 요일과 교체 대상을 다시 확인해 주세요.');
     return api.save(scope, base, desired, signal);
 }

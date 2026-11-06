@@ -98,7 +98,7 @@ export function HomePanel(props: Props) {
         <div className={styles.days}>{dates.map((date, index) => {
           const planned = data.overview.plannedDays.find(d => d.date === date), state = dayStatus(planned, date, today)
           return <button type="button" key={date} aria-pressed={selected === date} aria-label={`${date} ${weekdays[index]} ${planned?.plan?.name ?? ''} ${state.label}`} aria-current={date === today ? 'date' : undefined} onClick={() => setSelectedDay(date)}>
-            <small data-past={date < today}>{date.slice(8)}</small><strong data-status={state.kind}>{date < today ? state.mark : weekdays[index]}</strong><span data-past={date < today}>{planned?.plan ? scheduleRoutineLabel(planned.plan.name, planned.plan.tag??undefined) : planned?.status === 'REST' ? '휴식' : '미확인'}</span>
+            <small data-past={date < today}>{date.slice(8)}</small><strong data-status={state.mark === 'X' ? 'missed' : state.kind}>{state.mark}</strong><span data-past={date < today}>{planned?.plan ? scheduleRoutineLabel(planned.plan.name, planned.plan.tag??undefined) : planned?.status === 'REST' ? '휴식' : '미확인'}</span>
           </button>
         })}</div>
         <p className={styles.dayDetail}>{selected.slice(5).replace('-', '.')} · {day?.plan?.name ?? (day?.status === 'REST' ? '휴식' : '확인할 수 있는 계획 없음')} · {status.label}{day?.selectedSessionId && <Button className={styles.dayLink} variant="quiet" onClick={() => props.onOpen(day.selectedSessionId!)}>기록 ›</Button>}</p>

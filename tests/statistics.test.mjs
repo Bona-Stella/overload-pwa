@@ -121,7 +121,7 @@ test('schedule reads and versioned online writes preserve scope and never mutate
 })
 test('schedule editor has seven routine or rest choices and makes immediate first registration explicit',()=>{
   const html=renderToStaticMarkup(React.createElement(ScheduleEditor,{state:weekly(),routines:[{id:OTHER,name:'routine',version:'0'}],busy:false,onSave(){},onCancel(){}}))
-  assert.equal((html.match(/<select/g)||[]).length,7);assert.match(html,/저장 즉시 적용/);assert.match(html,/일정 저장/)
+  assert.equal((html.match(/aria-label="[월화수목금토일]요일 루틴"/g)||[]).length,7);assert.match(html,/루틴 후보 필터/);assert.match(html,/저장 즉시 적용/);assert.match(html,/일정 저장/)
 })
 
 test('existing schedule editor applies immediately without reservation controls',()=>{
