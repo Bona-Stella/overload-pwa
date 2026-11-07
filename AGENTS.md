@@ -99,17 +99,21 @@ AI 에이전트는 코드 변경 전에
 Required:
 - `AGENTS.md`
 
-### UI v0.9와 디로딩 v1.6
+### UI v0.9와 디로딩 v1.7
 
-화면·조작은 [UI/UX 명세](docs/product/ui-ux.md)와 [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md)를 확인하며 최신 10.14절이 과거 결정보다 우선합니다. [Wireframe](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토 자료입니다. 실제 PWA의 Onyx 테마·메인 컬러·그라데이션·토큰·시각적 위계는 [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 실제 앱 컬러로 구현하지 않습니다.
+화면·조작은 [UI/UX 명세](docs/product/ui-ux.md)와 [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md)를 확인하며 홈·T02-B는10.14절, 디로딩 표현 정정은10.15절이 과거 결정보다 우선합니다. [Wireframe](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토 자료입니다. 실제 PWA의 Onyx 테마·메인 컬러·그라데이션·토큰·시각적 위계는 [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 실제 앱 컬러로 구현하지 않습니다.
 
-운동 검색·선택은 [추출 아이콘 원본 6종](docs/product/assets/exercise-icons/README.md)을 재사용해 32 CSS px로 표시합니다. 디로딩 정책·상태는 [v1.6](docs/product/Overload_Deloading_Design_Specification_v1.6.md)을 따릅니다. 테마·일반 보기와 실제 디로딩 상태·쓰기 권한을 구분하고 테마 변경으로 입력·타이머를 초기화하지 않습니다.
+운동 검색·선택은 [추출 아이콘 원본 6종](docs/product/assets/exercise-icons/README.md)을 재사용해 32 CSS px로 표시합니다. 디로딩 정책·상태는 [v1.7](docs/product/Overload_Deloading_Design_Specification_v1.7.md)을 따릅니다. 테마·일반 보기와 실제 디로딩 상태·쓰기 권한을 구분하고 테마 변경으로 입력·타이머를 초기화하지 않습니다.
 
 [프론트엔드 적용 범위](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)와 [백엔드 연동 설계](docs/engineering/backend-ui-v0.9.md)에서 기존 구현과 후속 작업을 구분합니다. 디로딩 기능은 구현 예정이며 아래 기존 운동·통계·인증·동기화 계약을 유지합니다.
 
 T02-A 일반 홈은 2026-11-06 iPhone 실기기 최종 승인으로 완료했습니다. [마감·DB 보존·T02-B 인계](docs/tasks/ui-v09-t02a-closeout.md)를 따르며, **T02-B 1차 루틴 UI 구현 완료 전에는 검토용 프론트엔드·Backend·DB를 자동 시작하지 않습니다.** 기존 검토 데이터는 영구 백업/볼륨을 보존하고 새 seed·초기화·구형 폐기 Stop을 사용하지 않습니다. T02-B 1차 UI가 끝난 뒤에도 실제 API·모바일 검토를 위한 사용자의 재개 승인을 받은 후에만 문서의 수동 재개 절차를 적용합니다.
 
 ### Task 009 Current Design
+
+**2026-11-07 현행 디로딩:** G0~G3 기반은 구현 확인, G4 분석 설정/epoch/E/N·G5 기간/임시 계획은 미구현, G6는 시안 일부와 실제 API 미연동을 구분합니다. 시작 자격은4조건이며 계획0/1일·분석OFF·게이지0 자체로 차단하지 않습니다. 중복 ACTIVE 기간은 별도 상태 제약입니다. 최초 분석 기본값은 미확정 제품 결정이며 HTML 초기ON을 서버 기본으로 사용하지 않습니다. G3 일반 검사는 OFF여도 유지하고 실제 디로딩 기간 정지는 G5 연결 전입니다.
+
+디로딩의 현행 정책은 [v1.7](docs/product/Overload_Deloading_Design_Specification_v1.7.md), 일반 통계는 [v1.4](../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md)다. 아래 단계별 v1.3/v1.6·예약·미적용 문구는 당시 기록이며 [현재 구현 분석](docs/tasks/deload-v17-backend-readiness-analysis.md)의 실제 G0~G3와 G4~G5 미구현을 구분한다. 이번 문서 정리로 Backend/DB/오프라인 계약을 변경하지 않는다.
 
 아래는 현행 계약의 진입점과 단계별 구현·적용 기록입니다. 통계·추적 2A~2E 구현과 해당 단계의 자동 검증은 완료되었습니다.
 이전 단계의 미구현 표기는 당시 범위이며, 이후 단계에서 확장된 내용은 최신 계약을 따릅니다.
@@ -123,7 +127,7 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기 최종 승인으로 완료했습
 
 승인 중량 성장 2C는 [진행 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2c-report.md)와 [조회 계약](../overload-server/docs/api/approved-weight-growth.md)을 따릅니다. 기존 승인 사건을 routineId+placementId별로 분리하고 과거 수행/승인 이름을 검색하며, 초기/현재 중량으로 과거 점을 생성하지 않습니다. 연결 근거가 없는 점은 선으로 잇지 않습니다. 디로딩 식별/일반 승인 차단의 실제 연결은 후속3단계이며 혼재 검증 완료로 표시하지 않습니다. 개인 DB V18~V20 미적용을 유지합니다.
 
-주간 일정/달성률의 현행 계약은 [2B 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)와 [주간 일정 API](../overload-server/docs/api/weekly-schedule.md)를 따릅니다. 일정 최초 등록은 당일 즉시 적용하고 첫 주 분모는 등록일~일요일 예정일만 포함하며, 기존 일정 변경은 온라인에서 다음 월요일 적용으로 예약합니다. 같은 예정일은 최고 단일 세션의 InitialPlan 달성률만 사용합니다. 통계는 새 overview를 사용하고 이력 없는 과거/실제 유산소 목표 확인 불가는 추정하지 않습니다. IndexedDB3/schema2·고정 snapshot/finish·오프라인 permit은 유지합니다. 개인 DB V18·V19·V20 적용과 운영 카탈로그 검증은 미완료입니다.
+주간 일정/달성률의 현행 계약은 [2B 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)와 [주간 일정 API](../overload-server/docs/api/weekly-schedule.md)를 따릅니다. 일정 최초 등록은 당일 즉시 적용하고 첫 주 분모는 등록일~일요일 예정일만 포함하며, 기존 일정 변경도 저장 즉시 적용하며 첫 예정 START·최초 MISS·과거 날짜 근거를 보존합니다. 같은 예정일은 최고 단일 세션의 InitialPlan 달성률만 사용합니다. 통계는 새 overview를 사용하고 이력 없는 과거/실제 유산소 목표 확인 불가는 추정하지 않습니다. IndexedDB3/schema2·고정 snapshot/finish·오프라인 permit은 유지합니다. 개인 DB V18·V19·V20 적용과 운영 카탈로그 검증은 미완료입니다.
 
 제거된 2A 조회 endpoint의 당시 계약은 [Backend 진행 보고서](../overload-server/docs/tasks/statistics-tracking-phase-2a-report.md)와 [통계 읽기 API](../overload-server/docs/api/statistics.md)를 따릅니다. 실제 계정의 온라인 통계는 서버 종료 기록만 읽으며 종료 세션 InitialPlan 계획을 주간 전체 계획으로 표시하지 않습니다. 주간 전체 달성률의 이후 구현은2B, 승인 성장선은2C를 따릅니다. 유산소 계산 거리 저장은 위 2D에서 구현했고 디로딩 연결은 후속입니다. 기존 DB3/schema2·고정 요청·오프라인 허용을 유지합니다. 개인 DB V18 적용과 운영 카탈로그 분류 검증도 미완료입니다.
 

@@ -4,7 +4,7 @@
 - 디자인 결정: **다크 모드**, 모바일 퍼스트, 운동 중 **한 번에 한 종목 집중(A안)**
 - 상태: **UI 설계 기준 · 적용 구현은 별도**. 초기 토큰과 Task 002~005.5 항목은 당시 범위다.
 - 기능 정의 기준: [`requirements.md`](./requirements.md)
-- 확정 UI/UX 결정·상호작용은 [Decision Log](Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절이 우선한다. [Wireframe](Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용이다. 실제 PWA 색상·테마·시각적 위계는 [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)을 따르며 HTML의 흰색·회색을 앱 컬러로 구현하지 않는다. 디로딩 도메인은 [v1.6](Overload_Deloading_Design_Specification_v1.6.md), 아이콘은 [추출 원본 6종](assets/exercise-icons/README.md)을 사용한다. HTML 화면의 예시 날짜·수치·자격 스위치는 시연용이며 [실제 구현 범위](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)는 별도로 확인한다.
+- 확정 UI/UX 결정·상호작용은 [Decision Log](Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절이 우선한다. [Wireframe](Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용이다. 실제 PWA 색상·테마·시각적 위계는 [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)을 따르며 HTML의 흰색·회색을 앱 컬러로 구현하지 않는다. 디로딩 도메인은 [v1.7](Overload_Deloading_Design_Specification_v1.7.md), 아이콘은 [추출 원본 6종](assets/exercise-icons/README.md)을 사용한다. HTML 화면의 예시 날짜·수치·자격 스위치는 시연용이며 [실제 구현 범위](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)는 별도로 확인한다.
 - Task 005 보완: 웨이트 뒤 유산소 계획·실수행·완료 확인과 유산소 전용 루틴을 추가했다. 아래 7절이 해당 흐름을 구체화한다.
 
 최신 세부 규칙은 아래 공식 절을 참조하며 이 문서에 복제하지 않는다.
@@ -302,3 +302,7 @@
 같은 계정의 한 세션 충돌 복구와 독립 계정 간 운동 데이터 병합을 구별한다. 후자는 후속 과제다. 차이 표시의 세부 단위·복구 검증·수정/삭제 이력 표현·제어권 이전 실패 화면은 [Task 006 설계 대상](../handoff/Overload-Task006-Design-Handoff.md)이며 이번 문서 작업에서 구체적 UI/기술 계약을 확정하지 않는다.
 
 **2026-11-07 v0.9 T02-B 문서 개정:** 홈 판정·루틴3.2~3.4절을 최신 요구사항으로 통합했다. 초기 Task002~005.5절은 당시 기록이며 T02-B 현재 가이드보다 우선하지 않는다. T02-A 승인 유지, T02-B 최종 실기기 승인 별도.
+
+### 2026-11-07 디로딩 정책 표현 정정
+
+설정 이력이 없는 신규 계정의 최초 분석 기본값은 **미확정 제품 결정**이다. 기본 ON/OFF를 임의 선언하지 않으며 G4 설정 계약 전에 확정한다. HTML의 초기 ON과 개발용5.2주는 시연 상태일 뿐 서버 기본값·실제 누적이 아니다. 시작 자격은 최근7일 실제 일반 수행/이전 완료 이후 신규 일반 수행/오늘 수행 없음/ACTIVE 일반 세션 없음의4조건이다. 계획일 수·OFF·게이지0은 gate가 아니다. 이미 ACTIVE인 디로딩 기간은 별도 상태 제약으로 중복 생성하지 않는다. 유산소 실제 수행은 기존 계약의 미삭제 COMPLETED·activeMs>0를 뜻하며 최초 목표 달성과는 구분한다. E≤1 RESET·E>1 min(1,E/N) ADD, 다음 월04시 이후 검사 완료 확정·주중 미가산을 따른다. G4/G5는 미구현이고 HTML/헤더는 시연이다. 일반 ST-17~23의 예정 루틴 분모를 디로딩에 복사하지 않는다.

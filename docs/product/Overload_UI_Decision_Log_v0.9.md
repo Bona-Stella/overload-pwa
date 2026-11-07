@@ -4,10 +4,11 @@
 - 기준 화면 파일: **`Overload_UI_Baseline_Wireframe_v0.9.html`**
 - 역사 자료: v0.1~v0.8 HTML은 과거 참조명이며 현재 저장소에는 없다. 이번 개정 직전 v0.9는 [별도 보존본](Overload_UI_Baseline_Wireframe_v0.9_before_T02B_2026-11-07.html)으로 남겼다.
 - 성격: **실제 앱 구현이 아닌, 사용자와 합의한 UX 방향·와이어프레임·남은 검토 사항의 기준 문서**. 원본 `/demo`는 초기 디자인 참고용이며 최종 기능·정책의 근거로 고정하지 않는다.
+- **디로딩 정책 후속 기준(2026-11-07):** [v1.7](Overload_Deloading_Design_Specification_v1.7.md)의 기록 기반E/N·E≤1 RESET·월04시 확정·epoch·시작4조건이 아래 과거 디로딩 계산/5조건/예약 문구보다 우선한다. T02-A/T02-B 배치는 유지하며 실제 디로딩 API/기간/UI는 G4~G6 후속이다.
 - 문서 우선순위: 사용자가 최근 명시적으로 수정·승인한 제품 결정을 과거 설계/시연 문구보다 우선한다. 서버 구현 여부는 별도로 검증한다.
 - **최신 화면 규칙:** 홈 주간 상태와 T02-B는 **10.14절(2026-11-07)**, 나머지 승인된 홈은 10.12절, 그 외 시각 보완은 10.11절을 따른다. 3~10.13절은 당시 결정 이력이며 충돌하는 규칙은 10.14절의 폐기 목록으로 대체한다. T02-A 승인과 T02-B 요구사항 확정·최종 실기기 승인은 구분한다.
 
-- **문서 역할:** [HTML 와이어프레임](Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 배치·동작 검토용이며 실제 컬러를 적용하지 않는다. 실제 PWA의 색상·그라데이션·시각 토큰과 완료 컨트롤 표현은 [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)을 따른다. 디로딩 도메인은 [v1.6](Overload_Deloading_Design_Specification_v1.6.md)을 따른다.
+- **문서 역할:** [HTML 와이어프레임](Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 배치·동작 검토용이며 실제 컬러를 적용하지 않는다. 실제 PWA의 색상·그라데이션·시각 토큰과 완료 컨트롤 표현은 [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)을 따른다. 디로딩 도메인은 [v1.7](Overload_Deloading_Design_Specification_v1.7.md)을 따른다.
 
 ## 1. 상태 표기
 
@@ -222,7 +223,9 @@
 - 자동 분할 가능성 판단의 세부 PRIMARY/`jointType`/분할 실패 처리, 동기화/오프라인 중 상태 전환 원자성, 8일차 팝업 1회 확인 기록의 계정/기간 단위 보존, 완료 후 날짜 경계와 기록 정정 영향, 디로딩 재시작 제한/임시 루틴 편집 유효성 등은 **실제 구현 검증 대상**.
 - 이번 UI 확정과 무관하게 기존 디로딩 계산·중량·세트·유산소 산식은 `Overload_Deloading_Design_Specification_v1.3.md`에 따라 유지하되, v0.7 대화에서 **명시적으로 변경한 UI/제품 정책만 최신 합의 우선**. 별도 v1.4 정책 통합본에 변경점 반영.
 
-## 10.9 v0.8 · 통계 UI 개선 및 디로딩 시작 자격 (2026-11-04 확정)
+## 10.9 v0.8 · 통계 UI 개선 및 디로딩 시작 자격 (2026-11-04 당시 기록)
+
+> 아래 다섯 조건/계획2일 gate는 폐기 이력이다. 현재 자격·분석은10.15절과 디로딩v1.7을 따른다.
 
 ### 운동 현황 그래프와 필터
 
@@ -470,11 +473,22 @@
 
 수정 전 [HTML 보존본](Overload_UI_Baseline_Wireframe_v0.9_before_T02B_2026-11-07.html)과 10.13절·단계 보고서는 역사 자료다. [현재 HTML](Overload_UI_Baseline_Wireframe_v0.9.html)의 시연은 메모리 안에서만 동작하며 서버 저장·실제 G3 실행·오프라인 ACK를 모방하지 않는다. 디로딩 화면·통계·운동 화면은 이번 개정 대상이 아니다. 이번에는 문서만 변경하며 새로운 사용자 최종 승인이나 API/DB 적용을 선언하지 않는다.
 
+## 10.15 · 2026-11-07 디로딩 v1.7 표현 정정
+
+이 절은 디로딩 정책 안내를 정리하며 T02-A/T02-B 레이아웃을 변경하지 않는다. 과거10.9/10.10의 계획2일·다섯 조건·원형 게이지/전역 전환 표현과 구버전 변경 이력은 당시 기록으로 보존한다.
+
+- 현재 자격은 최근7일 실제 일반 수행/이전 완료 이후 새 수행/오늘 수행 없음/ACTIVE 일반 세션 없음의4조건이다. 계획0~1일·OFF·게이지0도 다른 네 조건을 충족하면 시작 가능하다.
+- ACTIVE 디로딩 기간 중복 생성은 별도 상태 제약이며 다섯 번째 자격이 아니다. 동일 요청의 재확인과 서버 동시성 보호가 필요하다.
+- 설정 이력이 없는 신규 계정의 최초 분석 기본값은 **미확정 제품 결정**이다. 기본 ON/OFF를 임의 선언하지 않으며 G4 설정 계약 전에 확정한다. HTML의 초기 ON과 개발용5.2주는 시연 상태일 뿐 서버 기본값·실제 누적이 아니다.
+- 유산소 실제 수행은 유효 미삭제 COMPLETED·양의 activeMs다. START만/활동 없음/SKIPPED를 실제 수행으로 보지 않으며 최초 목표 달성과 구분한다.
+- 디로딩은 자기InitialPlan의 최고 단일 후보를 날짜별로 고른 E/N·E≤1 RESET·월요일04시 이후 확정·주중 미가산이다. 일반ST-17~23은 별도다. OFF도 G3/일반통계를 중단하지 않는다. 정지·완료/취소 경계와 기존 감량/편성 수치는v1.7을 따른다.
+- G0~G3 구현 확인, G4/G5 미구현, G6 시안/실제 미연동을 구분한다. 최신 HTML의 자격 시연은4조건과 기간 상태 제약으로 정정하며 서버 결과를 생성하지 않는다.
+
 ## 11. 참조 문서 및 확인 근거
 
 - `Overload_UI_Baseline_Wireframe_v0.4.html`: 직전 확정·검토된 홈·루틴·기록·분석 와이어프레임.
 - `Overload_Statistics_and_Tracking_Design_Specification_v1.3.md`: 기간·근육별 통계·성장 추적 정책.
-- `Overload_Deloading_Design_Specification_v1.6.md`: **현재 디로딩 단일 설계 기준** (v1.3~v1.5 개정 이력 보존). v0.9 최신 헤더/시작 흐름은 DL-85~90과 관련 수정 조항 우선.
+- [Overload_Deloading_Design_Specification_v1.7.md](Overload_Deloading_Design_Specification_v1.7.md): **현재 디로딩 단일 정책 기준**. v1.6과 이전 개정 이력은 보존하며 최신 기록 기반 분석/시작4조건이 과거 계산·자격 문구보다 우선한다.
 - `Overload_Statistics_and_Tracking_Design_Specification_v1.3.md`: v0.9에서도 유지되는 실제 수행·주동근/보조근·승인 중량 통계 정책. 
 - `standard-exercise-catalog-design-analysis.md`: 표준 운동/별칭/근육/제조사와 운동 평가 정책 분석(당시 설계 제안 부분은 현재 구현 계약과 구분).
 - `standard-exercise-catalog.md`, 표준 카탈로그 Backend 1·2단계 및 Frontend 3단계 검증 보고서: 실제 조회 응답 범위와 제조사/부하 방식 필드.

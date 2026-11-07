@@ -18,7 +18,7 @@
 
 ## 1. 목적 및 적용 범위
 
-UI를 변경할 때는 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)의 실제 컬러·시각 위계와 [추출 아이콘 원본](../product/assets/exercise-icons/README.md)을 먼저 확인하고 [UI/UX 명세](../product/ui-ux.md)와 [v0.9 적용 범위](#87-v09-적용-범위와-구현-상태)를 확인합니다. 디로딩 도메인·데이터 경계는 [제품 v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)과 [백엔드 연동 설계](backend-ui-v0.9.md)를 따릅니다.
+UI를 변경할 때는 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)의 실제 컬러·시각 위계와 [추출 아이콘 원본](../product/assets/exercise-icons/README.md)을 먼저 확인하고 [UI/UX 명세](../product/ui-ux.md)와 [v0.9 적용 범위](#87-v09-적용-범위와-구현-상태)를 확인합니다. 디로딩 도메인·데이터 경계는 [제품 v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md)과 [백엔드 연동 설계](backend-ui-v0.9.md)를 따릅니다.
 
 이 문서는 Overload 프론트엔드의 기술별 개발 규칙을 정의합니다.
 
@@ -622,7 +622,7 @@ iPhone의 화면 구조를 고려합니다.
 
 2026-11-07 현재 T02-B는 `85ec10f50e59`에 구현·로컬 커밋된 상태다. [1차](../tasks/ui-v09-t02b-first-ui-report.md)·[2차 보고서](../tasks/ui-v09-t02b-second-report.md)는 당시 기록이며 최신 현황은 이 절과 Decision Log10.14절을 따른다. 루틴 태그 저장과 일정 즉시 적용이 연결되어 있다. 최종 코드 이후548건 테스트·build·lint 통과 기록을 확인했으나, T02-B 사용자 최종 실기기 승인은 별도다. 문서 개정 자체가 추가 API/DB 적용·승인을 뜻하지 않는다.
 
-[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
+[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
@@ -1531,3 +1531,7 @@ AI 에이전트는 기존 구조를 이해하고,
 홈과 루틴 목록은 같은 현재 배정을 재조회한다. 과거 계획·첫 예정 START는 서버 overview의 고정 근거를 사용하고 현재 템플릿으로 덮지 않는다. PENDING과 미검사/재검사0은 미수행 확정 표시를 하지 않는다. 일반 통계의 계획 미달과 실제 무수행을 구분한다. 정책은 [통계 v1.4](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md), API는 [일정 계약](../../../overload-server/docs/api/weekly-schedule.md)을 따른다. 수정 전 UI v0.9 HTML은 별도 보존본이며 현재 HTML과 Decision Log10.14절은 최신 T02-B 레이아웃/즉시 적용을 반영한다.
 
 IndexedDB/ACK/writerEpoch/dataGeneration/타 기기 읽기 전용과 개발용 디로딩 샘플은 유지한다. 당시 G2~G3 단계는 실제 개발·검토 DB migration과 서버 운영 전환을 허용하지 않았다. 기존 V23 전용 재개 도구는 V24를 임의 적용하도록 변경하지 않았다.
+
+### 2026-11-07 디로딩 정책 표현 정정
+
+설정 이력이 없는 신규 계정의 최초 분석 기본값은 **미확정 제품 결정**이다. 기본 ON/OFF를 임의 선언하지 않으며 G4 설정 계약 전에 확정한다. HTML의 초기 ON과 개발용5.2주는 시연 상태일 뿐 서버 기본값·실제 누적이 아니다. 시작 자격은 최근7일 실제 일반 수행/이전 완료 이후 신규 일반 수행/오늘 수행 없음/ACTIVE 일반 세션 없음의4조건이다. 계획일 수·OFF·게이지0은 gate가 아니다. 이미 ACTIVE인 디로딩 기간은 별도 상태 제약으로 중복 생성하지 않는다. 유산소 실제 수행은 기존 계약의 미삭제 COMPLETED·activeMs>0를 뜻하며 최초 목표 달성과는 구분한다. E≤1 RESET·E>1 min(1,E/N) ADD, 다음 월04시 이후 검사 완료 확정·주중 미가산을 따른다. G4/G5는 미구현이고 HTML/헤더는 시연이다. 일반 ST-17~23의 예정 루틴 분모를 디로딩에 복사하지 않는다.
