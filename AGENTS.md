@@ -111,7 +111,7 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기 최종 승인으로 완료했습
 
 ### Task 009 Current Design
 
-**2026-11-07 현행 디로딩:** G0~G3 기반은 구현 확인, G4 분석 설정/epoch/E/N·G5 기간/임시 계획은 미구현, G6는 시안 일부와 실제 API 미연동을 구분합니다. 시작 자격은4조건이며 계획0/1일·분석OFF·게이지0 자체로 차단하지 않습니다. 중복 ACTIVE 기간은 별도 상태 제약입니다. 최초 분석 기본값은 미확정 제품 결정이며 HTML 초기ON을 서버 기본으로 사용하지 않습니다. G3 일반 검사는 OFF여도 유지하고 실제 디로딩 기간 정지는 G5 연결 전입니다.
+**2026-11-07 현행 디로딩:** G0~G3 기반은 구현 확인, G4 분석 설정/epoch/E/N·G5 기간/임시 계획은 미구현, G6는 시안 일부와 실제 API 미연동을 구분합니다. 시작 자격은4조건이며 계획0/1일·분석OFF·게이지0 자체로 차단하지 않습니다. 중복 ACTIVE 기간은 별도 상태 제약입니다. 신규 계정은 기본ON·누적0의 초기 epoch로 확정됐으며 OFF→ON 새 epoch와 구분합니다. 기존 미설정 계정은 비소급 이행 경계를 검증하고 HTML 초기ON을 실제 서버 상태로 보지 않습니다. G3 일반 검사는 OFF여도 유지하고 실제 디로딩 기간 정지는 G5 연결 전입니다.
 
 디로딩의 현행 정책은 [v1.7](docs/product/Overload_Deloading_Design_Specification_v1.7.md), 일반 통계는 [v1.4](../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md)다. 아래 단계별 v1.3/v1.6·예약·미적용 문구는 당시 기록이며 [현재 구현 분석](docs/tasks/deload-v17-backend-readiness-analysis.md)의 실제 G0~G3와 G4~G5 미구현을 구분한다. 이번 문서 정리로 Backend/DB/오프라인 계약을 변경하지 않는다.
 

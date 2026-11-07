@@ -1,6 +1,6 @@
 # 디로딩 v1.7 정책 통합·Backend 구현 현황 분석
 
-2026-11-07 (Asia/Seoul). 기능 개발이 아닌 소스·계약·테스트·보존 환경의 현황 분석이다. G0~G3 기반은 구현되어 있지만 **G4 분석 엔진·G5 실제 디로딩 실행 엔진은 미구현**이다. 재사용 가능한 일반 기능을 실제 디로딩 구현으로 계산하지 않는다. 최초 분석은 Backend를 읽기 전용으로 조사했다. 이후 사용자 요청에 따른 이번 정정은 양쪽 활성 문서에만 반영하며 검증 후 독립 문서 커밋한다. 기능 소스·migration·DB는 변경하지 않는다.
+2026-11-07 (Asia/Seoul). 기능 개발이 아닌 소스·계약·테스트·보존 환경의 현황 분석이다. G0~G3 기반은 구현되어 있지만 **G4 분석 엔진·G5 실제 디로딩 실행 엔진은 미구현**이다. 재사용 가능한 일반 기능을 실제 디로딩 구현으로 계산하지 않는다. 최초 분석과 문서 정정 커밋은 아래에 기록했다. 후속 요청으로 신규 계정 기본ON을 확정 반영하고5절의 G4 준비 계약을 구체화한다. **이번 준비 작업은 문서만 수정하며 commit/push·기능 소스·migration·DB·서버 변경은 하지 않는다.**
 
 ## 1. 기준·Git 체크포인트·조사 범위
 
@@ -9,6 +9,7 @@
 | PWA UI 구현 | `85ec10f50e595467622f1f562c1430e1896baf24` |
 | 이번 1단계 UI 문서 커밋 | **`6b13ff8167ebed4ebf575032837fc4666173c4f6`** / `docs: synchronize T02-B UI specifications and wireframe` |
 | Backend | `2d37f8b7ce0445d5246ba47e8a37dac227372cdc` |
+| 이번 G4 준비 시작 HEAD | PWA `00622559e9ee845b2d4d65643e0a88a5f719c267`, Backend `eb193cbf3956381a0188f7796fca3eb69fcfa16c`; 양쪽 clean 확인. 위 해시는 당시 분석 기준 |
 | 양쪽 브랜치 | `feature/weekly-schedule-daily-review-t02b` |
 | 현행 디로딩 정책 | [v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md) |
 | 보존 정책 원본 | [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md), Backend의 [v1.3](../../../overload-server/docs/product/Overload_Deloading_Design_Specification_v1.3.md) 및 이전 버전 |
@@ -124,27 +125,108 @@ V24 source trigger는 실제 세트·유산소·상태/논리삭제 변화와 �
 | 기간/임시 계획/일정 | 없음 | 기간 version·임시 계획 소속·미수행 수정/교환/삭제·일반 read-only 정책 |
 | 완료/취소/자동 종료 | 없음 | 종료 시각·사유·10일 경계·누적reset/preserve·ever-performed·ACTIVE/지연동기화 원자성 |
 
-설정 이력이 없는 신규 계정의 최초 기본ON/OFF는 확정 근거가 없는 **제품 결정**이며 G4 전에 정해야 한다. HTML 초기ON/개발 시안은 근거가 아니다. 경로·DTO·오류 enum은 아직 미확정인 기술 계약이며 예시 endpoint를 실제 계약으로 선언하지 않는다. 기존 AuthApi/WorkoutTransport·쿠키/CSRF·code-only 오류·scope/version·no-store를 재사용할 수 있다. 새 API가 필요하다는 정책과 실제 breaking 변경/DB 적용 승인은 구분한다.
+신규 계정의 **기본ON·누적0·초기 epoch**는2026-11-07 사용자 추가 결정으로 확정됐다. 최초 ON은 OFF→ON이 아니며 HTML 초기ON/개발 시안과 실제 서버 상태는 구분한다. 기존 미설정 계정의 비소급 이행·API/DDL 후보는5절을 따른다. 후보 경로·DTO·오류는 구현 전 기술 계약이며 현재 존재하는 API로 선언하지 않는다. 기존 AuthApi/WorkoutTransport·쿠키/CSRF·code-only 오류·scope/version·no-store를 재사용할 수 있다. 새 API가 필요하다는 정책과 실제 breaking 변경/DB 적용 승인은 구분한다.
 
 PWA [HomePanel](../../src/features/home/HomePanel.tsx)은 일반 계정에서 분석 미연동 아이콘을 표시한다. [HomeReviewContext](../../src/review/context.ts)·[ReviewHeader](../../src/review/ReviewHeader.tsx)의5.2주는 개발 표시이며 서버 상태·권한·통계/IndexedDB에 저장되지 않는다. 실제 게이지·분석 토글·기간 UI는 G4/G5 API 이후 별도 G6 작업이다.
 
 ## 5. G4 개발 범위·의존성·검증 계획
 
-기존 C+A 최소 확장 방향을 유지한다. 아래 이름은 기존 계획의 **책임 후보**이며 지금 생성한 테이블/서비스가 아니다.
+기존 C+A 최소 확장 방향을 유지한다. 이 절은 **구현 전 기술 후보와 실행 기준**이며 새 서비스·API·테이블은 아직 없다. 제품 E/N·네 자격·OFF/epoch는 다시 설계하지 않는다. 실제 SQL/DTO·오류명은 G4-1에서 검증하며 기능 개발은 별도 지시 후 진행한다.
 
-| 작업 | 대상·재사용 | 완료 근거·핵심 검증 |
+### 5.1 실제 코드 대조와 재사용
+
+| 실제 근거 | 재사용 및 필요한 확장 |
+|---|---|
+| [AccountProvisioningService.provision](../../../overload-server/src/main/java/com/overload/overload_server/account/AccountProvisioningService.java), [AccountRepository](../../../overload-server/src/main/java/com/overload/overload_server/account/AccountRepository.java) | users/identity/휴식 seed는 같은 REQUIRES_NEW·READ_COMMITTED JDBC 트랜잭션, identity 경쟁 패자는 전체 rollback 후 승자를 읽는다. 신규 생성 경로에 분석 초기 행을 함께 넣고 재로그인에서는 재seed하지 않는다 |
+| [V1 users](../../../overload-server/src/main/resources/db/migration/V1__create_users.sql), [UserWorkoutSettings](../../../overload-server/src/main/java/com/overload/overload_server/workoutsettings/UserWorkoutSettings.java) | created_at·data_generation은 있으나 계정 공통 시간대·분석 필드는 없다. 휴식 @Version은 분석 expectedVersion을 대신하지 않으며 별도 휴식 계약은 유지한다 |
+| PlanningCalculator.judge/Candidate/Fraction | private 종목 판정·하한/상한·BigInteger 분수만 최소 공유한다. 일반 calculate의 예정 루틴 필터/일정 분모/PlannedDay까지 공통화하지 않는다. ST-17~23과 기존 테스트 유지 |
+| StatisticsRepository.read·PlanningRepository.read | 미삭제 FINISHED/AUTO_CLOSED·실제 WEIGHT 세트·COMPLETED 유산소·InitialPlan을 재사용한다. 현재 Session projection에는 started_at/started_time_zone가 없으므로 epoch 구간 필터용 메타 조회가 필요하다. G4에 불필요한 근육 매핑/최근3건을 매번 읽지 않게 필요한 사실 조회만 공유한다 |
+| DailyTrainingReviewService/Job·WorkoutCalendarRepository·V24 | 04시 due·dirty/revision·retry·잠금·분할 배치 재사용. PERFORMED는 점수1이 아니다. 현재 owner 탐색은 calendar_control만 사용하므로 일정 없는 분석 계정 탐색이 필요하다. cursor는 보류 날짜도 지나가므로 단독 확정 근거가 아니다 |
+| WeeklyScheduleService·WorkoutSessionRequests·SecurityConfiguration | owner FOR UPDATE·세대/expectedVersion·IANA ZoneId·START 날짜 검증과 세션/CSRF/code-only/no-store 재사용. 기존 START 입력·고정 hash·불변 날짜는 바꾸지 않는다 |
+
+### 5.2 초기 ON과 기존 미설정 계정의 이행 후보
+
+**신규 생성:** 계정 생성 트랜잭션에서 `(owner,generation,version=0,epoch=0,enabled=true,reason=INITIAL)` 한 행을 생성한다. epoch 기준 시각은 같은 users.created_at을 서버에서 읽고 최초 누적은 정확한0이다. 최초 GET/로그인/클라이언트 시각으로 바꾸거나 OFF→ON 사건을 만들지 않는다. identity 경쟁 패자·가입 실패는 분석 행도 함께 rollback한다. 초기 PK와 기존 identity 유일성으로 동시 최초 요청에 epoch 하나만 남긴다.
+
+**시간대:** 현재 가입 계약에는 시간대가 없다. ON/초기 epoch 시각은 가입과 함께 보장하고 time_zone 미확정 동안 계산 상태는 `AWAITING_TIME_ZONE` 후보로 구분한다. 설정ON·초기누적0은 유지하되 미확정 주간 점수를0으로 확정하지 않는다. 기존 일정이 있으면 고정 시간대를 재사용한다. 일정 없는 계정은 최초 일반 START의 검증된 startedTimeZone 또는 인증된 명시적 설정 쓰기의 IANA 시간대로 한 번 확정하는 방안을 사용한다. version만 증가하고 초기 epoch 시각은 유지한다. 일정 최초 저장/START/설정 쓰기와 같은 owner 잠금에서 일관성을 확인하며 이후 다른 기기 시간대로 과거 workoutDate를 다시 쓰지 않는다. JVM 기본 UTC를 조용히 대입하지 않는다. 시간대 혼재·경합은 격리 테스트로 검증한다.
+
+**기존 미설정 계정:** 현재 분석 설정 구조 자체가 없으므로 기존 계정은 신규 가입 경로와 구분해야 한다. 이행 후보는 후속 DDL 배포 시 가입/관리 쓰기 정지·백업/격리 복원 검증 후 고정 서버 시각 `T_adopt`에서 기존 미설정 owner/현재세대에 `enabled=true,version=0,epoch=0,reason=ADOPTED_INITIAL,epoch_started_at=T_adopt`를 한 번 삽입하는 방식이다. 이는 기본ON의 **비소급 이행 제안**이며 이번에 실제 계정을 변경한 것이 아니다. 이미 생성된 ON/OFF 선택은 덮어쓰지 않는다. 기존 계정의 users.created_at으로 소급하지 않고 T_adopt 이전 START/기록/MISS는 가산하지 않는다. 시간대가 없으면 명시적 확정을 기다린다. 재실행은 PK/기존 행 확인으로 중복 초기 epoch를 만들지 않아야 한다.
+
+**부재·재진입:** 이행 후 재로그인/GET은 설정을 재생성하지 않는다. 배포 후 신규 생성 경로의 행 누락은 무결성 오류이며 “부재=신규”로 추정하거나 GET에서 silent seed하지 않는다. 이행 대상·경계를 증명할 수 없으면 자동 복구/소급하지 않는다. 현재 dataGeneration만 다루고 향후 데이터 초기화/세대 전환은 별도 원자적 생성 계약과 연결하며 이전 세대를 복사하지 않는다.
+
+**토글:** 기술 후보에서 epoch 식별자는 그 구간을 연 최초 설정 version이다. 최초 ON은 version0/epoch0, ON→OFF는 동일 epoch의 분석 종료 경계, 실제 OFF→ON은 새 설정 version을 새 epoch로 참조하고 서버 전환 시각·누적0으로 시작한다. epoch에 별도 순번 카운터를 중복 저장하지 않는다. 같은 enabled·확정 시간대 반복은 새 epoch/설정 이력을 만들지 않는다. 미확정 시간대의 최초 확정은 문맥 변경이므로 version만 증가하며 epoch는 유지한다. OFF에는 주간 재계산을 가산하지 않고 재ON이 이전 OFF/epoch 실적을 가져오지 않는다. 시작 시각이 ON 구간에 속한 세션만 후보이며 활성화 전 세션을 쪼개 넣지 않는다. OFF가 일반 진행 세션의 snapshot/FINISH를 차단하거나 미전송 원본을 버리게 하지 않는다.
+
+### 5.3 API·DDL 최소 후보
+
+아래 경로·필드·오류는 **미구현 후보**다. 기존 휴식 API와 분석 계약을 분리하고 시작 자격/기간은 G5로 남긴다.
+
+| API 후보 | 최소 계약 |
+|---|---|
+| GET `/api/v1/deload-analysis` | 인증 principal의 현재세대 설정·version/epoch/epochStartedAt·timeZone·계산 상태, 마지막 확정 누적 분수/표시값·확정 범위·재계산 시작 주/기준 revision. 본문/미지원 query 거절·일관된 read-only snapshot·no-store. 부재를 성공 기본ON 응답으로 꾸미거나 GET에서 쓰지 않음 |
+| PUT `/api/v1/deload-analysis/settings` | `{dataGeneration:Counter,expectedVersion:Counter,enabled:boolean,timeZone:IANA}` 후보. userId/epoch/누적/기준시각은 입력받지 않음. 세션 쿠키+CSRF, owner FOR UPDATE 후 현재세대/version/고정 시간대 확인. 실제 전이만 서버 시각으로 append하고 최신 설정/계산 상태 응답 |
+
+Counter는 기존 정규 long 십진 문자열이다. 형식/중복 키/null/미지원 필드·시간대400, 인증401, CSRF/권한403, 세대/version/시간대409, 연결 일시 실패503 경계를 따른다. 새 code명은 구현 시 테스트와 확정한다. 휴식 API에 expectedVersion이 없다는 이유로 G4에서 생략하지 않는다. expectedVersion은 no-op보다 먼저 확인한다. ACK 유실 후 옛 version 재요청은409→GET 재확인이며 재전이하지 않는다. 최신 version으로 같은 상태를 쓰면 no-op이다. owner 잠금·version PK/같은 트랜잭션으로 동시 최초 시간대 확정·토글·중복 요청을 처리하고 별도 receipt/event 표를 추가하지 않는다. 저장 시각 정밀도·단조 version을 유지하고 시각 역행/overflow는 충돌로 거절한다.
+
+| 저장 책임 후보 | 최소 필드·제약 |
+|---|---|
+| `deload_analysis_versions` | `(user_id UUID,data_generation BIGINT,version BIGINT)` PK·users scope FK, enabled BOOLEAN, epoch BIGINT, recorded_at/epoch_started_at TIMESTAMPTZ, time_zone TEXT nullable(초기 미확정만), reason TEXT. epoch는 그 시작 행의 version을 참조하는 같은 owner/세대 자기 FK,0≤epoch≤version·시각/시간대 제약. 최신 version으로 현재 설정 조회. 별도 current 설정/epoch/누적 표 없음. related_period는 G5 때 실제 기간과 연결 |
+| `deload_weekly_assessments` | `(user_id,data_generation,epoch,week_start DATE)` PK·versions의 해당 epoch 시작 version에 대한 owner/세대 범위 FK. E와 기여의 정확한 분자/분모 NUMERIC 정수, N INTEGER 0~7, rule_version·주별 revision·입력 revision 식별값, 보류/확정·RESET/ADD, confirmed_at/updated_at·재검사 표지. 월요일/양의 분모/0≤E≤N·ADD≤1·N0 나눗셈 금지 검사. 보류값을 확정 점수로 사용하지 않음 |
+
+epoch가 가리키는 행은 최초ON/재ON 등 구간 시작 사건이어야 하고, 이후 OFF/시간대 확정 행은 이를 유지한다. FK와 같은 트랜잭션의 전이 검증으로 다른 owner/세대/epoch가 섞이지 않게 한다. 정확 분수는 기약형 임의 정밀 정수로 저장·문자열 전송하고 NUMERIC 한계/연산 비용을 검증한다. Fraction.decimal은 표시용이다. 마지막 확정 누적은 같은 epoch의 주들을 순서대로 RESET/ADD fold해 구하며 current-total 캐시는 두지 않는다. 가장 이른 dirty/보류 주 이전의 신뢰 가능한 확정값·범위와 재계산 상태를 따로 반환한다. 초기 주간 결과 없음의0과 UNKNOWN을 구분한다. 분할 진도는 주별 상태/revision을 사용하며 중복 일별 점수·범용 작업 이벤트 저장소를 만들지 않는다.
+
+### 5.4 독립 후보·04시 확정·재계산
+
+1. 현재 owner/세대·ON 구간 started_at의 **일반** 세션만 읽는다. 현재는 디로딩 소속 필드가 없으므로 기존 일반 세션 기반 G4 단독 범위와 G5 이후 명시적 소속 필터를 구분한다. 미삭제 FINISHED/AUTO_CLOSED에 실제 WEIGHT 세트 또는 유효 COMPLETED·activeMs>0가 필요하다. START만은 제외하며 부분 수행의 값0은 유효 후보다.
+2. InitialPlan 웨이트 계획 세트 전부·유산소 최초 목표를 기존 judge로 판정한다. 실제 활동 존재와 목표 달성은 다르며 추가 종목은 완료 분자에서 제외한다. 날짜별 lower 최대와 모든 후보 upper 최대를 비교해 UNKNOWN이 최고값에 영향을 주면 보류한다. 알려진 완전1이 있으면 다른 UNKNOWN의 상한이 최고1을 바꾸지 못하는 원리도 유지한다. 손상/계획0을0/0=1로 만들지 않는다.
+3. 실제 날짜와 G3의 **현재 확정 MISSED** 날짜의 합집합으로 N을 정한다. 실제 날짜는 최고 단일값을 사용하며 두 세션의 종목 완료를 합치지 않는다. 최초 MISS 이력과 실제가 같은 날짜면 N1이다. PERFORMED→1·현재 계획일 분모·예정 루틴 필터 재사용을 금지한다.
+4. 고정 시간대 월~일·다음 월04시를 사용한다. calendar_control이 있으면 cursor와 해당 주 dirty/ACTIVE/UNKNOWN·retry/후보 평가 완료를 모두 확인한다. 일정 미등록 계정은 분석 활성 계정 탐색으로 발견하고 실제 세션·ACTIVE·기존 source revision을 평가한다. **계획 부재가 확인된 경우** 실제 날짜만 쓰며 계획 UNKNOWN을 가짜 MISS로 만들지 않는다. 근거 불명확은 보류다. 가짜 일정/control 등록이나 G3 예정일 판정 복제는 하지 않는다.
+5. 기존 Job 주기에 G3 검사 뒤 G4 호출을 연결한다. G3가 처리한 owner만 전달하면 일정 없음·일별 no-op·주간 due·재평가를 놓치므로 **분석 활성/재계산 대상은 독립 조회**한다. 별도 자정/월요일 scheduler는 없다. 현재 review.enabled는 job 전체 제어이며 계정 분석 토글과 연결하지 않는다. OFF여도 G3는 처리한다.
+6. 기존 source dirty/revision을 재사용한다. 주별 입력 식별값은 ON 경계/시간대/ruleVersion과 관련 날짜 revision의 정렬된 묶음으로 만들고, G3가 dirty를 지우기 전/같은 트랜잭션에서 영향 주를 표시한다. dirty-clear 후에만 조회하거나 최대 revision 하나만 비교하지 않는다. owner 잠금/주별 CAS 아래 원본 변화와 확정을 직렬화하며 계획 외·휴식일 사실도 읽는다.
+7. 정상 검사 완료 N0/E0 또는 E≤1은 RESET0, E>1은 min(1,E/N) ADD다. UNKNOWN/ACTIVE/검사 미완료는 보류이며 RESET하지 않는다. epoch 전/분석OFF/전체 정지를 정상 N0으로 바꾸지 않는다. 주별 PK·입력 revision으로 결과를 교체하고 `currentTotal +=`하지 않는다.
+8. 정정·늦은 동기화·논리삭제·명시복구는 가장 이른 영향 주부터 같은 epoch 후속 주를 순서대로 재계산한다. RESET은 가역 파생값이다.3→RESET→ADD1의1이 RESET주0.75ADD로 바뀌면4.75이며1.75가 아니다. 재ON hard epoch를 넘지 않는다. bounded catch-up·다중 worker·실패/재시작에서 미처리 주를 재계산 상태로 남긴다. 원본/InitialPlan/고정 JSON/hash/ACK·최초 MISS는 불변이다.
+
+### 5.5 G4-1~G4-6 실행 순서
+
+| 단계 | 수정 예상 모듈·선행 | 완료 기준 |
 |---|---|---|
-| M2 계약/저장 | 분석 ON/OFF·경계용 `deload_analysis_versions`, 주별 `deload_weekly_assessments` 최소2책임. user/세대·시간대·version·epoch·ruleVersion/입력revision·확정/보류/E/N/ADD·RESET | 최초 설정/재ON·주중 경계·OFF의 일반G3/통계 지속. 설정 이력과 별도 current 설정/epoch/현재누적 표를 중복 생성하지 않음 |
-| 단일 세션 완료 판정 공유 | PlanningCalculator의 private judge/Fraction를 실제 소비가 생길 때 최소 추출; 실제 세트/유산소 원본 조회 재사용 | InitialPlan 세트전부/유산소 목표, 추가종목 제외, 서로 다른 반쪽 합산금지, 실제부분0·UNKNOWN과missing구분 |
-| 독립 후보·E/N | 일반 ST-17~23 유지, 일반 세션 유형/epoch 구간·자기InitialPlan·workoutDate 최고단일; G3 confirmedMISS와 날짜집합 합집합 | 예정A 대신B,휴식일,계획0/1일,동일날 MISS+실제N1,START만/삭제/유효실제없음 처리 |
-| 주간 확정 | 기존 DailyTrainingReviewJob→일별검사 완료→주간 평가 호출. 새 중복 자정/월요일 scheduler 없음 | 월03:59:59 미가산·04시 gate, 일요일ACTIVE/UNKNOWN보류,다중worker/재시작/31일catch-up/실패재시도·중복가산없음 |
-| 정정·재평가 | 기존 source trigger/dirty/revision에 주별 invalidation 연결, 같은epoch의 가장 이른 영향 주 이후 순서 folding | RESET→0.75ADD 뒤4.75복원, 새hardepoch오염없음,동일주 반복/idempotence,원본/최초MISS불변 |
-| 조회 | 마지막 확정값·현재 재계산 상태·8주 도달·버전/시각을 명확히 반환. 정확 유리수 계산 후 표시만 문자열 | 미확정0/설정OFF로위장금지·UI반올림으로E임계판정금지·권한/세대/CSRF/invalid값/네트워크 실패 |
-| G5 정지·종료 연결 | 실제 기간 소속/정지·완료hardreset·취소보호 날짜를 후속 통합 | 기간 없이 분석만 구현한 단계에서 정지/완료/취소가 실제 동작한다고 노출하지 않음 |
+| G4-1 설정·기본ON·epoch/API·DDL | account 신규 생성 트랜잭션·기존 security/요청 검증, 신규 분석 모듈·후속 migration 후보. 번호는 착수 시 확인 | 초기ON/누적0/초기 epoch 원자 생성, 미설정 계정 비소급 이행·시간대·세대/version/CSRF/no-op·동시성 격리 테스트. 실제 DB 적용은 별도 승인 |
+| G4-2 공통 InitialPlan 판정 | PlanningCalculator private judge/Candidate/Fraction 최소 추출 | ST-17~23 결과 불변, 웨이트/유산소/추가종목·UNKNOWN 하한/상한·정확분수 테스트 |
+| G4-3 독립 후보·E/N | G4-1/2, 필요한 사실·세션 시각 projection, G3 확정MISS/revision | 예정 외/휴식일/계획없음·부분0·다중세션·MISS+실제N1·UNKNOWN 검증 |
+| G4-4 04시 주간 확정 | G4-3, 기존 Job·독립 분석 owner 탐색·주별 PK/revision/잠금 | 월04시 전후/DST·일요일ACTIVE/dirty보류·N0/RESET/ADD·재실행·실패 rollback·재시작 |
+| G4-5 후속 주 재계산 | G4-4, 원본 dirty와 같은 트랜잭션의 주별 invalidation | 정정/삭제/복구·지연동기화·4.75 복원·epoch 경계·분할 재계산/중간 실패 재개 |
+| G4-6 조회·토글·격리 통합 | G4-1~5, 신규 API/인증/계정·세션/통계 회귀 | 정확분수/마지막 확정범위·보류 구분·OFF 중 G3 유지·동시 토글·미등록 계정 자동발견. 전체 단위/격리 통합·assemble·API/문서 확인 |
 
-일별 전체 계획·성과를 새 표에 복제하거나 매 실행 현재누적에 `+=`를 적용하지 않는다. 최소 주별 결과를 날짜순으로 계산하고 별도 projection/cache·이벤트 프레임워크는 실측 필요가 없으면 도입하지 않는다. 원래 source table의 JSON/hash/고정 요청을 재작성하는 migration은 계획하지 않는다.
+G4 단독 완료에 G5의 기간 정지·완료 새 epoch·취소 누적 보존·일반/디로딩 소속 필터를 포함하지 않는다. G5 연결 전 실제 디로딩 혼재/기간 보호가 완료됐다고 표시하지 않는다. G6 PWA 실연동·iPhone 검토도 별도다.
 
-인수 예: E0/1/1.5/2, [1]/[1,0]/[0.5,0.5] RESET,3/4=0.75·3.5/5=0.7·4/5=0.8,정상N0RESET/UNKNOWN보류/전체정지무적용,1.000000000001>1의 정확 비교,같은 주 재ON,OFF일반미수행 유지,완료주 잔여2일E2/N2=1·잔여1일RESET 등이다. 기존 분수 단위 테스트와 일별 격리 PostgreSQL fixture에 추가한다.
+### 5.6 필수 격리 테스트 예상 결과
+
+아래는 **미실행 계획**이다. 기존 단위/Testcontainers fixture를 확장하며 검토/개인DB에서 실행하지 않는다.
+
+| 시나리오 | 예상 결과 |
+|---|---|
+| 신규 가입·재로그인 | 기본ON·누적0·version0/epoch0·INITIAL 한 번, 재로그인으로 설정/version/epoch 변경 없음 |
+| 동시 최초 가입·identity 경쟁/중간 실패 | users/identity/휴식/분석 함께 commit 또는 rollback, 초기 epoch 하나·고아 행 없음 |
+| 최초 ON vs OFF→ON | 최초 사건과 전환 구분, 재ON은 새 시작 version의 epoch·새 기준 시각·0, OFF/활성화 전 실적 제외 |
+| 동일 enabled·ACK 유실·토글 경쟁 | 최신 version 같은 값 no-op, 옛 version409→GET, 중복 epoch/유실 갱신 없음 |
+| 기존 미설정 계정 이행/재실행 | T_adopt/ADOPTED_INITIAL·0 한 번, 이전 START/기록/MISS 가산 없음. 기존 선택 보존·불명확 부재 오류 |
+| 시간대 없음/충돌·세대/소유권/CSRF | 계산 보류와 ON 구분, 임의 UTC 없음. 검증된 시간대 고정·원본 날짜 불변,400/401/403/409 경계 |
+| OFF 중 일반 운동·G3·통계 | 기존 기록/일별MISS/dirty/통계 유지, 분석/추천만 중단. 수동 시작/기간 독립성은 유지하며 실제 G5 연동은 후속 |
+| 일정 미등록 또는 계획0일·완전 수행2일 | 가짜 일정 없이 작업 대상 포함, E2/N2=1 ADD |
+| 완전 수행1일만 존재 | E1/N1이므로 RESET0,1주 ADD 아님 |
+| 부분·미수행 | [1,0.5]→0.75 ADD, [1,1,1,0]→0.75 ADD, [0.5,0.5]→RESET |
+| 같은 날 여러 반쪽 세션·MISS+실제 | 합산1 금지, 최고 단일0.5·같은 날짜 N1 |
+| 예정 외/휴식일·운동 중 계획 축소 | 자기 InitialPlan 기준, 추가종목 분자 제외·최초 세트 전부 필요·현재 루틴/AppliedPlan 무시 |
+| 유산소 양수·목표 미달/근거 부족 | 실제 날짜 포함, 목표 미달0·필요 측정 근거 부족UNKNOWN, START/SKIPPED/무활동 제외 |
+| UNKNOWN·일요일 ACTIVE·dirty/retry | 필요한 날짜/최고 후보 미확정이면 보류, cursor 전진만으로 확정 안 함. 완전1이 UNKNOWN 상한을 지배하는 경우 별도 검증 |
+| 월03:59:59/월04:00:00·DST | 전자 미가산, 후자는 필요한 검사 완료 때만 확정·저장 IANA 시간대 사용 |
+| 정상 N0 vs epoch전/OFF/검사미완료 | 정상 ON 휴식 주만 RESET, 나머지는 가짜 N0 초기화 금지 |
+| 같은 주·다중 worker·재시작/실패 | 입력 결과 하나·중복ADD 없음, 원본/주별 쓰기 rollback·미처리 창 보류/재개 |
+| 정정/삭제/복구 후 후속 주 | RESET→0.75ADD이면3+0.75+1=4.75, 새 epoch 오염 없음·원본 보존 |
+| 정확 분수 | E=1 RESET,1.000000000001>1·3.5/5=7/10, 표시 반올림 재입력 금지 |
+
+### 5.7 준비 상태와 기술 위험
+
+추가 제품 결정 없이 G4-1~6의 일반 분석을 구현할 수 있다. 남은 것은 기술 후보를 실제 SQL/DTO·테스트로 검증하는 일이다. 가입/이행 배포 순서, 시간대 확정 경합, 일정 없는 계정 탐색, dirty 소비/주간 확정 원자성, 임의 정밀 분수·장기 epoch fold 비용, 시각 역행·세대 변경을 검증한다. 범위 조회·기존20owner/31일창을 참고한 bounded 처리/index를 먼저 쓰며 근거 없이 current-total 캐시·중복 일별 점수·범용 이벤트를 추가하지 않는다. G5 기간·소속·정지/완료/취소는 별도 통합 위험으로 남긴다.
 
 ## 6. G5 개발 범위·의존성·검증 계획
 
@@ -165,7 +247,7 @@ PWA [HomePanel](../../src/features/home/HomePanel.tsx)은 일반 계정에서 �
 
 ## 7. 개발 착수 전 확정·검증할 기술 사항
 
-확정된 E/N·후보·시작4조건을 다시 제품 질문으로 되돌리지 않는다. 신규 계정의 최초 분석 ON/OFF 기본값은 G4 설정 계약 전에 확정할 별도 제품 결정이다. 그 외 남은 실제 계약·기술 검증은 다음과 같다.
+확정된 E/N·후보·시작4조건을 다시 제품 질문으로 되돌리지 않는다. 신규 계정 기본ON·누적0·초기 epoch도 추가 확정됐다. 최초 시각·기존 미설정 이행·시간대/API·DDL·G4-1~6 후보는5절을 따른다. 남은 실제 계약·기술 검증은 다음과 같다.
 
 1. **구간과 시간대:** 분석 미설정/미등록계획 계정의 활성화 시각·고정 시간대,세션 시작시각과 epoch 포함,기간시작/종료의 날짜 경계. 기존 workoutDate를 새 시간대로 재작성하지 않는다.
 2. **정확 수치/재평가:** 정확 유리수 저장/전송,주별 유일키·입력revision·보류/확정,현재epoch folding의조회비용·경합,dirty일별검사와주별확정 원자성. current-total 별도캐시는 기본안이 아니다.
@@ -240,7 +322,7 @@ API 문서의 “이번에는V24미적용”은 G2~G3 개발 당시 작업 제�
 
 ## 12. 2026-11-07 활성 문서 불일치 전수 정정
 
-최초 분석의 미커밋7개 수정·2개 신규를 보존하고 아래 실제 불일치를 정정했다. 새 체크리스트/중복 보고서는 만들지 않았다. 소스 구현은 G0~G3 확인/G4·G5 미구현/G6 시안 일부·실제 미연동으로 통일한다.
+이 절은 기본ON 추가 결정 전의 문서 정정 커밋(PWA00622559e9ee·Backendeb193cbf3956) 당시 기록이다. 당시 최초 분석의 미커밋7개 수정·2개 신규를 보존하고 아래 실제 불일치를 정정했다. 새 체크리스트/중복 보고서는 만들지 않았다. 소스 구현은 G0~G3 확인/G4·G5 미구현/G6 시안 일부·실제 미연동으로 통일한다.
 
 | 발견한 불일치 | 정정 위치·결과 |
 |---|---|
@@ -255,7 +337,7 @@ API 문서의 “이번에는V24미적용”은 G2~G3 개발 당시 작업 제�
 | Decision Log의 과거5조건을 최신처럼 읽을 위험 |10.9에 역사 표기,10.15 현행 정정절·우선순위 추가. 과거 결정/버전 변경 이력은 원문 유지 |
 | 이전 보고서의 “Backend clean/읽기전용·HTML 미동기화” 상태가 현재 정정과 혼재 | 최초 분석 시점으로 구분하고 이번 활성 문서 수정·커밋 범위를 별도 기록 |
 
-### 최초 분석 기본값의 근거 확인
+### 최초 분석 기본값의 근거 확인 · 추가 결정 전 기록
 
 PWA의 v1.6·v1.7·UI Decision Log, Backend의 과거 디로딩v1.1~v1.3·통계v1.4·최종 구현 계획에서 명시적인 신규 계정 기본ON/OFF 확정 기록을 찾지 못했다. 기존 HTML의 deloadAnalysisOn=true와 개발 헤더의 기본 인수는 표현 시연이며 서버 설정 계약이 아니다. **기본값은 미확정**으로 유지하며 이 사실은 문서 커밋을 막지 않는다. 이미 확정된 E/N·OFF/재ON·네 자격을 다시 미정으로 돌리지 않는다.
 
@@ -275,3 +357,9 @@ WorkoutSnapshotRequests.cardioNumbers는 COMPLETED의 activeMs를 검증하고, 
 - 기능·테스트·설정·자산491개와 역사 원본196개의 SHA-256을 보존했다. 기존 격리 DB의10개 표 행수/지문·V24·컨테이너/볼륨 및 dump4개 해시는 작업 전후 같았다. 신규 서버·컨테이너·migration은 실행하지 않았다.
 - 두 저장소의 diff 공백 검사와 신규 문서 전체 줄 검사를 통과했다. 역사 HTML은 이번 변경·스테이징 대상이 아니며 새 공백 예외는 없다. 로그·캡처·백업·환경 파일은 커밋에서 제외한다.
 - 문서 전용 작업으로 Gradle/npm 기능 테스트·build·lint는 재실행하지 않았다. 기존 JUnit 결과와 이번 문서/HTML 검증을 구분한다. 검증용 Chrome은 종료하고 기존 Backend·PWA 검토 프로세스는 유지한다.
+
+### 신규 기본 ON 추가 결정과 이번 G4 준비
+
+이전12절의 기본값 미확정 기록은 당시 상태이며, 사용자가 이후 기본ON·누적0·초기 epoch를 확정했다. 현행 정책은 v1.7 2.1절·DL-05·수용 테스트·15절과 이번 보고서4~5절을 따른다. G4-1~6/API·DDL/19개 격리 시나리오는 준비안이고 기능 구현·테스트 실행·실제 계정 이행 완료를 뜻하지 않는다. 이번에는 양쪽 HEAD를 유지하고 문서 변경을 미스테이징·미커밋으로 남긴다. 기존 DB·migration·서버·백업에는 접속/실행/변경 작업을 하지 않는다.
+
+이번 준비 검증: 변경 문서15개(PWA10·Backend5)의 상대 링크/anchor367개·Markdown fence·양쪽 `git diff --check`를 통과했다. DL-01~90·기존 감량/편성 본문·분수 예9개/정밀 임계값을 확인했고, HTML CSS와 설명 문자열2개 외 JavaScript가 HEAD와 동일하다. 역사 원본·기능/설정/테스트/자산을 포함한 나머지 추적파일748개는 SHA-256이 같다. 기능 테스트·build·lint·브라우저 캡처는 이번에 재실행하지 않았으며19개 격리 시나리오는 향후 구현 시 검증할 계획이다. 새 추적 대상 파일·스테이징·commit/push는 없다.
