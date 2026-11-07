@@ -1,5 +1,7 @@
 # UI v0.9 T02-B 루틴 관리 2차 구현·검증 보고서
 
+> **역사 보고서:** 아래는 2차 구현 당시의 예약 방식·미커밋 상태·검증 기록이다. 현재 T02-B는 `85ec10f50e59`, 일정은 G2~G3 immediate-v1이며 최신 공식 기준은 [Decision Log10.14절](../product/Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)과 [Frontend8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)이다. 당시 결과를 재실행·최종 실기기 승인으로 해석하지 않는다.
+
 작성: 2026-11-06. **React/API 통합 검증 완료, iPhone 최종 시각 승인 전. commit/push 없음.** T02-A 승인은 유지한다.
 
 ## 1. 구현한 화면과 공식 WF 대응
@@ -102,3 +104,43 @@ PWA main HEAD afd6ed95245cadae1a6c4212dd12a2c365c1dd2d, Backend main HEAD 80327c
 공통 유산소 폼은 루틴에 실제 연결했다. 기존 세션 addCardio/updateCardioPlan에 새 계획을 넣고 최초 계획/고정 요청을 보존하는 호환성 테스트를 추가했다. **기존 LocalWorkoutScreen 전체 또는 그 추가 UI를 이번에 교체하지 않았다.** T02-C에서 이 공통 폼을 진행 화면에 장착하고 실제 START/로컬 입력/타이머/오프라인·종료 동기화를 통합 검증한다. 디로딩·통계 새 화면·다른 T02 화면 재설계는 하지 않았다.
 
 T02-B 다음 단계는 위 LAN 주소에서 iPhone 목록/태그/검색/중량·유산소/요일 충돌 밀도를 최종 검토하는 것이다. 최종 승인 후에만 요청된 커밋을 진행한다.
+
+## 2026-11-07 공식 UI 문서 통합 기록
+
+최신 요구사항은 Decision Log10.14절, HTML v0.9 T02-B 개정, Theme Spec7절, UI/UX3.2~3.4절, Frontend8.7절로 통합했다. v0.9 이름을 유지하며 개정일·변경 이력으로 관리한다. 수정 전 HTML은 같은 디렉터리에 byte 단위 보존본으로 남긴다. T02-A 승인 상태를 유지하며 T02-B 최종 사용자 실기기 승인은 별도다. React·CSS·TypeScript·Backend·DB와 공식 아이콘 원본은 이번 문서 작업 대상이 아니다.
+
+### 조사한 자료와 관리 역할
+
+| 실제 경로 | 역할·처리 |
+|---|---|
+| `docs/product/Overload_UI_Baseline_Wireframe_v0.9.html` | 유일한 현행 원본·독립 HTML 시연. 홈 주간 상태/루틴 관련 구조·동작 갱신 |
+| `docs/product/Overload_UI_Baseline_Wireframe_v0.9_before_T02B_2026-11-07.html` | 이번 개정 직전 원문 보존. 최신 지침으로 사용하지 않음 |
+| `docs/product/Overload_UI_Decision_Log_v0.9.md` | 최신10.14절, 과거10.13절 대체/보존 구분·변경 이력 |
+| `docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md` | 실제 Onyx/토큰의 단일 비주얼 가이드.7절에 재사용·가로/세로·배정 배경·모바일 밀도 반영 |
+| `docs/product/ui-ux.md`, `requirements.md` | 화면 흐름/제품 요구와 최신 기준 링크. 초기 Task 시연 기록과 현재 UI 구분 |
+| `docs/engineering/frontend.md`, `backend-ui-v0.9.md` | 실제 컴포넌트·상태/소비 API와 후속 디로딩 계약 구분 |
+| `README.md`, `AGENTS.md` | 문서 인덱스·진입점 최신10.14 링크. 별도 docs/index 파일은 없음 |
+| `docs/tasks/ui-v09-t01-foundation-report.md` | 디자인 토큰/공통 셸 당시 구현 기록, 원문 유지 |
+| `docs/tasks/ui-v09-t02a-home-report.md`, `ui-v09-t02a-design-review-report.md`, `ui-v09-t02a-home-details-report.md`, `ui-v09-t02a-home-final-visual-report.md`, `ui-v09-t02a-home-polish-report.md`, `ui-v09-t02a-closeout.md` | T02-A 단계 검증·최종 승인·DB 보존 기록. 승인된 UI·당시 검증/백업 기록 유지 |
+| `docs/tasks/ui-v09-t02b-first-ui-report.md`, 본 보고서 | 당시1·2차 구현 기록. 현재 미연동·예약 상태의 안내와 구분 |
+| `docs/product/assets/exercise-icons/README.md`·`manifest.json`·공식 SVG/PNG, `assets/deload-icons/` | 원본 운동6종·달·아령. 새 자산 제작/원본 변경 없음 |
+| `docs/product/Overload_Deloading_Design_Specification_v1.6.md` | 디로딩 도메인 기준, 이번 개정에서 재설계하지 않음 |
+| `docs/product/auth-preview.md`, `docs/engineering/authentication.md`, `docs/handoff/`, `docs/tasks/task-00*-*` | 인증/초기 설계·과거 검증 기록. T02-B 최신 레이아웃의 근거와 구분, 원문 유지 |
+| `tests/fixtures/routine-ui.jsx`, `routine-list-ui.jsx`, `src/app/FoundationPreview.tsx`, 기존 `/demo` | 개발용 React fixture/기반 검토/과거 데모 코드. 공식 문서 원본이 아니며 이번에는 수정하지 않음 |
+| `dist/`, `logs/routine-ui/` | 빌드·브라우저 검증 산출물, 공식 문서/최신 기준 링크로 사용하지 않음 |
+| Backend `docs/api/routine-management.md`, `weekly-schedule.md`, `statistics.md`, `docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md` | 현재 nullable 태그/즉시 적용/G3 판정·통계 계약 확인만 수행, Backend 무변경 |
+
+별도 '디자인 특징' 파일은 발견되지 않아 기존 Theme Spec에 통합했다. 과거 v0.1~v0.8 HTML은 Decision Log의 역사 참조에만 있으며 현재 저장소에 존재한다고 안내하지 않는다. 새 프로젝트 체크리스트는 만들지 않는다.
+
+### 코드 대조 결과와 시연 한계
+
+확정 요구사항의 가로/세로·요일 잠금·단일 목록 필터·카드/메뉴·공통 상세/편집·태그·웨이트 검색/교체·일정 후보 필터·즉시 저장은 현재 PWA와 일치한다. 이전 문서의 태그 미저장/요일 미연동·예약 정책·제거 버튼 위치·독립 상세는 폐기 안내로 구분했다.
+
+HTML은 합성 메모리 시연으로 실제 카탈로그ID·정밀한 승인 사건·고정 요청/ACK·API 부분 성공·서버 G3 실행을 재현하지 않는다. UI 구조 대응을 데이터 무결성 통합검증이나 모바일 최종 승인으로 표현하지 않는다. 기존 실제 PWA의 승인 중량 입력은 명시 체크박스이며 문서의 과거 '변경 버튼 확장' 설명을 현재 계약으로 남기지 않는다.
+
+### 이번 문서 개정의 검증
+
+- 격리 headless Chrome에서 파일 URL만 열어 393px·320px 홈/가로/세로/상세/검색/일정 편집 렌더링, 가로 overflow 없음, 요일 잠금·해제/보기 공유/읽기 전용/11개 태그 옵션/검색 포커스/새 종목 초기값/후보 전환의 선택값·크기 보존/메모리 일정 저장을 검사했다. 전체48개 화면 선택 항목도 렌더링 오류가 없었다. 실제 API나 DB에는 접근하지 않았다.
+- 변경 Markdown의 상대 파일·제목 링크와 HTML 자산 경로252개, 인라인 JS 문법, 수정 전 HTML과 HEAD 원문 일치를 확인했다. 상세 로그·이미지는 Git 제외 대상인 `logs/t02b-docs/`에 있다.
+- React·TypeScript·CSS·패키지·Backend·DB 무변경이다. 문서 작업이므로 npm 전체 테스트/build/lint는 재실행하지 않았다. 이전 코드의548건 통과는 이전 검증 기록으로만 표기한다.
+- `git diff --check`를 통과했고 문서 변경 범위(11개 수정·HTML 보존본1개 추가)를 확인했다. commit/push하지 않으며 기존 서버를 시작·종료·재시작하지 않는다. 이번 검증에서 시작한 headless Chrome만 종료한다.

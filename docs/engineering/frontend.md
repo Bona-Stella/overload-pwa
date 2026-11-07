@@ -620,9 +620,9 @@ iPhone의 화면 구조를 고려합니다.
 
 ### 8.7 v0.9 적용 범위와 구현 상태
 
-[T02-B 1차 루틴 UI](../tasks/ui-v09-t02b-first-ui-report.md)는 목록·편집·검색·태그/요일 초안을 구현한 미커밋 검토 단계다. 태그 저장과 편집기 요일 결합 저장은 미연동이며 선택을 저장 성공처럼 처리하지 않는다. 실제 API/iPhone 검토 및 검토 서버 재개는 사용자 승인 후 진행한다.
+2026-11-07 현재 T02-B는 `85ec10f50e59`에 구현·로컬 커밋된 상태다. [1차](../tasks/ui-v09-t02b-first-ui-report.md)·[2차 보고서](../tasks/ui-v09-t02b-second-report.md)는 당시 기록이며 최신 현황은 이 절과 Decision Log10.14절을 따른다. 루틴 태그 저장과 일정 즉시 적용이 연결되어 있다. 최종 코드 이후548건 테스트·build·lint 통과 기록을 확인했으나, T02-B 사용자 최종 실기기 승인은 별도다. 문서 개정 자체가 추가 API/DB 적용·승인을 뜻하지 않는다.
 
-[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.12절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
+[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
@@ -630,13 +630,31 @@ iPhone의 화면 구조를 고려합니다.
 
 [T02-A 홈 설계 일치 수정](../tasks/ui-v09-t02a-design-review-report.md)에 이은 [홈 세부 개선](../tasks/ui-v09-t02a-home-details-report.md)은 Decision Log 10.12절의 공식 달 헤더·날짜·글자 크기·선택 자동 닫힘·종목 달성 표시를 반영한다. 최근 운동은 종료 목록을 최대3페이지(60건), 상세 동시4개로 읽고 무수행을 홈에서만 제외한다. 분모는 InitialPlan, 분자는 기존 주간 달성 계약의 현재 유효 수행이며 승인 eligible과 구분한다. 태그는 선택형 표현만 준비하고 저장은 T02-B 계약 대상이다. 실제 루틴/일정/기록은 기존 API를 읽고, 디로딩 게이지의 대표 표시값은 명시적으로 실행한 개발 검토 앱의 `HomeReviewContext`에만 주입한다. `DEV && VITE_HOME_REVIEW` 진입점은 production build에서 제거되며 시안 값을 운동/자격/권한/통계·IndexedDB에 사용하지 않는다. 검토 서버만 전용 계정의 실제 OTP 메일 전달을 자동화한다. HTTP LAN의 로그인·기기 식별은 기존 CSPRNG UUID 함수를 공통화해 지원하지만, Web Locks가 없는 홈에서는 새 운동 START를 비활성화한다. 기존 편집 잠금·고정 요청·ACK·오프라인 경계는 유지한다. 설치형 PWA는 별도 production/HTTPS 검증 대상이다.
 
-[최종 시각 보완](../tasks/ui-v09-t02a-home-final-visual-report.md)에서 브랜드18px/700/자간0.06em을 적용하고, 동일 격리 검토 DB에 기존 루틴의 혼합 달리기 완료 기록1건을 실제 API로 추가했다. 이후 [최종 디테일](../tasks/ui-v09-t02a-home-polish-report.md)에서 공식 원형 아령 SVG·아이콘–수치 gap5px·제목 아래 구분선을 적용했다. 실제 계정의 태그 저장 기능은 여전히 T02-B 대상이다.
+[최종 시각 보완](../tasks/ui-v09-t02a-home-final-visual-report.md)에서 브랜드18px/700/자간0.06em을 적용하고, 동일 격리 검토 DB에 기존 루틴의 혼합 달리기 완료 기록1건을 실제 API로 추가했다. 이후 [최종 디테일](../tasks/ui-v09-t02a-home-polish-report.md)에서 공식 원형 아령 SVG·아이콘–수치 gap5px·제목 아래 구분선을 적용했다. 당시 태그 저장은 후속이었으며 현재는 T02-B 루틴 계약에 연결되어 있다.
 
-2026-11-06 사용자의 iPhone 실기기 검토로 T02-A 일반 홈을 최종 승인했다. 디로딩 운영 API·T02-B 루틴 전체 UI는 후속이다. 검토 환경은 [마감·데이터 보존·수동 재개](../tasks/ui-v09-t02a-closeout.md)를 따르며 T02-B 1차 UI 구현이 끝나기 전에는 검토 서버를 자동 시작하지 않는다.
+2026-11-06 사용자의 iPhone 실기기 검토로 T02-A 일반 홈을 최종 승인했다. 디로딩 운영 API는 후속이며 T02-B 구현 상태는 이 절 상단을 따른다. 검토 환경은 [마감·데이터 보존·수동 재개](../tasks/ui-v09-t02a-closeout.md)를 따르며 T02-B 1차 UI 구현이 끝나기 전에는 검토 서버를 자동 시작하지 않는다.
+
+#### T02-B 현재 컴포넌트·상태 연결 (2026-11-07)
+
+| 실제 모듈 | 책임·연결 |
+|---|---|
+| [WorkoutWorkspace.tsx](../../src/features/workout-online/WorkoutWorkspace.tsx) / `WorkspaceView` | `editor{routine,readOnly}`와 `scheduleEditing` 관리. 목록/공통 폼 연결. `scheduleRefresh`·`onScheduleSaved`로 홈/루틴 재조회. ACTIVE·고정 시도는 관리 쓰기 차단 |
+| [RoutineCards.tsx](../../src/features/workout-online/RoutineCards.tsx) | 로컬 `day/vertical/filter`; 생성순 정렬·단일 목록 필터·요일 잠금. 서버 assignments로 배정 카드/주간 보기 파생, `Home.module.css` 재사용. 상세/수정/삭제 콜백 분리 |
+| [RoutineForm.tsx](../../src/features/workout-online/RoutineForm.tsx) | 생성·편집·readOnly 공통 폼. 이름/태그/weights/cardio/days 초안. 고정 제출·루틴 성공 후 일정만 재시도·교체 확인. 다른 종목은 새 배치, 원승인 전이 금지 |
+| [TagPicker.tsx](../../src/features/workout-online/TagPicker.tsx) | 미지정+10종·기존 설명 드롭다운, 키보드/ESC/바깥 닫힘. 태그는 실제 nullable 루틴 DTO이며 더미 분류가 아님 |
+| [ExerciseSearch.tsx](../../src/features/workout-online/ExerciseSearch.tsx) | 추가·변경 공통 검색, 실제 카탈로그 이름/별칭·`ExerciseIcon`·PRIMARY 표시. 폼의 `searchRegion`/`showPicker`가 스크롤·포커스, 입력 보존 담당 |
+| [WeeklySchedulePanel.tsx](../../src/features/statistics/WeeklySchedulePanel.tsx) / `ScheduleEditor` | 편집을 별도로 표시. saved assignments 기준 후보 필터,7일 초안 보존. 배정 유무/태그/전체3개 고정, 필터 밖 선택 option도 원래 이름 유지. 열려 있는 초안은 외부 refresh로 덮지 않음 |
+| [weekly-schedule.ts](../../src/features/statistics/weekly-schedule.ts) / [routine-schedule.ts](../../src/features/workout-online/routine-schedule.ts) | `WeeklyScheduleApi.read/save`, `saveSchedule`가 저장 전 최신 version과 응답 후 GET 비교. immediate-v1·expectedVersion·appliedAt, 충돌시 초안 유지/조용한 병합 금지. history 메서드는 서버 근거용이며 사용자 이력 UI 없음 |
+| [HomePanel.tsx](../../src/features/home/HomePanel.tsx) / [model.ts](../../src/features/home/model.ts) | 실제 일정·overview에서 `dayStatus` 파생. 미판정 요일/✓/X/-; 과거 날짜만으로 미수행 생성 금지. refreshKey로 일정 변경 반영 |
+| [AchievementIcon.tsx](../../src/components/AchievementIcon.tsx) | 공식 아령 SVG/running.png18px. 최근 운동은 최초 계획 달성 분수, 루틴 세로는 등록 종목 수로 사용 의미 구분. 검색용32px 아이콘은 변경하지 않음 |
+
+일정 계약은 [Backend G2~G3](../../../overload-server/docs/api/weekly-schedule.md)의 `assignments/version/timeZone/appliedAt`이다. current/pending·다음 월요일 예약을 최신 화면에 사용하지 않는다. 04시 검사는 서버 책임이며 PWA 조회로 실행하지 않는다. 11/03·11/05는 G3 전환11/07 이전이므로 미판정 요일 잔류가 정상이다. integration의 자동 검사OFF를 운영 동작으로 해석하지 않는다.
+
+루틴/일정 쓰기는 기존 온라인 인증·CSRF·소유권·세대/version을 사용한다. 진행 운동의 IndexedDB3/schema2·snapshot·ACK·writerEpoch·계정 경계는 그대로다. 문서용 HTML은 독립 합성 상태로만 동작하며 운영 데이터나 고정 요청을 수정하지 않는다. T02-A [마감 문서](../tasks/ui-v09-t02a-closeout.md)의 당시 종료/재개 절차는 환경 보존 기록이며 이번 문서 작업에서 서버를 시작·종료하지 않는다.
 
 | 영역 | 현재 계정 경로의 구현 | 후속 구현할 내용 |
 |---|---|---|
-| 홈·루틴 | [T02-A](../tasks/ui-v09-t02a-home-report.md)의 `HomePanel`이 실제 루틴 상세·주간 일정·통계 overview·세션 상세로 오늘 카드의 WEIGHT/CARDIO, 카드 밖 START, 두 줄 오늘만 선택, 월~일 상태, 최근 기록을 표시합니다. 날짜는 일정의 시간대를 사용하고 UNKNOWN/UNVERIFIABLE은 미수행으로 추정하지 않습니다. 상세는 버전별 재사용하며 새로고침 때 목록과 일정을 재조회합니다. START는 기존 controller에서 처리하며 직전 루틴 버전 변경은 재확인을 요구합니다. 루틴 탭의 온라인 관리와 `WeeklySchedulePanel` 일정 편집은 유지합니다. | 루틴 관리 전체 UI 전환, 서버 분석 설정·디로딩 상태 계약 이후 상태별 헤더·게이지 및 디로딩 일정 연동. 미조회·로딩·실패를 분석 OFF나 0주로 대체하지 않습니다. |
+| 홈·루틴 | [T02-A](../tasks/ui-v09-t02a-home-report.md)의 `HomePanel`이 실제 루틴 상세·주간 일정·통계 overview·세션 상세로 오늘 카드의 WEIGHT/CARDIO, 카드 밖 START, 두 줄 오늘만 선택, 월~일 상태, 최근 기록을 표시합니다. 날짜는 일정의 시간대를 사용하고 UNKNOWN/UNVERIFIABLE은 미수행으로 추정하지 않습니다. 상세는 버전별 재사용하며 새로고침 때 목록과 일정을 재조회합니다. START는 기존 controller에서 처리하며 직전 루틴 버전 변경은 재확인을 요구합니다. 루틴 탭의 온라인 관리와 `WeeklySchedulePanel` 일정 편집은 유지합니다. | T02-B 최종 사용자 실기기 승인, 서버 분석 설정·디로딩 상태 계약 이후 상태별 헤더·게이지 및 디로딩 일정 연동. 미조회·로딩·실패를 분석 OFF나 0주로 대체하지 않습니다. |
 | 운동 진행 | `LocalWorkoutScreen`의 세트 완료·취소, 타이머·임시 편집·유산소 입력, 공통 `RepsInput`의 ±1과 직접 입력. | 기존 기록/이번 기록 배치를 재사용합니다. 공통 3열 가운데는 현재 탐색 위치와 표시 대상 종목 수로 파생합니다. 종목 이동·임시 계획 변경 때 갱신하며 완료율이나 별도 저장 필드로 다루지 않습니다. 반복 조작은 초안에만 적용하고 기존 완료 검증·타이머를 보존합니다. |
 | 운동 결과·기록 | 기록 탭에서 `ClosedWorkout`의 서버 종료 기록, 당시 장비, 정정·논리 삭제·선택 복구 및 평가에 접근합니다. | 결과와 과거 상세의 공통 수행 영역을 WEIGHT/CARDIO로 나누고 세트별·종목별 볼륨을 표시합니다. 당시 계획과 현재 유효한 실제 수행, 최초 평가와 현재 평가를 구분합니다. 데이터 갱신은 기존 세션 확인과 ACK 흐름을 사용합니다. |
 | 카탈로그·통계 | `ExerciseSearch`의 표준 검색, 기록 탭의 `StatisticsPanel` 기간/집계·근육 상세와 `GrowthPanel` 종목·배치 검색을 유지합니다. 근육 화면은 대분류가 기본입니다. 공통 `ExerciseIcon`은 원본 6종을 32px로 제공하며, 현재 분류가 없는 검색 결과는 중립 표시입니다. | 카탈로그 분류 계약 후 대표 아이콘을 매핑합니다. 전체 세부 PRIMARY 기본 표시 및 부위 필터·SECONDARY 펼침을 적용합니다. 운동 현황 필터를 막대와 합계에 일관되게 전달하고, 성장 별칭 검색과 제조사별 참고 집계의 API 범위는 [백엔드 연동 설계](backend-ui-v0.9.md)를 확인합니다. |
@@ -1498,16 +1516,18 @@ AI 에이전트는 기존 구조를 이해하고,
 사용자 데이터를 보호하며,
 검증 가능한 프론트엔드 코드를 작성해야 합니다.
 
-## T02-B 2차 연동 (2026-11-06)
+## T02-B 2차 연동 (2026-11-06 당시 기록)
+
+이 절은 당시 검증 기록이며 현재 UI/승인 상태는 [8.7절](#87-v09-적용-범위와-구현-상태)을 따른다. 현재 목록은 최신순뿐 아니라 단일 필터의 오래된순·배정·미배정을 지원한다.
 
 루틴 목록은 생성일 최신순, 현재 주간 배정과 필터를 사용한다. 태그는 서버 nullable 필드이며 UI 임시 상태가 아니다. 카탈로그 근육은 실제 PRIMARY 매핑만 표시한다. 공통 CardioPlanFields와 cardio-draft는 기존 CardioPlan 및 세션 addCardio/updateCardioPlan 입력을 사용하며 IndexedDB 버전과 고정 요청을 변경하지 않는다. 루틴 저장/일정 저장은 별도 단계이고 일정 실패 시 루틴 중복 저장 없이 재시도한다. 계정·세대·일정 version과 기존 적용일을 확인한다. 상세 결과는 [2차 보고서](../tasks/ui-v09-t02b-second-report.md)를 따른다.
 
-사용자는 이번 요청에서 정적 검증 후 **기존 보존 검토 환경의 안전 재개 및 격리 DB V23 추가 마이그레이션**을 승인했다. 개인 DB(5433)에는 적용하지 않는다. 예전 1차의 서버 실행 금지는 당시 단계의 제한이다. 실제 iPhone T02-B 최종 승인은 아직 진행하지 않았다.
+사용자는 당시 2차 연동 요청에서 정적 검증 후 **기존 보존 검토 환경의 안전 재개 및 격리 DB V23 추가 마이그레이션**을 승인했다. 개인 DB(5433)에는 적용하지 않는다. 예전 1차의 서버 실행 금지는 당시 단계의 제한이다. 실제 iPhone T02-B 최종 승인은 아직 진행하지 않았다.
 
 ## G2~G3 일정 계약 전환 (2026-11-06)
 
 주간 일정은 현재 version/timeZone/appliedAt/assignments를 사용하고 PUT에 contractVersion=immediate-v1을 보낸다. current/pending/nextEffectiveFrom과 예약 표시를 제거했다. 저장 응답과 재조회가 version/정확한 배정/시각에서 일치해야 성공하며, 루틴 성공·일정 실패는 기존 고정 입력으로 일정만 재확인한다. ACTIVE 오류는 종료/저장 확인 안내와 함께 입력을 유지한다.
 
-홈과 루틴 목록은 같은 현재 배정을 재조회한다. 과거 계획·첫 예정 START는 서버 overview의 고정 근거를 사용하고 현재 템플릿으로 덮지 않는다. PENDING과 미검사/재검사0은 미수행 확정 표시를 하지 않는다. 일반 통계의 계획 미달과 실제 무수행을 구분한다. 정책은 [통계 v1.4](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md), API는 [일정 계약](../../../overload-server/docs/api/weekly-schedule.md)을 따른다. 기존 UI v0.9 원본은 역사적 레이아웃 기준으로 보존하며 해당 예약 의미만 후속 계약이 대체한다.
+홈과 루틴 목록은 같은 현재 배정을 재조회한다. 과거 계획·첫 예정 START는 서버 overview의 고정 근거를 사용하고 현재 템플릿으로 덮지 않는다. PENDING과 미검사/재검사0은 미수행 확정 표시를 하지 않는다. 일반 통계의 계획 미달과 실제 무수행을 구분한다. 정책은 [통계 v1.4](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md), API는 [일정 계약](../../../overload-server/docs/api/weekly-schedule.md)을 따른다. 수정 전 UI v0.9 HTML은 별도 보존본이며 현재 HTML과 Decision Log10.14절은 최신 T02-B 레이아웃/즉시 적용을 반영한다.
 
-IndexedDB/ACK/writerEpoch/dataGeneration/타 기기 읽기 전용과 개발용 디로딩 샘플은 유지한다. 이번 단계는 실제 개발·검토 DB migration과 서버 운영 전환을 허용하지 않는다. 기존 V23 전용 재개 도구는 V24를 임의 적용하도록 변경하지 않았다.
+IndexedDB/ACK/writerEpoch/dataGeneration/타 기기 읽기 전용과 개발용 디로딩 샘플은 유지한다. 당시 G2~G3 단계는 실제 개발·검토 DB migration과 서버 운영 전환을 허용하지 않았다. 기존 V23 전용 재개 도구는 V24를 임의 적용하도록 변경하지 않았다.

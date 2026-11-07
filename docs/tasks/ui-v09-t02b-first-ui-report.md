@@ -1,5 +1,7 @@
 # T02-B 루틴 관리 1차 React UI
 
+> **역사 기록:** 이 보고서는 1차 UI 당시 범위다. 현재 태그 저장·일정 즉시 적용과 확정 UI는 [Frontend8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태) 및 [Decision Log10.14절](../product/Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)을 따른다. 아래 미연동·미커밋·서버 재개 전 표기를 현재 상태로 해석하지 않는다.
+
 2026-11-06. 기준 PWA `afd6ed9`(T02-A 구현 `60a6dce`), Backend `80327ca`. 시작 시 두 저장소 모두 clean이었다. 사용자 승인된 T02-A 홈/공식 자산은 변경하지 않았다. 이번에는 commit/push하지 않는다.
 
 ## 구현과 HTML 대응

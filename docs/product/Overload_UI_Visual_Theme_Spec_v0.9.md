@@ -1,6 +1,6 @@
 # Overload UI v0.9 — Visual Theme Specification
 
-**기준일:** 2026-11-05
+**기준일:** 2026-11-07 · v0.9 T02-B 개정 (기존 컬러/토큰 유지)
 
 **범위:** React PWA 실제 구현용 시각 스타일 명세. [Overload_UI_Baseline_Wireframe_v0.9.html](Overload_UI_Baseline_Wireframe_v0.9.html)은 흑백 저충실도 UX 와이어프레임이므로 **아래 색상을 적용하지 않는다.**
 
@@ -106,3 +106,22 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 
 - WCAG 대비 검토, iPhone 15 Safari 및 홈화면 PWA 실제 렌더링, 재마운트/타이머 리셋 방지, 아이콘 이미지 자산 경로와 캐시 검증은 React 통합 단계에서 수행.
 - HTML은 **흑백 UI 플로우 시뮬레이션**에 집중하고 위 시각 테마는 CSS Modules 실제 구현 단계에서만 적용한다. [Overload_UI_Decision_Log_v0.9.md](Overload_UI_Decision_Log_v0.9.md)는 사용자 행동/배치·정보 위계·정책, [Overload_Deloading_Design_Specification_v1.6.md](Overload_Deloading_Design_Specification_v1.6.md)는 디로딩 제품 계약을 책임진다.
+
+## 7. T02-B 공통 표현 — 2026-11-07 개정
+
+구조·행동은 [Decision Log 10.14절](Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준), 무채색 시연은 [현재 HTML](Overload_UI_Baseline_Wireframe_v0.9.html)을 따른다. 확정 요구사항과 T02-B 최종 실기기 승인 여부는 별개다.
+
+| 표현 | 실제 PWA 재사용 기준 |
+|---|---|
+| 가로 일정 | 홈 `Home.module.css` 타일·선택 강조 재사용, 루틴 화면 날짜 생략. 작은 셀은 태그/실제 이름 말줄임 |
+| 세로 일정 | 요일당 한 줄. 왼쪽 요일 / 중앙 태그·한 줄 이름 / 오른쪽 종목 수. `AchievementIcon` 공식 원형 아령·running.png18px, 수치 gap5px. 수행률로 바꾸지 않음 |
+| 배정 카드 | `--hero-gradient`의 블루그레이 배경, 미배정은 `--surface-card`. 양쪽 모두 `--border-subtle` 사용하며 선택형 블루 테두리 금지 |
+| 메타·요약 | 번호·태그/WEIGHT/CARDIO는 `--accent`, 요일은 `--text-muted`, 이름/계획은 `--text-primary`. 루틴명 말줄임과 전체 이름 접근성 유지 |
+| 이름·태그 | 라벨12px/line-height18px, 내부 gap6px, 필드44px/본문14px/padding10px 12px. `--surface-input`·동일 경계·radius. 설명 드롭다운은 이름+승인 설명, 팝오버는 입력 표면 사용 |
+| 운동 조작·검색 | 하단 3개 동일 너비·최소44px 조작. 기존 인라인 검색과 원본32px `ExerciseIcon` 사용, 검색 영역 scroll-margin으로 가림 방지. 상세에서는 같은 폼을 비활성화하되 가독성을 낮추지 않음 |
+| 일정 후보 필터 | 3열 `minmax(0,1fr)`/gap6px. 기존 pill형 버튼과 `--accent`/`--on-accent` 선택 상태. 하위 팝오버는 흐름을 밀지 않고 외부/ESC로 닫음 |
+| 좁은 폭 | 393·320px, 가로 스크롤 금지. 선택창 폭/높이 고정, 루틴명 우선 말줄임. 필터 팝오버로 7개 선택값·레이아웃 변경 금지. 세로 행 수치와 아이콘을 축소해 밀도를 맞추지 않음 |
+
+검색 아이콘6종은32px, 주간 세로·최근 운동 달성 아이콘은18px로 역할을 구분한다. 달 SVG·T02-A 헤더/최근 운동의 원본 자산·기존 토큰·디로딩 테마 정책을 변경하지 않는다. HTML에는 실제 블루그레이 색을 적용하지 않고 회색 배경 차이로 역할만 시연한다.
+
+**변경 이력:** 2026-11-05 v0.9 시각 기준 → 2026-11-07 T02-B 공통 표현 보완. 컬러·토큰의 역사적 값과 기존1~6절은 보존했다.

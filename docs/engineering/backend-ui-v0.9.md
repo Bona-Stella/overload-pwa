@@ -1,6 +1,6 @@
 # Overload UI v0.9 — 백엔드 연동 설계
 
-기준일 2026-11-05. 이 문서는 PWA 작업에서 확인한 서버 계약과 후속 연동 요구사항을 구분한다. 화면·조작은 [UI 결정 로그 v0.9](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.11절, 디로딩 도메인은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md), 일반 통계는 [통계 v1.3](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.3.md)을 따른다. 실제 PWA의 색상·시각적 위계는 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따르며 HTML은 무채색 UX 자료다. 현재 API의 요청·응답은 각 서버 계약 문서가 기준이며 시각 표현의 변경으로 계약을 바꾸지 않는다.
+기준일 2026-11-07 · T02-B 문서 개정. 이 문서는 PWA 작업에서 확인한 서버 계약과 후속 연동 요구사항을 구분한다. 화면·조작은 [UI 결정 로그 v0.9](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절, 디로딩 도메인은 [v1.6](../product/Overload_Deloading_Design_Specification_v1.6.md), 일반 통계는 [통계 v1.4](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md)을 따른다. 실제 PWA의 색상·시각적 위계는 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따르며 HTML은 무채색 UX 자료다. 현재 API의 요청·응답은 각 서버 계약 문서가 기준이며 시각 표현의 변경으로 계약을 바꾸지 않는다.
 
 ## 확인한 계약과 적용 범위
 
@@ -12,7 +12,11 @@
 | 통계·성장 | `StatisticsController`의 `/api/v1/statistics/overview`와 `/api/v1/statistics/growth/exercises` 및 배치별 조회. 전체·종목·대분류·세부 근육과 역할별 집계, 기간별 실제 수행 및 계획 근거, 승인 사건을 재사용한다. | 그래프 필터에 대응하는 날짜별 종목·근육 집계 및 제조사별 참고 통계는 현재 응답의 제공 범위를 넘는다. 추가 조회 또는 응답 확장을 검토한다. 디로딩 연결 뒤 전체 실적 집계와 해당 기간만 조회하는 화면을 구분하고, 일반 계획 달성·유효 주수 및 승인 경로에는 일반 실적만 적용한다. |
 | 설정 | `GET/PATCH /api/v1/workout-settings`로 고정된 세 휴식 시간(초)을 읽고 한 번에 변경할 수 있다. 로그인 세션과 CSRF 계약을 유지한다. | 디로딩 분석 설정 저장과 추천 누적·시작 자격 조회가 필요하다. 분석 설정의 수명 주기는 휴식 시간과 다르며 기존 휴식 API 확장 여부는 미정이다. |
 
-현행 계약은 [루틴](../../../overload-server/docs/api/routine-management.md), [주간 일정](../../../overload-server/docs/api/weekly-schedule.md), [운동 세션](../../../overload-server/docs/api/workout-sessions.md), [카탈로그](../../../overload-server/docs/api/standard-exercise-catalog.md), [통계](../../../overload-server/docs/api/statistics.md), [성장](../../../overload-server/docs/api/approved-weight-growth.md), [휴식](../../../overload-server/docs/api/workout-online-write.md)에 있다. 서버 소스와 마이그레이션 V22까지의 계약을 확인했다. 디로딩 API·기간/임시 루틴 모델과 혼재 데이터 검증은 구현 예정이다. V18~V22의 개인 DB 적용, 운영 카탈로그 분류 품질, 실기기 동작은 별도로 검증한다.
+현행 계약은 [루틴](../../../overload-server/docs/api/routine-management.md), [주간 일정](../../../overload-server/docs/api/weekly-schedule.md), [운동 세션](../../../overload-server/docs/api/workout-sessions.md), [카탈로그](../../../overload-server/docs/api/standard-exercise-catalog.md), [통계](../../../overload-server/docs/api/statistics.md), [성장](../../../overload-server/docs/api/approved-weight-growth.md), [휴식](../../../overload-server/docs/api/workout-online-write.md)에 있다. 현재 루틴 태그(V23)와 일정 즉시 적용·일별 판정(V24/G2~G3) 계약도 확인했다. 루틴 목록·공통 폼·일정 편집은 실제 클라이언트에 연결되며 T02-B 최종 실기기 승인은 별도다. 사용자용 일정 변경 이력 UI는 없지만 서버 이력 API는 유지한다. 디로딩 API·기간/임시 루틴 모델과 혼재 데이터 검증은 구현 예정이다. V18~V22의 개인 DB 적용, 운영 카탈로그 분류 품질, 실기기 동작은 별도로 검증한다.
+
+## T02-B 현재 API 소비
+
+`RoutineForm`은 루틴 CRUD와 nullable 태그를 저장한 뒤 `saveSchedule`로 별도 일정 PUT을 처리한다. `WeeklyScheduleApi.save`는 immediate-v1, expectedVersion, dataGeneration, timeZone, assignments만 제출하고 응답과 최신 GET의 version/assignments/appliedAt을 확인한다. ACTIVE와 버전/계정 경계 실패 시 입력 및 부분 성공을 유지한다. `HomePanel`의 overview 판정은 미판정 요일/완전✓/부분·MISSED X/REST -로 표시하며 04시 서버 작업을 클라이언트에서 실행하지 않는다. Backend 변경이나 실제 DB 적용 여부는 이 문서 개정만으로 확정하지 않는다.
 
 ## 디로딩 구현 요구사항
 
@@ -20,7 +24,7 @@
 
 - 시작 자격은 v1.6 DL-15/80~84를 사용한다. 서버가 인증 사용자·현재 세대, 적용 일정의 계획 운동일 수, 계정 시간대 기준 오늘 제외 직전 7일의 일반 실제 수행과 이전 완료 이후 신규 수행, 오늘 실제 수행 및 활성 세션을 확인한다. 웨이트 실제 1세트나 완료 유산소 1건이 증거가 된다. 미리보기는 조회이며 시작 요청에서 최신 근거와 원본·일정 변경을 재검사한다. 일반 START와 디로딩 시작이 경합할 때 한쪽만 성립하도록 상태 검사·전이를 함께 보호한다.
 - 서버가 보유한 최신 상태와 클라이언트에 남은 미동기화 원본의 범위가 다르다. 오늘의 미전송 수행을 배제하고 시작을 확정하거나, 최근 실제 수행을 업로드 날짜로 판단하지 않는다. 다른 기기의 미전송 상태를 확인할 수 없는 경우의 보류·동기화 및 재시도 흐름은 후속 계약이다.
-- 유효 주수는 DL-05~14를 적용한다. 현재 주간 일정의 유효 버전과 일반 세션의 `InitialPlan`, 현재 유효한 완료 세트·실제 유산소 목표 증거를 비교한다. 최초 등록일부터 그 주 일요일까지의 분모와 다음 월요일부터 적용되는 변경을 구분한다. 하루 최대 1일, 주 최대 1주, 완전히 지난 주의 유효일 0 초기화, OFF/재활성화, 디로딩 중 정지, 완료 후 0·무수행 취소 시 누적 보존을 적용한다. 완료 다음 날부터 일반 운동을 허용하며 해당 주 분모는 DL-13을 따른다.
+- 유효 주수는 DL-05~14를 적용한다. 현재 주간 일정의 유효 버전과 일반 세션의 `InitialPlan`, 현재 유효한 완료 세트·실제 유산소 목표 증거를 비교한다. 일반 주간 일정은 현재 immediate-v1 계약을 따른다. 디로딩 추천 누적은 G4 후속이며 구 설계의 다음 월요일 예약 문구를 현재 일정 UI/API에 적용하지 않는다. 하루 최대 1일, 주 최대 1주, 완전히 지난 주의 유효일 0 초기화, OFF/재활성화, 디로딩 중 정지, 완료 후 0·무수행 취소 시 누적 보존을 적용한다. 완료 다음 날부터 일반 운동을 허용하며 해당 주 분모는 DL-13을 따른다.
 - 현재 통계의 달성률은 일정·최초 계획 비교를 재사용할 근거다. 추천 분석의 활성 기간과 초기화 이력, 디로딩 제외·재개는 별도로 적용한다. 재동기화나 기록 정정·논리 삭제·복구 후 수행일을 기준으로 재계산하며, 확인 불가한 유산소 목표나 과거 일정을 임의로 채우지 않는다.
 
 ### 기간·임시 루틴·세션 소속

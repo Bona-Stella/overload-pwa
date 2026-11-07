@@ -101,7 +101,7 @@ Required:
 
 ### UI v0.9와 디로딩 v1.6
 
-화면·조작은 [UI/UX 명세](docs/product/ui-ux.md)와 [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md)를 확인하며 최신 10.12절이 과거 결정보다 우선합니다. [Wireframe](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토 자료입니다. 실제 PWA의 Onyx 테마·메인 컬러·그라데이션·토큰·시각적 위계는 [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 실제 앱 컬러로 구현하지 않습니다.
+화면·조작은 [UI/UX 명세](docs/product/ui-ux.md)와 [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md)를 확인하며 최신 10.14절이 과거 결정보다 우선합니다. [Wireframe](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토 자료입니다. 실제 PWA의 Onyx 테마·메인 컬러·그라데이션·토큰·시각적 위계는 [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 실제 앱 컬러로 구현하지 않습니다.
 
 운동 검색·선택은 [추출 아이콘 원본 6종](docs/product/assets/exercise-icons/README.md)을 재사용해 32 CSS px로 표시합니다. 디로딩 정책·상태는 [v1.6](docs/product/Overload_Deloading_Design_Specification_v1.6.md)을 따릅니다. 테마·일반 보기와 실제 디로딩 상태·쓰기 권한을 구분하고 테마 변경으로 입력·타이머를 초기화하지 않습니다.
 

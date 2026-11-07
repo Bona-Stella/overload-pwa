@@ -51,7 +51,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 [통계·추적 2C](../overload-server/docs/tasks/statistics-tracking-phase-2c-report.md)에서 기존 승인 사건의 기간별(1/3/6개월·전체) 검색·루틴 배치 선택·승인 중량 변화 그래프를 연결했습니다. 다른 배치를 하나의 성장선으로 합치지 않으며 기록 없는 기간의 값을 만들지 않습니다. 실제 API·보존/디로딩 한계는 [조회 계약](../overload-server/docs/api/approved-weight-growth.md)을 따릅니다. 개인 DB V18~V20 적용·운영 카탈로그 검증·디로딩3단계 연결은 이번 완료 범위가 아닙니다.
 
-[통계·추적 2B](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)에서 실제 계정의 월~일 루틴 일정 예약·현재/예정/페이지별 변경 이력과 주간 계획일/달성률을 연결했습니다. 최초 등록은 당일부터 즉시 적용하고 첫 주는 등록일~일요일의 예정일만 분모에 포함합니다. 기존 일정 변경은 다음 월요일부터 적용하며 과거 일정은 생성하지 않습니다. 같은 예정일의 최고 단일 세션을 사용하고 추가 운동으로 계획을 채우지 않습니다. 실제 유산소 목표 증거가 부족한 경우 확인 불가로 표시합니다. 기존 오프라인 데이터·요청 계약은 그대로이며 개인 DB V18·V19·V20 적용과 운영 카탈로그 분류 검토는 미완료입니다.
+[통계·추적 2B](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)는 당시 예약 방식의 구현 기록입니다. 현재 일반 주간 일정은 [G2~G3 즉시 적용 계약](../overload-server/docs/api/weekly-schedule.md)의 assignments/version/appliedAt을 사용하며 예약 UI·사용자용 일정 이력은 제공하지 않습니다. 과거 계획·세션 InitialPlan과 서버 버전 이력은 보존하고 날짜별 판정은 다음 날04시 경계를 따릅니다. G4~G5 디로딩 연결·다른 DB 적용은 별도입니다.
 
 [통계·추적 2A](../overload-server/docs/tasks/statistics-tracking-phase-2a-report.md)에서 실제 계정의 이번 주 요약 → 주/월 운동 현황·근육별 상세·최근3건/기존 이력 연결을 추가했습니다. 서버가 확인한 종료 기록을 사용하며 미전송 로컬 실적은 포함하지 않습니다. 2A 당시 미완료였던 주간 전체 계획/달성률은 위 2B에서 구현했습니다. 성장선은2C에서 구현했고 유산소 계산 거리 저장은2D에서 구현했고 디로딩 연결은 후속입니다. 개인 DB V18 미적용·운영 카탈로그 분류 검토 미완료 상태를 유지합니다.
 
@@ -65,7 +65,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 ## ✨ 주요 기능
 
-아래 기능 체크리스트는 초기 제품 로드맵이며, 미체크 항목이 모두 현재 미구현이라는 뜻은 아닙니다. 현재 구현과 후속 범위는 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 따릅니다. [T01](docs/tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 4탭과 Onyx 공통 기반을 구현했고, [T02-A](docs/tasks/ui-v09-t02a-home-report.md)에서 실제 API 홈·오늘만 루틴 선택·주간 일정·최근 기록을 연결했습니다. [홈 설계 일치·iPhone 검토 개선](docs/tasks/ui-v09-t02a-design-review-report.md) 이후 [홈 세부 개선](docs/tasks/ui-v09-t02a-home-details-report.md)에서 공식 달 헤더·글자 크기·선택 자동 닫힘·최초 계획 기준 종목 달성 수와 무수행 홈 필터를 적용했습니다. [최종 시각 보완](docs/tasks/ui-v09-t02a-home-final-visual-report.md)에서 브랜드·아령을 다듬고 격리 검토 DB에 혼합 달리기 완료 기록을 추가했습니다. 2026-11-06 사용자 iPhone 실기기 최종 승인을 받았습니다. 현재 마감 상태·DB 보존·재개 절차는 [T02-A 마감 기록](docs/tasks/ui-v09-t02a-closeout.md)을 따릅니다. T02-B 1차 UI 구현 완료 전에는 검토 서버를 자동 시작하지 않습니다. 루틴·운동 진행·기록·설정의 전체 UI 전환과 운영 디로딩 연동은 후속입니다.
+아래 기능 체크리스트는 초기 제품 로드맵이며, 미체크 항목이 모두 현재 미구현이라는 뜻은 아닙니다. 현재 구현과 후속 범위는 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 따릅니다. [T01](docs/tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 4탭과 Onyx 공통 기반을 구현했고, [T02-A](docs/tasks/ui-v09-t02a-home-report.md)에서 실제 API 홈·오늘만 루틴 선택·주간 일정·최근 기록을 연결했습니다. [홈 설계 일치·iPhone 검토 개선](docs/tasks/ui-v09-t02a-design-review-report.md) 이후 [홈 세부 개선](docs/tasks/ui-v09-t02a-home-details-report.md)에서 공식 달 헤더·글자 크기·선택 자동 닫힘·최초 계획 기준 종목 달성 수와 무수행 홈 필터를 적용했습니다. [최종 시각 보완](docs/tasks/ui-v09-t02a-home-final-visual-report.md)에서 브랜드·아령을 다듬고 격리 검토 DB에 혼합 달리기 완료 기록을 추가했습니다. 2026-11-06 사용자 iPhone 실기기 최종 승인을 받았습니다. 현재 마감 상태·DB 보존·재개 절차는 [T02-A 마감 기록](docs/tasks/ui-v09-t02a-closeout.md)을 따릅니다. T02-B 1차 UI 구현 완료 전에는 검토 서버를 자동 시작하지 않습니다. T02-B 루틴은 `85ec10f50e59`에 구현되었으며 최종 사용자 실기기 승인은 별도입니다. 최신 UI 기준은 아래 공식 문서 인덱스에서 확인합니다. 운동 진행·기록·설정의 전체 UI 전환과 운영 디로딩 연동은 후속입니다.
 
 ### 🏠 홈 대시보드
 
@@ -407,7 +407,7 @@ overload-pwa/
 | GET | `/api/v1/statistics/growth/exercises/{standardId}` | 루틴 배치 선택 |
 | GET | `/api/v1/statistics/growth/exercises/{standardId}/placements/{placementId}` | 승인 중량 이력 |
 | GET / PUT | `/api/v1/weekly-schedule` | 주간 일정 조회·저장 |
-| GET | `/api/v1/weekly-schedule/history` | 일정 이력 |
+| GET | `/api/v1/weekly-schedule/history` | 서버 버전 근거 조회 (사용자용 일정 이력 UI 없음) |
 
 요청·응답·query·인증·CSRF 조건은 Backend의 [통계·화면 계약](../overload-server/docs/api/statistics.md), [성장 조회](../overload-server/docs/api/approved-weight-growth.md), [주간 일정](../overload-server/docs/api/weekly-schedule.md), [세션](../overload-server/docs/api/workout-sessions.md), [휴식 설정](../overload-server/docs/api/workout-online-write.md)을 따릅니다. 개인 운동 GET과 이전 `/api/v1/statistics`는 제거됐으며 개인 운동 POST/PATCH는 차단 경계만 유지합니다. `/workouts`와 통계 volume 경로는 초기 예시이고 현재 호출하지 않습니다.
 
@@ -615,11 +615,11 @@ Local Development
 
 ## 📚 참고 문서
 
-UI v0.9의 공식 개발 기준은 아래 자료로 구분합니다. [UI/UX 요약](docs/product/ui-ux.md)은 적용 지점을 안내하며 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 현재 구현과 후속 작업을 구분합니다.
+UI v0.9의 공식 개발 기준은 아래 자료로 구분합니다. **2026-11-07 T02-B 개정:** [Decision Log10.14절](docs/product/Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)과 [현재 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)이 최신 루틴 기준입니다. [수정 전 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9_before_T02B_2026-11-07.html)은 역사 자료입니다. T02-B 구현은 `85ec10f50e59`에 로컬 커밋되었으며 최종 사용자 실기기 승인은 별도입니다. [UI/UX 요약](docs/product/ui-ux.md)은 적용 지점을 안내하며 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 현재 구현과 후속 작업을 구분합니다.
 
 | 공식 자료 | 역할 |
 |---|---|
-| [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md) | 확정 UI/UX 결정·상호작용. 충돌 시 10.12절 우선 |
+| [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md) | 확정 UI/UX 결정·상호작용. 충돌 시 홈·T02-B는 10.14절 우선 |
 | [Wireframe](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html) | 무채색 화면 구조·사용자 흐름·기능 배치 |
 | [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md) | 실제 PWA의 Onyx 테마·컬러·그라데이션·토큰·시각적 위계 |
 | [Deloading Design v1.6](docs/product/Overload_Deloading_Design_Specification_v1.6.md) | 디로딩 정책·상태와 관련 기능 |
