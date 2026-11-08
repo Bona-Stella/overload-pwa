@@ -51,7 +51,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 [통계·추적 2C](../overload-server/docs/tasks/statistics-tracking-phase-2c-report.md)에서 기존 승인 사건의 기간별(1/3/6개월·전체) 검색·루틴 배치 선택·승인 중량 변화 그래프를 연결했습니다. 다른 배치를 하나의 성장선으로 합치지 않으며 기록 없는 기간의 값을 만들지 않습니다. 실제 API·보존/디로딩 한계는 [조회 계약](../overload-server/docs/api/approved-weight-growth.md)을 따릅니다. 개인 DB V18~V20 적용·운영 카탈로그 검증·디로딩3단계 연결은 이번 완료 범위가 아닙니다.
 
-[통계·추적 2B](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)는 당시 예약 방식의 구현 기록입니다. 현재 일반 주간 일정은 [G2~G3 즉시 적용 계약](../overload-server/docs/api/weekly-schedule.md)의 assignments/version/appliedAt을 사용하며 예약 UI·사용자용 일정 이력은 제공하지 않습니다. 과거 계획·세션 InitialPlan과 서버 버전 이력은 보존하고 날짜별 판정은 다음 날04시 경계를 따릅니다. G4~G5 디로딩 연결·다른 DB 적용은 별도입니다.
+[통계·추적 2B](../overload-server/docs/tasks/statistics-tracking-phase-2b-report.md)는 당시 예약 방식의 구현 기록입니다. 현재 일반 주간 일정은 [G2~G3 즉시 적용 계약](../overload-server/docs/api/weekly-schedule.md)의 assignments/version/appliedAt을 사용하며 예약 UI·사용자용 일정 이력은 제공하지 않습니다. 과거 계획·세션 InitialPlan과 서버 버전 이력은 보존하고 날짜별 판정은 다음 날04시 경계를 따릅니다. G4·G5 Backend 연결은 구현했고 G6 PWA 연동과 기존 DB 적용은 별도입니다.
 
 [통계·추적 2A](../overload-server/docs/tasks/statistics-tracking-phase-2a-report.md)에서 실제 계정의 이번 주 요약 → 주/월 운동 현황·근육별 상세·최근3건/기존 이력 연결을 추가했습니다. 서버가 확인한 종료 기록을 사용하며 미전송 로컬 실적은 포함하지 않습니다. 2A 당시 미완료였던 주간 전체 계획/달성률은 위 2B에서 구현했습니다. 성장선은2C에서 구현했고 유산소 계산 거리 저장은2D에서 구현했고 디로딩 연결은 후속입니다. 개인 DB V18 미적용·운영 카탈로그 분류 검토 미완료 상태를 유지합니다.
 
@@ -615,7 +615,7 @@ Local Development
 
 ## 📚 참고 문서
 
-UI v0.9의 공식 개발 기준은 아래 자료로 구분합니다. 디로딩은 [v1.7](docs/product/Overload_Deloading_Design_Specification_v1.7.md)이 최신이며 [Backend 준비 현황](docs/tasks/deload-v17-backend-readiness-analysis.md)에서 G4~G5 미구현·검증 계획을 확인합니다. **2026-11-07 T02-B 개정:** [Decision Log10.14절](docs/product/Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)과 [현재 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)이 최신 루틴 기준입니다. [수정 전 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9_before_T02B_2026-11-07.html)은 역사 자료입니다. T02-B 구현은 `85ec10f50e59`에 로컬 커밋되었으며 최종 사용자 실기기 승인은 별도입니다. [UI/UX 요약](docs/product/ui-ux.md)은 적용 지점을 안내하며 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 현재 구현과 후속 작업을 구분합니다.
+UI v0.9의 공식 개발 기준은 아래 자료로 구분합니다. 디로딩은 [v1.7](docs/product/Overload_Deloading_Design_Specification_v1.7.md)이 최신이며 [Backend 최종 현황](docs/tasks/deload-v17-backend-readiness-analysis.md#0-2026-11-08-1차-개발-최종-현황)에서 G0~G5-3 구현, G6 실제 PWA 미연동, 기존 DB V25~V29 미적용을 구분합니다. **2026-11-07 T02-B 개정:** [Decision Log10.14절](docs/product/Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)과 [현재 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)이 최신 루틴 기준입니다. [수정 전 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9_before_T02B_2026-11-07.html)은 역사 자료입니다. T02-B 구현은 `85ec10f50e59`에 로컬 커밋되었으며 최종 사용자 실기기 승인은 별도입니다. [UI/UX 요약](docs/product/ui-ux.md)은 적용 지점을 안내하며 [프론트엔드 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 현재 구현과 후속 작업을 구분합니다.
 
 | 공식 자료 | 역할 |
 |---|---|
