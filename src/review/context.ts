@@ -1,5 +1,4 @@
 import { createContext } from 'react'
-import type { ReactNode } from 'react'
 
-/** Presentation only. No session, authorization, plan or statistics fields. */
-export const HomeReviewContext = createContext<{ header: ReactNode } | null>(null)
+/** Enables only the HTTP review note for the isolated account workspace. */
+export const HomeReviewContext = createContext(false)

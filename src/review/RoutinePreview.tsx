@@ -5,10 +5,9 @@ import { Dialog } from '../components/Dialog.tsx'
 import { HomeView, RoutinePlan } from '../features/home/HomePanel.tsx'
 import { activeCardio, activeWeights, dayOfWeek } from '../features/home/model.ts'
 import { RecentWorkout } from '../features/home/RecentWorkout.tsx'
-import { ScheduleEditor } from '../features/statistics/WeeklySchedulePanel.tsx'
-import { PresetHeader, PresetMembership, PresetNavigation } from '../features/workout-online/PresetControls.tsx'
+import { PresetAssignmentEditor } from '../features/statistics/WeeklySchedulePanel.tsx'
+import { PresetHeader, PresetMembership, PresetNavigation, RoutineCreatedNotice } from '../features/workout-online/PresetControls.tsx'
 import { PresetOrderEditor } from '../features/workout-online/PresetOrderEditor.tsx'
-import { presetNumber } from '../features/workout-online/preset-schedule.ts'
 import { RoutineCards } from '../features/workout-online/RoutineCards.tsx'
 import { RoutineForm } from '../features/workout-online/RoutineForm.tsx'
 import type { Routine } from '../features/workout-online/types.ts'
@@ -114,7 +113,6 @@ function Review({ scenario, tab, setTab, reset }: { scenario: Scenario; tab: App
   }
   const membership = (id: string) => <PresetMembership presets={schedule.presets} routineId={id} />
   const editPreset = editor?.type === 'schedule' ? editor.base.presets.find(p => p.id === editor.id) : undefined
-  const scheduleStale = editor?.type === 'schedule' && (editor.base.version !== schedule.version || editPreset?.version !== schedule.presets.find(p => p.id === editor.id)?.version)
   const modalRecord = modal?.type === 'record' ? data.sessions.find(s => s.id === modal.id) : undefined
   const modalPreset = modal?.type === 'rename' || modal?.type === 'deletePreset' ? schedule.presets.find(p => p.id === modal.id) : undefined
 
@@ -149,12 +147,7 @@ function Review({ scenario, tab, setTab, reset }: { scenario: Scenario; tab: App
     {tab === 'routines' && <>
       {protectedView && <p className="notice" role="status">{scenario === 'completed' ? '디로딩 완료 당일' : '디로딩 진행 중'} · 일반 루틴과 주간 일정은 조회 전용입니다.</p>}
       <div hidden={!!editor}>
-        {created && <section className="card stack" aria-label="새 루틴 생성 완료">
-          <h2>✓ 새 루틴 생성 완료</h2>
-          <div className={styles.createdMessage}><p>“{created.name}” 루틴을 만들었습니다.</p><p>주간 일정에 배정할까요?</p></div>
-          <div className={styles.createdActions}><button type="button" className="outline" onClick={() => setCreated(null)}>나중에</button>
-            <button type="button" className="primary" onClick={() => openSchedule(created.id)}>배정하기</button></div>
-        </section>}
+        {created && <RoutineCreatedNotice name={created.name} onLater={() => setCreated(null)} onAssign={() => openSchedule(created.id)} />}
         <RoutineCards summaries={routines} details={details} busy={busy} managementBlocked={protectedView}
           week={{ assignments: viewed.assignments, version: viewed.version }}
           presetHeader={viewToggle => <PresetHeader schedule={schedule} viewed={viewed} busy={busy} readOnly={protectedView} viewToggle={viewToggle}
@@ -173,17 +166,13 @@ function Review({ scenario, tab, setTab, reset }: { scenario: Scenario; tab: App
           onEdit={id => { setIssue(null); setEditor({ type: 'edit', routine: details.get(id)! }) }}
           onDelete={id => setModal({ type: 'deleteRoutine', id })} />
       </div>
-      {editor?.type === 'schedule' && editPreset && <ScheduleEditor key={editor.id + ':' + editor.base.version + ':' + editPreset.version} state={editPreset} routines={routines} busy={busy} readOnly={protectedView}
-          preset={{ priorityId: editor.priorityId, active: editor.id === schedule.activeId, stale: scheduleStale, controls: leave => <>
-            <label>편집할 주간 일정<select aria-label="편집할 주간 일정" value={editor.id} disabled={busy} onChange={event => {
-              const nextId = event.target.value
-              leave(() => { setIssue(null); setEditor({ ...editor, id: nextId, base: schedule }) })
-            }}>{schedule.presets.map((p, index) => <option value={p.id} key={p.id}>{presetNumber(index)} · {p.name}</option>)}</select></label>
-            {scheduleStale && <button type="button" className="outline" onClick={() => leave(() => { setIssue(null); setEditor({ ...editor, base: schedule }) })}>최신 일정 다시 열기</button>}
-          </> }}
-          onCancel={closeEditor} onSave={async assignments => {
-            if (await scheduleWrite({ type: 'assign', id: editor.id, version: editPreset.version, assignments }, editor.base)) { setViewedId(editor.id); closeEditor() }
-          }} />}
+      {editor?.type === 'schedule' && editPreset && <PresetAssignmentEditor base={editor.base} current={schedule} id={editor.id}
+        priorityId={editor.priorityId} routines={routines} busy={busy} readOnly={protectedView}
+        onSelect={id => { setIssue(null); setEditor({ ...editor, id, base: schedule }) }}
+        onReload={() => { setIssue(null); setEditor({ ...editor, base: schedule }) }}
+        onClose={closeEditor} onSave={async assignments => {
+          if (await scheduleWrite({ type: 'assign', id: editor.id, version: editPreset.version, assignments }, editor.base)) { setViewedId(editor.id); closeEditor() }
+        }} />}
       {editor?.type === 'order' && <PresetOrderEditor key={editor.base.version} schedule={editor.base} stale={editor.base.version !== schedule.version}
         busy={busy} readOnly={protectedView} routineName={routineName} onClose={closeEditor}
         onReload={() => { setIssue(null); setEditor({ type: 'order', base: schedule }) }}

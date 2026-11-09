@@ -6,7 +6,7 @@ import styles from './Presets.module.css'
 
 export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onActivate, onToggle, onRename, onOrganize, onDelete }: {
   schedule: PresetSchedule; viewed: SchedulePreset; busy: boolean; readOnly: boolean; viewToggle: ReactNode
-  onActivate: () => void; onToggle: () => void; onRename: () => void; onOrganize: () => void; onDelete: () => void
+  onActivate: () => void; onToggle: () => void; onRename?: () => void; onOrganize: () => void; onDelete: () => void
 }) {
   const active = schedule.activeId === viewed.id
   const number = presetNumber(schedule.presets.indexOf(viewed))
@@ -32,13 +32,25 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
         </button>
         {viewToggle}
         <details className={styles.menu}><summary aria-label="주간 루틴 일정 메뉴">⋯</summary><div>
-          <button type="button" disabled={busy || readOnly} onClick={e => menuAction(e.currentTarget, onRename)}>주간 일정 이름 변경</button>
+          {onRename ? <button type="button" disabled={busy || readOnly} onClick={e => menuAction(e.currentTarget, onRename)}>이름 변경</button>
+            : <button type="button" disabled>이름 변경 · 서버 미지원</button>}
           <button type="button" disabled={busy} onClick={e => menuAction(e.currentTarget, onOrganize)}>주간 일정 전체 편집</button>
           <button type="button" className="danger" disabled={busy || readOnly || !canDeletePreset(schedule, viewed)} onClick={e => menuAction(e.currentTarget, onDelete)}>현재 보고 있는 일정 삭제</button>
         </div></details>
       </div>
     </div>
   </>
+}
+
+export function RoutineCreatedNotice({ name, onLater, onAssign, blocked = false }: {
+  name: string; onLater: () => void; onAssign: () => void; blocked?: boolean
+}) {
+  return <section className="card stack" aria-label="새 루틴 생성 완료">
+    <h2>✓ 새 루틴 생성 완료</h2>
+    <div className={styles.createdMessage}><p>“{name}” 루틴을 만들었습니다.</p><p>주간 일정에 배정할까요?</p></div>
+    <div className={styles.createdActions}><button type="button" className="outline" onClick={onLater}>나중에</button>
+      <button type="button" className="primary" disabled={blocked} onClick={onAssign}>배정하기</button></div>
+  </section>
 }
 
 export function PresetNavigation({ schedule, viewed, busy, readOnly, onView, onAdd }: {

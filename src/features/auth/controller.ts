@@ -230,9 +230,13 @@ export class AuthController {
       ? new AuthError('NETWORK') : new AuthError('REQUEST_SUPERSEDED')
     if (!current()) throw obsolete()
     try {
+      // The schedule response carries a generation but no account ID.
+      const schedule = path === '/api/v1/weekly-schedule' || path.startsWith('/api/v1/weekly-schedule/')
       if (method !== 'GET') await this.prepareWrite(expected, generation)
+      else if (schedule) await this.owner(expected, generation)
       if (!current()) throw obsolete()
       const result = await this.api.workoutRequest(path, method, body, signal)
+      if (schedule && current()) await this.owner(expected, generation)
       if (!current()) throw obsolete()
       return result
     } catch (error) {

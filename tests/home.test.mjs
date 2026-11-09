@@ -84,12 +84,12 @@ test('saved plan strings retain precision and WEIGHT/CARDIO have independent lis
 function fixture() {
   const calls = [], schedule = { timeZone: 'Asia/Seoul' }, overview = { statistics: { recentSessions: [{ id: OTHER }] } }
   const api = { async routine(_scope, id) { calls.push(id); return { ...routine, id } }, async detail() { return session({ status: 'FINISHED' }) } }
-  const weekly = { async read() { return schedule } }, statistics = { async overview(_scope, period) { calls.push(period); return overview } }
+  const active = { ...schedule, activeId: routine.id, appliedVersion: schedule.version, presets: [{ id: routine.id, assignments: schedule.assignments }] }, statistics = { async overview(_scope, period) { calls.push(period); return overview } }
   const summaries = [{ id: routine.id, name: routine.name, version: routine.version }]
   api.routines = async () => ({ ...scope, routines: summaries })
   api.closed = async () => ({ ...scope, sessions: [{ id: OTHER, deletedAt: null }], next: null })
   const cache = new Map(), signal = new AbortController().signal
-  return { calls, api, weekly, statistics, summaries, cache, signal, read: () => loadHome(scope, api, weekly, statistics, cache, new Date('2026-11-01T15:30:00Z'), 'America/Los_Angeles', signal) }
+  return { calls, api, statistics, summaries, cache, signal, read: () => loadHome(scope, api, active, statistics, cache, new Date('2026-11-01T15:30:00Z'), 'America/Los_Angeles', signal) }
 }
 test('home reads authoritative timezone then overview; successful routine details reused by version', async () => {
   const f = fixture(), first = await f.read()

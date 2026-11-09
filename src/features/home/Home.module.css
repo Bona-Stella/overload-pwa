@@ -67,3 +67,7 @@
 .choiceFilters { display:flex; flex-wrap:wrap; gap:4px; margin-block:6px 10px; }
 .choiceFilters button { min-width:44px; min-height:44px; padding:4px 8px; }
 .routineTag { display:inline-block; margin-bottom:8px; color:var(--accent); font-size:11px; }
+.trainingGauge { display:flex; align-items:center; gap:6px; flex:1; min-width:0; font-size:12px; }
+.trainingGauge b { white-space:nowrap; }
+.trainingGauge > span:last-child { flex:1; min-width:20px; height:5px; border-radius:20px; background:var(--border-subtle); overflow:hidden; }
+.trainingGauge i { display:block; height:100%; border-radius:20px; background:var(--accent); }

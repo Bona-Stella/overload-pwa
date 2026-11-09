@@ -121,6 +121,21 @@ test('network failure retains known identity and has an explicit recovery state'
   await f.controller.restore(); assert.equal(f.controller.getSnapshot().status, 'unavailable'); assert.equal(f.controller.getSnapshot().userId, USER)
   f.api.session = read; await f.controller.restore(); assert.equal(f.controller.getSnapshot().status, 'authenticated')
 })
+test('weekly schedule never publishes a response across a shared-cookie account change', async () => {
+  for (const changeBeforeRead of [true, false]) {
+    const f = fake(); f.setSession({ userId: USER }); await f.controller.start()
+    let reads = 0
+    f.api.workoutRequest = async () => {
+      reads++
+      f.setSession({ userId: CHALLENGE })
+      return { status: 200, data: { dataGeneration: '0' } }
+    }
+    if (changeBeforeRead) f.setSession({ userId: CHALLENGE })
+    await assert.rejects(f.controller.workoutRequest(USER, '/api/v1/weekly-schedule', 'GET', undefined, new AbortController().signal), { code: 'SESSION_CHANGED' })
+    assert.equal(reads, changeBeforeRead ? 0 : 1)
+    assert.equal(f.controller.getSnapshot().status, 'unavailable')
+  }
+})
 test('rapid duplicate send clicks produce one request and no timer-based resend', async () => {
   const f = fake(); await f.controller.start(); const wait = gate(); let sends = 0
   f.api.requestOtp = async () => { sends++; await wait.promise; return CHALLENGE }

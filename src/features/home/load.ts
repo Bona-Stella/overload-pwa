@@ -1,18 +1,19 @@
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { Routine, RoutineList, Scope, Session } from '../workout-online/types.ts'
 import type { StatisticsApi, Overview } from '../statistics/api.ts'
-import type { WeeklyScheduleApi, WeeklySchedule } from '../statistics/weekly-schedule.ts'
+import type { Assignment, LiveSchedule } from '../statistics/weekly-schedule.ts'
 import { addDays, dateInZone, weekDates } from './model.ts'
 import { loadRecent } from './recent.ts'
 import type { RecentRow } from './recent.ts'
 
-export type HomeData = { summaries: RoutineList['routines']; schedule: WeeklySchedule; overview: Overview; routines: Map<string, Routine>; unavailable: string[]; recent: Map<string, Session>; recentRows: RecentRow[]; recentLimited: boolean; recentFailed: boolean }
+export type HomeData = { summaries: RoutineList['routines']; schedule: { version: string; assignments: Assignment[] }; overview: Overview; routines: Map<string, Routine>; unavailable: string[]; recent: Map<string, Session>; recentRows: RecentRow[]; recentLimited: boolean; recentFailed: boolean }
 /** Successful detail reads only, scoped by the owning HomePanel and routine version. */
-export async function loadHome(scope: Scope, api: WorkoutApi, weekly: WeeklyScheduleApi,
+export async function loadHome(scope: Scope, api: WorkoutApi, schedule: LiveSchedule,
   statistics: StatisticsApi, cache: Map<string, Routine>, now: Date, timeZone: string, signal: AbortSignal): Promise<HomeData> {
-  const [schedule, list] = await Promise.all([weekly.read(scope, timeZone, signal), api.routines(scope, signal)])
+  const list = await api.routines(scope, signal)
+  const active = schedule.presets.find(p => p.id === schedule.activeId)!
   const summaries = list.routines
-  const days = weekDates(dateInZone(now, schedule.timeZone))
+  const days = weekDates(dateInZone(now, schedule.timeZone ?? timeZone))
   const overview = await statistics.overview(scope, { fromDate: days[0], toDateExclusive: addDays(days[6], 1) }, signal)
   const routines = new Map<string, Routine>(), unavailable: string[] = []
   // Bound parallel routine reads for accounts with many saved routines.
@@ -30,7 +31,7 @@ export async function loadHome(scope: Scope, api: WorkoutApi, weekly: WeeklySche
     }
   }))
   const recent = await loadRecent(api, scope, signal)
-  return { summaries, schedule, overview, routines, unavailable, recent: recent.details, recentRows: recent.rows, recentLimited: recent.limited, recentFailed: recent.failed }
+  return { summaries, schedule: { version: schedule.appliedVersion ?? '0', assignments: active.assignments }, overview, routines, unavailable, recent: recent.details, recentRows: recent.rows, recentLimited: recent.limited, recentFailed: recent.failed }
 }
 export function boundaryError(error: unknown) {
   return error instanceof Error && 'code' in error && ['OWNER_MISMATCH', 'DATA_GENERATION_MISMATCH', 'AUTHENTICATION_REQUIRED'].includes(String(error.code))

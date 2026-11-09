@@ -313,7 +313,7 @@ test('isolated HOME and ROUTINE preview shares applied presets, protects drafts 
     await set(scenario, 'normal')
     await click('빈 프리셋 추가', 'ariaLabel')
     await wait(async () => !(await evaluate('!!document.querySelector("button[aria-label=\'빈 프리셋 추가\']")')), 'four presets maximum')
-    await menu(); await click('주간 일정 이름 변경')
+    await menu(); await click('이름 변경')
     await set('dialog input[name="name"]', '테스트 일정 이름'); await click('이름 저장')
     await wait(async () => (await body()).includes('테스트 일정 이름') && !await evaluate('!!document.querySelector("dialog[open]")'), 'renamed')
     await menu(); await click('현재 보고 있는 일정 삭제'); await click('일정 삭제')

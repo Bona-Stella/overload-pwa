@@ -61,9 +61,14 @@ export class WorkoutOnlineController {
       if (authState.localWorkoutUserId === this.owner && this.owner && this.state.detail?.status === 'ACTIVE') {
         this.cancel(); this.needsRevalidation = true; this.set({ busy: false, status: 'ready' }); return
       }
+      // Preserve mounted management drafts in memory during a transient outage. They stay hidden
+      // until the same account revalidates. Logout, expiration and account switches clear the scope.
+      if (authState.offlineNetworkFailure && this.owner && authState.localWorkoutUserId === this.owner && this.state.scope) {
+        this.cancel(); this.needsRevalidation = true; this.set({ busy: false }); return
+      }
       const owner = authState.status === 'authenticated' && (authState.pending === null || authState.userId === this.owner && authState.pending !== 'logout') ? authState.userId : null
       if (this.owner === owner) {
-        if (this.needsRevalidation && eligible(authState)) { this.needsRevalidation = false; void this.refresh() }
+        if (this.needsRevalidation && eligible(authState)) { this.needsRevalidation = false; void this.refresh(true) }
         return
       }
       this.needsRevalidation = false
@@ -87,9 +92,10 @@ export class WorkoutOnlineController {
     }
     this.set({ issue: onlineIssue(error) })
   }
-  refresh = async () => {
+  refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
-    this.set({ ...(this.state.detail?.status === 'ACTIVE' ? {} : empty()), userId: context.userId, status: 'loading', busy: true, issue: null })
+    const keepActive = this.state.detail?.status === 'ACTIVE'
+    this.set({ ...(keepActive || keepDraftScope ? {} : empty()), userId: context.userId, status: 'loading', busy: true, issue: null })
     try {
       const data = await this.api.bootstrap(context.userId, context.signal)
       const active = (await this.api.active(data.scope, context.signal)).session
@@ -116,7 +122,12 @@ export class WorkoutOnlineController {
         if (!(error instanceof LocalStoreError)) throw error
         if (context.current()) this.set({ deviceId, attempt, localReady: false, copySaved: false, issue: onlineIssue(error) })
       }
-    } catch (error) { if (context.current()) this.failure(error) }
+    } catch (error) {
+      if (context.current()) {
+        if (keepDraftScope && !keepActive) this.set({ ...empty(), userId: context.userId })
+        this.failure(error)
+      }
+    }
     finally { if (context.current()) this.set({ status: 'ready', busy: false }) }
   }
   select = async (id: string) => {

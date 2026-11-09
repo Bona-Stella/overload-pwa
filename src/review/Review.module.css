@@ -12,7 +12,3 @@
 .controls label { display:grid; gap:3px; min-width:0; }
 .controls select { width:100%; min-height:44px; min-width:0; padding:4px; font-size:13px; }
 .period { color:var(--status-done); font-size:12px; }
-.createdMessage { display:grid; gap:4px; min-width:0; overflow-wrap:anywhere; }
-.createdMessage p { margin:0; }
-.createdActions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
-.createdActions button { min-height:44px; padding:8px; white-space:nowrap; }

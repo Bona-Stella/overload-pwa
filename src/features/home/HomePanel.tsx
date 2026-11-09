@@ -5,7 +5,8 @@ import type { AppTab } from '../../app/types.ts'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { Routine, RoutineList, Scope, Session } from '../workout-online/types.ts'
 import type { StatisticsApi } from '../statistics/api.ts'
-import type { WeeklyScheduleApi } from '../statistics/weekly-schedule.ts'
+import type { TrainingSchedule } from '../workout-online/useTrainingSchedule.ts'
+import { HomeTrainingHeader } from './HomeTrainingHeader.tsx'
 import { activeCardio, activeWeights, cardioPlanLabel, dateInZone, dayOfWeek, dayStatus, representativeExercises, weekdays, weekDates } from './model.ts'
 import { boundaryError, loadHome } from './load.ts'
 import type { HomeData } from './load.ts'
@@ -26,7 +27,7 @@ export function RoutinePlan({ routine }: { routine: Routine }) {
   </>
 }
 type Props = {
-  scope: Scope; routines: RoutineList['routines']; api: WorkoutApi; weekly: WeeklyScheduleApi; statistics: StatisticsApi;
+  scope: Scope; routines: RoutineList['routines']; api: WorkoutApi; training: TrainingSchedule; statistics: StatisticsApi; visit: number;
   refreshKey: string; active: Session | null; attempt: boolean; busy: boolean; localReady: boolean; issue: string | null;
   onStart: (routine: Routine) => Promise<void>; onResume: () => void; onRetry: () => void; onNavigate: (tab: AppTab) => void;
   onOpen: (id: string) => void; onInvalid: (error: unknown) => void
@@ -34,10 +35,11 @@ type Props = {
 export function HomePanel(props: Props) {
   const review = useContext(HomeReviewContext)
   const editingSupported = typeof globalThis.crypto?.randomUUID === 'function' && !!globalThis.navigator?.locks
-  const { scope, routines, api, weekly, statistics, refreshKey } = props
+  const { scope, routines, api, training, statistics, refreshKey } = props
+  const { schedule, protection, analysis, refresh } = training
   const [clock, setClock] = useState(() => new Date())
   const [reload, setReload] = useState(0)
-  const [result, setResult] = useState<{ key: string; data: HomeData | null; error: boolean } | null>(null)
+  const [result, setResult] = useState<{ key: string; data: HomeData | null } | null>(null)
   const [cache] = useState(() => new Map<string, Routine>())
   const invalid = useRef(props.onInvalid)
   useEffect(() => { invalid.current = props.onInvalid }, [props.onInvalid])
@@ -47,27 +49,37 @@ export function HomePanel(props: Props) {
     window.addEventListener('pageshow', tick); document.addEventListener('visibilitychange', tick)
     return () => { clearInterval(interval); window.removeEventListener('pageshow', tick); document.removeEventListener('visibilitychange', tick) }
   }, [])
-  const zone = result?.data?.schedule.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  const zone = schedule?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
   const today = dateInZone(clock, zone)
+  const activeVersion = schedule?.presets.find(p => p.id === schedule.activeId)?.version
   const summaryKey = routines.map(r => r.id + ':' + r.version).join(',')
-  const requestKey = [scope.userId, scope.dataGeneration, summaryKey, refreshKey, today, reload].join('|')
-  const inputs = useRef({ scope, routines, clock, zone })
-  useEffect(() => { inputs.current = { scope, routines, clock, zone } }, [scope, routines, clock, zone])
+  const requestKey = [scope.userId, scope.dataGeneration, summaryKey, schedule?.activeId, activeVersion,
+    schedule?.appliedVersion, zone, refreshKey, today, reload].join('|')
+  const inputs = useRef({ scope, schedule, clock, zone })
+  useEffect(() => { inputs.current = { scope, schedule, clock, zone } }, [scope, schedule, clock, zone])
   useEffect(() => {
     const abort = new AbortController(), current = inputs.current
-    void loadHome(current.scope, api, weekly, statistics, cache, current.clock, current.zone, abort.signal).then(data => {
-      if (!abort.signal.aborted) setResult({ key: requestKey, data, error: false })
+    if (!current.schedule) return
+    void loadHome(current.scope, api, current.schedule, statistics, cache, current.clock, current.zone, abort.signal).then(data => {
+      if (!abort.signal.aborted) setResult({ key: requestKey, data })
     }).catch(error => {
       if (abort.signal.aborted) return
       if (boundaryError(error)) invalid.current(error)
-      setResult({ key: requestKey, data: null, error: true })
+      setResult({ key: requestKey, data: null })
     })
     return () => abort.abort()
-  }, [requestKey, api, weekly, statistics, cache])
-  const loading = result?.key !== requestKey, data = loading ? null : result?.data
+  }, [requestKey, api, statistics, cache])
+  const loading = schedule ? result?.key !== requestKey : training.loading
+  const data = loading || !schedule ? null : result?.data
+  const protectedView = protection !== null
+  const protectionNotice = protection === 'ACTIVE' ? '일반 보기 · 디로딩 진행 중에는 일반 운동과 루틴을 변경할 수 없습니다.'
+    : protection === 'COMPLETED' ? '디로딩 완료 당일 · 일반 운동은 다음 날부터 시작할 수 있습니다.' : null
   return <HomeView {...props} data={data} today={today} loading={loading}
-    canStart={editingSupported && props.localReady} header={review?.header}
-    showHttpNote={!!review && !editingSupported} onRefresh={() => { cache.clear(); setReload(n => n + 1) }} />
+    canStart={editingSupported && props.localReady && !training.loading && !training.issue && !training.busy}
+    protectedView={protectedView} issue={props.issue ?? training.issue ?? protectionNotice}
+    header={<HomeTrainingHeader analysis={analysis} protection={protection} />}
+    presetFilter={schedule ? { presets: schedule.presets, activeId: schedule.activeId, visit: props.visit } : undefined}
+    showHttpNote={!!review && !editingSupported} onRefresh={() => { refresh(); cache.clear(); setReload(n => n + 1) }} />
 }
 
 type HomeViewData = Pick<HomeData, 'summaries' | 'routines' | 'recent' | 'recentRows' | 'recentLimited' | 'recentFailed'> & {

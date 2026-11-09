@@ -4,7 +4,7 @@ import { root } from './routine-ui.jsx'
 import { routine, bootstrap, session, start } from './workout-online-data.mjs'
 import { WorkspaceView } from '../../src/features/workout-online/WorkoutWorkspace.tsx'
 import { HomePanel } from '../../src/features/home/HomePanel.tsx'
-import { WeeklyScheduleApi } from '../../src/features/statistics/weekly-schedule.ts'
+import { useTrainingSchedule } from '../../src/features/workout-online/useTrainingSchedule.ts'
 import { WorkoutApiError } from '../../src/features/workout-online/api.ts'
 import { AppShell } from '../../src/app/AppShell.tsx'
 import { addDays, dayOfWeek } from '../../src/features/home/model.ts'
@@ -21,21 +21,27 @@ let calendar = { ...scope, version: '1', timeZone: 'Asia/Seoul', appliedAt: '202
 const ui = window.listUi = { ids, requests: [], selected: [], edited: [], deleted: [], routineWrites:[], invalid: [], activeError: false, versionConflict: false, loseAck: false }
 ui.confirmDelete=true;ui.confirms=[]
 window.confirm=message=>{ui.confirms.push(message);return ui.confirmDelete}
-const weekly = new WeeklyScheduleApi({ workoutRequest: async (owner, path, method, body) => {
+const presetId = '90000000-0000-4000-8000-000000000011'
+const transport = { workoutRequest: async (owner, path, method, body) => {
   if (owner !== scope.userId) throw Error('Fixture owner mismatch')
+  if (path === '/api/v1/deload-periods/current') return { status: 200, data: { ...scope, period: null } }
+  if (path === '/api/v1/deload-analysis') return { status: 200, data: { ...scope, enabled: true, calculationStatus: 'INITIAL', confirmedWeeks: null, recommendationThreshold: { numerator: '8', denominator: '1' } } }
   ui.requests.push({ path, method, body: structuredClone(body) })
   if (method === 'PUT') {
-    if (body.contractVersion !== 'immediate-v1') throw Error('Fixture requires immediate-v1')
+    if (path !== '/api/v1/weekly-schedule/presets/' + presetId + '/assignments') throw Error('Fixture requires V30 assignment endpoint')
     if (ui.activeError) throw new WorkoutApiError('ACTIVE_SESSION_EXISTS', 409)
-    if (ui.versionConflict || body.expectedVersion !== calendar.version) throw new WorkoutApiError('SCHEDULE_VERSION_CONFLICT', 409)
+    if (ui.versionConflict || body.expectedPresetVersion !== calendar.version) throw new WorkoutApiError('PRESET_VERSION_CONFLICT', 409)
     const changed = calendar.version === '0' || JSON.stringify(body.assignments) !== JSON.stringify(calendar.assignments)
     calendar = { ...calendar, assignments: structuredClone(body.assignments), version: (BigInt(calendar.version) + (changed ? 1n : 0n)).toString(), appliedAt: '2026-11-06T01:00:00Z' }
     if (ui.loseAck) { ui.loseAck = false; throw Error('응답 유실 · 입력 유지') }
   }
-  const value = structuredClone(calendar)
+  const value = { dataGeneration: scope.dataGeneration, stateVersion: calendar.appliedAt ? '1' : '0',
+    activePresetId: presetId, autoEnabled: false, timeZone: calendar.timeZone, appliedAt: calendar.appliedAt,
+    appliedScheduleVersion: calendar.appliedAt ? calendar.version : null, nextRotationAt: null,
+    presets: [{ id: presetId, displayOrder: 1, presetVersion: calendar.version, rotationIncluded: false, assignments: structuredClone(calendar.assignments) }] }
   if (ui.holdRead && method === 'GET') { ui.holdRead = false; return new Promise(resolve => { ui.releaseRead = () => resolve({ status: 200, data: value }) }) }
   return { status: 200, data: value }
-} })
+} }
 const summaries = plans.map(({ id, name, version, tag, createdAt }) => ({ id, name, version, tag, createdAt }))
 const api = { routine: async (_scope, id) => structuredClone(plans.find(p => p.id === id)), cardioActivities: async () => [], routines: async () => ({ ...scope, routines: summaries }), closed: async () => ({ ...scope, sessions: [], next: null }) }
 const statistics = { overview: async (_scope, period) => ({ plannedDays: Array.from({ length: 7 }, (_, i) => {
@@ -55,6 +61,7 @@ function ReviewWorkspace() {
     ui.staleSelection = () => update({ selected: { ...plans[0], version: '0', weightPlacements: [{ ...plans[0].weightPlacements[0], exerciseName: 'STALE EXERCISE' }] } })
     return { getSnapshot: () => current, refresh: async () => setRefresh(n => n + 1), invalidateScope: error => ui.invalid.push(error?.code), select: async id => { ui.selected.push(id); update({ selected: plans.find(p => p.id === id) }) }, deleteRoutine: async () => { ui.deleted.push(current.selected?.id);update({selected:null}) }, removedRoutine: async () => null, saveRoutine:async body=>{ui.routineWrites.push(structuredClone(body));return true},start:async()=>{} }
   })
+  const training = useTrainingSchedule(transport, scope, String(refresh), controller.invalidateScope)
   ui.showHome = () => setTab('home')
   ui.setHomeReview = value => {ui.homeReview=value;setRefresh(n=>n+1)}
   ui.showRoutines = () => setTab('routines')
@@ -65,8 +72,8 @@ function ReviewWorkspace() {
   ui.hide = () => setVisible(false)
   ui.reveal = () => setVisible(true)
   return <AppShell authenticated tab={tab} focused={focused} onNavigate={setTab}>
-    <div hidden={tab !== 'routines'}>{visible && <WorkspaceView state={state} controller={controller} api={api} weekly={weekly} refreshKey={refresh} onScheduleSaved={() => setRefresh(n => n + 1)} onEditingChange={setFocused}/>}</div>
-    {tab === 'home' && <HomePanel scope={scope} routines={summaries} api={api} weekly={weekly} statistics={statistics} refreshKey={String(refresh)} active={null} attempt={false} busy={false} localReady issue={null} onStart={async () => {}} onResume={() => {}} onRetry={() => {}} onNavigate={setTab} onOpen={() => {}} onInvalid={() => {}}/>}
+    <div hidden={tab !== 'routines'}>{visible && <WorkspaceView state={state} controller={controller} api={api} training={training} enabled onEditingChange={setFocused}/>}</div>
+    {tab === 'home' && <HomePanel scope={scope} routines={summaries} api={api} training={training} statistics={statistics} visit={refresh} refreshKey={String(refresh)} active={null} attempt={false} busy={false} localReady issue={null} onStart={async () => {}} onResume={() => {}} onRetry={() => {}} onNavigate={setTab} onOpen={() => {}} onInvalid={() => {}}/>}
   </AppShell>
 }
 root.render(<ReviewWorkspace/> )

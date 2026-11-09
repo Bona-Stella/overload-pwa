@@ -12,10 +12,10 @@ test('real React reconciliation removes statistics across workout, account, gene
   const stub = `export class WorkoutApi {cardioActivities=async()=>[];};
     export class WorkoutOnlineController { getSnapshot=()=>window.boundaryState; subscribe=()=>()=>{}; connect=()=>()=>{}; invalidateScope=()=>{}; }
     export class StatisticsApi { overview=(scope,period,signal)=>window.boundaryOverview(scope,period,signal); }
-    export class WeeklyScheduleApi { read=async(scope,timeZone)=>({...scope,version:'0',timeZone,appliedAt:null,assignments:[]}) };
-    export const WeeklySchedulePanel=()=>null,LocalWorkoutScreen=()=>null,ClosedWorkout=()=>null,WorkoutHistory=()=>null;
+    export function useTrainingSchedule(){return {loading:false,canWrite:false,refresh:()=>{}}};
+    export const PresetAssignmentEditor=()=>null,LocalWorkoutScreen=()=>null,ClosedWorkout=()=>null,WorkoutHistory=()=>null;
     export const offlineAccess={scope:async()=>{},source:async()=>null};`
-  const replaced = new Set(['./api.ts', './controller.ts', '../statistics/api.ts', '../statistics/weekly-schedule.ts', '../statistics/WeeklySchedulePanel.tsx', '../workout-local/LocalWorkoutScreen.tsx', './ClosedWorkout.tsx', '../workout-local/offline.ts'])
+  const replaced = new Set(['./api.ts', './controller.ts', '../statistics/api.ts', './useTrainingSchedule.ts', '../statistics/WeeklySchedulePanel.tsx', '../workout-local/LocalWorkoutScreen.tsx', './ClosedWorkout.tsx', '../workout-local/offline.ts'])
   const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'workspace-component-only', enforce: 'pre',
     resolveId(id, importer) { if (importer?.endsWith('/WorkoutWorkspace.tsx') && replaced.has(id)) return '\0workspace-boundary-stub' },
     load(id) { if (id === '\0workspace-boundary-stub') return stub },

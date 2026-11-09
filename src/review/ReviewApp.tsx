@@ -5,7 +5,6 @@ import { useAuth } from '../features/auth/context.ts'
 import { returnFlow } from '../features/auth/controller.ts'
 import { HomeReviewContext } from './context.ts'
 import styles from './Review.module.css'
-import { ReviewHeader } from './ReviewHeader.tsx'
 
 function ReviewLogin() {
   const { state, controller } = useAuth()
@@ -34,6 +33,5 @@ function ReviewLogin() {
   return <aside className={styles.login} aria-label="검토용 로그인"><span>전용 검토 DB · 실제 OTP 인증</span><button type="button" disabled={busy || state.pending !== null || remaining > 0} onClick={() => void login()}>{busy ? '검토 계정 확인 중…' : remaining > 0 ? `${remaining}초 후 검토 로그인` : '검토 계정으로 로그인'}</button>{issue && <p role="alert">검토 연결을 확인한 뒤 다시 시도하세요.</p>}<small>메일 전달만 자동화합니다. 별도 코드 입력이 필요 없습니다.</small></aside>
 }
 export default function ReviewApp() {
-  const analysisOn = new URL(window.location.href).searchParams.get('analysis') !== 'off'
-  return <HomeReviewContext value={{ header: <ReviewHeader analysisOn={analysisOn} /> }}><AuthProvider flow={returnFlow(window.location.pathname)}><ReviewLogin /><AuthApp /></AuthProvider></HomeReviewContext>
+  return <HomeReviewContext value={true}><AuthProvider flow={returnFlow(window.location.pathname)}><ReviewLogin /><AuthApp /></AuthProvider></HomeReviewContext>
 }

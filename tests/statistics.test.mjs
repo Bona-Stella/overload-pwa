@@ -7,7 +7,6 @@ import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { StatisticsApi, overview, periodFor, weightStats } from '../src/features/statistics/api.ts'
-import { WeeklyScheduleApi, weeklySchedule } from '../src/features/statistics/weekly-schedule.ts'
 import { scope, OTHER, routine } from './fixtures/workout-online-data.mjs'
 
 registerHooks({load(url,context,next){
@@ -107,17 +106,6 @@ test('overview accepts verified weekly rate and rejects fabricated denominators 
 test('weekly summary displays 2.25 out of 4 and 56.25 percent without adding extra workouts',()=>{
   const data=planned(),html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/2\.25 \/ 4일/);assert.match(html,/56\.25%/);assert.doesNotMatch(html,/아직 확인할 수 없습니다/)
-})
-test('schedule reads and versioned online writes preserve scope and never mutate retained draft after failure',async()=>{
-  const state=weekly(),draft=[Object.freeze({dayOfWeek:1,routineId:OTHER})];Object.freeze(draft)
-  let request
-  const api=new WeeklyScheduleApi({workoutRequest:async(...args)=>{request=args;if(args[2]==='PUT')throw Object.assign(new Error('conflict'),{code:'SCHEDULE_VERSION_CONFLICT'});return{status:200,data:state}}})
-  assert.deepEqual(await api.read(scope,'Asia/Seoul',new AbortController().signal),state)
-  assert.equal(request[2],'GET');assert.equal(request[3],undefined)
-  await assert.rejects(api.save(scope,state,draft,new AbortController().signal),error=>error.code==='SCHEDULE_VERSION_CONFLICT')
-  assert.deepEqual(request[3],{contractVersion:'immediate-v1',dataGeneration:scope.dataGeneration,expectedVersion:'0',timeZone:'Asia/Seoul',assignments:draft})
-  assert.deepEqual(draft,[{dayOfWeek:1,routineId:OTHER}])
-  assert.equal(weeklySchedule({...state,version:'1',appliedAt:'2026-11-02T00:00:00Z',assignments:[{dayOfWeek:8,routineId:OTHER}]}),false)
 })
 test('schedule editor has seven routine or rest choices and makes immediate first registration explicit',()=>{
   const html=renderToStaticMarkup(React.createElement(ScheduleEditor,{state:weekly(),routines:[{id:OTHER,name:'routine',version:'0'}],busy:false,onSave(){},onCancel(){}}))
@@ -315,11 +303,3 @@ test('cardio comparison uses only the selected week/month overview returned thro
     assert.ok(renderCardioTime(result).includes(`실제 누적 ${expectedMinutes}분 / 계획 ${(index + 1) * 10}분`))
   }
 })
-
-test('immediate schedule save sends its contract marker and confirms the authoritative state by GET',async()=>{
-  const state=weekly(),saved={...state,version:'1',appliedAt:'2026-11-06T00:00:00Z',assignments:[{dayOfWeek:1,routineId:OTHER}]},calls=[];
-  const api=new WeeklyScheduleApi({workoutRequest:async(...args)=>{calls.push(args);return{status:200,data:saved}}});
-  assert.deepEqual(await api.save(scope,state,saved.assignments,new AbortController().signal),saved);
-  assert.deepEqual(calls.map(c=>c[2]),['PUT','GET']);assert.equal(calls[0][3].contractVersion,'immediate-v1');
-  assert.equal(weeklySchedule({...state,appliedAt:undefined,current:null,pending:null}),false);
-});

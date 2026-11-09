@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { WeeklySchedule } from '../statistics/weekly-schedule.ts'
+import type { SchedulePreset } from './preset-schedule.ts'
 import { activeWeights, activeCardio } from '../home/model.ts'
 import { scheduleRoutineLabel } from '../home/tags.ts'
 import { AchievementIcon } from '../../components/AchievementIcon.tsx'
@@ -19,7 +19,7 @@ function composition(routine: Routine | undefined) {
     : { weight: exerciseSummary(['구성 확인 필요']), cardio: exerciseSummary(['구성 확인 필요']) }
 }
 export function RoutineCards({ summaries, details, busy, managementBlocked = false, onSelect, onNew, onEdit, onDelete, schedule, scheduleEditing = false, week, presetHeader, presetNavigation, presetAssignments }: {
-  week?: Pick<WeeklySchedule, 'assignments' | 'version'>;
+  week?: Pick<SchedulePreset, 'assignments' | 'version'>;
   presetHeader?: (viewToggle: ReactNode) => ReactNode; presetNavigation?: ReactNode; presetAssignments?: (id: string) => ReactNode; schedule?: ReactNode; scheduleEditing?: boolean;
   onEdit?: (id: string) => void; onDelete?: (id: string) => void;
   summaries: RoutineList['routines']; details: Map<string, Routine>; busy: boolean; managementBlocked?: boolean;

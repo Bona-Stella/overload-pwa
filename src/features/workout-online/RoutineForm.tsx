@@ -59,7 +59,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const changeWeight = (id: string, patch: Partial<WeightDraft>) => setWeights(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
   const changeCardio = (id: string, patch: Partial<CardioDraft>) => setCardio(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
   async function save() {
-    if(readOnly||guard.current)return
+    if(readOnly||locked||managementBlocked||guard.current)return
     guard.current=true;setSaving(true)
     try {
       let body = submitted
@@ -85,7 +85,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   return <form className={`${styles.editor} stack online-routine`} data-readonly={readOnly} data-picking={picker !== null} aria-label={readOnly ? '루틴 상세' : routine ? '루틴 편집' : '새 루틴'} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
     <div className="section-heading"><h2>{readOnly ? '루틴 상세' : routine ? '루틴 편집' : '새 루틴'}</h2><div className={styles.detailActions}>{readOnly && onEdit && <button type="button" className="quiet" disabled={busy || managementBlocked} onClick={onEdit}>편집</button>}{readOnly && onDelete && <button type="button" className="quiet danger" disabled={busy || managementBlocked} onClick={onDelete}>삭제</button>}<button type="button" className="quiet" disabled={locked && !readOnly} onClick={close}>닫기</button></div></div>
     <p className="muted small">{readOnly ? '저장된 루틴 계획입니다. 이 화면에서는 변경하지 않습니다.' : saveDescription ?? '온라인에서 저장합니다. 기존 배치의 승인 중량은 아래에서 명시적으로 선택한 경우에만 변경됩니다. 진행 중인 운동의 시작 계획은 유지됩니다.'}</p>
-    <fieldset disabled={readOnly || locked || submitted !== null} className="stack online-fieldset">
+    <fieldset disabled={readOnly || locked || managementBlocked || submitted !== null} className="stack online-fieldset">
       {!readOnly && routine && <button type="button" className="outline" onClick={() => void controller.removedRoutine().then(value => { if (value) { if (value.version !== routine.version) setError('루틴이 변경되었습니다. 닫은 뒤 최신 루틴을 다시 조회해 주세요.'); else setRemoved(value) } })}>제거한 배치 조회</button>}
       {removed?.weightPlacements.filter(p => !weights.some(w => w.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setWeights(values => [...values, { ...p, restore: true, standardExerciseId: p.standardExerciseId, setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), approve: false, nextWeightKg: p.approvedWeightKg }])}>{p.exerciseName} 배치 복원</button>)}
       {removed?.cardioPlacements.filter(p => !cardio.some(c => c.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setCardio(values => [...values, {id:p.id,existing:true,restore:true,...draftCardio(p.plan)}])}>{p.plan.name} 배치 복원</button>)}
@@ -122,6 +122,6 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     {readOnly && assignments}
     {error && <p className="notice error" role="alert">{error}</p>}
     {submitted && <p className="muted small">제출 내용을 고정했습니다. 응답이 확인되지 않았다면 같은 내용으로 확인하거나, 닫은 뒤 서버의 최신 루틴을 조회해 주세요.</p>}
-    {!readOnly && <button className="primary full" disabled={locked}>{locked ? '서버 확인 중…' : submitted ? '고정된 저장 요청 다시 확인' : '루틴 저장'}</button>}
+    {!readOnly && <button className="primary full" disabled={locked || managementBlocked}>{locked ? '서버 확인 중…' : submitted ? '고정된 저장 요청 다시 확인' : '루틴 저장'}</button>}
   </form>
 }
