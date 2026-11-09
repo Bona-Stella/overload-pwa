@@ -4,8 +4,8 @@
 - Task 005 보완일: 2026-10-27 · 로컬 유산소 V1 구현, 아래 8절 적용
 - Task 005.5 정책 정리일: 2026-10-27 · 인증·계정 정책과 후속 저장/동기화 요구사항 확정. 구현 상태와 구분하며 아래 9–10절 적용
 - 최신 설계 기준일: 2026-11-05
-- 확정 UI/UX·상호작용은 [Decision Log](Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절을 우선한다. [Wireframe](Overload_UI_Baseline_Wireframe_v0.9.html)은 화면 구조·사용자 흐름·배치의 무채색 검토 자료다. 실제 PWA의 색상·그라데이션·토큰·시각적 위계는 [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)을 따르며 HTML의 흰색·회색을 앱 컬러로 구현하지 않는다. 디로딩 정책·상태는 [v1.7](Overload_Deloading_Design_Specification_v1.7.md)을 따른다.
-- 상태: **제품 설계 기준**. 초기 Task 002~005.5 항목은 당시 범위이며, 실제 계정의 구현과 v0.9 후속 범위는 [프론트엔드 현황](../engineering/frontend.md#87-v09-적용-범위와-구현-상태) 및 [백엔드 연동 설계](../engineering/backend-ui-v0.9.md)에서 구분한다.
+- 화면별 최신 조작과 시각 기준은 [UI/UX 적용 지점](ui-ux.md), 디로딩 도메인은 [v1.7](Overload_Deloading_Design_Specification_v1.7.md), 일정과 자동 순환은 [주간 일정 계약](../../../overload-server/docs/api/weekly-schedule.md)을 따른다.
+- 상태: **기초 제품 요구사항**. 초기 Task 범위와 정책 형성의 근거를 보존한다. 현행 작업별 정책·API와 구현 상태는 [AGENTS.md 3절](../../AGENTS.md#3-required-engineering-documents)에서 찾는다.
 - 대상: iPhone 홈 화면 설치를 목표로 하는 모바일 퍼스트 웨이트 트레이닝 PWA
 - 구현 관련 주의: 본 문서는 **제품의 기준**이며 Git 저장소·코드의 현재 상태를 검증한 문서가 아니다. 구현 전 Codex가 실제 저장소와 각 `AGENTS.md` 및 엔지니어링 문서를 확인해야 한다.
 

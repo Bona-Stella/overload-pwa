@@ -1,5 +1,7 @@
 # Overload Deloading Design Specification
 
+> **역사 자료.** 현재 디로딩 정책과 프리셋 연동은 [v1.7](Overload_Deloading_Design_Specification_v1.7.md)을 적용한다. 아래 시작 자격과 분석·표현은 당시 기준이다.
+
 **버전:** v1.6  
 **기준일:** 2026-11-05  
 **상태:** 제품 정책 합의본 · 구현 전 (기술 검증은 별도)  

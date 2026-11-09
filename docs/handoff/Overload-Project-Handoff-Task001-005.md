@@ -1,5 +1,7 @@
 # Overload — 프로젝트 인수인계 (Task 001–005)
 
+> **역사 자료.** Task 001~005의 개발 상태와 결정 당시 근거를 보존한다. 신규 개발은 [AGENTS.md 3절](../../AGENTS.md#3-required-engineering-documents), 휴식 알림은 [Decision Log 10.17절](../product/Overload_UI_Decision_Log_v0.9.md#1017--휴식-타이머-시각효과음-알림)을 적용한다.
+
 > 기준: 2026-10-27, 이 ChatGPT 대화에서 합의한 요구사항 및 Codex의 Task 005 최종 보고서.  
 > 목적: **Task 005.5(로그인·회원가입 UX 및 기존 로컬 기록 연결 정책)**를 새 ChatGPT 채팅에서 시작하기 위한 기준 문서.  
 > 상태: 사용자가 Task 005의 **Git 커밋을 직접 완료했다고 알림**. 원격 Push 여부, 실제 커밋 해시, 현재 작업 트리 상태는 이 문서에서 검증하지 않음.  

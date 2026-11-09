@@ -4,7 +4,7 @@
 - 디자인 결정: **다크 모드**, 모바일 퍼스트, 운동 중 **한 번에 한 종목 집중(A안)**
 - 상태: **UI 설계 기준 · 적용 구현은 별도**. 초기 토큰과 Task 002~005.5 항목은 당시 범위다.
 - 기능 정의 기준: [`requirements.md`](./requirements.md)
-- 확정 UI/UX 결정·상호작용은 [Decision Log](Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절이 우선한다. [Wireframe](Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용이다. 실제 PWA 색상·테마·시각적 위계는 [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)을 따르며 HTML의 흰색·회색을 앱 컬러로 구현하지 않는다. 디로딩 도메인은 [v1.7](Overload_Deloading_Design_Specification_v1.7.md), 아이콘은 [추출 원본 6종](assets/exercise-icons/README.md)을 사용한다. HTML 화면의 예시 날짜·수치·자격 스위치는 시연용이며 [실제 구현 범위](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)는 별도로 확인한다.
+- 이 문서는 화면별 적용 지점이다. [Decision Log](Overload_UI_Decision_Log_v0.9.md)는 아래에 직접 연결한 확정 결정, [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)은 실제 색상·테마·위계, [HTML](Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 시연에 사용한다. 적용 상태는 [Frontend 8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 확인한다.
 - Task 005 보완: 웨이트 뒤 유산소 계획·실수행·완료 확인과 유산소 전용 루틴을 추가했다. 아래 7절이 해당 흐름을 구체화한다.
 
 최신 세부 규칙은 아래 공식 절을 참조하며 이 문서에 복제하지 않는다.
@@ -14,8 +14,13 @@
 | 일반·디로딩 테마, 강조 카드·레이블 | [Visual Theme Spec 1~2절](Overload_UI_Visual_Theme_Spec_v0.9.md#1-공통-onyx와-강조색). 조회 테마와 실제 디로딩 상태·권한은 분리 |
 | 디로딩 추천 게이지 | [Decision Log](Overload_UI_Decision_Log_v0.9.md) 10.11.4절 및 [Visual Theme Spec 3절](Overload_UI_Visual_Theme_Spec_v0.9.md#3-상태색과-게이지) |
 | 홈 주간 일정의 요일 / ✓ / X / - | [Decision Log](Overload_UI_Decision_Log_v0.9.md) 10.14.1절. 미판정은 요일, 다음 날04시 검사·전환 이전 소급 금지 |
-| T02-B 루틴·주간 일정·공통 폼 | [Decision Log](Overload_UI_Decision_Log_v0.9.md) 10.14.2~5절, [Theme Spec7절](Overload_UI_Visual_Theme_Spec_v0.9.md#7-t02-b-공통-표현--2026-11-07-개정) |
+| 다중 프리셋·오늘만 선택·루틴 폼 | [Decision Log 10.16절](Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)이 배정·폼·필터의 목표 UI를 정한다. 아래 3.2~3.4의 단일 일정 관련 설명은 T02-B 구현 참조다. |
+| 휴식 타이머 알림 | [Decision Log 10.17절](Overload_UI_Decision_Log_v0.9.md#1017--휴식-타이머-시각효과음-알림)의 확정 정책을 T03.5에 적용한다. |
+| 기존 T02-B의 공통 표현 | [Decision Log 10.14절](Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)과 [Theme Spec 7절](Overload_UI_Visual_Theme_Spec_v0.9.md#7-t02-b-공통-표현--2026-11-07-개정) |
 | 종목 위치의 누적 진행 | [Decision Log](Overload_UI_Decision_Log_v0.9.md) 10.11.5절. 현재 칸 하나만 켜는 표시와 세트 완료율을 사용하지 않음 |
+| 기록 상세의 볼륨·구획 | [결정 10.10.2절의 09~10항](Overload_UI_Decision_Log_v0.9.md#10102-운동-진행기록--0710). 실제 값과 기록 정정은 [세션 API](../../../overload-server/docs/api/workout-sessions.md) 및 관련 측정 계약을 적용한다. |
+| 운동 현황·근육·성장 | [그래프와 필터](Overload_UI_Decision_Log_v0.9.md#운동-현황-그래프와-필터), [성장 검색](Overload_UI_Decision_Log_v0.9.md#성장-추적의-종목-검색), [보조근 상세](Overload_UI_Decision_Log_v0.9.md#근육별-secondary-상세)의 화면 설계. 현재 API와 남은 연동은 [PWA 연동 지침](../engineering/backend-ui-v0.9.md)에서 구분한다. |
+| 설정의 표준 운동 열람 | [목록](Overload_UI_Decision_Log_v0.9.md#82-운동-목록-조회-ui--합의된-기능-배치-초안)·[상세](Overload_UI_Decision_Log_v0.9.md#83-운동-상세-ui--합의연동-대기)의 목표 화면. 현재 검색 필드는 [표준 카탈로그 API](../../../overload-server/docs/api/standard-exercise-catalog.md)를 따른다. |
 | 세트 완료·완료 취소 | [Visual Theme Spec 5절](Overload_UI_Visual_Theme_Spec_v0.9.md#5-세트-완료-컨트롤). 취소 확인 뒤 입력 복원, 실제 기록·동기화 계약 보존 |
 | 수행 중량·반복수, 제조사·부하 방식, 물음표 도움말 | [Visual Theme Spec 4절](Overload_UI_Visual_Theme_Spec_v0.9.md#4-텍스트-위계--중량과-장비). 수행값 우선, 장비는 보조 위계, 시각 크기와 터치 영역 구분 |
 | 운동 검색·선택 아이콘 | [아이콘 README·manifest](assets/exercise-icons/README.md), 원본 PNG를 32 CSS px로 표시 |
@@ -80,6 +85,8 @@
 
 ### 3.2 루틴 목록 — `RoutineList`
 
+> 아래 3.2~3.4의 단일 일정 동작은 기존 PWA 기준이다. 신규 프리셋의 목록·폼·요일 배정은 [결정 10.16절](Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)을 적용한다.
+
 [Decision Log10.14.2~3절](Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)이 기준이다. 기본 가로7요일 타일/세로 한 줄 보기를 단일 아이콘으로 전환하고 요일 선택을 공유한다. 날짜 숫자와 상세 운동명은 타일에 넣지 않는다. 세로 오른쪽 공식18px 아이콘은 등록 종목 수다.
 
 요일을 선택하면 해당 배정 루틴만 표시하고 단일 목록 필터가 요일명으로 잠긴다. 해제하면 전체다. 목록 필터는 전체/최신순/오래된순/배정/미배정이며 태그 필터는 없다. 카드 메타 번호·태그·요일/이름/첫 운동 외 N/⋯ 메뉴를 사용한다. 배정은 배경 그라데이션으로 구분한다. 본문은 읽기 전용 상세로 진입한다.
@@ -96,7 +103,7 @@
 
 추가·변경은 공통 `ExerciseSearch` 인라인 검색을 재사용한다. 이름/별칭·공식32px 아이콘·실제 대분류/PRIMARY 표시, 열 때 스크롤·포커스, 다른 입력 초안 보존을 적용한다. 검색 선택은 원본 카탈로그 ID를 사용하며 새 자동완성 카드 시스템/개인 운동 CRUD를 만들지 않는다. 상세 조회는 설정 경로와 구분한다.
 
-별도 일정 편집은7개 선택창·휴식·복수 배정·단일 즉시 저장이다. 한 줄 후보 필터는 배정 유무/태그/전체 보기3개, 단일 선택이며 후보 변경에도 선택값·선택창 크기는 고정한다. 선택 유지 접미사·예약·사용자 일정 이력 UI는 없다. [주간 일정 계약](../../../overload-server/docs/api/weekly-schedule.md)의 최신 재조회·expectedVersion·ACTIVE 보호를 사용한다. Backend 버전 이력은 보존한다.
+별도 일정 편집은7개 선택창·휴식·복수 배정·단일 즉시 저장이다. 한 줄 후보 필터는 배정 유무/태그/전체 보기3개, 단일 선택이며 후보 변경에도 선택값·선택창 크기는 고정한다. 선택 유지 접미사·예약·사용자 일정 이력 UI는 없다. 단일 일정의 재조회·expectedVersion·ACTIVE 보호를 사용하던 구현이다. 신규 연동은 [프리셋 API](../../../overload-server/docs/api/weekly-schedule.md)를 사용하며 서버 적용 이력은 보존한다.
 
 ### 3.5 스트레칭/워밍업 — `WarmupScreen`
 
@@ -224,9 +231,11 @@
 - 홈 헤더 → 디로딩 상세 → 횟수·분할·요일 선택 → 운동이 배치된 날짜만 있는 비교 미리보기 → `이 일정으로 디로딩 시작`. 날짜를 펼쳐 원본 대비 종목·중량·세트·반복·유산소 목표를 확인한다. 원본과 승인 중량의 보호를 안내한다. 상세에서 자격 미달 이유를 표시하고 시작을 비활성화한다. 미리보기 하단에서 바로 시작을 요청하고, 그 순간 재검사에서 거부되면 최신 이유를 표시한다.
 - 진행 중 홈에서만 `일반 보기 / 디로딩 복귀`를 전환한다. 선택한 조회 모드는 루틴·기록 탭 이동에 유지한다. 일반 보기에서는 원본과 일반 기록의 조회만 허용하고 원본 실행·수정·삭제를 제한한다. 조회 전환은 진행 중인 디로딩 기간·세션을 바꾸지 않는다.
 - 디로딩 홈에서는 오늘의 임시 루틴과 임시 일정을 표시한다. 전체 임시 목록·편집·삭제 및 빈 날짜로 옮기기는 루틴 탭에서 처리한다. 완전 휴식은 오늘의 루틴에 휴식 안내를 표시하고 시작·다른 루틴 선택을 숨긴다. 경과한 휴식일은 `경과`로 표시한다.
-- 진행 상세에서만 완료·조건부 취소를 제공하고 각각 한 번 확인한다. 8~10일차 최초 진입의 권장 기간 경과 안내는 진행 중 운동을 방해하지 않는다. 완료 당일과 다음 날, 무수행 취소의 복귀 차이는 [제품 요구사항 5절](requirements.md#5-디로딩과-기록분석)을 따른다. 완료한 기간 카드는 일반 기록에서 조회한다.
+- 진행 상세에서만 완료·조건부 취소를 제공하고 각각 한 번 확인한다. 8~10일차 최초 진입의 권장 기간 경과 안내는 진행 중 운동을 방해하지 않는다. 완료 당일과 다음 날, 무수행 취소의 복귀 차이는 [디로딩 v1.7](Overload_Deloading_Design_Specification_v1.7.md)을 따른다. 완료한 기간 카드는 일반 기록에서 조회한다.
 
 ## 4. 기본 다크 디자인 토큰(시작점)
+
+> 초기 색상 기록이다. 실제 UI 토큰은 [Visual Theme Spec](Overload_UI_Visual_Theme_Spec_v0.9.md)을 적용한다.
 
 | 용도 | 컬러 제안 | 비고 |
 |---|---|---|
@@ -264,6 +273,8 @@
 - 새로고침/앱 재진입 후 진행 화면·타이머 복구
 
 ## 6. Task 002에서 의도적으로 가볍게 만들 부분
+
+> 6~9절은 초기 데모와 계정 프리뷰의 범위를 보존한다. 계정 연동은 [인증 지침](../engineering/authentication.md), 실제 쓰기·복원·복구는 [현행 작업별 기준](../../AGENTS.md#3-required-engineering-documents)을 확인한다.
 
 - Task 005 설계 대기: 드랍세트는 추후 기능이며 현재는 일반 본세트 기준이다. 미래 감량 구간은 정상 기준 기록/증량 판단과 분리해야 하며 이번에 데이터 구조나 조작을 추가하지 않는다.
 - 실제 운영 PWA 오프라인 설치/백그라운드 알림/서버 동기화는 구현 완료라고 주장하지 않는다.
@@ -307,4 +318,4 @@
 
 ### 2026-11-07 디로딩 정책 표현 정정
 
-신규 계정은 **기본 ON·누적0의 초기 epoch**로 시작한다(2026-11-07 추가 확정). 최초 ON은 OFF→ON 전환이 아니다. OFF→ON은 새 epoch·누적0이며 OFF/활성화 전 기록을 소급 가산하지 않는다. 기존 미설정 계정은 G4의 명시적 이행 경계를 검증한다. HTML 초기 ON·개발용5.2주는 시연이며 실제 서버 설정·누적을 증명하지 않는다. 시작 자격은 최근7일 실제 일반 수행/이전 완료 이후 신규 일반 수행/오늘 수행 없음/ACTIVE 일반 세션 없음의4조건이다. 계획일 수·OFF·게이지0은 gate가 아니다. 이미 ACTIVE인 디로딩 기간은 별도 상태 제약으로 중복 생성하지 않는다. 유산소 실제 수행은 기존 계약의 미삭제 COMPLETED·activeMs>0를 뜻하며 최초 목표 달성과는 구분한다. E≤1 RESET·E>1 min(1,E/N) ADD, 다음 월04시 이후 검사 완료 확정·주중 미가산을 따른다. G4·G5 Backend는 구현했고 G6 PWA 연동은 후속이다. HTML과 개발용 헤더는 시연이며 기존 DB에 V25~V29를 적용하지 않았다. 일반 ST-17~23의 예정 루틴 분모를 디로딩에 복사하지 않는다.
+분석 설정·누적·시작 자격과 일반 기록의 경계는 [디로딩 v1.7](Overload_Deloading_Design_Specification_v1.7.md)에 통합했다. 구현 상태는 [Frontend 8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 따른다.

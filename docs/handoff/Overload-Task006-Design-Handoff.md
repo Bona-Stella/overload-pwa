@@ -1,5 +1,7 @@
 # Overload — Task 005.5 최종 정책 및 Task 006 설계 인계
 
+> **역사 자료.** Task 005.5 목업과 Task 006 착수 당시의 인계다. 현행 인증·세션·복구는 [AGENTS.md 3절](../../AGENTS.md#3-required-engineering-documents)에 연결된 계약을 적용한다.
+
 - 기준일: 2026-10-27 (Asia/Seoul).
 - 상태: **Task 005.5 제품 정책 정리 완료 / 인증·계정 목업 사용자 1차 검토 통과 / Task 006 기술 설계 대기**.
 - 목적: PostgreSQL·API·인증 설계를 독립적으로 시작할 수 있도록 확정 요구사항, 잠정값, 설계 결정 대상을 구분한다.

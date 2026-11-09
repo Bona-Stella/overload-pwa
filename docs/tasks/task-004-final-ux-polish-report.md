@@ -2,7 +2,7 @@
 
 - 작업일: 2026-10-27 (Asia/Seoul)
 - 사용자 요청: `task-004-final-ux-polish.md`를 “읽고 진행해줘.”
-- [요청 문서 보관본](task-004-final-ux-polish-request.md)
+- 요청 문서 보관본 (당시 파일 `docs/tasks/task-004-final-ux-polish-request.md`, Git `ab907b2`에 보존)
 - 상태: A/B 구현, 자동 검사 및 데스크톱 브라우저 검증 완료. 실제 iPhone 검증은 남음.
 
 ## Summary — 선행 조사와 구현 결과

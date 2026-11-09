@@ -620,9 +620,9 @@ iPhone의 화면 구조를 고려합니다.
 
 ### 8.7 v0.9 적용 범위와 구현 상태
 
-2026-11-07 현재 T02-B는 `85ec10f50e59`에 구현·로컬 커밋된 상태다. [1차](../tasks/ui-v09-t02b-first-ui-report.md)·[2차 보고서](../tasks/ui-v09-t02b-second-report.md)는 당시 기록이며 최신 현황은 이 절과 Decision Log10.14절을 따른다. 루틴 태그 저장과 일정 즉시 적용이 연결되어 있다. 최종 코드 이후548건 테스트·build·lint 통과 기록을 확인했으나, T02-B 사용자 최종 실기기 승인은 별도다. 문서 개정 자체가 추가 API/DB 적용·승인을 뜻하지 않는다.
+**현행 구현 상태.** T02-B의 태그 저장과 단일 일정 즉시 적용은 구현됐다(`85ec10f50e59`, 당시 테스트 548건·build·lint 통과, 최종 사용자 실기기 승인 별도). [최신 Backend 프리셋·자동 순환 및 G5 연동](../../../overload-server/docs/engineering/backend.md#125-다중-주간-일정-프리셋)은 구현과 격리 회귀 검증을 마쳤다. PWA 신규 프리셋과 G6 연동은 후속이다. 휴식 타이머 알림은 [확정 UX](../product/Overload_UI_Decision_Log_v0.9.md#1017--휴식-타이머-시각효과음-알림)와 HTML 시연까지 완료했으며 실제 구현·검증은 [T03.5](#t035-휴식-타이머-시각효과음-알림)에서 진행한다.
 
-[Decision Log](../product/Overload_UI_Decision_Log_v0.9.md)의 최신 10.14절을 확정 UI/UX·상호작용 기준으로 적용합니다. [Wireframe](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 화면 구조·사용자 흐름·배치 검토용 독립 HTML이며 실제 PWA 색상은 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다. HTML의 흰색·회색을 운영 UI 컬러로 구현하지 않습니다. 운동 검색·선택은 [추출 PNG 원본 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다. 디로딩 정책은 [v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md)을 따르며 예시 값·버튼 시연을 서버 응답·IndexedDB·인증 결과로 가져오지 않습니다.
+[UI/UX 적용 지점](../product/ui-ux.md)의 화면별 링크를 사용합니다. 무채색 HTML은 배치와 조작의 시연이고 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)은 실제 색상·위계의 기준입니다. 검색·선택에는 [원본 PNG 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다.
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
@@ -632,7 +632,7 @@ iPhone의 화면 구조를 고려합니다.
 
 [최종 시각 보완](../tasks/ui-v09-t02a-home-final-visual-report.md)에서 브랜드18px/700/자간0.06em을 적용하고, 동일 격리 검토 DB에 기존 루틴의 혼합 달리기 완료 기록1건을 실제 API로 추가했다. 이후 [최종 디테일](../tasks/ui-v09-t02a-home-polish-report.md)에서 공식 원형 아령 SVG·아이콘–수치 gap5px·제목 아래 구분선을 적용했다. 당시 태그 저장은 후속이었으며 현재는 T02-B 루틴 계약에 연결되어 있다.
 
-2026-11-06 사용자의 iPhone 실기기 검토로 T02-A 일반 홈을 최종 승인했다. G4·G5 서버 API는 구현됐고 실제 PWA 연동은 후속이다. T02-B 구현 상태는 이 절 상단을 따른다. 검토 환경은 [마감·데이터 보존·수동 재개](../tasks/ui-v09-t02a-closeout.md)를 따르며 T02-B 1차 UI 구현이 끝나기 전에는 검토 서버를 자동 시작하지 않는다.
+T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보존된 검토 환경은 [AGENTS.md 3절](../../AGENTS.md#3-required-engineering-documents)의 승인 및 수동 재개 절차를 따른다.
 
 #### T02-B 현재 컴포넌트·상태 연결 (2026-11-07)
 
@@ -1535,6 +1535,8 @@ AI 에이전트는 기존 구조를 이해하고,
 
 ## G2~G3 일정 계약 전환 (2026-11-06)
 
+> PWA에 남아 있는 단일 일정 경로의 구현 기록이다. 신규 Backend 연동은 [프리셋 계약](../../../overload-server/docs/api/weekly-schedule.md)을 사용한다.
+
 주간 일정은 현재 version/timeZone/appliedAt/assignments를 사용하고 PUT에 contractVersion=immediate-v1을 보낸다. current/pending/nextEffectiveFrom과 예약 표시를 제거했다. 저장 응답과 재조회가 version/정확한 배정/시각에서 일치해야 성공하며, 루틴 성공·일정 실패는 기존 고정 입력으로 일정만 재확인한다. ACTIVE 오류는 종료/저장 확인 안내와 함께 입력을 유지한다.
 
 홈과 루틴 목록은 같은 현재 배정을 재조회한다. 과거 계획·첫 예정 START는 서버 overview의 고정 근거를 사용하고 현재 템플릿으로 덮지 않는다. PENDING과 미검사/재검사0은 미수행 확정 표시를 하지 않는다. 일반 통계의 계획 미달과 실제 무수행을 구분한다. 정책은 [통계 v1.4](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md), API는 [일정 계약](../../../overload-server/docs/api/weekly-schedule.md)을 따른다. 수정 전 UI v0.9 HTML은 별도 보존본이며 현재 HTML과 Decision Log10.14절은 최신 T02-B 레이아웃/즉시 적용을 반영한다.
@@ -1543,9 +1545,9 @@ IndexedDB/ACK/writerEpoch/dataGeneration/타 기기 읽기 전용과 개발용 �
 
 ### 2026-11-07 디로딩 정책 표현 정정
 
-신규 계정은 **기본 ON·누적0의 초기 epoch**로 시작한다(2026-11-07 추가 확정). 최초 ON은 OFF→ON 전환이 아니다. OFF→ON은 새 epoch·누적0이며 OFF/활성화 전 기록을 소급 가산하지 않는다. 기존 미설정 계정은 G4의 명시적 이행 경계를 검증한다. HTML 초기 ON·개발용5.2주는 시연이며 실제 서버 설정·누적을 증명하지 않는다. 시작 자격은 최근7일 실제 일반 수행/이전 완료 이후 신규 일반 수행/오늘 수행 없음/ACTIVE 일반 세션 없음의4조건이다. 계획일 수·OFF·게이지0은 gate가 아니다. 이미 ACTIVE인 디로딩 기간은 별도 상태 제약으로 중복 생성하지 않는다. 유산소 실제 수행은 기존 계약의 미삭제 COMPLETED·activeMs>0를 뜻하며 최초 목표 달성과는 구분한다. E≤1 RESET·E>1 min(1,E/N) ADD, 다음 월04시 이후 검사 완료 확정·주중 미가산을 따른다. G4·G5 Backend는 구현했고 G6 PWA 연동은 후속이다. HTML과 개발용 헤더는 시연이며 기존 DB에 V25~V29를 적용하지 않았다. 일반 ST-17~23의 예정 루틴 분모를 디로딩에 복사하지 않는다.
+시작 자격·분석·epoch는 [제품 v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md)을 따릅니다. API와 미연동 범위는 [G6 연동 지침](backend-ui-v0.9.md) 및 [8.7절](#87-v09-적용-범위와-구현-상태)을 확인합니다.
 
-### 다중 주간 루틴 일정 (정책 확정 · 구현 전)
+### 다중 주간 루틴 일정 (Backend 구현 · PWA 연동 예정)
 
 [UI 결정 로그 10.16절](../product/Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)과 [동작 와이어프레임](../product/Overload_UI_Baseline_Wireframe_v0.9.html)을 기준으로 한다. 현재는 단일 일정 조회·저장과 날짜 범위의 Today-only 선택이 구현돼 있다. `HomePanel`의 오늘만 선택 목록에는 검색 입력이 없다. 필터·검색·프리셋 관리는 후속이다.
 
