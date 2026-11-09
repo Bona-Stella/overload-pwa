@@ -1,6 +1,6 @@
 # T02-A 완료 · 검토 DB 보존 · T02-B 인계
 
-> **T02-A 완료 및 당시 인계 기록.** 구현 현황은 [Frontend 8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 확인한다. 아래 백업·볼륨 보호와 사용자 승인 후 수동 재개 절차는 계속 적용한다.
+> **T02-A 완료 및 당시 인계 기록.** 백업·볼륨 보호와 사용자 재개 승인 조건은 유지한다. 아래 수동 재개 도구는 보존된 V22/V23 검토 환경용이며 승인된 추가 적용은 V23에 한정된다. 최신 V30 PWA 통합에는 [프리셋 전환 계약](../../../overload-server/docs/api/weekly-schedule.md#v1-출시-전-전환)과 별도의 환경 검증·승인을 적용한다. 구현 현황은 [Frontend 8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 확인한다.
 
 2026-11-06(Asia/Seoul). 사용자의 iPhone 실기기 최종 검토로 **T02-A 일반 홈 UI/UX를 승인·확정**했다. T02-B 구현은 시작하지 않았다. push하지 않는다.
 
@@ -66,6 +66,8 @@ PC의 영구 백업:
 `home-review.ps1 -Action Stop`은 사용하지 않으며 해당 폐기 액션 자체도 차단했다. 영구 archive가 있으면 기존 `-Action Start`의 새 seed 경로도 차단한다. 내일부터는 아래 수동 재개만 사용한다.
 
 ## 내일: T02-B 1차 UI 완료 전에는 서버를 켜지 않는다
+
+> 당시 V22/V23 환경의 인계와 재개 절차다.
 
 초기 작업은 코드·설계·fixture 기반으로 루틴 관리 목록/상세/생성·편집1차 UI를 작성한다. 기존 `WorkspaceView`, `RoutineEditor`, `WeeklySchedulePanel`, 온라인 controller/API·version/소유권·저장 실패 보호를 재사용한다. 실제 수정 대상 이름은 착수 시 현재 파일을 다시 확인한다. 기존 홈과 운동/기록 보호를 보존하며 새 태그 API/DB 저장을 UI 작업만으로 임의 확정하지 않는다.
 

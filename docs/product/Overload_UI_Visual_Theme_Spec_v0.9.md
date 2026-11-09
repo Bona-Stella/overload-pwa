@@ -105,11 +105,11 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 ```
 
 - WCAG 대비 검토, iPhone 15 Safari 및 홈화면 PWA 실제 렌더링, 재마운트/타이머 리셋 방지, 아이콘 이미지 자산 경로와 캐시 검증은 React 통합 단계에서 수행.
-- HTML은 **흑백 UI 플로우 시뮬레이션**에 집중하고 위 시각 테마는 CSS Modules 실제 구현 단계에서만 적용한다. [Overload_UI_Decision_Log_v0.9.md](Overload_UI_Decision_Log_v0.9.md)는 사용자 행동/배치·정보 위계·정책, [Overload_Deloading_Design_Specification_v1.6.md](Overload_Deloading_Design_Specification_v1.6.md)는 디로딩 제품 계약을 책임진다.
+- HTML은 **흑백 UI 플로우 시뮬레이션**에 집중하고 위 시각 테마는 CSS Modules 실제 구현에 적용한다. 화면·조작은 [UI/UX](ui-ux.md), 디로딩 제품 정책은 [v1.7](Overload_Deloading_Design_Specification_v1.7.md)을 따른다.
 
 ## 7. T02-B 공통 표현 — 2026-11-07 개정
 
-구조·행동은 [Decision Log 10.14절](Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준), 무채색 시연은 [현재 HTML](Overload_UI_Baseline_Wireframe_v0.9.html)을 따른다. 확정 요구사항과 T02-B 최종 실기기 승인 여부는 별개다.
+홈 상태와 변경 범위 밖의 공통 표현은 [Decision Log 10.14절](Overload_UI_Decision_Log_v0.9.md#1014--2026-11-07-t02-b-최신-ui-통합-기준)을 따른다. 신규 프리셋의 요일 배정·루틴 폼·필터 동작은 [10.16절](Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)이 우선한다. [현재 HTML](Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 시연이다. 확정 요구사항과 T02-B 최종 실기기 승인 여부는 별개다.
 
 | 표현 | 실제 PWA 재사용 기준 |
 |---|---|

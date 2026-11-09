@@ -636,6 +636,8 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보�
 
 #### T02-B 현재 컴포넌트·상태 연결 (2026-11-07)
 
+아래는 현재 PWA에 남아 있는 단일 일정 구현의 교체 지점이다. 최신 Backend의 프리셋 DTO·쓰기 계약은 [주간 일정 API](../../../overload-server/docs/api/weekly-schedule.md)를 따른다.
+
 | 실제 모듈 | 책임·연결 |
 |---|---|
 | [WorkoutWorkspace.tsx](../../src/features/workout-online/WorkoutWorkspace.tsx) / `WorkspaceView` | `editor{routine,readOnly}`와 `scheduleEditing` 관리. 목록/공통 폼 연결. `scheduleRefresh`·`onScheduleSaved`로 홈/루틴 재조회. ACTIVE·고정 시도는 관리 쓰기 차단 |
@@ -644,11 +646,11 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보�
 | [TagPicker.tsx](../../src/features/workout-online/TagPicker.tsx) | 미지정+10종·기존 설명 드롭다운, 키보드/ESC/바깥 닫힘. 태그는 실제 nullable 루틴 DTO이며 더미 분류가 아님 |
 | [ExerciseSearch.tsx](../../src/features/workout-online/ExerciseSearch.tsx) | 추가·변경 공통 검색, 실제 카탈로그 이름/별칭·`ExerciseIcon`·PRIMARY 표시. 폼의 `searchRegion`/`showPicker`가 스크롤·포커스, 입력 보존 담당 |
 | [WeeklySchedulePanel.tsx](../../src/features/statistics/WeeklySchedulePanel.tsx) / `ScheduleEditor` | 편집을 별도로 표시. saved assignments 기준 후보 필터,7일 초안 보존. 배정 유무/태그/전체3개 고정, 필터 밖 선택 option도 원래 이름 유지. 열려 있는 초안은 외부 refresh로 덮지 않음 |
-| [weekly-schedule.ts](../../src/features/statistics/weekly-schedule.ts) / [routine-schedule.ts](../../src/features/workout-online/routine-schedule.ts) | `WeeklyScheduleApi.read/save`, `saveSchedule`가 저장 전 최신 version과 응답 후 GET 비교. immediate-v1·expectedVersion·appliedAt, 충돌시 초안 유지/조용한 병합 금지. history 메서드는 서버 근거용이며 사용자 이력 UI 없음 |
+| [weekly-schedule.ts](../../src/features/statistics/weekly-schedule.ts) / [routine-schedule.ts](../../src/features/workout-online/routine-schedule.ts) | `WeeklyScheduleApi.read/save`, `saveSchedule`가 저장 전 최신 version과 응답 후 GET 비교. immediate-v1·expectedVersion·appliedAt, 충돌시 초안 유지/조용한 병합 금지. 구 history 메서드가 코드에 남아 있으며 최신 Backend에서 해당 경로 제거 |
 | [HomePanel.tsx](../../src/features/home/HomePanel.tsx) / [model.ts](../../src/features/home/model.ts) | 실제 일정·overview에서 `dayStatus` 파생. 미판정 요일/✓/X/-; 과거 날짜만으로 미수행 생성 금지. refreshKey로 일정 변경 반영 |
 | [AchievementIcon.tsx](../../src/components/AchievementIcon.tsx) | 공식 아령 SVG/running.png18px. 최근 운동은 최초 계획 달성 분수, 루틴 세로는 등록 종목 수로 사용 의미 구분. 검색용32px 아이콘은 변경하지 않음 |
 
-일정 계약은 [Backend G2~G3](../../../overload-server/docs/api/weekly-schedule.md)의 `assignments/version/timeZone/appliedAt`이다. current/pending·다음 월요일 예약을 최신 화면에 사용하지 않는다. 04시 검사는 서버 책임이며 PWA 조회로 실행하지 않는다. 11/03·11/05는 G3 전환11/07 이전이므로 미판정 요일 잔류가 정상이다. integration의 자동 검사OFF를 운영 동작으로 해석하지 않는다.
+`assignments/version/timeZone/appliedAt`은 기존 PWA의 단일 일정 응답이다. 쿼리 없는 조회, 프리셋별 쓰기, 상태·프리셋 버전, 수동 적용·순환은 [현행 Backend 계약](../../../overload-server/docs/api/weekly-schedule.md)을 사용한다. 04시 검사와 과거 근거는 계속 서버 책임이다.
 
 루틴/일정 쓰기는 기존 온라인 인증·CSRF·소유권·세대/version을 사용한다. 진행 운동의 IndexedDB3/schema2·snapshot·ACK·writerEpoch·계정 경계는 그대로다. 문서용 HTML은 독립 합성 상태로만 동작하며 운영 데이터나 고정 요청을 수정하지 않는다. T02-A [마감 문서](../tasks/ui-v09-t02a-closeout.md)의 당시 종료/재개 절차는 환경 보존 기록이며 이번 문서 작업에서 서버를 시작·종료하지 않는다.
 
@@ -659,7 +661,7 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보�
 | 운동 결과·기록 | 기록 탭에서 `ClosedWorkout`의 서버 종료 기록, 당시 장비, 정정·논리 삭제·선택 복구 및 평가에 접근합니다. | 결과와 과거 상세의 공통 수행 영역을 WEIGHT/CARDIO로 나누고 세트별·종목별 볼륨을 표시합니다. 당시 계획과 현재 유효한 실제 수행, 최초 평가와 현재 평가를 구분합니다. 데이터 갱신은 기존 세션 확인과 ACK 흐름을 사용합니다. |
 | 카탈로그·통계 | `ExerciseSearch`의 표준 검색, 기록 탭의 `StatisticsPanel` 기간/집계·근육 상세와 `GrowthPanel` 종목·배치 검색을 유지합니다. 근육 화면은 대분류가 기본입니다. 공통 `ExerciseIcon`은 원본 6종을 32px로 제공하며, 현재 분류가 없는 검색 결과는 중립 표시입니다. | 카탈로그 분류 계약 후 대표 아이콘을 매핑합니다. 전체 세부 PRIMARY 기본 표시 및 부위 필터·SECONDARY 펼침을 적용합니다. 운동 현황 필터를 막대와 합계에 일관되게 전달하고, 성장 별칭 검색과 제조사별 참고 집계의 API 범위는 [백엔드 연동 설계](backend-ui-v0.9.md)를 확인합니다. |
 | 설정·인증·PWA | 설정 탭에 기존 계정 상세, 세 휴식 값 조회, 데이터 및 앱의 `PwaStatus`, 하단 로그아웃을 배치했습니다. 로그인 화면에는 설치 패널을 표시하지 않습니다. 기존 초안 저장 확인과 로그아웃 경고를 유지하고 공통 Help 팝오버를 제공합니다. | 고정 세 휴식 시간의 온라인 일괄 편집, 독립 설정 토글과 화면별 도움말 배치를 확장합니다. 유실·미전송·재인증 경고는 기존 접근 가능한 상태 영역에 남깁니다. |
-| 디로딩 | 일반 세션·주간 일정·기록·통계는 연동되어 있습니다. G4·G5 Backend는 구현됐으며 디로딩 API의 실제 PWA 소비와 혼재 세션 표시·동기화는 G6 범위입니다. 기존 DB에는 V25~V29를 적용하지 않았습니다. | 기존 홈·루틴·운동 진행·기록을 재사용합니다. 상세·선택·미리보기와 시작 요청을 연결하고 최신 자격 실패 이유를 노출합니다. 완료·취소는 진행 상세의 단일 확인으로 처리합니다. |
+| 디로딩 | 일반 세션·기록·통계는 연동되어 있고 일정은 기존 단일 일정 Backend를 대상으로 연결된 상태입니다. G4·G5 Backend는 구현됐으며 디로딩 API의 실제 PWA 소비와 혼재 세션 표시·동기화는 G6 범위입니다. 기존 DB에는 V25~V29를 적용하지 않았습니다. | 기존 홈·루틴·운동 진행·기록을 재사용합니다. 상세·선택·미리보기와 시작 요청을 연결하고 최신 자격 실패 이유를 노출합니다. 완료·취소는 진행 상세의 단일 확인으로 처리합니다. |
 
 **상태 소유권.** 분석 설정·시작 자격·기간·세션 소속은 서버 응답에서 읽습니다. `일반 보기 / 디로딩 복귀`는 홈에서만 바꾸는 조회 상태이며 루틴·기록 탭 이동 동안 유지합니다. 진행 중 일반 보기에서는 원본 실행·정정·수정·삭제를 제공하지 않습니다. 서버 권한 검증은 별도로 적용됩니다. 미리보기 선택과 편집 초안은 로컬 UI 상태이고, 기간 시작·완료·취소는 서버 확인 이후 표시합니다.
 
@@ -1549,7 +1551,7 @@ IndexedDB/ACK/writerEpoch/dataGeneration/타 기기 읽기 전용과 개발용 �
 
 ### 다중 주간 루틴 일정 (Backend 구현 · PWA 연동 예정)
 
-[UI 결정 로그 10.16절](../product/Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)과 [동작 와이어프레임](../product/Overload_UI_Baseline_Wireframe_v0.9.html)을 기준으로 한다. 현재는 단일 일정 조회·저장과 날짜 범위의 Today-only 선택이 구현돼 있다. `HomePanel`의 오늘만 선택 목록에는 검색 입력이 없다. 필터·검색·프리셋 관리는 후속이다.
+[UI 결정 로그 10.16절](../product/Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)과 [UI/UX 화면 명세](../product/ui-ux.md#32-루틴-목록--routinelist)를 적용한다. T02 실제 API 통합에서 [Backend 프리셋 계약](../../../overload-server/docs/api/weekly-schedule.md)으로 transport·DTO/응답 검증·홈·루틴을 함께 전환한다. 현재 코드에는 단일 일정 조회·저장과 기존 Today-only 선택이 남아 있으며, 필터·검색·프리셋 관리는 후속이다. 실제 개발 DB V30 적용과 통합 환경 검증은 별도다.
 
 - [AGENTS.md 4.2·4.3절](../../AGENTS.md#42-v1-출시-전-설계와-호환성)에 따라 PWA와 Backend를 동일한 최신 프리셋 계약으로 함께 전환한다. `RoutineCards`의 가로·세로 일정과 `WeeklySchedulePanel`의 요일 편집기는 재사용 후보이며, 프리셋 상태를 단순하게 관리할 수 있도록 수정·교체도 비교한다. 활성·조회·편집 초안은 각각 구분한다. 번호 조회에는 기존 응답을 활용한다. 오래된 저장은 서버에서 거절하며 최신 정보를 불러와 다시 편집하도록 안내한다. 자동 병합·기기별 비교·별도 초안 복구는 추가하지 않는다. `RoutineForm`의 현재 별도 일정 저장은 단일 일정의 구현 기록이다. 요일 배정을 주간 일정 편집으로 옮길 때 현재의 두 요청과 부분 성공 경로를 정리할 수 있다.
 - 홈은 활성 배정과 서버의 날짜별 overview를 사용한다. 월요일 00:00부터 전환 대상이며, Job 적용 전 START가 발생하면 시작 당시 근거를 사용한다. 그 짧은 구간 전용 순환 확인 체계는 추가하지 않는다. 새 계약에서도 이미 시작된 세션의 최초 계획과 미동기화 기록을 보호하고 START·snapshot·FINISH 재시도를 안전하게 처리한다. 현재 API·IndexedDB 형식의 재사용 여부는 `AGENTS.md` 4.2절 기준으로 판단한다. 이미 확정된 START의 늦은 기록은 최초 계획·출처 기준이며 24시간 AUTO_CLOSED 뒤에는 기존 복구를 사용한다. 신규 오프라인 START나 자동 병합을 추가하지 않는다.
