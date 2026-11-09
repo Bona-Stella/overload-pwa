@@ -1,6 +1,6 @@
 # T02-A 완료 · 검토 DB 보존 · T02-B 인계
 
-> **T02-A 완료 및 당시 인계 기록.** 백업·볼륨 보호와 사용자 재개 승인 조건은 유지한다. 아래 수동 재개 도구는 보존된 V22/V23 검토 환경용이며 승인된 추가 적용은 V23에 한정된다. 최신 V30 PWA 통합에는 [프리셋 전환 계약](../../../overload-server/docs/api/weekly-schedule.md#v1-출시-전-전환)과 별도의 환경 검증·승인을 적용한다. 구현 현황은 [Frontend 8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 확인한다.
+> **T02-A 완료 및 당시 인계 기록.** 아래 V22 복원과 V23 재개 옵션은 당시 절차다. 백업·볼륨 보호와 명시적 재개 승인은 유지한다. 이후 V24 확인 기록, 현재 소스의 호환성, V30 통합 경로는 [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md)를 따른다. 구현 현황은 [Frontend 8.7절](../engineering/frontend.md#87-v09-적용-범위와-구현-상태)에서 확인한다.
 
 2026-11-06(Asia/Seoul). 사용자의 iPhone 실기기 최종 검토로 **T02-A 일반 홈 UI/UX를 승인·확정**했다. T02-B 구현은 시작하지 않았다. push하지 않는다.
 

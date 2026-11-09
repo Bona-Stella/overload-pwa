@@ -424,17 +424,9 @@ React → http://127.0.0.1:3000/api/v1/health
 
 ### 로컬 통합 확인 (Windows)
 
-1. `overload-server` 루트의 PowerShell에서 JDK를 현재 프로세스에만 지정하고 서버를 실행합니다.
+화면 검토와 사용자 승인까지는 [Frontend 기본 UI 개발 절차](docs/engineering/frontend.md#181-기본-ui-개발-절차)를 따릅니다. 실제 API 연결은 [테스트 환경 안내](../overload-server/docs/engineering/test-environment.md)에서 승인된 Backend와 Flyway 이력, 전용 테스트 계정, 프록시 대상과 안전 종료를 확인한 뒤 진행합니다.
 
-   ```powershell
-   $env:JAVA_HOME = 'C:\Users\Home\.jdks\temurin-25.0.4.1'
-   .\gradlew.bat --offline bootRun --args="--server.address=127.0.0.1 --server.port=8080"
-   ```
-
-2. 다른 터미널에서 `overload-pwa` 루트의 `npm run dev`를 실행하고 개발 데모 `http://localhost:3000/demo`를 엽니다. 실제 인증 진입은 `http://localhost:3000/`입니다.
-3. 개발 전용 `/demo`의 **설정 → 서버 연결 진단 열기**에서 **서버 연결 성공**, **UP**를 확인합니다. `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 프록시 응답의 HTTP 200과 `{"status":"UP"}`도 확인할 수 있습니다.
-4. 백엔드를 `Ctrl+C`로 종료한 뒤 **다시 확인**을 눌러 연결 실패를 확인합니다. 백엔드 재실행 후 같은 버튼으로 연결 성공 복구를 확인합니다.
-5. 검증 후 각 서버 터미널에서 `Ctrl+C`로 종료합니다.
+이미 확인된 테스트 프록시의 기본 포트를 사용하는 경우 `curl.exe -i http://127.0.0.1:3000/api/v1/health`로 HTTP 200과 `{"status":"UP"}`를 확인할 수 있습니다. 실제 계정 검증은 분리된 테스트 브라우저의 `/`에서 진행합니다.
 
 ---
 
