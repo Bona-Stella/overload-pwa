@@ -21,7 +21,10 @@ export function dayStatus(day: PlannedDay | undefined, date: string, today: stri
   if (date > today) return { mark: weekday, label: '예정', kind: 'planned' }
   if (day.reviewStatus === 'PENDING' || day.reviewStatus === 'PENDING_ACTIVE' || day.reviewStatus === 'UNKNOWN') return { mark:weekday, label:day.reviewStatus === 'PENDING_ACTIVE' ? '운동 진행 중 · 판정 대기' : '검사 대기', kind:'unknown' }
   if (day.effectiveDay === '1') return { mark: '✓', label: '완료', kind: 'complete' }
-  if (day.effectiveDay === null) return { mark: weekday, label: '달성 확인 불가', kind: 'unknown' }
+  if (day.effectiveDay === null) {
+    const scheduledToday = date === today && day.plan && day.reviewStatus === null && day.selectedSessionId === null
+    return { mark: weekday, label: scheduledToday ? '오늘 예정' : '달성 확인 불가', kind: 'unknown' }
+  }
   if (day.effectiveDay !== '0') return { mark: date < today || day.reviewStatus === 'PERFORMED' || day.selectedSessionId ? 'X' : weekday, label: '일부 달성', kind: 'partial' }
   if (day.reviewStatus !== 'PERFORMED' && day.reviewStatus !== 'MISSED') return { mark: weekday, label: date === today ? '오늘 예정' : '검사 대기', kind: 'unknown' }
   // Zero achievement can include performed sets below the plan's threshold.

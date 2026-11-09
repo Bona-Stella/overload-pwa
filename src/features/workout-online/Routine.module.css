@@ -38,7 +38,7 @@
 .weekRows { display:grid; gap:5px; margin-top:11px; }
 .weekRows .weekRow { display:grid; grid-template-columns:24px minmax(0,1fr) max-content; align-items:center; gap:6px; min-width:0; min-height:44px; padding:6px 7px; text-align:left; background:transparent; border:1px solid var(--border-subtle); border-radius:5px; font-size:13px; }
 .weekDay { display:grid; align-self:stretch; place-items:center; border-right:1px solid var(--border-subtle); color:var(--accent); }
-.weekInfo { display:flex; align-items:center; gap:6px; min-width:0; white-space:nowrap; }
+.weekInfo { display:flex; align-items:center; gap:6px; min-width:0; padding-inline-start:4px; white-space:nowrap; }
 .weekInfo > strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
 .planCounts { display:flex; align-items:center; gap:8px; white-space:nowrap; font-size:12px; }
 .planCounts > span { display:inline-flex; align-items:center; gap:5px; }
@@ -78,8 +78,8 @@
 .candidateFilters [aria-pressed='true'] { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
 .candidateTags { position:relative; min-width:0; }
 .candidateTagOptions { position:absolute; top:calc(100% + 4px); right:0; z-index:3; display:grid; gap:4px; min-width:110px; max-height:260px; overflow:auto; padding:5px; border:1px solid var(--border-subtle); border-radius:5px; background:var(--surface-input); }
-.candidateFilters .chip { display:inline-flex; align-items:center; justify-content:center; gap:4px; width:auto; min-height:38px; padding:7px 11px; border:1px solid var(--border-subtle); border-radius:999px; background:var(--surface-card); color:var(--text-primary); font-size:12px; }
-.candidateFilters .chip[aria-pressed='true'] { border-color:var(--accent); background:var(--accent); color:var(--on-accent); }
+button.chip { display:inline-flex; align-items:center; justify-content:center; gap:4px; width:auto; min-height:38px; padding:7px 11px; border:1px solid var(--border-subtle); border-radius:999px; background:var(--surface-card); color:var(--text-primary); font-size:12px; }
+button.chip[aria-pressed='true'] { border-color:var(--accent); background:var(--accent); color:var(--on-accent); }
 .candidateFilters > .chip,.candidateTags > .chip { width:100%; white-space:nowrap; min-width:0; padding:6px 3px; font-size:12px; gap:2px; }
 .tagField { position:relative; min-width:0; }
 .tagOptions { position:absolute; inset:calc(100% + 4px) 0 auto; z-index:6; max-height:min(360px,45dvh); overflow:auto; padding:5px; border:1px solid var(--border-subtle); border-radius:var(--radius-control); background:var(--surface-input); }
@@ -105,3 +105,5 @@
 .scheduleDays option { white-space:normal; }
 .scheduleDays select { width:100%; max-width:100%; min-width:0; box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 @media(max-width:360px) { .candidateFilters > .chip,.candidateTags > .chip { font-size:11px; } }
+.listHeading[data-preset='true'] select,.scheduleEditor[data-preset='true'] .chip { min-height:44px; }
+.scheduleEditor[data-preset='true'] .candidateTags:first-child .candidateTagOptions { left:0; right:auto; }

@@ -6,3 +6,13 @@
 .login { width: min(100%, 520px); margin: auto; padding: 16px; display: grid; gap: 8px; font: 12px system-ui,sans-serif; background: #1B1D22; color: #F0F1F4; }
 .login button { min-height: 44px; background: #6C93C6; color: #111820; border: 0; border-radius: 5px; font-weight: 700; }
 .login small { color: #A9ADB7; }
+.controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-bottom:14px; padding:10px; border:1px solid var(--border-subtle); border-radius:var(--radius-control); background:var(--surface-card); font-size:12px; }
+.controls b,.controls small { grid-column:1 / -1; }
+.controls small { color:var(--text-muted); }
+.controls label { display:grid; gap:3px; min-width:0; }
+.controls select { width:100%; min-height:44px; min-width:0; padding:4px; font-size:13px; }
+.period { color:var(--status-done); font-size:12px; }
+.createdMessage { display:grid; gap:4px; min-width:0; overflow-wrap:anywhere; }
+.createdMessage p { margin:0; }
+.createdActions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.createdActions button { min-height:44px; padding:8px; white-space:nowrap; }

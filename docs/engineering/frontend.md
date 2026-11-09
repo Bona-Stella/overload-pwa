@@ -627,12 +627,22 @@ iPhone의 화면 구조를 고려합니다.
 | T01 공통 기반 | **완료.** 계정 앱 셸, Onyx 역할 토큰, 공통 컴포넌트가 현행 코드에 포함돼 있다. 구현 `ad8d664a1a5ef60caea96d5787a12bfe01875988`의 최종 검증은 자동 테스트 507건, build·lint, 격리 Chrome 8개 검증 그룹을 통과했다. [T01 보고서](../tasks/ui-v09-t01-foundation-report.md#최종-검토로컬-커밋-범위) |
 | T02-A 일반 홈 | **완료.** 구현 `60a6dce9707c861926b0690e47a421db21c91ae2`가 반영돼 있고 2026-11-06 iPhone 사용자 검토에서 승인됐다. [T02-A 마감](../tasks/ui-v09-t02a-closeout.md) |
 | T02-B 기존 루틴·단일 일정 | **검증 대기.** 루틴 태그·편집과 단일 일정 즉시 적용은 구현됐다. 2026-11-08 확인 기록의 자동 테스트 548건·build·lint가 통과했고 T02-B 최종 사용자 실기기 승인은 별도다. [PWA 검증 기록](../tasks/deload-v17-backend-readiness-analysis.md#0-2026-11-08-1차-개발-최종-현황) |
-| T02 화면별 후속 UI·V30 프리셋 | **예정.** 현행 PWA는 단일 일정 요청·응답을 사용한다. 다중 프리셋 화면과 V30 요청·검증·활성 배정·순환 연동은 후속이다. [현재 교체 지점](backend-ui-v0.9.md#t02-b-현재-api-소비) |
+| T02 HOME·ROUTINE 다중 프리셋 | **A · 격리 Mock UI 구현. B · 사용자 검토 대기.** HOME-01과 ROUTINE-01/02/04/05/06/07에서 다중 일정, 수동 전환, 순환 구성, 루틴 CRUD 및 신규 루틴 배정 안내를 시연한다. 계정 경로의 일정은 단일 계약을 사용하며 V30 연결(C)과 통합 검증(D)은 후속이다. [검토 환경](#home-및-routine-mock-검토) |
 | T03·T04 및 G6 | **예정.** T03 디로딩 API 계약 연결과 T04 디로딩 UI 통합에서 G6 범위인 분석·기간·디로딩 세션 및 혼재 기록의 로컬 저장·동기화를 다룬다. Backend 구현과 PWA 시안이 확인됐다. [G6 API·선행조건](backend-ui-v0.9.md#g6-실제-연동-선행조건) |
 | T03.5 휴식 타이머 알림 | **예정.** 정책 확정과 HTML 시연을 마쳤다. T02 화면별 UI 이후 진행하며 T03과 병행할 수 있다. T04 전 구현과 검증을 마친다. [T03.5 구현 지침](#t035-휴식-타이머-시각효과음-알림) |
 | T05 후속 통합·검증 | **예정.** 화면과 API 통합 이후 진행한다. iPhone Safari·설치형 PWA의 최신 조합 및 오프라인·복귀 검증은 T02-A 일반 홈 승인과 구분한다. [실기기 검증 규칙](#167-실제-iphone-테스트) |
 
-**현재 단계와 다음 작업.** T02의 남은 화면과 V30 프리셋 통합을 준비하는 단계다. 위 후속 항목에 대해 현재 구현이 진행 중인 코드는 확인되지 않았다. 다음 홈·루틴 작업에서는 [최신 UI 결정 10.16절](../product/Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)의 화면을 먼저 Mock으로 검토한다. UI 승인 후에는 V30 호환 환경·테스트 계정과 실제 적용 이력을 확인하고 단일 일정 계약을 전환한다. G6에서 디로딩 세션을 노출하기 전에 nullable `InitialPlan.routineId` 및 혼재 세션의 동기화 보호를 검증한다. 기존 DB 변경과 보존 서버 재개에는 별도 승인 절차를 적용한다. [UI 개발 절차](#181-기본-ui-개발-절차) · [Backend 개발 현황](../../../overload-server/docs/engineering/backend.md#11-현재-개발-현황) · [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md)
+**현재 단계와 다음 작업.** 2026-11-09의 HOME·ROUTINE 작업 트리에서 A단계 Mock 화면을 구현했다. B단계 UI 승인 후에는 V30 호환 격리 환경과 전용 계정을 확인하고 기존 단일 일정 호출을 전환한다. 보호된 검토 환경 재개는 별도 승인 대상이다. [UI 개발 절차](#181-기본-ui-개발-절차) · [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md)
+
+#### HOME 및 ROUTINE Mock 검토
+
+- `npm run dev -- --mode ui-review`는 PC 전용 주소 `http://localhost:4173/routine-preview`를 제공한다. `?tab=home`을 붙이면 홈에서 시작한다. 동일 LAN 검토는 시작 전 `OVERLOAD_MOCK_LAN_IP`에 PC의 사설 IPv4 주소를 지정한다.
+- 상단 검토 설정에서 신규 사용자·미배정·자동 순환·디로딩 진행/완료 당일·분석 OFF·홈 로딩/오류를 확인할 수 있다. 연결 실패와 버전 충돌은 다음 저장에 한 번 적용한다. 합성 날짜는 2026-11-11이며 변경 내용은 새로고침 시 초기화된다.
+- 기존 홈, 공통 루틴 폼, 종목 검색, 요일 드롭다운을 재사용한다. 최신 화면의 고정 상태 태그와 전체 편집을 적용하고, 각 프리셋을 보는 조작과 홈 적용을 분리했다. 루틴 저장과 일정 저장은 독립 명령이다.
+- 2026-11-09에 자동 테스트 548건과 타입 검사·빌드·Lint를 통과했다. 격리 Chrome의 320px·393px 화면에서 주요 조작과 가로 넘침 여부를 검사했다. iPhone Safari와 설치형 PWA 검토는 사용자 실기기 확인 범위다.
+- 전용 모드는 API 프록시를 열지 않으며 인증·서비스 워커·운동 저장소를 시작하지 않는다. 실제 일정 전환 시각과 복구, G3 04시 판정, G6 쓰기·세션 연결은 서버 계약 검증 범위다. Mock은 날짜별 과거 근거를 고정하며 승인 중량과 기록 스냅샷을 보존한다.
+- V30 서버 소스의 프리셋 응답에 이름 필드와 변경 명령이 없다. UI 승인 후 이름 연동에는 선택적 저장 필드와 기존 사용자·세대·버전·디로딩 검증을 적용하는 별도 이름 쓰기 계약이 필요하다. 배정과 적용 이력에 영향을 주지 않는 범위에서 검토한다. [V30 계약](../../../overload-server/docs/api/weekly-schedule.md)
+
 
 #### 현황 갱신
 
@@ -652,15 +662,15 @@ Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/doc
 
 T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보존된 검토 환경의 재개 승인·버전 확인·종료는 [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md)를 따른다.
 
-#### T02-B 현재 컴포넌트·상태 연결 (2026-11-07)
+#### T02-B 단일 일정 연결 (2026-11-07 기록)
 
-아래는 현재 PWA에 남아 있는 단일 일정 구현의 교체 지점이다. 최신 Backend의 프리셋 DTO·쓰기 계약은 [주간 일정 API](../../../overload-server/docs/api/weekly-schedule.md)를 따른다.
+아래는 계정 경로의 단일 일정 구현을 기반으로 한 교체 지점이다. 최신 Backend의 프리셋 DTO·쓰기 계약은 [주간 일정 API](../../../overload-server/docs/api/weekly-schedule.md)를 따른다.
 
 | 실제 모듈 | 책임·연결 |
 |---|---|
 | [WorkoutWorkspace.tsx](../../src/features/workout-online/WorkoutWorkspace.tsx) / `WorkspaceView` | `editor{routine,readOnly}`와 `scheduleEditing` 관리. 목록/공통 폼 연결. `scheduleRefresh`·`onScheduleSaved`로 홈/루틴 재조회. ACTIVE·고정 시도는 관리 쓰기 차단 |
 | [RoutineCards.tsx](../../src/features/workout-online/RoutineCards.tsx) | 로컬 `day/vertical/filter`; 생성순 정렬·단일 목록 필터·요일 잠금. 서버 assignments로 배정 카드/주간 보기 파생, `Home.module.css` 재사용. 상세/수정/삭제 콜백 분리 |
-| [RoutineForm.tsx](../../src/features/workout-online/RoutineForm.tsx) | 생성·편집·readOnly 공통 폼. 이름/태그/weights/cardio/days 초안. 고정 제출·루틴 성공 후 일정만 재시도·교체 확인. 다른 종목은 새 배치, 원승인 전이 금지 |
+| [RoutineForm.tsx](../../src/features/workout-online/RoutineForm.tsx) | 생성·편집·readOnly 공통 폼. 이름·태그·WEIGHT·CARDIO 초안과 고정 제출. 2026-11-09 변경에서 요일 조작과 일정 PUT을 분리했다. 다른 종목은 새 배치, 원승인 전이 금지 |
 | [TagPicker.tsx](../../src/features/workout-online/TagPicker.tsx) | 미지정+10종·기존 설명 드롭다운, 키보드/ESC/바깥 닫힘. 태그는 실제 nullable 루틴 DTO이며 더미 분류가 아님 |
 | [ExerciseSearch.tsx](../../src/features/workout-online/ExerciseSearch.tsx) | 추가·변경 공통 검색, 실제 카탈로그 이름/별칭·`ExerciseIcon`·PRIMARY 표시. 폼의 `searchRegion`/`showPicker`가 스크롤·포커스, 입력 보존 담당 |
 | [WeeklySchedulePanel.tsx](../../src/features/statistics/WeeklySchedulePanel.tsx) / `ScheduleEditor` | 편집을 별도로 표시. saved assignments 기준 후보 필터,7일 초안 보존. 배정 유무/태그/전체3개 고정, 필터 밖 선택 option도 원래 이름 유지. 열려 있는 초안은 외부 refresh로 덮지 않음 |

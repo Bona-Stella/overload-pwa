@@ -64,3 +64,6 @@
 .tools > button { font-size: 11px; padding: 6px; min-height: 32px; }
 .tools > span { font-size: 10px; }
 .httpNote { margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-muted); }
+.choiceFilters { display:flex; flex-wrap:wrap; gap:4px; margin-block:6px 10px; }
+.choiceFilters button { min-width:44px; min-height:44px; padding:4px 8px; }
+.routineTag { display:inline-block; margin-bottom:8px; color:var(--accent); font-size:11px; }

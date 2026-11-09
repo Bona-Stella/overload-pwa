@@ -1,18 +1,16 @@
+import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { boundaryError } from '../home/load.ts'
 import { newId } from '../../id.ts'
 import { TagPicker } from './TagPicker.tsx'
-import { Dialog } from '../../components/Dialog.tsx'
 import { exerciseDescription } from './catalog-label.ts'
 import { CardioPlanFields } from './CardioPlanFields.tsx'
 import { cardioPlan, draftCardio, emptyCardio, adjust } from './cardio-draft.ts'
 import type { CardioDraft as PlanDraft } from './cardio-draft.ts'
-import { dayNames, plannedAssignments, routineAssignments, sameAssignments, saveSchedule } from './routine-schedule.ts'
 import { scheduleIssue } from '../statistics/weekly-schedule.ts'
-import type { WeeklySchedule, WeeklyScheduleApi } from '../statistics/weekly-schedule.ts'
 import type { RoutineTag } from '../home/tags.ts'
 import styles from './Routine.module.css'
-import type { CardioActivity, Scope, CreateRoutine, Manufacturer, StandardExercise, Routine, UpdateRoutine } from './types.ts'
+import type { CardioActivity, CreateRoutine, Manufacturer, StandardExercise, Routine, UpdateRoutine } from './types.ts'
 import { decimalDraft, name as validName } from './validation.ts'
 import type { WorkoutOnlineController } from './controller.ts'
 import { ExerciseSearch } from './ExerciseSearch.tsx'
@@ -21,8 +19,8 @@ import { EquipmentFields } from './EquipmentFields.tsx'
 import { newWeights, updatedWeights } from './routine-weights.ts'
 import type { WeightDraft } from './routine-weights.ts'
 type CardioDraft = PlanDraft & {id:string;existing:boolean;restore?:boolean}
-export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, weekly, scheduleState, scope, activities = [], onSaved, readOnly = false, onEdit, onDelete, managementBlocked = false }: {
-  weekly?:WeeklyScheduleApi; scheduleState?:WeeklySchedule; scope?:Scope; activities?:CardioActivity[]; onSaved?:()=>void; readOnly?:boolean; onEdit?:()=>void; onDelete?:()=>void; managementBlocked?:boolean; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: WorkoutOnlineController; onClose: () => void
+export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, assignments, saveDescription, activities = [], onSaved, readOnly = false, onEdit, onDelete, managementBlocked = false }: {
+  assignments?: ReactNode; saveDescription?: string; activities?:CardioActivity[]; onSaved?:(id: string, name: string)=>void; readOnly?:boolean; onEdit?:()=>void; onDelete?:()=>void; managementBlocked?:boolean; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: Pick<WorkoutOnlineController, 'saveRoutine' | 'removedRoutine' | 'invalidateScope'>; onClose: () => void
 }) {
   const [id] = useState(() => routine?.id ?? newId())
   const [tag, setTag] = useState<RoutineTag | ''>(routine?.tag??'')
@@ -44,12 +42,9 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     window.addEventListener('resize', revealFocusedSearch)
     return () => { window.visualViewport?.removeEventListener('resize', revealFocusedSearch); window.removeEventListener('resize', revealFocusedSearch) }
   }, [picker])
-  const [scheduleBase] = useState(scheduleState)
-  const [days,setDays] = useState<number[]>(()=>scheduleState?plannedAssignments(scheduleState).filter(a=>a.routineId===routine?.id).map(a=>a.dayOfWeek):[])
-  const [conflict,setConflict]=useState(false),[saving,setSaving]=useState(false),[routineSaved,setRoutineSaved]=useState(false)
-  const guard=useRef(false),abort=useRef(new AbortController())
-  useEffect(()=>{abort.current=new AbortController();return()=>abort.current.abort()},[])
-  const conflicts=scheduleBase?plannedAssignments(scheduleBase).filter(a=>days.includes(a.dayOfWeek)&&a.routineId!==id):[]
+  const [saving, setSaving] = useState(false)
+  const guard = useRef(false), abort = useRef(new AbortController())
+  useEffect(() => { abort.current = new AbortController(); return () => abort.current.abort() }, [])
   const locked=busy||saving
   const move = <T,>(values: T[], index: number, delta: number) => { const next = [...values], target = index + delta; if(target<0 || target>=next.length)return values; [next[index],next[target]]=[next[target],next[index]];return next }
   const [name, setName] = useState(routine?.name ?? '')
@@ -59,16 +54,14 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const [removed, setRemoved] = useState<Routine | null>(null)
   const [error, setError] = useState('')
   const [submitted, setSubmitted] = useState<CreateRoutine | UpdateRoutine | null>(null)
-  const [initialDraft] = useState(()=>JSON.stringify({name,weights,cardio,tag,days}))
-  const close = () => { if(readOnly || JSON.stringify({name,weights,cardio,tag,days})===initialDraft || window.confirm('작성 중인 변경을 버리고 닫을까요?')) onClose() }
+  const [initialDraft] = useState(()=>JSON.stringify({name,weights,cardio,tag}))
+  const close = () => { if(readOnly || JSON.stringify({name,weights,cardio,tag})===initialDraft || window.confirm('작성 중인 변경을 버리고 닫을까요?')) onClose() }
   const changeWeight = (id: string, patch: Partial<WeightDraft>) => setWeights(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
   const changeCardio = (id: string, patch: Partial<CardioDraft>) => setCardio(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
-  async function save(confirmed=false) {
+  async function save() {
     if(readOnly||guard.current)return
-    if(conflicts.length&&!confirmed&&!routineSaved){setConflict(true);return}
     guard.current=true;setSaving(true)
     try {
-      if(!scheduleBase||!weekly||!scope)throw new Error('주간 일정을 확인한 뒤 저장해 주세요. 입력은 유지됩니다.')
       let body = submitted
       if (!body) {
         if (!validName(name) || weights.length + cardio.length === 0) throw new Error('루틴 이름과 한 개 이상의 운동을 입력해 주세요.')
@@ -82,23 +75,22 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
         setSubmitted(body)
       }
       setError('')
-      if(!routineSaved){if(!await controller.saveRoutine(body,routine?.id))return;setRoutineSaved(true)}
-      const desired=routineAssignments(plannedAssignments(scheduleBase),id,days)
-      if(!sameAssignments(plannedAssignments(scheduleBase),desired))await saveSchedule(weekly,scope,scheduleBase,desired,abort.current.signal)
-      if(!abort.current.signal.aborted){onSaved?.();onClose()}
+      if (await controller.saveRoutine(body, routine?.id) && !abort.current.signal.aborted) {
+        onSaved?.(id, body.name.trim())
+        onClose()
+      }
     } catch (error) { if(boundaryError(error))controller.invalidateScope(error);if(!abort.current.signal.aborted)setError(scheduleIssue(error)) }
     finally{guard.current=false;if(!abort.current.signal.aborted)setSaving(false)}
   }
   return <form className={`${styles.editor} stack online-routine`} data-readonly={readOnly} data-picking={picker !== null} aria-label={readOnly ? '루틴 상세' : routine ? '루틴 편집' : '새 루틴'} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
     <div className="section-heading"><h2>{readOnly ? '루틴 상세' : routine ? '루틴 편집' : '새 루틴'}</h2><div className={styles.detailActions}>{readOnly && onEdit && <button type="button" className="quiet" disabled={busy || managementBlocked} onClick={onEdit}>편집</button>}{readOnly && onDelete && <button type="button" className="quiet danger" disabled={busy || managementBlocked} onClick={onDelete}>삭제</button>}<button type="button" className="quiet" disabled={locked && !readOnly} onClick={close}>닫기</button></div></div>
-    <p className="muted small">{readOnly ? '저장된 루틴 계획입니다. 이 화면에서는 변경하지 않습니다.' : '온라인에서 저장합니다. 기존 배치의 승인 중량은 아래에서 명시적으로 선택한 경우에만 변경됩니다. 진행 중인 운동의 시작 계획은 유지됩니다.'}</p>
+    <p className="muted small">{readOnly ? '저장된 루틴 계획입니다. 이 화면에서는 변경하지 않습니다.' : saveDescription ?? '온라인에서 저장합니다. 기존 배치의 승인 중량은 아래에서 명시적으로 선택한 경우에만 변경됩니다. 진행 중인 운동의 시작 계획은 유지됩니다.'}</p>
     <fieldset disabled={readOnly || locked || submitted !== null} className="stack online-fieldset">
       {!readOnly && routine && <button type="button" className="outline" onClick={() => void controller.removedRoutine().then(value => { if (value) { if (value.version !== routine.version) setError('루틴이 변경되었습니다. 닫은 뒤 최신 루틴을 다시 조회해 주세요.'); else setRemoved(value) } })}>제거한 배치 조회</button>}
       {removed?.weightPlacements.filter(p => !weights.some(w => w.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setWeights(values => [...values, { ...p, restore: true, standardExerciseId: p.standardExerciseId, setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), approve: false, nextWeightKg: p.approvedWeightKg }])}>{p.exerciseName} 배치 복원</button>)}
       {removed?.cardioPlacements.filter(p => !cardio.some(c => c.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setCardio(values => [...values, {id:p.id,existing:true,restore:true,...draftCardio(p.plan)}])}>{p.plan.name} 배치 복원</button>)}
       <section className={styles.formbox}><label className={styles.identityField}>루틴 이름<input placeholder="나의 루틴" value={name} onChange={e => setName(e.target.value)} /></label>
       <TagPicker value={tag} onChange={setTag} readOnly={readOnly}/></section>
-      <section className={styles.formbox}><span>운동 요일{!readOnly && ' · 복수 선택'}</span><div className={styles.days}>{dayNames.map((day,i)=><button type="button" key={day} aria-pressed={days.includes(i+1)} onClick={()=>setDays(v=>v.includes(i+1)?v.filter(d=>d!==i+1):[...v,i+1])}>{day}</button>)}</div><p className="muted small">{scheduleBase?(readOnly?'현재 배정 · ':'저장 즉시 적용 · ')+scheduleBase.timeZone:readOnly?'현재 배정을 확인하지 못했습니다.':'일정을 조회하지 못했습니다. 저장을 보류합니다.'}</p></section>
       <h3 className={styles.group}>WEIGHT <small>웨이트 운동 · {weights.length}종목</small></h3>
       {!weights.length && <p className="muted small">등록된 웨이트 종목 없음</p>}
 
@@ -127,10 +119,9 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       </section>)}
       {!readOnly && <button type="button" className="outline" onClick={() => setCardio(values => [...values, {id:newId(),existing:false,...emptyCardio()}])}>유산소 추가</button>}
     </fieldset>
-    {conflict&&<Dialog title="요일 배정 교체" onClose={()=>setConflict(false)}><p>다음 요일을 {name}으로 교체할까요? 기존 루틴과 다른 요일은 유지합니다.</p><ul>{conflicts.map(a=><li key={a.dayOfWeek}>{dayNames[a.dayOfWeek-1]}요일 · {controller.getSnapshot().data?.routines.find(r=>r.id===a.routineId)?.name??'기존 루틴'}</li>)}</ul><button type="button" onClick={()=>setConflict(false)}>취소</button><button type="button" className="primary" onClick={()=>{setConflict(false);void save(true)}}>교체 확인</button></Dialog>}
-    {routineSaved&&<p className="notice" role="status">루틴은 저장되었습니다. 일정 반영을 확인 중입니다. 실패하면 아래 버튼으로 일정만 다시 확인합니다.</p>}
+    {readOnly && assignments}
     {error && <p className="notice error" role="alert">{error}</p>}
     {submitted && <p className="muted small">제출 내용을 고정했습니다. 응답이 확인되지 않았다면 같은 내용으로 확인하거나, 닫은 뒤 서버의 최신 루틴을 조회해 주세요.</p>}
-    {!readOnly && <button className="primary full" disabled={locked}>{locked ? '서버 확인 중…' : routineSaved ? '일정 반영 다시 확인' : submitted ? '고정된 저장 요청 다시 확인' : '루틴 저장'}</button>}
+    {!readOnly && <button className="primary full" disabled={locked}>{locked ? '서버 확인 중…' : submitted ? '고정된 저장 요청 다시 확인' : '루틴 저장'}</button>}
   </form>
 }

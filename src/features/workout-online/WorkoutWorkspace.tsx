@@ -5,6 +5,7 @@ import { WorkoutOnlineController } from './controller.ts'
 import type { OnlineState } from './controller.ts'
 import type { CardioActivity, Manufacturer, Routine, Session } from './types.ts'
 import { equipmentLabel } from './equipment.ts'
+import { dayNames } from './routine-schedule.ts'
 import { RoutineCards } from './RoutineCards.tsx'
 import { RoutineForm } from './RoutineForm.tsx'
 import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
@@ -61,7 +62,7 @@ export function WorkspaceView({ state, controller, onEditingChange, api, weekly,
     if (managementBlocked) return
     await controller.select(id)
     const current = controller.getSnapshot()
-    if (current.active || current.attempt || current.selected?.id !== id || !window.confirm('이 루틴을 삭제할까요? 기존 운동 기록은 보존합니다.')) return
+    if (current.active || current.attempt || current.selected?.id !== id || !window.confirm('이 루틴을 삭제할까요? 주간 일정의 배정이 해제되며 기존 운동 기록은 보존합니다.')) return
     await controller.deleteRoutine()
     if (!controller.getSnapshot().selected) setEditor(null)
   }
@@ -72,7 +73,7 @@ export function WorkspaceView({ state, controller, onEditingChange, api, weekly,
     {state.data && <>
       <div hidden={editor!==null}><RoutineCards week={currentWeek} schedule={schedule} scheduleEditing={scheduleEditing} onEdit={id=>{void controller.select(id).then(()=>{const selected=controller.getSnapshot().selected;if(selected?.id===id)setEditor({routine:selected,readOnly:false})})}} onDelete={id=>void deleteRoutine(id)} summaries={state.data.routines} details={cards} busy={state.busy||!currentWeek} managementBlocked={managementBlocked} onNew={()=>setEditor({routine:null,readOnly:false})} onSelect={id=>{void controller.select(id).then(()=>{const selected=controller.getSnapshot().selected;if(selected?.id===id)setEditor({routine:selected,readOnly:true})})}} /></div>
       {editor && state.scope && <><RoutineForm key={state.userId + ':' + state.scope.dataGeneration + ':' + (editor.routine ? editor.routine.id + ':' + editor.routine.version : 'new') + ':' + editor.readOnly} routine={editor.routine} readOnly={editor.readOnly}
-        scope={state.scope} weekly={weekly} scheduleState={currentWeek} activities={activities} onSaved={onScheduleSaved} generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers} busy={managementBlocked} controller={controller} onClose={() => setEditor(null)} managementBlocked={managementBlocked} onEdit={() => { if(!managementBlocked) setEditor({...editor,readOnly:false}) }} onDelete={() => { if(editor.routine) void deleteRoutine(editor.routine.id) }} />
+        assignments={editor.routine && <p>현재 배정 요일 · {currentWeek?.assignments.filter(a => a.routineId === editor.routine?.id).map(a => dayNames[a.dayOfWeek - 1]).join('·') || (currentWeek ? '없음' : '확인 필요')}</p>} activities={activities} onSaved={onScheduleSaved} generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers} busy={managementBlocked} controller={controller} onClose={() => setEditor(null)} managementBlocked={managementBlocked} onEdit={() => { if(!managementBlocked) setEditor({...editor,readOnly:false}) }} onDelete={() => { if(editor.routine) void deleteRoutine(editor.routine.id) }} />
         {editor.readOnly && <button type="button" className="primary" disabled={state.busy || !state.localReady || state.attempt !== null || state.active !== null} onClick={() => void controller.start()}>온라인으로 운동 시작</button>}</>}
     </>}
   </section>
