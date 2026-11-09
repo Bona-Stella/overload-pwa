@@ -30,6 +30,12 @@
 
 React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** 기술을 적용하여 별도의 앱스토어 설치 없이 모바일 기기에서 앱처럼 사용할 수 있도록 설계합니다.
 
+### 새 채팅에서 시작하기
+
+- **Codex**에서는 UI·PWA를 맡는 `overload-pwa` 또는 API·DB를 맡는 `overload-server`를 열고 해당 저장소의 `AGENTS.md`에서 시작합니다. 연동 작업이면 양쪽의 Git 상태와 개발 현황을 확인한 뒤 작업별 정책과 계약을 고릅니다. [Frontend AGENTS.md](AGENTS.md#3-required-engineering-documents) · [Backend AGENTS.md](../overload-server/AGENTS.md#3-required-engineering-documents)
+- **ChatGPT**에서 로컬 파일을 읽을 수 없는 경우, 작업 목표와 해당 저장소의 현황 절·기준 커밋을 붙여넣거나 첨부합니다. 관련 `AGENTS.md`와 작업에 해당하는 현행 설계·API의 절만 함께 제공하고, 필요한 경우 최신 Codex 작업 보고, 코드 일부 또는 스크린샷을 추가합니다. 두 저장소의 현황 절에서 마지막 검증과 미검증 범위를 확인할 수 있습니다. [Frontend 개발 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태) · [Backend 개발 현황](../overload-server/docs/engineering/backend.md#11-현재-개발-현황)
+- 화면·조작은 UI/UX와 연결된 Decision Log, 데이터 통신은 해당 API 계약을 가져옵니다. 스키마·실행을 다루는 작업에는 필요한 DB 자료나 테스트 환경 안내를 추가합니다. [UI/UX와 결정 적용 지점](docs/product/ui-ux.md) · [API 계약](../overload-server/docs/api/) · [ERD](../overload-server/docs/database/erd.md) · [DB 설계서](../overload-server/docs/database/schema.md) · [테스트 환경 안내](../overload-server/docs/engineering/test-environment.md)
+
 ### 🎯 프로젝트 목표
 
 - 빠르고 간편한 웨이트 트레이닝 기록
@@ -608,7 +614,7 @@ Local Development
 개발은 [AGENTS.md 3절](AGENTS.md#3-required-engineering-documents)에서 작업별 현행 계약을 찾고 [Frontend 개발 규칙](docs/engineering/frontend.md)을 적용합니다.
 
 - 화면·조작은 [UI/UX 적용 지점](docs/product/ui-ux.md), 실제 색상·토큰은 [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md), 배치·클릭 검토는 [현재 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)을 참조합니다.
-- 현행 구현은 [Frontend 8.7절](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 확인합니다. 다중 프리셋과 G6는 PWA 미연동이며, 휴식 타이머 알림은 [결정 10.17절](docs/product/Overload_UI_Decision_Log_v0.9.md#1017--휴식-타이머-시각효과음-알림)에 확정되어 T03.5에서 구현합니다.
+- 현재 구현·후속 단계·마지막 검증은 [Frontend 개발 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 확인합니다.
 - 변경 이유나 당시 검증이 필요하면 [문서 감사 기록](docs/tasks/documentation-audit-2026-11-09.md)에서 이전 버전·핸드오프·보고서를 찾습니다.
 
 - [React 공식 문서](https://react.dev/)
