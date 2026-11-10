@@ -18,7 +18,7 @@ export const cardioMeasurement = (v: unknown): v is import('./types.ts').CardioM
 export const targets = (v: Record<string, unknown>) => count(v.setCount) && count(v.minReps) && count(v.maxReps) && v.minReps <= v.maxReps
 export const unique = (values: { id: string }[]) => new Set(values.map(v => v.id)).size === values.length
 export function cardioPlan(v: unknown): v is CardioPlan {
-  return object(v) && (v.activityId===undefined || uuid(v.activityId)) && ['TREADMILL', 'BIKE', 'OUTDOOR', 'STAIRS', 'OTHER'].includes(String(v.kind)) && name(v.name) && count(v.targetSeconds) && v.targetSeconds <= 86400
+  return object(v) && (v.activityId===undefined || uuid(v.activityId)) && (v.standardExerciseId === undefined || (uuid(v.standardExerciseId) && uuid(v.activityId))) && ['TREADMILL', 'BIKE', 'OUTDOOR', 'STAIRS', 'OTHER'].includes(String(v.kind)) && name(v.name) && count(v.targetSeconds) && v.targetSeconds <= 86400
     && nullable(v.targetDistanceKm, decimal) && nullable(v.inclinePercent, decimal) && nullable(v.resistance, decimal)
     && nullable(v.intensity, x => object(x) && ['SPEED', 'PACE'].includes(String(x.mode)) && decimal(x.value))
 }
@@ -49,7 +49,7 @@ function weightContext(v: unknown) {
   return object(v) && (v.kind === 'APPROVAL_REQUEST' ? uuid(v.requestId) : ['INITIAL_APPROVED', 'TODAY_ONLY', 'UNVERIFIED'].includes(String(v.kind)) && v.requestId === null)
 }
 export function snapshot(v: unknown): v is Snapshot {
-  return object(v) && array(v.sessionExercises, x => object(x) && uuid(x.id) && (x.kind === 'WEIGHT' ? uuid(x.standardExerciseId) : x.kind === 'CARDIO' && x.standardExerciseId === null))
+  return object(v) && array(v.sessionExercises, x => object(x) && uuid(x.id) && (x.kind === 'WEIGHT' ? uuid(x.standardExerciseId) : x.kind === 'CARDIO' && nullable(x.standardExerciseId, uuid)))
     && object(v.appliedPlan) && v.appliedPlan.schemaVersion === 2
     && array(v.appliedPlan.weightExercises, x => object(x) && uuid(x.sessionExerciseId) && targets(x) && equipment(x))
     && array(v.appliedPlan.cardioActivities, x => object(x) && uuid(x.sessionActivityId) && cardioPlan(x.plan))

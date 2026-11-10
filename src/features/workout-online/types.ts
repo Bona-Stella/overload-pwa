@@ -6,8 +6,13 @@ export type Decimal = string
 export type Instant = string
 export type Scope = { userId: UUID; dataGeneration: Counter }
 export type WorkoutSettingsResponse = Scope & { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
-export type CardioActivity = { id: UUID; category: 'RUNNING'|'WALKING'|'CYCLING'; name:string; kind:CardioPlan['kind'] }
-export type CardioPlan = { activityId?:UUID; kind: 'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'; name: string; targetSeconds: number;
+export type CatalogExercise = StandardExercise & {
+  exerciseType: 'WEIGHT' | 'CARDIO' | 'STATIC_HOLD' | 'STRETCH' | 'OTHER';
+  recordMethod: 'SETS_REPS' | 'CARDIO' | 'HOLD_DURATION' | 'UNSPECIFIED';
+  instructionsKo: string | null; equipmentDescription: string | null;
+}
+export type CardioActivity = { id: UUID; activityId: UUID; aliases: string[]; category: 'RUNNING'|'WALKING'|'CYCLING'; name:string; kind:CardioPlan['kind'] }
+export type CardioPlan = { activityId?:UUID; standardExerciseId?:UUID; kind: 'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'; name: string; targetSeconds: number;
   targetDistanceKm: Decimal | null; intensity: { mode: 'SPEED' | 'PACE'; value: Decimal } | null; inclinePercent: Decimal | null; resistance: Decimal | null }
 export type LoadType = 'PLATE' | 'STACK' | 'DUMBBELL' | 'BODYWEIGHT'
 export type Equipment = { manufacturerId: UUID | null; loadType: LoadType | null }

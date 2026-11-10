@@ -130,7 +130,7 @@ export function updateCardioPlan(workout: LocalWorkout, id: string, plan: Cardio
 export function addCardio(workout: LocalWorkout, plan: CardioPlan, randomId = () => crypto.randomUUID()) {
   if (!cardioPlan(plan) || plan.name.length > 100) throw new Error('유산소 이름(100자 이내)과 계획을 확인해 주세요.')
   const id = freshId(workout, randomId)
-  workout.snapshot.sessionExercises.push({ id, kind: 'CARDIO', standardExerciseId: null })
+  workout.snapshot.sessionExercises.push({ id, kind: 'CARDIO', standardExerciseId: plan.standardExerciseId ?? null })
   workout.snapshot.appliedPlan.cardioActivities.push({ sessionActivityId: id, plan: structuredClone(plan) }); workout.currentExerciseId = id
 }
 export function removeExercise(workout: LocalWorkout, id: string) {

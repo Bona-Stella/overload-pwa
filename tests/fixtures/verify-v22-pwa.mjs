@@ -1,4 +1,4 @@
-// Real production app and V22 Backend. Only the test proxy may discard genuine responses.
+// Real production app and current isolated Backend via the V22 test launcher. Only the test proxy may discard genuine responses.
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { execFile } from 'node:child_process'
@@ -42,14 +42,29 @@ async function prepare(name) {
   const routines = (await d.api('GET', '/api/v1/routines')).body
   const routine = await d.api('POST', '/api/v1/routines', { id: crypto.randomUUID(), name, dataGeneration: routines.dataGeneration,
     weightPlacements: [{ id: crypto.randomUUID(), standardExerciseId: verified.catalog.bodyweightExerciseId, manufacturerId: null, loadType: 'BODYWEIGHT', setCount: 3, minReps: 2, maxReps: 4, initialWeightKg: '80' }],
-    cardioPlacements: [{ id: crypto.randomUUID(), plan: { kind: 'OUTDOOR', name: 'V22 PWA cardio', targetSeconds: 60, targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null } }],
+    cardioPlacements: [{ id: crypto.randomUUID(), plan: { kind: 'OUTDOOR', name: 'V22 PWA cardio', standardExerciseId: verified.catalog.cardioExerciseId,
+      activityId: verified.catalog.cardioActivityId, targetSeconds: 60, targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null } }],
   })
   assert.equal(routine.status, 201); return routine.body
 }
 async function start(routine) {
-  await d.click('다시 조회', '.workout-online'); await d.click(routine.name, '.workout-online'); await d.click('온라인으로 운동 시작')
+  await d.click('루틴', 'nav');
+  await d.click('다시 조회', '.workout-online')
+  await waitFor(() => d.evaluate(`(() => {
+    const button = [...document.querySelectorAll('button[aria-label]')]
+      .find(item => item.getAttribute('aria-label') === ${JSON.stringify(routine.name + ' 상세')} && !item.disabled)
+    if (!button) return false
+    button.click()
+    return true
+  })()`), 'saved routine card')
+  await d.click('온라인으로 운동 시작')
   await waitFor(() => selector('.local-workout input'), 'active local editor')
   const server = (await d.api('GET', '/api/v1/workout-sessions/active')).body.session
+  const cardio = server.initialPlan.cardioActivities[0]
+  assert.equal(cardio.plan.standardExerciseId, verified.catalog.cardioExerciseId)
+  assert.equal(cardio.plan.activityId, verified.catalog.cardioActivityId)
+  assert.equal(server.snapshot.state.sessionExercises.find(item => item.id === cardio.sessionActivityId).standardExerciseId,
+    verified.catalog.cardioExerciseId)
   await waitFor(async () => { const x = await saved(); return x.version === 3 && x.workouts.some(w => w.sessionId === server.id && w.schemaVersion === 2) && x.permit?.sessionId === server.id && x.fence?.allowed && x.permit.nonce === x.fence.nonce }, 'durable IDB3/schema2 offline permit')
   return server
 }
@@ -79,6 +94,7 @@ async function retryWrite() {
   else await d.click('서버 저장 상태 다시 확인', '.local-workout')
 }
 async function logout() {
+  await d.click('설정', 'nav')
   await d.click('로그아웃'); await d.click('로그아웃 확인'); await waitFor(() => selector('#auth-email'), 'logout UI')
   assert.equal(await statsCount(), 0); assert.equal(await selector('.local-workout, .workout-online'), false)
 }
@@ -191,17 +207,50 @@ async function synchronization() {
   const fixedFinish = sha(closing.requestJson); proxy.fault.dropFinish = false
   await retryWrite()
   await waitFor(() => selector('.workout-online'), 'authenticated after FINISH ACK loss')
-  if (!(await workout(id)).finish.ack && !await selector('.local-workout')) {
-    const label = await waitFor(() => d.evaluate(`Array.from(document.querySelectorAll('section[aria-label="종료 운동 이력"] button')).find(b=>b.textContent.includes('V22 offline A')&&!b.disabled)?.textContent.trim()`), 'closed session history')
-    await d.click(label); await d.click('미확인 종료 요청 결과 확인', '.closed-workout')
-  }
+  let historyOpened = false
+  await waitFor(async () => {
+    if ((await workout(id)).finish?.ack) return true
+    const action = await d.evaluate(`(() => {
+      const visible = button => !button.disabled && button.getClientRects().length > 0
+      const confirm = [...document.querySelectorAll('.closed-workout button')].find(
+        button => visible(button) && button.textContent.trim() === '미확인 종료 요청 결과 확인')
+      if (confirm) { confirm.click(); return 'confirm' }
+      const historyTab = [...document.querySelectorAll('nav button')].find(
+        button => visible(button) && button.textContent.trim() === '기록' && button.getAttribute('aria-current') !== 'page')
+      if (historyTab) { historyTab.click(); return 'navigate' }
+      if (!${historyOpened} && !document.querySelector('.closed-workout')) {
+        const record = [...document.querySelectorAll('section[aria-label="종료 운동 이력"] button')].find(
+          button => visible(button) && button.textContent.includes('V22 offline A'))
+        if (record) { record.click(); return 'history' }
+      }
+    })()`)
+    if (action === 'history') historyOpened = true
+    return action === 'confirm'
+  }, 'wait for automatic ACK or explicit closed-record recovery')
   await waitFor(async () => (await workout(id)).finish?.ack?.duplicate === true, 'duplicate FINISH ACK durably accepted')
   assert.deepEqual(await commitProof(id), closedProof)
   const final = await workout(id); assert.equal(final.syncState, 'CLEAN'); assert.equal(final.serverRevision, final.finish.ack.acceptedLocalRevision)
   assert(proxy.records.filter(r => r.path === finishPath).every(r => r.requestSha256 === fixedFinish))
   await waitFor(() => selector('.closed-workout'), 'closed UI after confirmed FINISH'); assert.equal(await statsCount(), 1)
-  const finalWrites = proxy.records.length; await reload(); await waitFor(() => selector('#statistics-title'), 'post-FINISH reload'); assert.equal(proxy.records.length, finalWrites)
+  const finalWrites = proxy.records.length
+  await reload()
+  await d.click('기록', 'nav')
+  await waitFor(() => textHas('통계·추적'), 'visible statistics after FINISH reload')
+  assert.equal(proxy.records.length, finalWrites)
   note('Offline FINISH intent survives restart; real commit then lost ACK, exact duplicate replay, immutable DB and final local ACK', { committed: closedProof, requestSha256: fixedFinish })
+  const fromDate = server.workoutDate
+  const toDateExclusive = new Date(Date.parse(fromDate + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10)
+  const overview = await d.api('GET', '/api/v1/statistics/overview?' + new URLSearchParams({ fromDate, toDateExclusive }))
+  assert.equal(overview.status, 200)
+  const stats = overview.body.statistics
+  assert.equal(stats.summary.completedSets, '3')
+  assert.deepEqual(stats.groupActuals, [{ groupCode: 'ARMS', completedSets: '3' }, { groupCode: 'CHEST', completedSets: '3' }])
+  assert.equal(stats.muscles.find(muscle => muscle.role === 'SECONDARY').contributionSets, '1.5')
+  await d.click('근육별 통계', '.statistics')
+  await waitFor(() => textHas('부위별 실제 완료 세트'), 'muscle statistics')
+  await d.evaluate(`[...document.querySelectorAll('.statistics summary')].find(item => item.textContent.startsWith('보조근 참여')).click()`)
+  await waitFor(() => textHas('기여 1.5세트 · 실제 참여 3세트'), 'separate exact contribution and actual count')
+  note('Real Backend and PWA show secondary 1.5 contribution and three actual completed sets separately')
   assert.equal(a.userId, final.userId)
   // Explicit clearing is an online closed-record operation, never an offline edit.
   const sealed = await detail(id), cardio = sealed.snapshot.state.cardioResults[0], weight = sealed.snapshot.state.performedSets.find(s => s.ordinal === 1)

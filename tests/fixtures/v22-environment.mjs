@@ -21,8 +21,8 @@ export function validateV22Ready(value, expectedRunId, now = Date.now()) {
   if (value.jdbcUrl !== `jdbc:postgresql://127.0.0.1:${value.databasePort}/${value.database}`) reject()
   const started = Date.parse(value.startedAt), ready = Date.parse(value.readyAt)
   if (!Number.isFinite(started) || !Number.isFinite(ready) || started > ready || ready > now || now - started > 30 * 60000) reject()
-  if (value.initialUsers !== 0 || value.preparedUsers !== 1 || value.accountFlow !== 'EMAIL_OTP' || value.migrations !== 22
-    || JSON.stringify(value.migrationVersions) !== JSON.stringify(Array.from({ length: 22 }, (_, i) => String(i + 1)))) reject()
+  if (value.initialUsers !== 0 || value.preparedUsers !== 1 || value.accountFlow !== 'EMAIL_OTP' || value.migrations !== 35
+    || JSON.stringify(value.migrationVersions) !== JSON.stringify(Array.from({ length: 35 }, (_, i) => String(i + 1)))) reject()
   for (const field of ['freshDatabase', 'loopbackDatabase', 'tmpfsOnly', 'schemaValidated', 'noDeveloperEnv', 'springSessionTables', 'fakeEmailSender', 'externalAuthDisabled', 'httpSmokePassed']) {
     if (value[field] !== true) reject()
   }

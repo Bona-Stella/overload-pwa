@@ -19,7 +19,7 @@ const placement = { routineId: ROUTINE, placementId: PLACEMENT, routineName: 'ìš
 const overview = () => ({ statistics: {
   ...scope, ...period, planCoverage: 'PARTIAL_SCHEDULE_HISTORY', plannedWorkoutDays: null, routineAchievementPercent: null,
   summary: { plannedSets: '0', completedSets: '0', reps: '0', volumeLoadKg: null, setsWithoutVolume: '0' },
-  cardioActiveMs: '0', unmappedCompletedSets: '0', days: [], exercises: [], muscles: [], groups: [], cardio: [], recentSessions: [],
+  cardioActiveMs: '0', unmappedCompletedSets: '0', days: [], exercises: [], muscles: [], groups: [], groupActuals: [], cardio: [], recentSessions: [],
 }, effectiveWorkoutDays: null, unknownPlanDays: 7, unverifiableDays: 0, plannedDays: [], cardioByKind: [] })
 
 // Only the network is substituted: feature API -> AuthController -> AuthApi -> fetch.

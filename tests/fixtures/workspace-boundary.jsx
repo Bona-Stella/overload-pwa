@@ -13,7 +13,9 @@ window.boundaryRequests = []
 window.boundaryOverview = (scope, period, signal) => {
   const count = scope.userId === USER && scope.dataGeneration === '0' ? 7 : 0
   const value = { statistics: { ...scope, ...period, planCoverage: 'PARTIAL_SCHEDULE_HISTORY', plannedWorkoutDays: null, routineAchievementPercent: null,
-    summary: weights(count), cardioActiveMs: '0', unmappedCompletedSets: '0', days: [], exercises: [], muscles: [], groups: [], cardio: [], recentSessions: [] },
+    summary: weights(count), cardioActiveMs: '0', unmappedCompletedSets: '0', days: [], exercises: [],
+    muscles: count ? [{ id: DEVICE, groupCode: 'LEGS', role: 'SECONDARY', name: '햄스트링', weights: weights(3), contributionSets: '1.5' }] : [],
+    groups: [], groupActuals: count ? [{ groupCode: 'LEGS', completedSets: '3' }] : [], cardio: [], recentSessions: [] },
     effectiveWorkoutDays: null, unknownPlanDays: 1, unverifiableDays: 0, plannedDays: [], cardioByKind: [] }
   const request = { scope, signal }; window.boundaryRequests.push(request)
   if (window.holdBoundaryRequest) { window.holdBoundaryRequest = false; request.held = true; return new Promise(resolve => held.push(() => resolve(value))) }

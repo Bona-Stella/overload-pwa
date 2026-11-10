@@ -91,6 +91,22 @@ test('new session exercises have no routine approval source; removal protects re
   assert.throws(()=>change(w,x=>m.removeExercise(x,E)),/먼저/)
 })
 function cardio(w=local()) {return change(w,x=>m.addCardio(x,{kind:'TREADMILL',name:'러닝',targetSeconds:600,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null}))}
+test('linked cardio survives local storage with both IDs while legacy payloads keep the original fields', () => {
+  const activityId = id()
+  const linked = change(local(), w => m.addCardio(w, {
+    kind: 'OUTDOOR', name: '야외 러닝', activityId, standardExerciseId: EXERCISE, targetSeconds: 600,
+    targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null,
+  }))
+  const restored = JSON.parse(JSON.stringify(linked))
+  assert.ok(localWorkout(restored))
+  assert.deepEqual(restored.snapshot, linked.snapshot)
+  const activity = restored.snapshot.sessionExercises.find(e => e.kind === 'CARDIO')
+  assert.equal(activity.standardExerciseId, EXERCISE)
+  assert.equal(restored.snapshot.appliedPlan.cardioActivities[0].plan.activityId, activityId)
+  const old = cardio()
+  assert.equal(old.snapshot.sessionExercises.find(e => e.kind === 'CARDIO').standardExerciseId, null)
+  assert.equal('standardExerciseId' in old.snapshot.appliedPlan.cardioActivities[0].plan, false)
+})
 test('cardio timer anchors and original segments survive cloning, refresh and pause/resume without revision ticks',()=>{
   let w=cardio(), c=w.currentExerciseId, revision=w.localRevision
   w=change(w,x=>m.timerAction(x,c,'start',at));w=structuredClone(w)

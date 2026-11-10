@@ -9,7 +9,8 @@ export type Statistics = Scope & { fromDate: string; toDateExclusive: string; pl
   summary: WeightStats; cardioActiveMs: string; unmappedCompletedSets: string;
   days: { date: string; weights: WeightStats; cardioActiveMs: string }[];
   exercises: { standardExerciseId: string; name: string; weights: WeightStats }[];
-  muscles: { id: string; name: string; groupCode: string; role: 'PRIMARY' | 'SECONDARY'; weights: WeightStats }[];
+  muscles: { id: string; name: string; groupCode: string; role: 'PRIMARY' | 'SECONDARY'; weights: WeightStats; contributionSets: string }[];
+  groupActuals: { groupCode: string; completedSets: string }[];
   groups: { groupCode: string; role: 'PRIMARY' | 'SECONDARY'; weights: WeightStats }[];
   cardio: { kind: string; name: string; activeMs: string; distanceKm: string | null; recordsWithoutDistance: string }[];
   recentSessions: { id: string; routineName: string; workoutDate: string; startedAt: string; status: 'FINISHED' | 'AUTO_CLOSED' }[] }
@@ -27,12 +28,19 @@ export const weightStats = (x: unknown): x is WeightStats => v.object(x) && v.co
   && v.nullable(x.volumeLoadKg, decimal) && v.counter(x.setsWithoutVolume) && BigInt(x.setsWithoutVolume) <= BigInt(x.completedSets)
 const group = (x: unknown) => typeof x === 'string' && ['CHEST', 'BACK', 'SHOULDERS', 'ARMS', 'LEGS', 'CORE'].includes(x)
 const role = (x: unknown) => x === 'PRIMARY' || x === 'SECONDARY'
+const contributionSets = (value: unknown, completed: string, role: 'PRIMARY' | 'SECONDARY') => {
+  if (typeof value !== 'string' || !/^(0|[1-9][0-9]*)\.[05]$/.test(value)) return false
+  const [whole, half] = value.split('.')
+  return BigInt(whole) * 2n + (half === '5' ? 1n : 0n) === BigInt(completed) * (role === 'PRIMARY' ? 2n : 1n)
+}
 function facts(x: unknown): x is Statistics {
   return v.object(x) && v.uuid(x.userId) && v.counter(x.dataGeneration) && date(x.fromDate) && date(x.toDateExclusive)
     && weightStats(x.summary) && v.counter(x.cardioActiveMs) && v.counter(x.unmappedCompletedSets)
     && v.array(x.days, d => v.object(d) && date(d.date) && weightStats(d.weights) && v.counter(d.cardioActiveMs))
     && v.array(x.exercises, e => v.object(e) && v.uuid(e.standardExerciseId) && v.name(e.name) && weightStats(e.weights))
-    && v.array(x.muscles, m => v.object(m) && v.uuid(m.id) && v.name(m.name) && group(m.groupCode) && role(m.role) && weightStats(m.weights))
+    && v.array(x.muscles, m => v.object(m) && v.uuid(m.id) && v.name(m.name) && group(m.groupCode) && role(m.role) && weightStats(m.weights)
+      && contributionSets(m.contributionSets, m.weights.completedSets, m.role))
+    && v.array(x.groupActuals, g => v.object(g) && group(g.groupCode) && v.counter(g.completedSets))
     && v.array(x.groups, g => v.object(g) && group(g.groupCode) && role(g.role) && weightStats(g.weights))
     && v.array(x.cardio, c => v.object(c) && v.name(c.kind) && v.name(c.name) && v.counter(c.activeMs) && v.nullable(c.distanceKm, decimal) && v.counter(c.recordsWithoutDistance))
     && v.array(x.recentSessions, s => v.object(s) && v.uuid(s.id) && v.name(s.routineName) && date(s.workoutDate) && v.instant(s.startedAt) && ['FINISHED', 'AUTO_CLOSED'].includes(String(s.status)))

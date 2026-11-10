@@ -24,18 +24,20 @@ function plannedCardioMs(planning: Overview) {
   }
   return total
 }
-type Row = { key: string; name: string; weights: WeightStats }
+type Row = { key: string; name: string; weights: WeightStats; contributionSets?: string }
 type DetailPeriod = { mode: 'week' | 'month'; offset: number }
 export function WeightChart({ rows }: { rows: Row[] }) {
   const [metric, setMetric] = useState<'sets' | 'volume'>('sets')
   const volumeAvailable = rows.some(r => r.weights.volumeLoadKg !== null)
-  const values = rows.map(r => metric === 'volume' && volumeAvailable ? r.weights.volumeLoadKg : r.weights.completedSets)
+  const hasContribution = rows.some(r => r.contributionSets !== undefined)
+  const values = rows.map(r => metric === 'volume' && volumeAvailable ? r.weights.volumeLoadKg : r.contributionSets ?? r.weights.completedSets)
   // Scale exact decimal strings to integers before computing a bounded CSS percentage.
   const scaled = values.map(value => value === null ? 0n : BigInt(value.replace('.', '')) * 10n ** BigInt(6 - (value.split('.')[1]?.length ?? 0)))
   const maximum = scaled.reduce((a, b) => a > b ? a : b, 0n)
-  return <div className="stack">{volumeAvailable && <div className="row" aria-label="집계 항목"><button className="outline" aria-pressed={metric === 'sets'} onClick={() => setMetric('sets')}>세트 수</button><button className="outline" aria-pressed={metric === 'volume'} onClick={() => setMetric('volume')}>총중량</button></div>}
+  return <div className="stack">{volumeAvailable && <div className="row" aria-label="집계 항목"><button className="outline" aria-pressed={metric === 'sets'} onClick={() => setMetric('sets')}>{hasContribution ? '기여 세트' : '세트 수'}</button><button className="outline" aria-pressed={metric === 'volume'} onClick={() => setMetric('volume')}>총중량</button></div>}
     {!rows.length && <p className="muted">해당 기간의 기록이 없습니다.</p>}
-    {rows.map((row, index) => <div className="statistics-row" key={row.key}><div><strong>{row.name}</strong><span>{metric === 'volume' && volumeAvailable ? values[index] === null ? '중량 기록 없음' : `${values[index]} kg` : `${row.weights.completedSets}세트 · ${row.weights.reps}회`}</span></div>
+    {rows.map((row, index) => <div className="statistics-row" key={row.key}><div><strong>{row.name}</strong><span>{metric === 'volume' && volumeAvailable ? values[index] === null ? '중량 기록 없음' : `${values[index]} kg` : row.contributionSets === undefined ? `${row.weights.completedSets}세트 · ${row.weights.reps}회`
+      : `기여 ${row.contributionSets}세트 · 실제 참여 ${row.weights.completedSets}세트 · ${row.weights.reps}회`}</span></div>
       <div className="statistics-bar" aria-hidden="true"><i style={{ width: `${maximum ? Number(scaled[index] * 100n / maximum) : 0}%` }} /></div>
       <small>{row.weights.plannedSets === '0' ? '확인된 계획 없음' : `계획 ${row.weights.plannedSets}세트`}{row.weights.setsWithoutVolume !== '0' && ' · 추가 중량 근거가 없는 맨몸 세트는 총중량에서 제외'}</small></div>)}
   </div>
@@ -56,11 +58,16 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
         <h3>유산소 시간·거리</h3><p>실제 누적 {cardioTime(data.cardioActiveMs)}{plannedMs === null ? ' · 계획 시간 확인 불가' : plannedMs === 0n ? ' · 계획 없음' : ` / 계획 ${cardioTime(plannedMs.toString())}`}</p>
         <p className="muted small">선택 기간 전체의 누적 시간입니다. 실제 시간에는 계획 외 유산소도 포함됩니다.</p>
         {!planning.cardioByKind.length && <p>유산소 기록이 없습니다.</p>}{planning.cardioByKind.map(c => <div key={c.kind}><p>{cardioKinds[c.kind] ?? c.kind} · {cardioTime(c.activeMs)}{c.distanceKm !== null && ` · ${c.distanceKm} km`}</p><small>{c.manualDistanceKm !== null && `직접 입력 ${c.manualDistanceKm} km · `}{c.calculatedDistanceKm !== null && `계산 거리 ${c.calculatedDistanceKm} km · `}{c.unknownSourceDistanceKm !== null && `출처 미확인 ${c.unknownSourceDistanceKm} km · `}{c.recordsWithoutDistance !== '0' && '거리 미입력 기록 포함'}</small></div>)}</>
-      : <><h3>주동근 세트</h3><p className="muted small">{data.planCoverage === 'FULL_SCHEDULE_HISTORY' ? '미수행 예정일을 포함한 당시 일정과 계획입니다.' : '계획이 확인된 날짜만 표시합니다. 전체 주간 계획과는 다를 수 있습니다.'}</p>
-        <WeightChart rows={data.groups.filter(g => g.role === 'PRIMARY').map(g => ({ key: g.groupCode, name: groups[g.groupCode], weights: g.weights }))} />
-        <div className="row"><button className="outline" aria-pressed={selectedGroup === null} onClick={() => setSelectedGroup(null)}>전체 부위</button>{data.groups.filter(g => g.role === 'PRIMARY').map(g => <button className="outline" key={g.groupCode} aria-pressed={selectedGroup === g.groupCode} onClick={() => setSelectedGroup(g.groupCode)}>{groups[g.groupCode]} 상세</button>)}</div>
-        {selectedGroup && <><h3>{groups[selectedGroup]} 세부 주동근</h3><WeightChart rows={data.muscles.filter(m => m.groupCode === selectedGroup && m.role === 'PRIMARY').map(m => ({ key: m.id, name: m.name, weights: m.weights }))} /></>}
-        <details><summary>보조근 참여 · 주동근과 별도</summary><WeightChart rows={data.muscles.filter(m => m.role === 'SECONDARY' && (!selectedGroup || m.groupCode === selectedGroup)).map(m => ({ key: m.id, name: m.name, weights: m.weights }))} /></details>
+      : <><h3>부위별 실제 완료 세트</h3>
+        {data.groupActuals.length === 0 && <p className="muted">해당 기간의 기록이 없습니다.</p>}
+        {data.groupActuals.map(group => <div className="statistics-row" key={group.groupCode}>
+          <strong>{groups[group.groupCode]}</strong><span>실제 {group.completedSets}세트</span>
+        </div>)}
+        <details><summary>부위별 주동근 참여와 총중량</summary><p className="muted small">{data.planCoverage === 'FULL_SCHEDULE_HISTORY' ? '미수행 예정일을 포함한 당시 일정과 계획입니다.' : '계획이 확인된 날짜만 표시합니다. 전체 주간 계획과는 다를 수 있습니다.'}</p>
+        <WeightChart rows={data.groups.filter(g => g.role === 'PRIMARY').map(g => ({ key: g.groupCode, name: groups[g.groupCode], weights: g.weights }))} /></details>
+        <div className="row"><button className="outline" aria-pressed={selectedGroup === null} onClick={() => setSelectedGroup(null)}>전체 부위</button>{[...new Set([...data.groupActuals, ...data.groups].map(g => g.groupCode))].map(group => <button className="outline" key={group} aria-pressed={selectedGroup === group} onClick={() => setSelectedGroup(group)}>{groups[group]} 상세</button>)}</div>
+        {selectedGroup && <><h3>{groups[selectedGroup]} 세부 주동근</h3><WeightChart rows={data.muscles.filter(m => m.groupCode === selectedGroup && m.role === 'PRIMARY').map(m => ({ key: m.id, name: m.name, weights: m.weights, contributionSets: m.contributionSets }))} /></>}
+        <details><summary>보조근 참여 · 주동근과 별도</summary><WeightChart rows={data.muscles.filter(m => m.role === 'SECONDARY' && (!selectedGroup || m.groupCode === selectedGroup)).map(m => ({ key: m.id, name: m.name, weights: m.weights, contributionSets: m.contributionSets }))} /></details>
         {data.unmappedCompletedSets !== '0' && <p className="notice">주동근 분류가 없는 완료 세트 {data.unmappedCompletedSets}개는 전체 운동량에 포함됩니다.</p>}</>}
     <details><summary>예정일과 달성 내역</summary>{planning.plannedDays.map(d => <div className="statistics-row" key={d.date}><p>{d.date} · {d.status === 'BEFORE_REGISTRATION' ? '최초 등록 전 · 달성률 제외' : d.status === 'UNKNOWN' ? '과거 계획 확인 불가' : d.status === 'REST' ? '휴식' : `${d.plan?.name} · ${d.completedExercises ?? '확인 중'} / ${d.plannedExercises}종목`}{d.status === 'UNVERIFIABLE' && ' · 실제 유산소 목표 확인 불가'}{d.status === 'PENDING' && ' · 운동 진행 중 · 판정 대기'}</p>
       {d.plan && <details><summary>당시 계획 보기</summary>{d.plan.weightPlacements.map(w => <p key={w.id}>{w.exerciseName} · {w.setCount}세트</p>)}{d.plan.cardioPlacements.map(c => <p key={c.id}>{c.plan.name} · 목표 {c.plan.targetSeconds}초</p>)}</details>}

@@ -2,7 +2,8 @@
 const shell = __SHELL_CONFIG__
 const prefix = 'overload-static-shell-v1-'
 const cacheName = prefix + shell.id
-const paths = new Set(shell.assets.map(asset => asset.path))
+const publicAssets = shell.assets.filter(asset => !asset.path.startsWith('/media/exercises/'))
+const paths = new Set(publicAssets.map(asset => asset.path))
 async function compatibleDatabase() {
   // Read the version only. Abort creation when no database exists; never migrate/write workout data.
   return new Promise((resolve, reject) => {
@@ -20,7 +21,7 @@ async function compatibleDatabase() {
 }
 self.addEventListener('install', event => event.waitUntil((async () => {
   await compatibleDatabase()
-  const verified = await Promise.all(shell.assets.map(async asset => {
+  const verified = await Promise.all(publicAssets.map(async asset => {
     const response = await fetch(asset.path, { credentials: 'omit', cache: 'reload', redirect: 'error' })
     if (!response.ok || response.type === 'opaque') throw Error('App shell unavailable')
     const bytes = await response.clone().arrayBuffer()

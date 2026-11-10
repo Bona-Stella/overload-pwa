@@ -26,7 +26,7 @@ const flush = () => new Promise(resolve => setImmediate(resolve))
 const weights = count => ({ plannedSets: '0', completedSets: String(count), reps: '0', volumeLoadKg: null, setsWithoutVolume: '0' })
 function overview(owner, period, count) {
   return { statistics: { ...owner, ...period, planCoverage: 'PARTIAL_SCHEDULE_HISTORY', plannedWorkoutDays: null, routineAchievementPercent: null,
-    summary: weights(count), cardioActiveMs: '0', unmappedCompletedSets: '0', days: [], exercises: [], muscles: [], groups: [], cardio: [], recentSessions: [],
+    summary: weights(count), cardioActiveMs: '0', unmappedCompletedSets: '0', days: [], exercises: [], muscles: [], groups: [], groupActuals: [], cardio: [], recentSessions: [],
   }, effectiveWorkoutDays: null, unknownPlanDays: 1, unverifiableDays: 0, plannedDays: [], cardioByKind: [] }
 }
 function nodes(tree) {

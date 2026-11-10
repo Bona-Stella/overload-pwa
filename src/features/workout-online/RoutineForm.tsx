@@ -66,6 +66,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       if (!body) {
         if (!validName(name) || weights.length + cardio.length === 0) throw new Error('루틴 이름과 한 개 이상의 운동을 입력해 주세요.')
         const weightPlacements = newWeights(weights)
+        if (cardio.some(c => !c.existing && !c.standardExerciseId)) throw new Error('추가할 유산소 종목을 카탈로그에서 선택해 주세요.')
         const cardioPlacements = cardio.map(c => ({ id: c.id, plan: cardioPlan(c) }))
         body = routine ? { dataGeneration: generation, expectedVersion: routine.version, name, tag:tag||null,
           weightPlacements: updatedWeights(weights),
@@ -114,7 +115,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       {!cardio.length && <p className="muted small">등록된 유산소 계획 없음</p>}
       {cardio.map((c, index) => <section className="card stack" key={c.id} aria-label={`유산소 ${index + 1}`}>
         <div className="section-heading"><h3>유산소 {index + 1}</h3></div>
-        <CardioPlanFields value={c} onChange={v=>changeCardio(c.id,v)} activities={activities} readOnly={readOnly}/>
+        <CardioPlanFields value={c} onChange={v=>changeCardio(c.id,v)} activities={activities} readOnly={readOnly} existing={c.existing}/>
         {!readOnly && <div className={styles.exerciseActions}><button type="button" disabled={index===0} onClick={()=>setCardio(v=>move(v,index,-1))}>↑ 위로</button><button type="button" disabled={index===cardio.length-1} onClick={()=>setCardio(v=>move(v,index,1))}>↓ 아래로</button><button type="button" className="danger" onClick={() => setCardio(values => values.filter(x => x.id !== c.id))}>제거</button></div>}
       </section>)}
       {!readOnly && <button type="button" className="outline" onClick={() => setCardio(values => [...values, {id:newId(),existing:false,...emptyCardio()}])}>유산소 추가</button>}

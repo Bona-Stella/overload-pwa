@@ -27,6 +27,6 @@ export function ExerciseSearch({ exercises, onSelect, disabled = false, autoFocu
     <ul ref={list} aria-label="표준 운동 목록" className="exercise-search-results">
       {results.map(exercise => <li key={exercise.id}><button type="button" disabled={disabled} onClick={() => { onSelect(exercise); setQuery('') }}><ExerciseIcon kind={exerciseIcon(exercise)} /><span><strong>{exercise.name}</strong><small>{exerciseDescription(exercise)}</small></span></button></li>)}
     </ul>
-    {exercises.length === 0 ? <p role="status">등록된 표준 운동이 없습니다. 카탈로그 등록 후 다시 조회해 주세요. 유산소는 추가할 수 있습니다.</p> : !results.length && <p role="status">일치하는 운동이 없습니다.</p>}
+    {exercises.length === 0 ? <p role="status">등록된 표준 운동이 없습니다. 카탈로그 등록 후 다시 조회해 주세요.</p> : !results.length && <p role="status">일치하는 운동이 없습니다.</p>}
   </div>
 }

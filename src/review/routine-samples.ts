@@ -13,11 +13,11 @@ export const exercises: StandardExercise[] = [
   { id: id(13), name: '랫 풀다운', aliases: ['lat pulldown'], muscles: [{ id: id(113), groupCode: 'BACK', name: '광배근', role: 'PRIMARY' }] },
 ]
 export const activities: CardioActivity[] = [
-  { id: id(14), category: 'RUNNING', name: '러닝머신', kind: 'TREADMILL' },
-  { id: id(15), category: 'CYCLING', name: '실내 사이클', kind: 'BIKE' },
+  { id: id(14), activityId: id(114), aliases: ['treadmill run'], category: 'RUNNING', name: '러닝머신', kind: 'TREADMILL' },
+  { id: id(15), activityId: id(115), aliases: ['indoor cycling'], category: 'CYCLING', name: '실내 사이클', kind: 'BIKE' },
 ]
 export const manufacturers: Manufacturer[] = [{ id: id(16), name: '파나타' }, { id: id(17), name: '해머 스트렝스' }]
-const cardio = { id: id(41), deletedAt: null, plan: { activityId: activities[0].id, kind: 'TREADMILL', name: '러닝머신',
+const cardio = { id: id(41), deletedAt: null, plan: { activityId: activities[0].activityId, standardExerciseId: activities[0].id, kind: 'TREADMILL', name: '러닝머신',
   targetSeconds: 1200, targetDistanceKm: '2.5', intensity: { mode: 'SPEED', value: '8' }, inclinePercent: null, resistance: null } } as const
 const plans = ([
   { ...scope, id: id(21), version: '1', name: '상체 푸시 + 러닝', tag: 'PUSH', createdAt: '2026-11-03T09:00:00Z', weightPlacements: [], cardioPlacements: [cardio] },

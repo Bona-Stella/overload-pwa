@@ -8,6 +8,7 @@ import type { TrainingSchedule } from './useTrainingSchedule.ts'
 import { Dialog } from '../../components/Dialog.tsx'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useAuth } from '../auth/context.ts'
+import { PublicCatalog } from './PublicCatalog.tsx'
 import { WorkoutApi } from './api.ts'
 import { WorkoutOnlineController } from './controller.ts'
 import type { OnlineState } from './controller.ts'
@@ -52,9 +53,9 @@ type RoutineEditorState = { routine: Routine | null; readOnly: boolean }
 type ScheduleEditorState = { type: 'assign'; id: string; base: LiveSchedule; priorityId?: string } | { type: 'order'; base: LiveSchedule }
 type RenameDraft = { id: string; version: string; base: LiveSchedule; value: string; issue?: string }
 
-export function WorkspaceView({ state, controller, api, training, enabled, onEditingChange }: {
+export function WorkspaceView({ state, controller, api, training, enabled, activities = [], onEditingChange }: {
   state: OnlineState; controller: WorkoutOnlineController; api: WorkoutApi; training: TrainingSchedule
-  enabled: boolean; onEditingChange?: (editing: boolean) => void
+  enabled: boolean; activities?: CardioActivity[]; onEditingChange?: (editing: boolean) => void
 }) {
   const { schedule, protection } = training
   const [editor, setEditor] = useState<RoutineEditorState | null>(null)
@@ -64,17 +65,8 @@ export function WorkspaceView({ state, controller, api, training, enabled, onEdi
   const [deleting, setDeleting] = useState<{ id: string; base: LiveSchedule } | null>(null)
   const [renaming, setRenaming] = useState<RenameDraft | null>(null)
   const renameInput = useRef<HTMLInputElement>(null)
-  const [activities, setActivities] = useState<CardioActivity[]>([])
   const [previews, setPreviews] = useState<{ key: string; values: Map<string, Routine> } | null>(null)
   const previewKey = JSON.stringify([state.scope, state.data?.routines])
-  useEffect(() => {
-    if (!enabled || !state.scope) return
-    const abort = new AbortController()
-    void api.cardioActivities(state.scope.userId, abort.signal).then(value => {
-      if (!abort.signal.aborted) setActivities(value)
-    }).catch(error => { if (!abort.signal.aborted) controller.invalidateScope(error) })
-    return () => abort.abort()
-  }, [api, state.scope, controller, enabled])
   useEffect(() => {
     if (!enabled || !state.scope || !state.data) return
     const abort = new AbortController(), scope = state.scope, list = state.data.routines
@@ -239,6 +231,18 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   const registerExit = useCallback<ExitGuardRegistration>(guard => { exitGuard.current = guard; onExitGuard?.(guard) }, [onExitGuard])
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const accountReady = auth.status === 'authenticated' && auth.pending === null && state.scope?.userId === auth.userId && !auth.accountOpen
+  const cardioScope = accountReady ? state.scope : null
+  const [cardioChoices, setCardioChoices] = useState<{ key: string; values: CardioActivity[] } | null>(null)
+  const cardioKey = cardioScope ? cardioScope.userId + ':' + cardioScope.dataGeneration : null
+  const activities = cardioKey && cardioChoices?.key === cardioKey ? cardioChoices.values : []
+  useEffect(() => {
+    if (!cardioScope || !cardioKey) return
+    const abort = new AbortController()
+    void api.cardioActivities(cardioScope.userId, abort.signal).then(values => {
+      if (!abort.signal.aborted) setCardioChoices({ key: cardioKey, values })
+    }).catch(error => { if (!abort.signal.aborted) controller.invalidateScope(error) })
+    return () => abort.abort()
+  }, [api, cardioScope, cardioKey, controller])
   const [visit, setVisit] = useState({ tab, count: 0 })
   if (visit.tab !== tab) setVisit({ tab, count: visit.count + 1 })
   const scheduleRevision = [visit.count, state.detail?.id, state.detail?.version,
@@ -330,7 +334,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
         } finally { homeStarting.current = false }
       }} /> : <StatusNotice error={!!state.issue}>{state.issue ?? '현재 계정의 운동 정보를 확인하고 있습니다.'}</StatusNotice>)}</div>
     {(!localOnly || preserveDrafts) && <div hidden={!visible || localOnly || focused || tab !== 'routines'}>
-      <WorkspaceView training={training} enabled={accountReady} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} />
+      <WorkspaceView activities={activities} training={training} enabled={accountReady} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} />
     </div>}
 
     {visible && !localOnly && !focused && tab === 'history' && <SectionHeading title="운동 기록·분석" eyebrow="YOUR TRAINING" />}
@@ -340,7 +344,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     {session && session.status === 'ACTIVE' && <details hidden={!focused} open={!editable}><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={() => void controller.takeover()} /></details>}
     {visible && permissionIssue && <p className="notice" role="status">오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.</p>}
     <div hidden={!focused}>{editable && <LocalWorkoutScreen key={[session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')}
-      server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} manufacturers={localOnly ? [] : state.data!.manufacturers} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
+      server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
       sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}</div>
     <div hidden={!visible || focused || tab !== 'history'}>{visible && !localOnly && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} manufacturers={state.data?.manufacturers} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
@@ -348,6 +352,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     }} />}</div>
     <div hidden={!visible || focused || tab !== 'history'}>{visible && !localOnly && state.scope && <WorkoutHistory key={'history:' + state.scope.userId + ':' + state.scope.dataGeneration} api={api} scope={state.scope} onInvalid={controller.invalidateScope} refreshKey={session?.status === 'ACTIVE' ? 'active' : session?.id + ':' + session?.version} onOpen={id => void openRecord(id)} />}</div>
     {visible && !localOnly && !focused && tab === 'settings' && state.data && <Card><h2>세트 사이 휴식</h2><p className="muted small">현재 설정된 휴식 시간입니다.</p><p>1~10회 · {state.data.settings.restLowSeconds}초<br />11~12회 · {state.data.settings.restMediumSeconds}초<br />13회 이상 · {state.data.settings.restHighSeconds}초</p></Card>}
+    {visible && !localOnly && !focused && tab === 'settings' && cardioScope && <PublicCatalog key={cardioKey} api={api} userId={cardioScope.userId} onInvalid={controller.invalidateScope} />}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
     {visible && state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</>
 }

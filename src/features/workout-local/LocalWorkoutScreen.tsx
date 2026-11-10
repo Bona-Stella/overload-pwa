@@ -7,7 +7,9 @@ import { WorkoutStore } from '../workout-online/storage.ts'
 import { ExerciseSearch } from '../workout-online/ExerciseSearch.tsx'
 import { EquipmentFields } from '../workout-online/EquipmentFields.tsx'
 import { equipmentLabel } from '../workout-online/equipment.ts'
-import type { Equipment, Manufacturer, StandardExercise, Session } from '../workout-online/types.ts'
+import { CardioPlanFields } from '../workout-online/CardioPlanFields.tsx'
+import { cardioPlan, emptyCardio } from '../workout-online/cardio-draft.ts'
+import type { CardioActivity, Equipment, Manufacturer, StandardExercise, Session } from '../workout-online/types.ts'
 import { countDraft } from '../workout-online/validation.ts'
 import { LocalWorkoutController } from './controller.ts'
 import type { EditorState } from './controller.ts'
@@ -20,8 +22,8 @@ import './local.css'
 
 const duration = (ms: number) => { const seconds = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` }
 type Definition = StandardExercise
-export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, offlineRestart = false }: {
-  server: Session; policy: RestPolicy; definitions: Definition[]; manufacturers?: Manufacturer[]; authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean; onReady?: (workout: LocalWorkout) => void; offlineRestart?: boolean
+export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, offlineRestart = false }: {
+  server: Session; policy: RestPolicy; definitions: Definition[]; manufacturers?: Manufacturer[]; activities?: CardioActivity[]; authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean; onReady?: (workout: LocalWorkout) => void; offlineRestart?: boolean
 }) {
   const [initial] = useState(() => ({ server, policy, onReady }))
   const [ending, setEnding] = useState(false)
@@ -56,7 +58,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
     {state.syncIssue && <p className="notice" role="status">{state.syncIssue}</p>}
     {!!sync && <button className="outline" disabled={!authenticated || !state.writable || state.syncStatus === 'SENDING'} onClick={() => void controller.retrySync()}>서버 저장 상태 다시 확인</button>}
     {state.unsavedDrafts && <p className="notice" role="status">입력 초안을 저장 중이거나 저장하지 못했습니다. 화면의 입력을 유지합니다.{!state.pending && <button className="outline" onClick={() => void controller.retryDrafts()}>입력 다시 저장</button>}</p>}
-    {state.workout && <LocalWorkoutView state={state} controller={controller} definitions={definitions} manufacturers={manufacturers} />}
+    {state.workout && <LocalWorkoutView state={state} controller={controller} definitions={definitions} manufacturers={manufacturers} activities={activities} />}
     {state.workout && !!sync && <ApprovalControls state={state} controller={controller} />}
     {state.workout && !!sync && <>
       {state.workout.finish ? <p className="notice">{state.workout.finish.ack ? '서버에서 운동 종료를 확인했습니다.' : '종료 요청을 이 기기에 보존했습니다. 서버 종료는 아직 확인하지 못했습니다.'} 실제 종료 선택 시각 <time dateTime={state.workout.finish.endedAt}>{new Date(state.workout.finish.endedAt).toLocaleString('ko-KR')}</time></p>
@@ -66,7 +68,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
     </>}
   </section>
 }
-export function LocalWorkoutView({ state, controller, definitions, manufacturers = [] }: { state: EditorState; controller: LocalWorkoutController; definitions: Definition[]; manufacturers?: Manufacturer[] }) {
+export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [] }: { state: EditorState; controller: LocalWorkoutController; definitions: Definition[]; manufacturers?: Manufacturer[]; activities?: CardioActivity[] }) {
   const [now, setNow] = useState(() => Date.now())
   const [list, setList] = useState(false), [editing, setEditing] = useState(false), [weightOpen, setWeightOpen] = useState(false)
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 500); return () => window.clearInterval(timer) }, [])
@@ -111,7 +113,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     </>}
     {cardio && <LocalCardio key={id} workout={workout} id={id} state={state} controller={controller} now={now} />}
     <button className="quiet full" disabled={busy} onClick={() => setEditing(!editing)}>현재 운동에만 계획 변경</button>
-    {editing && <LocalPlanEditor key={id} workout={workout} controller={controller} definitions={definitions} manufacturers={manufacturers} busy={busy} />}
+    {editing && <LocalPlanEditor key={id} workout={workout} controller={controller} definitions={definitions} manufacturers={manufacturers} activities={activities} busy={busy} />}
     <details><summary>시작 당시 불변 계획</summary>{workout.initialPlan.weightExercises.map(e => <p key={e.sessionExerciseId}>{e.exerciseName} · {e.setCount}세트 · {e.minReps}~{e.maxReps}회 · 승인 {e.approvedWeightKg} kg</p>)}{workout.initialPlan.cardioActivities.map(c => <p key={c.sessionActivityId}>{c.plan.name} · {c.plan.targetSeconds}초</p>)}</details>
     <p className="muted small">공식 평가와 과거 기준 기록은 서버가 계산합니다. 이 화면은 달성 평가나 자동 증량을 계산하지 않습니다.</p>
     {weightOpen && <WeightDialog workout={workout} id={id} busy={busy} controller={controller} onClose={() => setWeightOpen(false)} />}
@@ -177,13 +179,13 @@ function ApprovalChoice({ state, controller, id }: { state: EditorState; control
     {canApprove && <><label>지금 다시 승인할 중량 kg<input inputMode="decimal" value={value} disabled={busy} onChange={e => setValue(e.target.value)} /></label><button className="primary" disabled={busy} onClick={() => { if (window.confirm(`${value} kg을 현재 시점의 새 중량으로 명시 승인할까요? 과거 수행에는 소급 적용하지 않습니다.`)) void controller.resolveApproval(id, pending.map(r => r.id), 'REAPPROVE', value) }}>이 중량으로 지금 재승인</button></>}
   </section>
 }
-function LocalPlanEditor({ workout, controller, definitions, manufacturers, busy }: { workout: LocalWorkout; controller: LocalWorkoutController; definitions: Definition[]; manufacturers: Manufacturer[]; busy: boolean }) {
+function LocalPlanEditor({ workout, controller, definitions, manufacturers, activities, busy }: { workout: LocalWorkout; controller: LocalWorkoutController; definitions: Definition[]; manufacturers: Manufacturer[]; activities: CardioActivity[]; busy: boolean }) {
   const id = workout.currentExerciseId, weight = workout.snapshot.appliedPlan.weightExercises.find(x => x.sessionExerciseId === id), cardio = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)
   const [sets, setSets] = useState(String(weight?.setCount ?? 3)), [min, setMin] = useState(String(weight?.minReps ?? 6)), [max, setMax] = useState(String(weight?.maxReps ?? 10))
   const [seconds, setSeconds] = useState(String(cardio?.plan.targetSeconds ?? 600))
   const [settings, setSettings] = useState<Equipment>(() => ({ manufacturerId: weight?.manufacturerId ?? null, loadType: weight?.loadType ?? null }))
   const [addition, setAddition] = useState<Equipment>({ manufacturerId: null, loadType: null })
-  const [cardioName, setCardioName] = useState(''), [cardioKind, setCardioKind] = useState<'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'>('OTHER'), [newSeconds, setNewSeconds] = useState('600')
+  const [newCardio, setNewCardio] = useState(() => ({ ...emptyCardio(), seconds: '600' }))
   return <section className="card stack" aria-label="현재 적용 계획 편집"><p className="muted small">이번 운동의 계획만 바꿉니다. 최초 계획·원래 루틴·완료 수행은 보존합니다. 완료 수행이 있는 종목은 먼저 완료 취소해야 제외할 수 있습니다.</p>
     {weight && <><label>계획 세트 수<input inputMode="numeric" value={sets} onChange={e => setSets(e.target.value)} /></label><div className="row"><label>목표 최소 반복<input inputMode="numeric" value={min} onChange={e => setMin(e.target.value)} /></label><label>목표 최대 반복<input inputMode="numeric" value={max} onChange={e => setMax(e.target.value)} /></label></div><button className="outline" disabled={busy} onClick={() => void controller.change(w => model.updateTargets(w, id, countDraft(sets), countDraft(min), countDraft(max)))}>현재 목표 적용</button></>}
     {weight && <><EquipmentFields value={settings} manufacturers={manufacturers} onChange={setSettings} disabled={busy} /><button className="outline" disabled={busy} onClick={() => void controller.change(w => model.changeEquipment(w, id, settings))}>현재 장비 적용</button><p className="muted small">이후 완료하는 세트에만 적용합니다. 완료 기록과 중량 승인은 유지합니다.</p></>}
@@ -191,9 +193,9 @@ function LocalPlanEditor({ workout, controller, definitions, manufacturers, busy
     <button className="quiet danger" disabled={busy} onClick={() => void controller.change(w => model.removeExercise(w, id))}>현재 종목 제외</button>
     <EquipmentFields value={addition} manufacturers={manufacturers} onChange={setAddition} disabled={busy} />
     <ExerciseSearch exercises={definitions} disabled={busy} onSelect={exercise => void controller.change(w => model.addWeight(w, exercise.id, exercise.name, undefined, addition))} />
-    <label>추가 유산소 이름<input value={cardioName} onChange={e => setCardioName(e.target.value)} /></label>
-    <label>추가 유산소 종류<select value={cardioKind} onChange={e => { const value = e.target.value; if (value === 'TREADMILL' || value === 'BIKE' || value === 'OUTDOOR' || value === 'STAIRS' || value === 'OTHER') setCardioKind(value) }}><option value="TREADMILL">러닝머신</option><option value="BIKE">자전거</option><option value="OUTDOOR">야외</option><option value="STAIRS">계단</option><option value="OTHER">기타</option></select></label>
-    <label>추가 유산소 목표 초<input inputMode="numeric" value={newSeconds} onChange={e => setNewSeconds(e.target.value)} /></label>
-    <button className="outline" disabled={busy} onClick={() => void controller.change(w => model.addCardio(w, { kind: cardioKind, name: cardioName, targetSeconds: countDraft(newSeconds), targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null }))}>＋ 오늘만 유산소 추가</button>
+    {activities.length > 0 && <>
+      <CardioPlanFields value={newCardio} onChange={setNewCardio} activities={activities} disabled={busy} />
+      <button className="outline" disabled={busy || !newCardio.standardExerciseId} onClick={() => void controller.change(w => model.addCardio(w, cardioPlan(newCardio)))}>＋ 오늘만 유산소 추가</button>
+    </>}
   </section>
 }

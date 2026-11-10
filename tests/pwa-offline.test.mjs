@@ -139,10 +139,10 @@ test('editor release can await the browser lock request completion before a new 
 })
 
 const template=readFileSync(new URL('../src/pwa/worker.js',import.meta.url),'utf8')
-function worker({version=3,wrongBytes=false}={}){
+function worker({version=3,wrongBytes=false,extraPaths=[]}={}){
   const events={},writes=[],deletes=[],net=[]
   const bytes='public immutable build bytes',digest=createHash('sha256').update(bytes).digest('hex')
-  const config={id:'test',assets:[{path:'/index.html',sha256:digest},{path:'/assets/app.js',sha256:digest}]}
+  const config={id:'test',assets:['/index.html','/assets/app.js',...extraPaths].map(path=>({path,sha256:digest}))}
   const store=new Map(),db={version,close(){}}
   const idb={open(name,...args){assert.equal(name,'overload.workout.v1');assert.equal(args.length,0);const req={result:db,transaction:{abort(){queueMicrotask(()=>req.onerror())}}};queueMicrotask(()=>{if(version===0)req.onupgradeneeded();else req.onsuccess()});return req}}
   const cache={put:async(path,response)=>{writes.push(path);store.set(path,response)},match:async path=>store.get(path)}
@@ -159,6 +159,14 @@ test('worker precaches only digest-verified public assets with credentials omitt
 })
 test('wrong deployment/personalized bytes abort install BEFORE any cache write',async()=>{
   const w=worker({wrongBytes:true});await assert.rejects(w.install(),/differs/);assert.deepEqual(w.writes,[])
+})
+test('worker bypasses protected exercise GIFs even if included in the shell manifest',async()=>{
+  const path='/media/exercises/v1/E4PwJqI.gif'
+  const w=worker({extraPaths:[path]});await w.install()
+  assert.ok(w.net.every(request=>request.path!==path))
+  assert.ok(!w.writes.includes(path))
+  assert.equal(w.fetchPath(path),undefined)
+  assert.equal(w.fetchPath(path+'?fresh=true'),undefined)
 })
 test('worker aborts absent DB creation, accepts v3 and rejects newer workout schema without writes',async()=>{
   await worker({version:0}).install();await worker({version:2}).install();await worker({version:3}).install();const w=worker({version:4});await assert.rejects(w.install(),/Newer workout storage/);assert.deepEqual(w.writes,[])

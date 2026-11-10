@@ -1,6 +1,6 @@
 # Overload UI v0.9 — 백엔드 연동 설계
 
-**역할 · G6 PWA 연동 보조 지침.** 화면은 [UI/UX 적용 지점](../product/ui-ux.md), 도메인은 [디로딩 v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md), HTTP는 아래 서버 계약을 적용한다. G4/G5 및 주간 프리셋 Backend는 구현됐다. 신규 프리셋과 G6의 PWA 연동, 실제 DB 적용과 혼재 기록의 실기기 검증은 후속이다.
+**역할 · G6 PWA 연동 보조 지침.** 화면은 [UI/UX 적용 지점](../product/ui-ux.md), 도메인은 [디로딩 v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md), HTTP는 아래 서버 계약을 적용한다. G4/G5 Backend와 일반 계정의 다중 프리셋 경로는 구현됐다. G6 전체 PWA 연동, 실제 DB 적용과 혼재 기록의 실기기 검증은 후속이다.
 
 ## 확인한 계약과 적용 범위
 
@@ -13,6 +13,13 @@
 | 설정 | `GET/PATCH /api/v1/workout-settings`로 고정된 세 휴식 시간(초)을 읽고 한 번에 변경할 수 있다. 로그인 세션과 CSRF 계약을 유지한다. | 분석 설정과 추천 누적은 기존 휴식 API와 분리한다. 홈의 분석 조회는 연결했다. 분석 설정 쓰기와 별도 기간 자격 조회는 G6에서 연결한다. |
 
 나머지 계약은 [세션](../../../overload-server/docs/api/workout-sessions.md)·[카탈로그](../../../overload-server/docs/api/standard-exercise-catalog.md)·[통계](../../../overload-server/docs/api/statistics.md)·[성장](../../../overload-server/docs/api/approved-weight-growth.md)·[휴식 설정](../../../overload-server/docs/api/workout-online-write.md)을 확인한다. 구현·DB 적용·실기기 경계는 [Frontend 8.7절](frontend.md#87-v09-적용-범위와-구현-상태)과 [Backend 12.4~12.5절](../../../overload-server/docs/engineering/backend.md#124-ui-v09와-디로딩-v17-연동)에 있다.
+
+## 표준 운동 사용자 UI의 V35 연결 경계
+
+- 설정의 일반 검색은 `/catalog` 목록을 소비한다. 웨이트·유산소 신규 선택은 각각 `/search-data`와 `/cardio-choices`를 소비한다. 신규 유산소 선택은 표준 운동 UUID와 기록 설정 `activityId`를 모두 유지한다. 기존 루틴·세션 재개는 저장된 참조를 사용한다.
+- 공개 운동의 UUID 상세 조회는 Backend에서 제공한다. 프런트엔드의 현행 API 전송 허용 목록에는 UUID 상세 경로가 없으므로 화면 연결 때 응답 검증과 함께 추가한다. 일반 조회와 루틴 추가 가능 여부를 구분하고 상세의 `instructionSteps`를 사용한다.
+- 상세 응답에는 보호 GIF 경로가 없다. 대표 경로 전달과 GIF 권리 범위를 먼저 확정한다. 이후 화면은 일반 운동 정보와 GIF 상태를 독립적으로 처리하고, 보호 미디어를 오프라인 캐시에 저장하지 않는다.
+- 근육 통계는 `contributionSets`와 `groupActuals`를 소비한다. 현행 유산소 통계 화면은 `cardioByKind`를 사용하며, Backend의 `cardioByCategory`는 화면에 아직 연결하지 않았다. [표준 운동 인수인계](../../../overload-server/docs/engineering/standard-exercise-handoff.md#다음-작업인-사용자-ui-연결)
 
 <a id="t02-b-현재-api-소비"></a>
 

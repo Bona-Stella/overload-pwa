@@ -88,7 +88,7 @@ export class AuthApi {
   }
   /** Uses the existing in-memory CSRF token; the controller prepares writes and fences the account. */
   async workoutRequest(path: string, method: string, body: unknown, signal: AbortSignal) {
-    if (!/^\/api\/v1\/(workout-settings|routines|workout-sessions)(\/[-a-zA-Z0-9]+)*$/.test(path) && !(method === 'GET' && body === undefined && ['/api/v1/standard-exercises/search-data', '/api/v1/manufacturers', '/api/v1/cardio-activities'].includes(path)) && !closedWorkoutPage(path, method, body) && !statisticsRequest(path, method, body) && !trainingScheduleRequest(path, method, body)
+    if (!/^\/api\/v1\/(workout-settings|routines|workout-sessions)(\/[-a-zA-Z0-9]+)*$/.test(path) && !(method === 'GET' && body === undefined && ['/api/v1/standard-exercises/search-data', '/api/v1/standard-exercises/catalog', '/api/v1/standard-exercises/cardio-choices', '/api/v1/manufacturers', '/api/v1/cardio-activities'].includes(path)) && !closedWorkoutPage(path, method, body) && !statisticsRequest(path, method, body) && !trainingScheduleRequest(path, method, body)
       || !['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) throw new AuthError('INVALID_REQUEST', 400)
     if (method !== 'GET' && !this.csrf) throw new AuthError('CSRF_INVALID', 403)
     const result = await this.call(path, method, body, method === 'GET' ? undefined : this.csrf!, signal)

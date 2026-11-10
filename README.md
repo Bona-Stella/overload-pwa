@@ -49,7 +49,10 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 ### PWA 빌드·배포
 
-아래 단계별 DB 적용 표기는 당시 검증 기록입니다. 개인 개발 DB의 마지막 확인 기록은V17 적용/V18~V22 미적용이며6A에서는 접속·재확인하지 않았습니다. 현재 앱·테스트 구현과 실제 DB 적용·브라우저·실기기 검증을 구분합니다.
+현재 계정 화면은 공개 카탈로그 검색, 신규 웨이트·유산소 선택과 근육별 실제·기여 세트 통계를 사용합니다. Backend의 목표는 V35이며 기존 기록과 오프라인 고정 요청은 유지합니다. UUID 상세 화면과 GIF 표시 연결은 후속 사용자 UI 범위입니다. 개인 개발 DB의 마지막 적용 기록은 V17이고 이번 작업에서 실제 DB 버전을 조회하지 않았습니다. [표준 운동 인수인계](../overload-server/docs/engineering/standard-exercise-handoff.md)
+
+<details>
+<summary>초기 통계·PWA 연결 및 당시 DB 적용 기록</summary>
 
 [통계·추적 2E](../overload-server/docs/tasks/statistics-tracking-phase-2e-report.md)에서 맨몸 운동의 명시적 추가 중량 기록·정정·오프라인 보존과 실제 반복 기반 총중량 계산을 연결했습니다. 기존 숫자 중량이나 체중을 추가 부하로 해석하지 않고, 근거가 없으면 세트·반복만 표시합니다. 승인 평가와 근육 다중 매핑/대분류 중복 제거를 유지합니다. [실제 DB/API 계약](../overload-server/docs/api/bodyweight-additional-load.md)을 따르며 개인 DB V18~V22는 미적용입니다. 운영 분류·디로딩3단계·실기기 검증은 남아 있습니다.
 
@@ -63,9 +66,11 @@ HOME·ROUTINE 계정 화면은 [V30·V31 주간 프리셋 API](../overload-serve
 
 현재 계정 화면은 Backend V17의 표준 운동명·별칭 검색과 선택형 제조사/부하를 사용합니다. 완료 세트에는 완료 당시 장비를 보존합니다. 계획·평가·로컬 운동 문서는 schema2, IndexedDB는 DB3입니다. 이전 DB1/2의 출시 전 테스트 데이터는 이번 전환에서 한 번만 정리하며, 이미 DB3인 기록은 앱 업데이트마다 초기화하지 않습니다. [Frontend 3단계](docs/tasks/standard-exercise-catalog-frontend-phase-3-report.md) 이후 [4단계 실제 개발 DB V17 적용·앱 검증](../overload-server/docs/tasks/standard-exercise-catalog-dev-phase-4-report.md)도 완료했습니다. 이 과정에서 접근 허용의 nonce 갱신 경쟁·강제 종료 내구성을 보강했고 로그아웃·계정/세대 차단은 유지합니다.
 
+</details>
+
 `npm run build`가 `dist/manifest.webmanifest`, 아이콘, 빌드 파일 목록·SHA-256을 포함한 `dist/sw.js`를 생성합니다. 개발 서버에는 Service Worker를 등록하지 않습니다. 루트 경로(`/`)의 HTTPS 정적 배포가 필요합니다(검증용 loopback HTTP는 브라우저가 secure context로 취급). `/`와 `/account`만 앱 진입 HTML로 연결하고 `/api`·OAuth/인증 복귀 경로는 실제 Backend/인증 라우팅을 유지하세요. `/sw.js`는 JavaScript MIME·재검증 가능한 캐시 정책으로 제공해야 합니다. 해시가 있는 자산과 index를 같은 릴리스로 배포하고, 열려 있는 이전 앱을 위해 이전 자산도 유지하세요. 사용자별 HTML 주입이나 파일 변환으로 원래 빌드 바이트가 바뀌면 오프라인 준비가 실패하도록 설계했습니다.
 
-새 버전은 기존 창을 강제로 새로고침하지 않습니다. 입력의 기기 저장을 확인하고 모든 Overload 창을 닫았다가 다시 열어 적용합니다. API·인증 응답은 Service Worker 캐시에 저장하지 않습니다.
+새 버전은 기존 창을 강제로 새로고침하지 않습니다. 입력의 기기 저장을 확인하고 모든 Overload 창을 닫았다가 다시 열어 적용합니다. API·인증 응답 및 `/media/exercises/` 보호 미디어는 Service Worker 캐시에서 제외합니다.
 
 ---
 

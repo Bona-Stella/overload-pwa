@@ -39,6 +39,10 @@ test('real React reconciliation removes statistics across workout, account, gene
     ws.onclose = () => { for (const p of pending.values()) p.reject(Error('Browser closed')); pending.clear() }
     await send('Page.enable'); await send('Page.navigate', { url: origin + '/boundary' })
     await wait(() => evaluate('typeof window.renderBoundary==="function"&&document.querySelector(".statistics")?.innerText.includes("7\\n완료 웨이트 세트")'))
+    await evaluate(`[...document.querySelectorAll('.statistics button')].find(button => button.textContent === '근육별 통계').click()`)
+    await wait(() => evaluate(`document.querySelector('.statistics')?.innerText.includes('실제 3세트')`))
+    await evaluate(`[...document.querySelectorAll('.statistics summary')].find(summary => summary.textContent.startsWith('보조근 참여')).click()`)
+    assert.equal(await evaluate(`document.querySelector('.statistics')?.innerText.includes('기여 1.5세트 · 실제 참여 3세트')`), true)
     for (let i = 0; i < 3; i++) {
       await render('A', '0', true); assert.equal(await count(), 0, 'ACTIVE must remove the statistics DOM')
       await render(); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7\\n완료 웨이트 세트")'))

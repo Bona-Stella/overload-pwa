@@ -5,6 +5,8 @@ import { AuthController } from '../src/features/auth/controller.ts'
 import { WorkoutApi } from '../src/features/workout-online/api.ts'
 import { WorkoutOnlineController, startBody } from '../src/features/workout-online/controller.ts'
 import { LocalStoreError } from '../src/features/workout-online/storage.ts'
+import { searchExercises } from '../src/features/workout-online/catalog.ts'
+import { cardioPlan, draftCardio } from '../src/features/workout-online/cardio-draft.ts'
 import * as validate from '../src/features/workout-online/validation.ts'
 import { USER, OTHER, DEVICE, ROUTINE, scope, start, session, routine, bootstrap } from './fixtures/workout-online-data.mjs'
 
@@ -23,6 +25,28 @@ function setup(options={}) {
   const controller=new WorkoutOnlineController(api,store),disconnect=controller.connect(auth)
   return {controller,disconnect,change,store,api,starts,getAttempt:()=>attempt,getCopies:()=>copies,setFailSave:v=>{failSave=v},setFailPrepare:v=>{failPrepare=v}}
 }
+test('public and selectable catalogs are separate and normalized aliases keep independent IDs', async () => {
+  const treadmill = { id: OTHER, activityId: DEVICE, category: 'RUNNING', name: '트레드밀 러닝', kind: 'TREADMILL', aliases: ['treadmill run'] }
+  const stretch = { id: ROUTINE, name: '스트레칭', aliases: ['stretch'], muscles: [], exerciseType: 'STRETCH',
+    recordMethod: 'UNSPECIFIED', instructionsKo: null, equipmentDescription: null }
+  const requests = []
+  const api = new WorkoutApi({ workoutRequest: async (_user, path) => {
+    requests.push(path)
+    return { status: 200, data: path.endsWith('cardio-choices') ? { activities: [treadmill] } : { exercises: [stretch] } }
+  } })
+  const signal = new AbortController().signal
+  assert.deepEqual(await api.publicCatalog(USER, signal), [stretch])
+  const choices = await api.cardioActivities(USER, signal)
+  assert.equal(searchExercises(choices, 'ＴＲＥＡＤＭＩＬＬ\u00a0  RUN')[0].name, treadmill.name)
+  assert.deepEqual(requests, ['/api/v1/standard-exercises/catalog', '/api/v1/standard-exercises/cardio-choices'])
+  const base = { kind: 'TREADMILL', name: treadmill.name, targetSeconds: 600, targetDistanceKm: null,
+    intensity: null, inclinePercent: null, resistance: null }
+  assert.deepEqual(cardioPlan(draftCardio(base)), base)
+  const linked = { ...base, standardExerciseId: treadmill.id, activityId: treadmill.activityId }
+  assert.deepEqual(cardioPlan(draftCardio(linked)), linked)
+  assert.equal(validate.cardioPlan(linked), true)
+  assert.equal(validate.cardioPlan({ ...linked, activityId: undefined }), false)
+})
 test('START dates retain the actual instant and IANA local date across midnight',()=>{
   const body=startBody(scope,ROUTINE,DEVICE,start.id,new Date('2026-10-31T23:59:00.001Z'),'Asia/Seoul')
   assert.equal(body.workoutDate,'2026-11-01');assert.equal(body.startedAt,'2026-10-31T23:59:00.001Z')

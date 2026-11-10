@@ -20,8 +20,8 @@ const weights={plannedSets:'4',completedSets:'3',reps:'28',volumeLoadKg:'2140',s
 const period={fromDate:'2026-10-26',toDateExclusive:'2026-11-02'}
 const fixture=()=>({...scope,...period,planCoverage:'PARTIAL_SCHEDULE_HISTORY',plannedWorkoutDays:null,routineAchievementPercent:null,
   summary:{...weights},cardioActiveMs:'1800000',unmappedCompletedSets:'0',days:[{date:'2026-11-01',weights:{...weights},cardioActiveMs:'1800000'}],
-  exercises:[{standardExerciseId:OTHER,name:'스쿼트',weights:{...weights}}],muscles:[{id:OTHER,name:'대퇴사두근',groupCode:'LEGS',role:'PRIMARY',weights:{...weights}},
-    {id:scope.userId,name:'보조근',groupCode:'LEGS',role:'SECONDARY',weights:{...weights}}],groups:[{groupCode:'LEGS',role:'PRIMARY',weights:{...weights}}],
+  exercises:[{standardExerciseId:OTHER,name:'스쿼트',weights:{...weights}}],muscles:[{id:OTHER,name:'대퇴사두근',groupCode:'LEGS',role:'PRIMARY',weights:{...weights},contributionSets:'3.0'},
+    {id:scope.userId,name:'보조근',groupCode:'LEGS',role:'SECONDARY',weights:{...weights},contributionSets:'1.5'}],groupActuals:[{groupCode:'LEGS',completedSets:'3'}],groups:[{groupCode:'LEGS',role:'PRIMARY',weights:{...weights}}],
   cardio:[{kind:'TREADMILL',name:'달리기',activeMs:'1800000',distanceKm:'3.8',recordsWithoutDistance:'0'}],recentSessions:[]})
 
 test('overview uses authenticated GET with no write body and preserves the original abort signal',async()=>{
@@ -53,6 +53,17 @@ test('overview retains exact aggregate decimals and valid nulls while rejecting 
   assert.equal(overview({...unknown,statistics:{...unknown.statistics,plannedWorkoutDays:4,routineAchievementPercent:'75'}}),false)
 })
 
+test('overview validates exact half-set contribution without changing integer actual counts', () => {
+  const response = planned()
+  assert.equal(overview(response), true)
+  for (const value of ['3.0', '1.499999', '1.50', 1.5]) {
+    const changed = structuredClone(response)
+    changed.statistics.muscles[1].contributionSets = value
+    assert.equal(overview(changed), false)
+  }
+  response.statistics.groupActuals[0].completedSets = '1.5'
+  assert.equal(overview(response), false)
+})
 test('overview forwards cancellation to an in-flight transport request',async()=>{
   const controller=new AbortController(),failure=new DOMException('Cancelled','AbortError')
   const api=new StatisticsApi({workoutRequest:(_owner,_path,_method,_body,signal)=>new Promise((_resolve,reject)=>{
@@ -77,8 +88,9 @@ test('summary distinguishes confirmed server records from unsent local facts and
 })
 test('muscle detail keeps secondary contribution separate and shows partial schedule-history coverage',()=>{
   const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:partial().statistics,planning:partial(),screen:'muscles',onScreen(){},onOpen(){},onHistory(){}}))
-  assert.match(html,/주동근 세트/);assert.match(html,/보조근 참여 · 주동근과 별도/)
-  assert.match(html,/전체 주간 계획과는 다를 수 있습니다/);assert.doesNotMatch(html,/0\.5세트/)
+  assert.match(html,/부위별 실제 완료 세트/);assert.match(html,/실제 3세트/)
+  assert.match(html,/보조근 참여 · 주동근과 별도/);assert.match(html,/기여 1\.5세트 · 실제 참여 3세트/)
+  assert.match(html,/전체 주간 계획과는 다를 수 있습니다/)
 })
 test('bodyweight-only and no-plan rows retain sets and repetitions without a total-weight toggle',()=>{
   const html=renderToStaticMarkup(React.createElement(WeightChart,{rows:[{key:'body',name:'푸시업',weights:{plannedSets:'0',completedSets:'3',reps:'30',volumeLoadKg:null,setsWithoutVolume:'3'}}]}))

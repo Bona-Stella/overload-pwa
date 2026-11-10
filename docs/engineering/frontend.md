@@ -628,6 +628,8 @@ iPhone의 화면 구조를 고려합니다.
 | T02-A 일반 홈 | **완료.** 구현 `60a6dce9707c861926b0690e47a421db21c91ae2`의 2026-11-06 iPhone 사용자 승인 기록이다. [T02-A 마감](../tasks/ui-v09-t02a-closeout.md) |
 | T02-B 단일 일정 | **이전 구현 기록.** 당시 루틴 태그·편집과 단일 일정 즉시 적용을 구현했다. 2026-11-08 확인 기록은 자동 테스트 548건·build·lint 통과이며 당시 최종 실기기 승인은 별도였다. [당시 검증](../tasks/deload-v17-backend-readiness-analysis.md#0-2026-11-08-1차-개발-최종-현황) |
 | T02 HOME·ROUTINE 다중 프리셋 | **UI·연동·PC 검토 완료.** Mock 구현과 사용자 UI 피드백 반영 후 계정 화면을 V30·V31에 연결하고 격리 실제 API로 검증했다. 아래 범위와 실기기 경계를 적용한다. [현재 API 소비](backend-ui-v0.9.md#t02-b-현재-api-소비) |
+| 표준 운동 DB 확장 3단계 | 근육 통계 화면에 세부 기여와 상위 그룹 실제 세트를 구분해 표시한다. [통계 계약](../../../overload-server/docs/api/statistics.md) |
+| 표준 운동 DB 확장 2단계 | 설정에서 공개 운동을 검색하고, 루틴·세션은 현재 기록할 수 있는 종목만 선택한다. [카탈로그 계약](../../../overload-server/docs/api/standard-exercise-catalog.md) · [검증 범위](#표준-운동-db-확장-2단계) |
 | T03·T04 및 G6 | **후속.** 홈의 디로딩 분석·기간 조회와 일반 쓰기 보호는 연결했다. 기간·임시 계획의 편집, 디로딩 START 및 혼재 세션의 검증·로컬 저장·동기화는 G6 범위다. [G6 선행조건](backend-ui-v0.9.md#g6-실제-연동-선행조건) |
 | T03.5 휴식 타이머 알림 | **별도 범위.** 정책과 HTML 시연이 확정됐다. [구현 지침](#t035-휴식-타이머-시각효과음-알림) |
 | 실기기·후속 통합 | **검증 대기.** 최신 HOME·ROUTINE의 iPhone Safari, 설치형 PWA 및 신뢰된 로컬 HTTPS START는 이번 PC 검증에 포함되지 않았다. [실기기 검증 규칙](#167-실제-iphone-테스트) |
@@ -642,6 +644,26 @@ iPhone의 화면 구조를 고려합니다.
 
 - 개발 전용 `/routine-preview`는 합성 상태를 사용한다. `npm run dev -- --mode ui-review`의 기본 검토 포트는 4173이고 `?tab=home`으로 홈에서 시작할 수 있다. 이 경로의 합성 상태·오류는 실제 계정, 인증·IndexedDB·운동 기록과 분리된다.
 - 실제 API 검토는 격리 Backend에 연결된 개발 전용 OTP 검토 경로를 사용했다. 2026-11-10에 검토 서버와 일회용 DB의 종료를 확인했다. [검토 환경과 종료 이력](../../../overload-server/docs/engineering/test-environment.md#home-routine-검토-종료-기록)
+
+#### 표준 운동 DB 확장 2단계
+
+2026-11-10, Frontend HEAD `5543e7f`의 작업 트리에서 Backend V33 계약을 연결했다. 설정의 일반 검색은 공개된 모든 기록 방식을 보여주며, 웨이트 선택은 기존 검색 응답을 사용한다. 신규 유산소 선택은 표준 운동 UUID와 기존 기록 설정 UUID를 구분한다.
+
+기존 유산소 계획은 저장 당시 이름·측정 종류·목표값을 계속 사용한다. IndexedDB 스키마와 이미 만든 START·Snapshot·FINISH 요청의 본문, 계정·세대·편집 기기 확인 경계는 유지한다. [세션 계약](../../../overload-server/docs/api/workout-sessions.md)
+
+자동 테스트 547건, lint와 production build를 통과했다. 새 일회용 V33 Backend와 격리 Chrome에서 오프라인 브라우저 재실행, 유산소 타이머·측정 출처 복원, Snapshot·FINISH ACK 유실 후 동일 본문 재전송과 DB 무중복을 확인했다. 별도 실행에서 세션 만료·다른 계정·로그아웃·같은 계정 재인증·기기 인수 후의 기록 격리와 이전 writer 차단도 확인했다. 설치형 iPhone 실기기 및 실제 DB 적용은 별도 범위다.
+
+#### 표준 운동 DB 확장 3단계
+
+Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 필터를 사용한다. 세부 근육 행은 기여 세트와 실제 참여 세트를 함께 표시하고, 상위 그룹은 역할을 통틀어 중복 제거된 실제 완료 세트를 표시한다. IndexedDB와 고정 요청 계약에는 변경이 없다.
+
+2026-11-10 기준 자동 테스트 548건, lint, production build를 통과했다. 일회용 V33 Backend와 격리 Chrome에서 종료 응답 유실 후 동일 요청의 재전송, 기록 무중복, 실제 3세트와 보조근 기여 1.5세트의 분리 표시를 확인했다. 설치형 iPhone 실기기 및 실제 DB 적용은 별도 범위다.
+
+#### 표준 운동 DB 확장 4-C
+
+2026-11-11, Frontend HEAD `5543e7f`의 작업 트리에서 Service Worker의 사전 캐시와 조회 대상에서 `/media/exercises/`를 제외했다. Backend는 V35와 UUID 상세 API를 제공한다. 기존 검색·선택과 근육 통계는 연동 상태다. UUID 상세 호출과 화면 표시, 권리·보호 경로 계약이 필요한 GIF 표시를 후속 사용자 UI 범위로 구분한다. [현재 API와 UI 연결 경계](backend-ui-v0.9.md#표준-운동-사용자-ui의-v35-연결-경계) · [표준 운동 인수인계](../../../overload-server/docs/engineering/standard-exercise-handoff.md)
+
+최종 통합 검증에서 lint, 프로덕션 빌드, 자동 테스트 549건을 다시 통과했다. 격리 V35 서버와 실제 Chrome에서 오프라인 Snapshot·FINISH 재전송과 무중복, 세션 만료·계정 격리·재인증·편집 기기 인수 후 이전 쓰기 차단을 확인했다. 설치형 iPhone과 운영 DB 적용은 이번 검증 범위에서 제외했다.
 
 #### 현황 갱신
 
