@@ -6,19 +6,24 @@
 
 | 영역 | 기존 구조 그대로 사용 가능 | 수정 또는 추가 검토 |
 |---|---|---|
-| 루틴·주간 일정 | [루틴 관리](../../../overload-server/docs/api/routine-management.md)와 [다중 프리셋 API](../../../overload-server/docs/api/weekly-schedule.md)가 현재 서버 계약이다. 과거 적용 근거는 내부 이력과 overview에서 읽는다. | T02-B 단일 일정 사용 경로를 프리셋 계약으로 전환한다. 디로딩 임시 일정·원본과 일반 일정은 분리한다. |
+| 루틴·주간 일정 | [루틴 관리](../../../overload-server/docs/api/routine-management.md)와 [다중 프리셋 API](../../../overload-server/docs/api/weekly-schedule.md)가 현재 서버 계약이다. 과거 적용 근거는 내부 이력과 overview에서 읽는다. | T02의 계정 경로는 V30·V31 프리셋 계약을 사용한다. 디로딩 임시 일정·원본과 일반 일정은 분리한다. |
 | 세션·기록 | `WorkoutSessionController`의 START, ACTIVE/상세/종료 목록, snapshot, FINISH, takeover, 종료 후 정정·논리 삭제·선택 복구·평가·변경 이력. `InitialPlan`과 `AppliedPlan`, 완료 세트 장비·부하 방식, 유산소 실제값을 제공한다. | 디로딩 START와 세션 소속은 서버 계약을 따른다. G6에서 기간별 조회와 혼재 세션 검증기를 연결한다. |
 | 볼륨·카탈로그 | V17 표준 운동 ID와 장비 원본, V18 `joint_type` 및 PRIMARY/SECONDARY 링크, V21 유산소 실제 측정과 V22 `bodyweightLoad`. 기존 세션 상세의 실제 수행값과 계획으로 세트별·종목별 볼륨 UI를 구성할 수 있다. | 공식 볼륨과 동일한 산식으로 파생한다. 숫자 표현이나 계산 위치는 구현 검증에서 정하며, 별도 저장 볼륨 컬럼을 전제로 삼지 않는다. 6종 대표 아이콘 매핑과 운영 카탈로그 분류를 확인한다. |
 | 통계·성장 | `StatisticsController`의 `/api/v1/statistics/overview`와 `/api/v1/statistics/growth/exercises` 및 배치별 조회. 전체·종목·대분류·세부 근육과 역할별 집계, 기간별 실제 수행 및 계획 근거, 승인 사건을 재사용한다. | 그래프 필터에 대응하는 날짜별 종목·근육 집계 및 제조사별 참고 통계는 현재 응답의 제공 범위를 넘는다. 추가 조회 또는 응답 확장을 검토한다. 디로딩 연결 뒤 전체 실적 집계와 해당 기간만 조회하는 화면을 구분하고, 일반 계획 달성·유효 주수 및 승인 경로에는 일반 실적만 적용한다. |
-| 설정 | `GET/PATCH /api/v1/workout-settings`로 고정된 세 휴식 시간(초)을 읽고 한 번에 변경할 수 있다. 로그인 세션과 CSRF 계약을 유지한다. | 분석 설정과 추천 누적은 기존 휴식 API와 분리한다. G6에서 분석 조회·설정 쓰기와 별도 기간 자격 조회를 연결한다. |
+| 설정 | `GET/PATCH /api/v1/workout-settings`로 고정된 세 휴식 시간(초)을 읽고 한 번에 변경할 수 있다. 로그인 세션과 CSRF 계약을 유지한다. | 분석 설정과 추천 누적은 기존 휴식 API와 분리한다. 홈의 분석 조회는 연결했다. 분석 설정 쓰기와 별도 기간 자격 조회는 G6에서 연결한다. |
 
 나머지 계약은 [세션](../../../overload-server/docs/api/workout-sessions.md)·[카탈로그](../../../overload-server/docs/api/standard-exercise-catalog.md)·[통계](../../../overload-server/docs/api/statistics.md)·[성장](../../../overload-server/docs/api/approved-weight-growth.md)·[휴식 설정](../../../overload-server/docs/api/workout-online-write.md)을 확인한다. 구현·DB 적용·실기기 경계는 [Frontend 8.7절](frontend.md#87-v09-적용-범위와-구현-상태)과 [Backend 12.4~12.5절](../../../overload-server/docs/engineering/backend.md#124-ui-v09와-디로딩-v17-연동)에 있다.
 
-## T02-B 현재 API 소비
+<a id="t02-b-현재-api-소비"></a>
 
-> T02 실제 API 통합의 교체 대상이다. 최신 [프리셋 API](../../../overload-server/docs/api/weekly-schedule.md)의 루트 GET은 쿼리를 받지 않으며 전체 프리셋 상태를 반환한다. 루트 PUT과 공개 이력 GET은 제거됐고 과거 적용 근거는 서버 내부 이력과 overview가 제공한다.
+## HOME·ROUTINE의 현재 API 소비
 
-현재 PWA는 `GET /api/v1/weekly-schedule?timeZone=…`와 단일 일정 응답을 사용한다. `RoutineForm`은 루틴 저장 뒤 루트 PUT으로 일정도 저장하며 구 이력 GET 메서드도 코드에 남아 있다. T02에서 인증 transport, DTO·응답 검증, 홈의 활성 배정, 루틴 탭의 프리셋 편집과 버전 충돌 처리를 함께 전환한다. 실제 개발 DB V30 적용과 통합 환경 검증은 별도다.
+[프리셋 API](../../../overload-server/docs/api/weekly-schedule.md)의 루트 GET은 쿼리 없이 전체 상태를 반환한다. 과거 적용 근거는 내부 이력과 통계 overview에서 읽는다. 시간대 쿼리·루트 PUT·공개 이력 GET은 T02-B 당시 단일 일정 경로다.
+
+- [WeeklyScheduleApi](../../src/features/statistics/weekly-schedule.ts)는 `POST /presets`, `DELETE /presets/{id}`, `PUT /active`, `PUT /rotation`, `PUT /presets/{id}/assignments`, V31 `PUT /presets/{id}/name`을 공통 접두어 아래 호출한다. 순환 쓰기에 포함 여부와 전체 순서를 전달한다. 루틴 CRUD와 요일 배정은 독립 요청이다.
+- 기존 인증 transport와 CSRF를 사용한다. 세대와 `expectedStateVersion`, 대상별 쓰기의 `expectedPresetVersion`을 확인한다. [useTrainingSchedule](../../src/features/workout-online/useTrainingSchedule.ts)은 서버가 확인한 스냅샷을 HOME·ROUTINE에 공유한다. 번호 조회와 편집 초안은 로컬 UI 상태다. 충돌이나 저장 결과 불확실 시 재조회하고, 편집 입력은 유지한다. 충돌한 쓰기를 자동 재전송하거나 병합하지 않는다.
+- 현재 디로딩 기간과 분석은 읽기 연결을 적용했다. 디로딩 ACTIVE·완료 당일에는 일반 일정·루틴 변경과 새 일반 START를 차단하며, 보호 상태를 확인하지 못하면 쓰기를 열지 않는다. 디로딩 상세·기간 변경·세션·혼재 기록과 동기화는 G6 범위다.
+- 계정 앱은 인증된 서버 응답을 사용한다. 개발용 `/routine-preview`는 합성 데이터만 사용하고, 격리 실제 OTP 검토 경로와 분리한다. [검토·종료 기록](../../../overload-server/docs/engineering/test-environment.md#home-routine-검토-종료-기록)
 
 ## 디로딩 구현 요구사항
 

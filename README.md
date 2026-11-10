@@ -57,7 +57,7 @@ React와 TypeScript를 기반으로 개발하며, **PWA(Progressive Web App)** �
 
 [통계·추적 2C](../overload-server/docs/tasks/statistics-tracking-phase-2c-report.md)에서 기존 승인 사건의 기간별(1/3/6개월·전체) 검색·루틴 배치 선택·승인 중량 변화 그래프를 연결했습니다. 다른 배치를 하나의 성장선으로 합치지 않으며 기록 없는 기간의 값을 만들지 않습니다. 실제 API·보존/디로딩 한계는 [조회 계약](../overload-server/docs/api/approved-weight-growth.md)을 따릅니다. 개인 DB V18~V20 적용·운영 카탈로그 검증·디로딩3단계 연결은 이번 완료 범위가 아닙니다.
 
-[다중 주간 프리셋 API](../overload-server/docs/api/weekly-schedule.md)는 Backend에 구현됐습니다. 과거 계획·최초 START·최초 MISS는 서버 내부 이력과 overview에 보존합니다. 현재 PWA의 단일 일정 경로를 교체하는 범위는 [T02 실제 API 전환](docs/engineering/backend-ui-v0.9.md#t02-b-현재-api-소비)에서 확인합니다.
+HOME·ROUTINE 계정 화면은 [V30·V31 주간 프리셋 API](../overload-server/docs/api/weekly-schedule.md)를 사용합니다. 과거 계획·최초 START·최초 MISS는 서버 내부 이력과 overview에 보존합니다. [연동 범위](docs/engineering/backend-ui-v0.9.md#t02-b-현재-api-소비)
 
 [통계·추적 2A](../overload-server/docs/tasks/statistics-tracking-phase-2a-report.md)에서 실제 계정의 이번 주 요약 → 주/월 운동 현황·근육별 상세·최근3건/기존 이력 연결을 추가했습니다. 서버가 확인한 종료 기록을 사용하며 미전송 로컬 실적은 포함하지 않습니다. 2A 당시 미완료였던 주간 전체 계획/달성률은 위 2B에서 구현했습니다. 성장선은2C에서 구현했고 유산소 계산 거리 저장은2D에서 구현했고 디로딩 연결은 후속입니다. 개인 DB V18 미적용·운영 카탈로그 분류 검토 미완료 상태를 유지합니다.
 
@@ -415,7 +415,7 @@ overload-pwa/
 
 요청·응답·query·인증·CSRF 조건은 Backend의 [통계·화면 계약](../overload-server/docs/api/statistics.md), [성장 조회](../overload-server/docs/api/approved-weight-growth.md), [주간 일정](../overload-server/docs/api/weekly-schedule.md), [세션](../overload-server/docs/api/workout-sessions.md), [휴식 설정](../overload-server/docs/api/workout-online-write.md)을 따릅니다. 개인 운동 GET과 이전 `/api/v1/statistics`는 제거됐으며 개인 운동 POST/PATCH는 차단 경계만 유지합니다. `/workouts`와 통계 volume 경로는 초기 예시이고 현재 호출하지 않습니다.
 
-통계는 기존 온라인 인증 transport를 사용합니다. 현재 PWA의 일정 transport·응답 검증·홈·루틴은 T02-B 단일 일정 계약을 사용합니다. 최신 Backend는 쿼리 없는 프리셋 GET과 프리셋별 쓰기를 제공하므로 현재 일정 호출과 호환되지 않습니다. [T02 실제 API 전환](docs/engineering/backend-ui-v0.9.md#t02-b-현재-api-소비)에서 연결하고, 실제 개발 DB V30 적용과 통합 환경 검증은 별도로 진행합니다.
+통계와 주간 일정은 기존 온라인 인증 transport를 사용합니다. 홈과 루틴은 쿼리 없는 프리셋 조회와 프리셋별 쓰기에 연결돼 있습니다. 실제 계정 연동은 일회용 격리 DB에서 검증했습니다. [연동·검증 범위](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)
 
 ### 개발 환경 Proxy
 
