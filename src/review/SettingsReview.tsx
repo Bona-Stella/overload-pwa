@@ -6,14 +6,16 @@ import { AccountSettingsPage } from '../features/auth/AccountSettings.tsx'
 import { RestTimeCard } from '../features/settings/RestTimeCard.tsx'
 import { CatalogView } from '../features/workout-online/PublicCatalog.tsx'
 import { PwaStatus } from '../pwa/PwaStatus.tsx'
-import { catalogSamples } from './catalog-samples.ts'
+import { catalogInstructionNotes, catalogSamples } from './catalog-samples.ts'
 import styles from './SettingsReview.module.css'
+import { useReviewMedia } from './useReviewMedia.ts'
 
 type View = 'account' | 'rest' | 'catalog'
 const restExample = { restLowSeconds: 180, restMediumSeconds: 120, restHighSeconds: 90 }
 const reviewNote = 'UI 검토용 예시 데이터입니다.'
 
 export function SettingsReview() {
+  const mediaSources = useReviewMedia()
   const [view, setView] = useState<View | null>(null)
   const [logoutOpen, setLogoutOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -62,7 +64,7 @@ export function SettingsReview() {
       </SettingsGroup>
       <Button variant="danger" className={styles.logout} onClick={() => setLogoutOpen(true)}>로그아웃</Button>
     </section>
-    {view === 'catalog' && <CatalogView items={catalogSamples} reviewNote={reviewNote} onBack={back} />}
+    {view === 'catalog' && <CatalogView items={catalogSamples} reviewNote={reviewNote} instructionNotes={catalogInstructionNotes} mediaSources={mediaSources} onBack={back} />}
     {view === 'account' && <div className={styles.account}>
       <AccountSettingsPage headingRef={heading} onBack={back}>
         <p className="muted small">{reviewNote} 인증과 계정 변경은 실제 앱에서 진행합니다.</p>

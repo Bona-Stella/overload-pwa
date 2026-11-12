@@ -4,8 +4,14 @@ import { networkInterfaces } from 'node:os';
 import { defineConfig, loadEnv } from "vite";
 import type { Plugin } from "vite";
 import { appShell } from './scripts/pwa-build.ts';
+import { reviewMedia } from './scripts/review-media.ts';
 
 function mockReview(lanIp?: string): Plugin {
+  const media = reviewMedia({
+    file: process.env.OVERLOAD_REVIEW_GIF_FILE,
+    accessKey: process.env.OVERLOAD_REVIEW_MEDIA_KEY,
+    origins: ['http://127.0.0.1:4173', 'http://localhost:4173', ...(lanIp ? ['http://' + lanIp + ':4173'] : [])],
+  });
   const addresses = new BlockList();
   addresses.addSubnet('127.0.0.0', 8, 'ipv4');
   if (lanIp) {
@@ -23,9 +29,11 @@ function mockReview(lanIp?: string): Plugin {
       server.middlewares.use((req, res, next) => {
         const address = req.socket.remoteAddress?.replace(/^::ffff:/, '');
         if (!address || !addresses.check(address, 'ipv4')) { res.writeHead(403).end(); return; }
-        const path = new URL(req.url ?? '/', 'http://localhost').pathname;
-        if (/^\/(api|oauth2|__review)(\/|$)/.test(path)) { res.writeHead(404).end(); return; }
-        next();
+        void media(req, res, () => {
+          const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+          if (/^\/(api|oauth2|__review)(\/|$)/.test(path)) { res.writeHead(404).end(); return; }
+          next();
+        }).catch(() => { if (!res.headersSent) res.writeHead(503).end(); else res.end(); });
       });
     },
   };

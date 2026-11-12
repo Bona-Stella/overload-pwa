@@ -57,8 +57,9 @@ function CatalogHeading({ title, backLabel, onBack, headingRef }: {
 
 const filters = Object.entries(catalogGroups) as [CatalogGroup, (typeof catalogGroups)[CatalogGroup]][]
 
-export function CatalogView({ items, failed = false, reviewNote, onBack }: {
-  items: CatalogBrowseExercise[] | null; failed?: boolean; reviewNote?: string; onBack: () => void
+export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, onBack }: {
+  items: CatalogBrowseExercise[] | null; failed?: boolean; reviewNote?: string
+  instructionNotes?: Readonly<Record<string, string>>; mediaSources?: Readonly<Record<string, string>>; onBack: () => void
 }) {
   const searchId = useId()
   const [query, setQuery] = useState('')
@@ -126,13 +127,13 @@ export function CatalogView({ items, failed = false, reviewNote, onBack }: {
     </div>
     {selected && <div className={styles.screen}>
       <CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={() => setSelected(null)} headingRef={detailTitle} />
-      <ExerciseDetail exercise={selected} />
+      <ExerciseDetail exercise={selected} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} />
       {reviewNote && <p className={styles.description}>{reviewNote}</p>}
     </div>}
   </>
 }
 
-function ExerciseDetail({ exercise }: { exercise: CatalogBrowseExercise }) {
+function ExerciseDetail({ exercise, instructionNote, mediaSource }: { exercise: CatalogBrowseExercise; instructionNote?: string; mediaSource?: string }) {
   const { name, aliases, pplSplit, frontBackSplit, instructionsKo, equipmentDescription } = exercise
   const steps = instructionsKo?.split(/\r\n|\r|\n/).map(step => step.trim()).filter(Boolean) ?? []
   return <>
@@ -148,13 +149,14 @@ function ExerciseDetail({ exercise }: { exercise: CatalogBrowseExercise }) {
       {aliases.length > 0 && <p className={styles.aliases}>별칭 · {aliases.join(', ')}</p>}
     </Card>
     <Card>
-      <h2>운동 동작 GIF</h2>
-      <div className={styles.gifPlaceholder}><span aria-hidden="true">▧</span><p>GIF를 제공하지 않습니다</p></div>
+      <h2>동작 시연</h2>
+      <ExerciseGif key={exercise.id + ':' + mediaSource} source={mediaSource} name={name} />
     </Card>
     <Card className={styles.instructions}>
       <details>
         <summary><span>운동 자세 및 방법</span><span className={styles.chevron} aria-hidden="true" /></summary>
         <div className={styles.steps}>
+          {instructionNote && <p className={styles.description}>{instructionNote}</p>}
           {steps.length > 0 ? <ol>{steps.map((step, index) => <li key={index}>{step}</li>)}</ol>
             : <p className={styles.description}>등록된 운동 방법 정보가 없습니다.</p>}
           {equipmentDescription && <p className={styles.description}>기구 설명 · {equipmentDescription}</p>}
@@ -163,6 +165,18 @@ function ExerciseDetail({ exercise }: { exercise: CatalogBrowseExercise }) {
     </Card>
     <MuscleCard title="주요 자극 근육" role="PRIMARY" muscles={primaryMuscles(exercise)} />
     <MuscleCard title="보조 자극 근육" role="SECONDARY" muscles={exercise.muscles?.filter(muscle => muscle.role === 'SECONDARY') ?? []} />
+  </>
+}
+
+function ExerciseGif({ source, name }: { source?: string; name: string }) {
+  const [loaded, setLoaded] = useState(false)
+  return <>
+    <div className={styles.gifPlaceholder}>
+      {source && <img className={styles.gifImage} src={source} width={180} height={180} alt={name + ' 운동 동작'}
+        hidden={!loaded} onLoad={() => setLoaded(true)} onError={() => setLoaded(false)} />}
+      {!loaded && <><span aria-hidden="true">▧</span><p>GIF를 제공하지 않습니다</p></>}
+    </div>
+    {source && <p className={styles.description}>개발용 미디어 시연</p>}
   </>
 }
 
