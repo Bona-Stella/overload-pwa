@@ -31,6 +31,7 @@ const { RoutineEditor } = await import('../src/features/routine/RoutineEditor.ts
 const { RoutineSelectionBadge } = await import('../src/features/routine/RoutineSelectionBadge.tsx')
 const { ResumeWorkoutCard } = await import('../src/features/workout/ResumeWorkoutCard.tsx')
 const { SettingsScreen } = await import('../src/features/settings/SettingsScreen.tsx')
+const { SettingsMain } = await import('../src/features/settings/SettingsMain.tsx')
 const { CurrentWeightReview, ProgressChangeHistory } = await import('../src/features/history/ProgressionHistory.tsx')
 const { WeightInput } = await import('../src/components/WeightInput.tsx')
 const { RepsInput } = await import('../src/components/RepsInput.tsx')
@@ -40,8 +41,21 @@ const { default: App } = await import('../src/App.tsx')
 const m = await import('../src/features/workout/model.ts')
 const NOW = new Date(2026, 9, 26, 12).getTime()
 const noop = () => {}
-const props = state => ({ state, now: NOW + 60000, onUpdate: noop, onExit: noop, onFinish: noop, onCreate: () => '' })
 const html = (Component, props) => renderToStaticMarkup(React.createElement(Component, props))
+
+test('approved settings groups are shared with the actual account and destructive placeholders remain disabled', () => {
+  const markup = html(SettingsMain, { onAccount: noop, onRest: noop, onCatalog: noop, onLogout: noop })
+  assert.match(markup, /계정 정보.*운동 설정.*데이터 및 앱.*계정 및 데이터 삭제/s)
+  const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)
+  for (const title of ['휴식 타이머 알림', '디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴']) {
+    const button = buttons.find(b => b.includes(title))
+    assert.match(button, /disabled/); assert.match(button, /미구현/)
+  }
+  for (const title of ['로그인된 계정', '세트 사이 휴식', '운동 종목 보기', '로그아웃']) assert.doesNotMatch(buttons.find(b => b.includes(title)), /disabled/)
+  assert.match(markup, /앱 설치·오프라인 준비/)
+  assert.doesNotMatch(markup, /합성 데이터|검토용 예시|r\*\*\*@example/)
+})
+const props = state => ({ state, now: NOW + 60000, onUpdate: noop, onExit: noop, onFinish: noop, onCreate: () => '' })
 
 const cardioPlan = (kind = 'treadmill') => ({ id: 'cardio-plan', kind, name: c.CARDIO_NAMES[kind], targetSeconds: 60, targetDistance: null, intensity: null, incline: null, resistance: null })
 function cardioState() {

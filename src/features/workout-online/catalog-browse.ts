@@ -1,6 +1,6 @@
 import { groupNames } from './catalog-label.ts'
 import { searchExercises } from './catalog.ts'
-import type { CatalogExercise, StandardExercise } from './types.ts'
+import type { CatalogExercise, StandardExercise, StandardExerciseDetail } from './types.ts'
 
 export const catalogGroups = {
   CHEST: { label: groupNames.CHEST, icon: 'chest' },
@@ -18,6 +18,19 @@ export type CatalogMuscle = NonNullable<StandardExercise['muscles']>[number]
 export type CatalogBrowseExercise = CatalogExercise & {
   pplSplit?: 'PUSH' | 'PULL' | 'LEGS' | null
   frontBackSplit?: 'FRONT' | 'BACK' | null
+  instructionSteps?: string[]
+}
+
+export function catalogDetailView(detail: StandardExerciseDetail): CatalogBrowseExercise {
+  return {
+    id: detail.id, name: detail.name, aliases: detail.aliases, exerciseType: detail.exerciseType, recordMethod: detail.recordMethod,
+    equipmentDescription: detail.equipmentDescription, instructionsKo: null, instructionSteps: detail.instructionSteps,
+    pplSplit: detail.pplSplit, frontBackSplit: detail.frontBackSplit,
+    muscles: [
+      ...detail.primaryMuscles.toSorted((a, b) => a.primaryOrder - b.primaryOrder).map(m => ({ ...m, role: 'PRIMARY' as const })),
+      ...detail.secondaryMuscles.map(m => ({ ...m, role: 'SECONDARY' as const })),
+    ],
+  }
 }
 
 export function primaryMuscles(exercise: CatalogExercise) {

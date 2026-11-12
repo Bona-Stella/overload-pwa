@@ -1,49 +1,41 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { ReactNode, Ref } from 'react'
+import { useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
+import { ReviewExerciseMediaContext } from '../../review/context.ts'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
 import type { WorkoutApi } from './api.ts'
-import { browseExercises, catalogGroups, catalogRowGroup, primaryMuscles } from './catalog-browse.ts'
+import { browseExercises, catalogDetailView, catalogGroups, catalogRowGroup, primaryMuscles } from './catalog-browse.ts'
 import type { CatalogBrowseExercise, CatalogGroup, CatalogMuscle } from './catalog-browse.ts'
 import { groupNames } from './catalog-label.ts'
 import { exerciseVariantLabels } from './catalog.ts'
 import styles from './PublicCatalog.module.css'
 
-export function CatalogMenu({ open, onOpenChange, children }: {
-  open: boolean; onOpenChange: (open: boolean) => void; children: (onBack: () => void) => ReactNode
-}) {
-  const trigger = useRef<HTMLButtonElement>(null)
-  const wasOpen = useRef(open)
-  const titleId = useId()
-  const descriptionId = useId()
-  useLayoutEffect(() => {
-    if (!open && wasOpen.current) trigger.current?.focus()
-    wasOpen.current = open
-  }, [open])
-  return open ? children(() => onOpenChange(false)) : <Card className={styles.menuCard}><button ref={trigger} type="button" className={styles.menuItem}
-    aria-labelledby={titleId} aria-describedby={descriptionId} onClick={() => onOpenChange(true)}>
-    <span><strong id={titleId}>운동 종목 보기</strong><span id={descriptionId} className={styles.description}>관리자 표준 운동 DB · 조회 전용</span></span>
-    <span className={styles.arrow} aria-hidden="true">›</span>
-  </button></Card>
-}
-
 export function PublicCatalog({ api, userId, onInvalid, onBack }: {
   api: WorkoutApi; userId: string | null; onInvalid: (error: unknown) => void; onBack: () => void
 }) {
-  const [items, setItems] = useState<CatalogBrowseExercise[] | null>(null)
-  const [failed, setFailed] = useState(false)
+  const mediaSources = useContext(ReviewExerciseMediaContext)
+  const [result, setResult] = useState<{ userId: string; items: CatalogBrowseExercise[] | null; failed: boolean } | null>(null)
+  const invalidate = useCallback((error: unknown) => {
+    if (error && typeof error === 'object' && 'code' in error
+      && ['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED'].includes(String(error.code))) onInvalid(error)
+  }, [onInvalid])
   useEffect(() => {
     if (!userId) return
     const abort = new AbortController()
     void api.publicCatalog(userId, abort.signal).then(value => {
-      if (!abort.signal.aborted) setItems(value)
+      if (!abort.signal.aborted) setResult({ userId, items: value, failed: false })
     }).catch(error => {
-      if (!abort.signal.aborted) { setFailed(true); onInvalid(error) }
+      if (!abort.signal.aborted) { setResult({ userId, items: null, failed: true }); invalidate(error) }
     })
     return () => abort.abort()
-  }, [api, userId, onInvalid])
+  }, [api, userId, invalidate])
 
-  return <CatalogView items={items} failed={failed} onBack={onBack} />
+  const loadDetail = useCallback(async (id: string, signal: AbortSignal) => {
+    try { return catalogDetailView(await api.exerciseDetail(userId ?? '', id, signal)) }
+    catch (error) { if (!signal.aborted) invalidate(error); throw error }
+  }, [api, userId, invalidate])
+  const current = result?.userId === userId ? result : null
+  return <CatalogView key={userId} items={current?.items ?? null} failed={current?.failed} loadDetail={loadDetail} mediaSources={mediaSources} onBack={onBack} />
 }
 
 function CatalogHeading({ title, backLabel, onBack, headingRef }: {
@@ -57,9 +49,11 @@ function CatalogHeading({ title, backLabel, onBack, headingRef }: {
 
 const filters = Object.entries(catalogGroups) as [CatalogGroup, (typeof catalogGroups)[CatalogGroup]][]
 
-export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, onBack }: {
+type DetailLoader = (id: string, signal: AbortSignal) => Promise<CatalogBrowseExercise>
+
+export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, loadDetail, onBack }: {
   items: CatalogBrowseExercise[] | null; failed?: boolean; reviewNote?: string
-  instructionNotes?: Readonly<Record<string, string>>; mediaSources?: Readonly<Record<string, string>>; onBack: () => void
+  instructionNotes?: Readonly<Record<string, string>>; mediaSources?: Readonly<Record<string, string>>; loadDetail?: DetailLoader; onBack: () => void
 }) {
   const searchId = useId()
   const [query, setQuery] = useState('')
@@ -127,15 +121,39 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
     </div>
     {selected && <div className={styles.screen}>
       <CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={() => setSelected(null)} headingRef={detailTitle} />
-      <ExerciseDetail exercise={selected} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} />
+      <SelectedExercise key={selected.id} exercise={selected} loadDetail={loadDetail} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} />
       {reviewNote && <p className={styles.description}>{reviewNote}</p>}
     </div>}
   </>
 }
 
-function ExerciseDetail({ exercise, instructionNote, mediaSource }: { exercise: CatalogBrowseExercise; instructionNote?: string; mediaSource?: string }) {
+function SelectedExercise({ exercise, loadDetail, instructionNote, mediaSource }: {
+  exercise: CatalogBrowseExercise; loadDetail?: DetailLoader; instructionNote?: string; mediaSource?: string
+}) {
+  const [result, setResult] = useState<{ detail?: CatalogBrowseExercise; error?: unknown } | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    if (!loadDetail) return
+    const abort = new AbortController()
+    void loadDetail(exercise.id, abort.signal).then(detail => {
+      if (!abort.signal.aborted) setResult({ detail })
+    }).catch(error => { if (!abort.signal.aborted) setResult({ error }) })
+    return () => abort.abort()
+  }, [exercise.id, loadDetail, attempt])
+  if (!loadDetail) return <ExerciseDetail exercise={exercise} instructionNote={instructionNote} mediaSource={mediaSource} />
+  if (result?.detail) return <ExerciseDetail exercise={result.detail} mediaSource={mediaSource} protectedMedia />
+  if (!result) return <StatusNotice>운동 정보를 불러오는 중입니다.</StatusNotice>
+  const status = result.error && typeof result.error === 'object' && 'status' in result.error ? result.error.status : null
+  return <Card><StatusNotice error>{status === 404 ? '운동 정보를 찾을 수 없습니다.'
+    : status === 403 ? '운동 정보를 조회할 권한이 없습니다.' : '운동 정보를 불러오지 못했습니다.'}</StatusNotice>
+    <Button variant="quiet" onClick={() => { setResult(null); setAttempt(value => value + 1) }}>다시 조회</Button></Card>
+}
+
+function ExerciseDetail({ exercise, instructionNote, mediaSource, protectedMedia = false }: {
+  exercise: CatalogBrowseExercise; instructionNote?: string; mediaSource?: string; protectedMedia?: boolean
+}) {
   const { name, aliases, pplSplit, frontBackSplit, instructionsKo, equipmentDescription } = exercise
-  const steps = instructionsKo?.split(/\r\n|\r|\n/).map(step => step.trim()).filter(Boolean) ?? []
+  const steps = exercise.instructionSteps ?? instructionsKo?.split(/\r\n|\r|\n/).map(step => step.trim()).filter(Boolean) ?? []
   return <>
     <Card>
       <div className={styles.detailHeader}>
@@ -150,7 +168,7 @@ function ExerciseDetail({ exercise, instructionNote, mediaSource }: { exercise: 
     </Card>
     <Card>
       <h2>동작 시연</h2>
-      <ExerciseGif key={exercise.id + ':' + mediaSource} source={mediaSource} name={name} />
+      <ExerciseGif key={exercise.id + ':' + mediaSource} source={mediaSource} name={name} protectedMedia={protectedMedia} />
     </Card>
     <Card className={styles.instructions}>
       <details>
@@ -168,7 +186,7 @@ function ExerciseDetail({ exercise, instructionNote, mediaSource }: { exercise: 
   </>
 }
 
-function ExerciseGif({ source, name }: { source?: string; name: string }) {
+function ExerciseGif({ source, name, protectedMedia }: { source?: string; name: string; protectedMedia: boolean }) {
   const [loaded, setLoaded] = useState(false)
   return <>
     <div className={styles.gifPlaceholder}>
@@ -176,7 +194,8 @@ function ExerciseGif({ source, name }: { source?: string; name: string }) {
         hidden={!loaded} onLoad={() => setLoaded(true)} onError={() => setLoaded(false)} />}
       {!loaded && <><span aria-hidden="true">▧</span><p>GIF를 제공하지 않습니다</p></>}
     </div>
-    {source && <p className={styles.description}>개발용 미디어 시연</p>}
+    {source && (protectedMedia ? loaded && <p className={styles.description}>동작 시연 제공 · AscendAPI</p>
+      : <p className={styles.description}>개발용 미디어 시연</p>)}
   </>
 }
 

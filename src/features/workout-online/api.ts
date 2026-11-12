@@ -1,5 +1,5 @@
 import type { AuthController } from '../auth/controller.ts'
-import type { CardioActivity, CatalogExercise, WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
+import type { CardioActivity, CatalogExercise, StandardExerciseDetail, WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
   ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents, ClosedPage, ClosedCursor } from './types.ts'
 import * as v from './validation.ts'
 
@@ -62,6 +62,23 @@ export class WorkoutApi {
       && ['SETS_REPS', 'CARDIO', 'HOLD_DURATION', 'UNSPECIFIED'].includes(String(e.recordMethod))
       && v.nullable(e.instructionsKo, v.name) && v.nullable(e.equipmentDescription, v.name))) throw new WorkoutApiError('RESPONSE_INVALID')
     return data.exercises as CatalogExercise[]
+  }
+  async exerciseDetail(userId: string, exerciseId: string, signal: AbortSignal): Promise<StandardExerciseDetail> {
+    const { status, data } = await this.transport.workoutRequest(userId, idPath('/api/v1/standard-exercises', exerciseId), 'GET', undefined, signal)
+    const muscle = (m: unknown) => v.object(m) && v.uuid(m.id) && v.name(m.groupCode) && v.name(m.name)
+    if (status !== 200 || !v.object(data) || data.id !== exerciseId || !v.name(data.name) || !v.array(data.aliases, v.name)
+      || !['WEIGHT', 'CARDIO', 'STATIC_HOLD', 'STRETCH', 'OTHER'].includes(String(data.exerciseType))
+      || !['SETS_REPS', 'CARDIO', 'HOLD_DURATION', 'UNSPECIFIED'].includes(String(data.recordMethod))
+      || !v.nullable(data.equipmentDescription, v.name) || !v.nullable(data.jointType, x => ['COMPOUND', 'ISOLATION', 'OTHER'].includes(String(x)))
+      || !v.array(data.primaryMuscles, m => muscle(m) && v.object(m) && v.count(m.primaryOrder))
+      || !v.array(data.secondaryMuscles, muscle)
+      || !v.nullable(data.pplSplit, x => ['PUSH', 'PULL', 'LEGS'].includes(String(x)))
+      || !v.nullable(data.frontBackSplit, x => ['FRONT', 'BACK'].includes(String(x)))
+      || !v.array(data.instructionSteps, v.name) || typeof data.selectableForRoutine !== 'boolean') throw new WorkoutApiError('RESPONSE_INVALID', status)
+    const detail = data as StandardExerciseDetail
+    if (!v.unique(detail.primaryMuscles) || !v.unique(detail.secondaryMuscles)
+      || new Set(detail.primaryMuscles.map(m => m.primaryOrder)).size !== detail.primaryMuscles.length) throw new WorkoutApiError('RESPONSE_INVALID', status)
+    return detail
   }
   async cardioActivities(userId: string, signal: AbortSignal): Promise<CardioActivity[]> {
     const { status, data } = await this.transport.workoutRequest(userId, '/api/v1/standard-exercises/cardio-choices', 'GET', undefined, signal)

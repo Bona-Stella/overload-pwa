@@ -8,7 +8,7 @@ import type { TrainingSchedule } from './useTrainingSchedule.ts'
 import { Dialog } from '../../components/Dialog.tsx'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useAuth } from '../auth/context.ts'
-import { CatalogMenu, PublicCatalog } from './PublicCatalog.tsx'
+import { PublicCatalog } from './PublicCatalog.tsx'
 import { WorkoutApi } from './api.ts'
 import { WorkoutOnlineController } from './controller.ts'
 import type { OnlineState } from './controller.ts'
@@ -28,7 +28,7 @@ import type { AppTab } from '../../app/types.ts'
 import { Button, Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { HomePanel } from '../home/HomePanel.tsx'
-import { RestTimeCard } from '../settings/RestTimeCard.tsx'
+import { RestSettings } from '../settings/RestTimeCard.tsx'
 
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
   const otherEditor = session.editorDeviceId !== deviceId
@@ -221,9 +221,9 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     </Dialog>}
   </section>
 }
-export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocusChange, catalogOpen = false, onCatalogOpenChange }: {
+export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocusChange, catalogOpen = false, restOpen = false, onSettingsBack }: {
   onExitGuard?: ExitGuardRegistration; tab?: AppTab; onNavigate?: (tab: AppTab) => Promise<boolean>; onFocusChange?: (focused: boolean) => void
-  catalogOpen?: boolean; onCatalogOpenChange?: (open: boolean) => void
+  catalogOpen?: boolean; restOpen?: boolean; onSettingsBack?: () => void
 } = {}) {
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
@@ -287,12 +287,11 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     onFocusChange?.(visible && (focused || tab === 'routines' && editingRoutine))
     return () => onFocusChange?.(false)
   }, [visible, focused, tab, editingRoutine, onFocusChange])
-  const catalogMenu = (visible || catalogOpen) && !localOnly && !focused && tab === 'settings' && onCatalogOpenChange
-    ? <CatalogMenu open={catalogOpen} onOpenChange={onCatalogOpenChange}>
-      {onBack => <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null} onInvalid={controller.invalidateScope} onBack={onBack} />}
-    </CatalogMenu>
+  const settingsDetail = !localOnly && !focused && tab === 'settings' && onSettingsBack
+    ? catalogOpen ? <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null} onInvalid={controller.invalidateScope} onBack={onSettingsBack} />
+      : restOpen ? <RestSettings settings={accountReady ? state.data?.settings : undefined} onBack={onSettingsBack} /> : null
     : null
-  if (!visible && !preserveDrafts) return catalogMenu
+  if (!visible && !preserveDrafts) return settingsDetail
   const editable = session && session.status === 'ACTIVE' && !session.deletedAt && session.editorDeviceId === state.deviceId && state.copySaved && state.data
   const flush = async () => {
     const before = controller.getSnapshot(), guard = exitGuard.current
@@ -358,8 +357,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
     }} />}</div>
     <div hidden={!visible || focused || tab !== 'history'}>{visible && !localOnly && state.scope && <WorkoutHistory key={'history:' + state.scope.userId + ':' + state.scope.dataGeneration} api={api} scope={state.scope} onInvalid={controller.invalidateScope} refreshKey={session?.status === 'ACTIVE' ? 'active' : session?.id + ':' + session?.version} onOpen={id => void openRecord(id)} />}</div>
-    {visible && !localOnly && !focused && tab === 'settings' && !catalogOpen && state.data && <RestTimeCard settings={state.data.settings} />}
-    {catalogMenu}
+    {settingsDetail}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
     {visible && state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</>
 }

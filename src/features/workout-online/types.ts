@@ -11,6 +11,14 @@ export type CatalogExercise = StandardExercise & {
   recordMethod: 'SETS_REPS' | 'CARDIO' | 'HOLD_DURATION' | 'UNSPECIFIED';
   instructionsKo: string | null; equipmentDescription: string | null;
 }
+export type StandardExerciseDetail = Pick<CatalogExercise, 'id' | 'name' | 'aliases' | 'exerciseType' | 'recordMethod' | 'equipmentDescription'> & {
+  jointType: 'COMPOUND' | 'ISOLATION' | 'OTHER' | null;
+  primaryMuscles: { id: UUID; groupCode: string; name: string; primaryOrder: number }[];
+  secondaryMuscles: { id: UUID; groupCode: string; name: string }[];
+  pplSplit: 'PUSH' | 'PULL' | 'LEGS' | null;
+  frontBackSplit: 'FRONT' | 'BACK' | null;
+  instructionSteps: string[]; selectableForRoutine: boolean;
+}
 export type CardioActivity = { id: UUID; activityId: UUID; aliases: string[]; category: 'RUNNING'|'WALKING'|'CYCLING'; name:string; kind:CardioPlan['kind'] }
 export type CardioPlan = { activityId?:UUID; standardExerciseId?:UUID; kind: 'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'; name: string; targetSeconds: number;
   targetDistanceKm: Decimal | null; intensity: { mode: 'SPEED' | 'PACE'; value: Decimal } | null; inclinePercent: Decimal | null; resistance: Decimal | null }

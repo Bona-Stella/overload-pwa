@@ -57,7 +57,7 @@
 
 .results, .muscles { list-style: none; margin: 0; padding: 0; }
 .results li + li, .muscles li + li { border-top: 1px solid var(--border-subtle); }
-.results .result, .menuCard .menuItem {
+.results .result {
   display: flex;
   width: 100%;
   min-width: 0;
@@ -67,7 +67,7 @@
   background: transparent;
   text-align: left;
 }
-.resultText, .menuItem > span:first-child {
+.resultText {
   display: grid;
   flex: 1;
   min-width: 0;

@@ -11,12 +11,14 @@ export function reviewAccountRequest(path, method, body, email) {
 }
 export function reviewAccess(evidence, origins, lan) {
   const issued = new Set()
+  let requestBlockedUntil = 0, lastLoginResponse = null
+  const remaining = () => Math.max(0, Math.ceil((requestBlockedUntil - Date.now()) / 1000))
   const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)) }
   return async (req, res, next) => {
     const origin = 'http://' + req.headers.host
     if (!origins.includes(origin) || !allowedAddress(req.socket.remoteAddress, lan)) { json(res, 403, { code: 'REVIEW_LOCAL_NETWORK_ONLY' }); return }
     const path = new URL(req.url, origin).pathname
-    if (path === '/__review/config') { json(res, 200, { email: evidence.reviewEmail }); return }
+    if (path === '/__review/config') { json(res, 200, { email: evidence.reviewEmail, retryAfter: remaining(), lastLoginResponse }); return }
     if (path !== '/__review/otp' && !/^\/(api|oauth2)(\/|$)/.test(path)) { next(); return }
     const chunks = []; let size = 0
     for await (const chunk of req) { size += chunk.length; if (size > 2097152) { json(res, 413, { code: 'REVIEW_REQUEST_TOO_LARGE' }); return } chunks.push(chunk) }
@@ -44,10 +46,23 @@ export function reviewAccess(evidence, origins, lan) {
       issued.delete(id); json(res, 200, { code: message.code }); return
     }
     if (req.headers.origin && req.headers.origin !== origin || !reviewAccountRequest(path, req.method, body, evidence.reviewEmail)) { json(res, 403, { code: 'REVIEW_ACCOUNT_ONLY' }); return }
+    if (path === '/api/v1/auth/email-otp/request' && req.method === 'POST' && remaining() > 0) {
+      res.setHeader('Retry-After', String(remaining()))
+      json(res, 429, { code: 'OTP_RATE_LIMITED' }); return
+    }
     await withV22Connection(evidence, 'control')
     await withV22Connection(evidence, 'backend', async send => {
       const upstream = await send(req.url, { method: req.method, headers: { ...req.headers, connection: 'keep-alive' } }, body)
       const bytes = Buffer.concat(await Array.fromAsync(upstream))
+      if (['/api/v1/auth/email-otp/request', '/api/v1/auth/email-otp/verify'].includes(path)) {
+        let code = null
+        try { const value = JSON.parse(bytes.toString()); if (/^[A-Z_]{1,80}$/.test(value.code ?? '')) code = value.code } catch { /* 204 has no body. */ }
+        const header = String(upstream.headers['retry-after'] ?? '')
+        const retryAfter = /^\d+$/.test(header) ? Math.min(86400, Number(header)) : 0
+        lastLoginResponse = { stage: path.endsWith('/request') ? 'request' : 'verify', status: upstream.statusCode, code, retryAfter,
+          client: /iPhone|iPad/.test(req.headers['user-agent'] ?? '') ? 'iOS' : 'other', at: new Date().toISOString() }
+        if (path.endsWith('/request') && upstream.statusCode === 429 && code === 'OTP_RATE_LIMITED' && retryAfter > 0) requestBlockedUntil = Date.now() + retryAfter * 1000
+      }
       if (path === '/api/v1/auth/email-otp/request' && upstream.statusCode === 202) {
         const value = JSON.parse(bytes.toString())
         if (typeof value.challengeId === 'string') { issued.clear(); issued.add(value.challengeId) }

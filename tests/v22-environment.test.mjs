@@ -14,6 +14,17 @@ const ready = () => ({ runId: run, containerRunId: run, backendOrigin: 'http://1
   jdbcUrl: 'jdbc:postgresql://127.0.0.1:49153/overload_v22_isolated', startedAt: '2026-11-03T23:59:00Z', readyAt: '2026-11-03T23:59:30Z',
   initialUsers: 0, preparedUsers: 1, accountFlow: 'EMAIL_OTP', migrations: 35, migrationVersions: Array.from({ length: 35 }, (_, i) => String(i + 1)),
   freshDatabase: true, loopbackDatabase: true, tmpfsOnly: true, schemaValidated: true, noDeveloperEnv: true, springSessionTables: true, fakeEmailSender: true, externalAuthDisabled: true, httpSmokePassed: true })
+
+test('ongoing approved catalog can reconnect without resetting its DB; default fixture age and identity checks remain strict', () => {
+  const value = { ...ready(), startedAt: '2026-11-03T22:00:00Z', readyAt: '2026-11-03T22:00:30Z' }
+  assert.throws(() => validateV22Ready(value, run, now))
+  assert.throws(() => validateV22Ready(value, run, now, { existingApprovedCatalog: true }))
+  value.approvedCatalogReview = { approvedExercises: 31, gifAccessGranted: true }
+  assert.equal(validateV22Ready(value, run, now, { existingApprovedCatalog: true }), value)
+  for (const patch of [{ containerRunId: 'other' }, { freshDatabase: false }, { migrations: 34 }, { databasePort: 5432 }, { readyAt: '2026-11-05T00:00:00Z' }]) {
+    assert.throws(() => validateV22Ready({ ...value, ...patch }, run, now, { existingApprovedCatalog: true }))
+  }
+})
 test('V22 harness accepts current, complete evidence bound to this explicit run', () => {
   const value = ready(); assert.equal(validateV22Ready(value, run, now), value)
 })
