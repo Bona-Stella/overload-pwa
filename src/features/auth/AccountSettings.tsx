@@ -1,6 +1,17 @@
 import { useState } from 'react'
+import type { ReactNode, Ref } from 'react'
 import type { AuthController, AuthState } from './controller.ts'
 import { IdentityManagement } from './IdentityManagement'
+
+export function AccountSettingsPage({ busy = false, onBack, headingRef, children }: {
+  busy?: boolean; onBack: () => void; headingRef?: Ref<HTMLHeadingElement>; children: ReactNode
+}) {
+  return <section className="stack auth-account">
+    <button type="button" className="quiet auth-back" disabled={busy} onClick={onBack}>‹ 설정으로</button>
+    <p className="eyebrow">YOUR ACCOUNT</p><h1 ref={headingRef} tabIndex={headingRef ? -1 : undefined}>계정 설정<span className="brand-dot">.</span></h1>
+    {children}
+  </section>
+}
 
 export function AccountSettings({ state, controller, now }: { state: AuthState; controller: AuthController; now: number }) {
   const [code, setCode] = useState('')
@@ -11,9 +22,7 @@ export function AccountSettings({ state, controller, now }: { state: AuthState; 
   const verifyWait = Math.max(0, Math.ceil((account.verifyAt - clock) / 1000))
   const remaining = challenge ? Math.max(0, Math.ceil((challenge.expiresAt - clock) / 1000)) : 0
   const clear = () => setCode('')
-  return <section className="stack auth-account">
-    <button className="quiet auth-back" disabled={busy} onClick={() => { clear(); controller.closeAccount() }}>‹ 설정으로</button>
-    <p className="eyebrow">YOUR ACCOUNT</p><h1>계정 설정<span className="brand-dot">.</span></h1>
+  return <AccountSettingsPage busy={busy} onBack={() => { clear(); controller.closeAccount() }}>
     <p className="muted">로그인되어 있습니다. 로그인 수단과 재인증 이메일을 확인하세요.</p>
     {!account.loaded ? <section className="card stack" role="status"><p>{busy ? '계정 정보를 확인하고 있어요.' : '계정 정보를 불러오지 못했습니다.'}</p>
       <button className="outline full" disabled={busy} onClick={() => { clear(); void controller.openAccount() }}>계정 정보 다시 확인</button></section> : <>
@@ -53,5 +62,5 @@ export function AccountSettings({ state, controller, now }: { state: AuthState; 
       </section>
       <button className="outline full" disabled={busy} onClick={() => { clear(); void controller.openAccount() }}>계정 정보 새로 확인</button>
     </>}
-  </section>
+  </AccountSettingsPage>
 }

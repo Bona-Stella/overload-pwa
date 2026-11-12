@@ -6,7 +6,7 @@ import { basename, dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createServer } from 'vite'
 
-test('isolated HOME and ROUTINE preview shares applied presets, protects drafts and supports mobile layouts', { timeout: 120000 }, async () => {
+test('isolated HOME, ROUTINE, SETTINGS and CATALOG previews support their mobile workflows', { timeout: 120000 }, async () => {
   const root = resolve('logs/preset-review')
   await mkdir(root, { recursive: true })
   const profile = await mkdtemp(resolve(root, 'browser-'))
@@ -342,6 +342,136 @@ test('isolated HOME and ROUTINE preview shares applied presets, protects drafts 
     assert.match(await body(), /홈 정보를 불러오지 못했습니다/)
     await click('홈 다시 불러오기')
     assert.match(await body(), /TODAY'S ROUTINE/)
+
+    await send('Page.navigate', { url: origin + '/routine-preview?tab=settings' })
+    const settingsPage = 'section[aria-label="설정"]'
+    const settingsItem = 'button[aria-labelledby][aria-describedby]'
+    await wait(() => evaluate(`!!document.querySelector('${settingsPage}')`), 'full settings')
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} h2')].map(e => e.textContent)`),
+      ['계정 정보', '운동 설정', '데이터 및 앱', '계정 및 데이터 삭제'])
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button strong, ${settingsPage} summary')].map(e => e.textContent)`),
+      ['로그인된 계정', '세트 사이 휴식', '휴식 타이머 알림', '운동 종목 보기', '디로딩 설정', '운동 데이터 상태',
+        '운동 데이터 내보내기', '앱 설치·오프라인 준비', '전체 운동 데이터 초기화', '회원 탈퇴'])
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button:disabled strong')].map(e => e.textContent)`),
+      ['휴식 타이머 알림', '디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴'])
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('nav[aria-label="기본 탐색"] button')].map(e => e.textContent)`),
+      ['홈', '루틴', '기록', '설정'])
+    for (const width of [320, 393]) {
+      await verifyWidth(width)
+      assert.ok(await evaluate(`(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight)
+        const last = document.querySelector('${settingsPage} > button')
+        return window.scrollY > 0 && last.textContent === '로그아웃' &&
+          last.getBoundingClientRect().bottom <= document.querySelector('nav').getBoundingClientRect().top
+      })()`))
+    }
+    await click('로그아웃')
+    assert.equal(await evaluate('document.querySelector("dialog[open] button.danger").disabled'), true)
+    await click('취소')
+    await click('앱 설치·오프라인 준비', 'textContent', 'summary')
+    assert.match(await body(), /검토용 설치 안내/)
+    await click('앱 설치·오프라인 준비', 'textContent', 'summary')
+    await click('로그인된 계정', 'textContent', settingsItem + ' strong')
+    assert.match(await body(), /대표 재인증 이메일/)
+    await click('‹ 설정으로')
+    assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '로그인된 계정')
+    await click('세트 사이 휴식', 'textContent', settingsItem + ' strong')
+    assert.match(await body(), /검토용 예시 휴식 시간입니다/)
+    assert.match(await body(), /1~10회 · 180초/)
+    await click('‹ 설정으로')
+    await click('운동 종목 보기', 'textContent', settingsItem + ' strong')
+    assert.equal(await evaluate('document.activeElement.textContent'), '운동 종목 보기')
+    const group = '[aria-label="운동 부위 필터"]'
+    const list = '[aria-label="표준 운동 목록"]'
+    const names = () => evaluate(`[...document.querySelectorAll('${list} strong')].map(row => row.textContent)`)
+    const query = 'input[type="search"]'
+    const parts = ['전체', '가슴', '등', '어깨', '팔', '하체', '코어', '유산소', '기타']
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${group} button')].map(b => b.textContent)`), parts)
+    assert.equal(await evaluate(`document.querySelector('${group} [aria-pressed="true"]').textContent`), '전체')
+    assert.equal((await names()).length, 12)
+    assert.equal(await evaluate(`document.querySelectorAll('${group} img, ${group} svg').length`), 0)
+    for (const width of [320, 393]) {
+      await verifyWidth(width)
+      assert.ok(await evaluate(`(() => {
+        const strip = document.querySelector('${group}'), buttons = [...strip.querySelectorAll('button')]
+        buttons.at(-1).focus()
+        return strip.scrollWidth > strip.clientWidth && strip.scrollLeft > 0 &&
+          buttons.every(b => b.offsetHeight >= 44 && b.offsetTop === buttons[0].offsetTop &&
+            b.firstElementChild.offsetHeight === 27 && getComputedStyle(b).backgroundColor === 'rgba(0, 0, 0, 0)')
+      })()`))
+    }
+    const gesture = await evaluate(`(() => {
+      const strip = document.querySelector('${group}')
+      strip.scrollLeft = 0
+      const { left, top, width, height } = strip.getBoundingClientRect()
+      return { x: Math.round(left + width * 0.75), y: Math.round(top + height / 2) }
+    })()`)
+    await send('Emulation.setTouchEmulationEnabled', { enabled: true })
+    await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [gesture] })
+    for (const distance of [25, 55, 90, 130]) {
+      await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ ...gesture, x: gesture.x - distance }] })
+    }
+    await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await wait(() => evaluate(`document.querySelector('${group}').scrollLeft > 0`), 'horizontal touch scroll')
+    await send('Emulation.setTouchEmulationEnabled', { enabled: false })
+    for (const part of parts.slice(1)) {
+      await click(part, 'textContent', group + ' button')
+      assert.ok((await names()).length > 0)
+      assert.deepEqual(await evaluate(`[...document.querySelectorAll('${group} [aria-pressed="true"]')].map(b => b.textContent)`), [part])
+    }
+    assert.match(await evaluate(`document.querySelector('${list} button').textContent`), /ETC.*손목 스트레칭/)
+    await set(query, 'ＬＡＴ　PullDown')
+    assert.match(await body(), /검색 결과가 없습니다\./)
+    await click('등', 'textContent', group + ' button')
+    assert.deepEqual(await names(), ['랫 풀다운'])
+    const press = async key => {
+      const code = key === 'Enter' ? 13 : 9
+      const event = { key, code: key, windowsVirtualKeyCode: code }
+      await send('Input.dispatchKeyEvent', key === 'Enter' ? { ...event, type: 'keyDown', text: '\r' } : { ...event, type: 'rawKeyDown' })
+      await send('Input.dispatchKeyEvent', { ...event, type: 'keyUp' })
+    }
+    await evaluate(`document.querySelector('${list} button').focus()`)
+    await press('Enter')
+    await wait(async () => (await body()).includes('GIF를 제공하지 않습니다'), 'exercise detail')
+    assert.equal(await evaluate('document.activeElement.textContent'), '운동 상세')
+    assert.deepEqual(await evaluate('[...document.querySelectorAll("main h2")].filter(e => e.getClientRects().length).map(e => e.textContent)'),
+      ['랫 풀다운', '운동 동작 GIF', '주요 자극 근육', '보조 자극 근육'])
+    assert.match(await body(), /PULL.*후면.*조회 전용/s)
+    assert.match(await body(), /광배근.*등.*핵심.*대원근.*보조 자극 근육.*상완이두근.*팔.*능형근/s)
+    assert.equal((await body()).match(/핵심/g).length, 1)
+    assert.doesNotMatch(await body(), /기구에 앉아/)
+    await press('Tab')
+    assert.equal(await evaluate('document.activeElement.tagName'), 'SUMMARY')
+    await press('Enter')
+    assert.deepEqual(await evaluate('[...document.querySelectorAll("details[open] ol li")].map(e => e.textContent)'), [
+      '기구에 앉아 허벅지 패드를 체형에 맞게 조절합니다.', '바를 잡고 가슴 방향으로 천천히 당깁니다.', '팔을 천천히 펴면서 시작 자세로 돌아옵니다.',
+    ])
+    await press('Enter')
+    assert.doesNotMatch(await body(), /기구에 앉아/)
+    await click('운동 목록으로 돌아가기', 'ariaLabel')
+    assert.equal(await evaluate(`document.activeElement === document.querySelector('${list} button')`), true)
+    assert.equal(await evaluate(`document.querySelector('${query}').value`), 'ＬＡＴ　PullDown')
+    await click('어깨', 'textContent', group + ' button')
+    await set(query, '와이드 로우')
+    assert.deepEqual(await names(), ['체스트 서포티드 와이드 그립 시티드 케이블 로우'])
+    await click('등', 'textContent', group + ' button')
+    assert.equal((await names()).length, 1)
+    await click('체스트 서포티드 와이드 그립 시티드 케이블 로우', 'textContent', list + ' strong')
+    await verifyWidth(320); await verifyWidth(393)
+    assert.match(await body(), /chest supported seated cable row/)
+    assert.doesNotMatch(await body(), /PULL|전면|후면\s*조회 전용/)
+    await click('운동 자세 및 방법', 'textContent', 'summary')
+    assert.match(await body(), /등록된 운동 방법 정보가 없습니다/)
+    await click('운동 목록으로 돌아가기', 'ariaLabel')
+    await set(query, '')
+    await click('유산소', 'textContent', group + ' button')
+    await click('걷기', 'textContent', list + ' strong')
+    assert.match(await body(), /등록된 주요 자극 근육 정보가 없습니다.*등록된 보조 자극 근육 정보가 없습니다/s)
+    await click('운동 목록으로 돌아가기', 'ariaLabel')
+    await click('설정으로 돌아가기', 'ariaLabel')
+    await wait(() => evaluate(`document.activeElement.matches('${settingsItem}')`), 'settings focus restored')
+    assert.equal(await evaluate(`document.querySelector('${settingsPage}').hidden`), false)
+    assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '운동 종목 보기')
     assert.deepEqual(apiRequests, [])
     assert.deepEqual(errors, [])
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)

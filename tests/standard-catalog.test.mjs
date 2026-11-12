@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { exerciseVariantLabels, normalizeSearch, searchExercises } from '../src/features/workout-online/catalog.ts'
+import { browseExercises, catalogRowGroup, primaryMuscles } from '../src/features/workout-online/catalog-browse.ts'
 import { newWeights, updatedWeights } from '../src/features/workout-online/routine-weights.ts'
 import { WorkoutApi } from '../src/features/workout-online/api.ts'
 import { AuthApi } from '../src/features/auth/api.ts'
@@ -26,6 +27,27 @@ test('catalog normalizes case, NFKC, Unicode whitespace and searches names and a
   assert.deepEqual(searchExercises([...catalog,catalog[0]],'공통 별칭').map(x=>x.id),[EXERCISE,OTHER])
   assert.equal(searchExercises(Array.from({length:30},(_,i)=>({id:String(i),name:'운동',aliases:[]})),'').length,20)
   assert.deepEqual(searchExercises([],''),[])
+})
+test('settings catalog browses all matches and combines aliases with any PRIMARY group by exercise ID', () => {
+  const items = Array.from({ length: 25 }, (_, id) => ({
+    id: String(id), name: '케이블 로우', aliases: ['Wide Row', '와이드 로우'], exerciseType: 'WEIGHT',
+    muscles: [
+      { id: 'back', groupCode: 'BACK', name: '광배근', role: 'PRIMARY' },
+      { id: 'shoulder', groupCode: 'SHOULDERS', name: '후면 삼각근', role: 'PRIMARY' },
+      { id: 'arm', groupCode: 'ARMS', name: '상완이두근', role: 'SECONDARY' },
+    ],
+  }))
+  const cardio = { id: 'walk', name: '걷기', aliases: [], exerciseType: 'CARDIO', muscles: [] }
+  const other = { id: 'stretch', name: '스트레칭', aliases: [], exerciseType: 'STRETCH', muscles: [] }
+  const all = [...items, items[0], cardio, other]
+  assert.equal(browseExercises(all, '', 'ALL').length, 27)
+  assert.deepEqual(browseExercises(all, 'ＷＩＤＥ row', 'SHOULDERS'), items)
+  assert.deepEqual(browseExercises(all, '와이드 로우', 'BACK'), items)
+  assert.deepEqual(browseExercises(all, 'row', 'ARMS'), [])
+  assert.deepEqual(browseExercises(all, 'row', 'CARDIO'), [])
+  assert.deepEqual(browseExercises(all, '', 'CARDIO'), [cardio])
+  assert.deepEqual(browseExercises(all, '', 'OTHER'), [other])
+  assert.equal(catalogRowGroup(items[0], primaryMuscles(items[0])[0]), 'BACK')
 })
 test('catalog endpoints use the authenticated transport and keep their own unscoped schema1 envelope',async()=>{
   const calls=[],api=new WorkoutApi({workoutRequest:async(user,path,method,body)=>{

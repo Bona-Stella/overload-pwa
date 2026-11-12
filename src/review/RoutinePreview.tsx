@@ -18,6 +18,7 @@ import { mockSaveRoutine } from './routine-mock.ts'
 import { activities, exercises, manufacturers, recoveryRoutine, reviewHome, reviewSample, reviewToday, scenarios, scope } from './routine-samples.ts'
 import type { ReviewData, Scenario } from './routine-samples.ts'
 import { ReviewHeader } from './ReviewHeader.tsx'
+import { SettingsReview } from './SettingsReview.tsx'
 import styles from './Review.module.css'
 import '../features/workout-online/online.css'
 
@@ -33,7 +34,10 @@ type Fault = 'none' | 'network' | 'conflict'
 
 export default function RoutinePreview() {
   const [scenario, setScenario] = useState<Scenario>('normal')
-  const [tab, setTab] = useState<AppTab>(() => new URLSearchParams(location.search).get('tab') === 'home' ? 'home' : 'routines')
+  const [tab, setTab] = useState<AppTab>(() => {
+    const requested = new URLSearchParams(location.search).get('tab')
+    return requested === 'home' || requested === 'settings' ? requested : 'routines'
+  })
   const [epoch, setEpoch] = useState(0)
   return <Review key={epoch} scenario={scenario} tab={tab} setTab={setTab} reset={next => { setScenario(next); setEpoch(value => value + 1) }} />
 }
@@ -116,8 +120,8 @@ function Review({ scenario, tab, setTab, reset }: { scenario: Scenario; tab: App
   const modalRecord = modal?.type === 'record' ? data.sessions.find(s => s.id === modal.id) : undefined
   const modalPreset = modal?.type === 'rename' || modal?.type === 'deletePreset' ? schedule.presets.find(p => p.id === modal.id) : undefined
 
-  return <AppShell authenticated tab={tab} focused={!!editor} displayTheme={deloadView ? 'deload' : 'normal'} onNavigate={navigate}>
-    <aside className={styles.controls} aria-label="Mock 검토 설정">
+  return <AppShell authenticated tab={tab} focused={!!editor} displayTheme={tab !== 'settings' && deloadView ? 'deload' : 'normal'} onNavigate={navigate}>
+    {tab !== 'settings' && <aside className={styles.controls} aria-label="Mock 검토 설정">
       <b>UI 검토 · 합성 데이터</b>
       <small>이 화면의 변경은 탭을 새로고침하면 초기화됩니다. 시연 날짜는 11월 11일입니다.</small>
       <label>검토 상태<select value={scenario} disabled={busy || !!editor || !!modal} onChange={e => reset(e.target.value as Scenario)}>
@@ -126,7 +130,7 @@ function Review({ scenario, tab, setTab, reset }: { scenario: Scenario; tab: App
       <label>다음 저장 테스트<select value={fault} disabled={busy || protectedView || !!modal} onChange={e => setFault(e.target.value as Fault)}>
         <option value="none">정상</option><option value="network">연결 실패</option><option value="conflict">일정 버전 충돌</option>
       </select></label>
-    </aside>
+    </aside>}
     {issue && <p className="notice error" role="alert">{issue}</p>}
     {busy && <p className="notice" role="status">Mock 응답을 확인하고 있습니다…</p>}
     <div hidden={tab !== 'home' || !!editor}>
@@ -202,7 +206,7 @@ function Review({ scenario, tab, setTab, reset }: { scenario: Scenario; tab: App
       {!home.recentRows.length && <p>표시할 운동 기록이 없습니다.</p>}
       {home.recentRows.map(row => <RecentWorkout key={row.id} row={row} detail={home.recent.get(row.id)} onOpen={id => setModal({ type: 'record', id })} />)}
     </section>}
-    {tab === 'settings' && <p className="notice">상단에서 홈·루틴 검토 상태를 선택할 수 있습니다.</p>}
+    {tab === 'settings' && <SettingsReview />}
     {modal?.type === 'rename' && modalPreset && <Dialog title="주간 일정 이름 변경" onClose={() => !busy && setModal(null)}>
       <form className="stack" onSubmit={async event => {
         event.preventDefault()

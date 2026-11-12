@@ -52,6 +52,30 @@
       "height": 128,
       "bytes": 11325,
       "sha256": "ceb7ed8238023777256af0e9bd21cb8711b96c8e6b8346aba367aa9055a98c79"
+    },
+    {
+      "label": "어깨",
+      "file": "shoulders.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 8424,
+      "sha256": "ce5b82b710e7a93e9d8895749ebe2e95db24fc3aa3a3c0b4fdf316cf2d54c95e"
+    },
+    {
+      "label": "팔",
+      "file": "arms.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 8902,
+      "sha256": "e00a8e16e395a7a97f2637a1a993215f55840956ec70059020ce07f492dfe02e"
+    },
+    {
+      "label": "코어",
+      "file": "core.png",
+      "width": 128,
+      "height": 128,
+      "bytes": 8536,
+      "sha256": "e2f6d058cc5d3193532e494682f6331f23eadd87c8d163766b36154ad5759f5b"
     }
   ]
 }

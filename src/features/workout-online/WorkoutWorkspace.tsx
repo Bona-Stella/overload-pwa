@@ -8,7 +8,7 @@ import type { TrainingSchedule } from './useTrainingSchedule.ts'
 import { Dialog } from '../../components/Dialog.tsx'
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useAuth } from '../auth/context.ts'
-import { PublicCatalog } from './PublicCatalog.tsx'
+import { CatalogMenu, PublicCatalog } from './PublicCatalog.tsx'
 import { WorkoutApi } from './api.ts'
 import { WorkoutOnlineController } from './controller.ts'
 import type { OnlineState } from './controller.ts'
@@ -25,9 +25,10 @@ import type { LocalWorkout } from '../workout-local/types.ts'
 import { StatisticsApi } from '../statistics/api.ts'
 import { StatisticsPanel } from '../statistics/StatisticsPanel.tsx'
 import type { AppTab } from '../../app/types.ts'
-import { Button, Card, Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
+import { Button, Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { HomePanel } from '../home/HomePanel.tsx'
+import { RestTimeCard } from '../settings/RestTimeCard.tsx'
 
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
   const otherEditor = session.editorDeviceId !== deviceId
@@ -220,8 +221,9 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     </Dialog>}
   </section>
 }
-export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocusChange }: {
+export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocusChange, catalogOpen = false, onCatalogOpenChange }: {
   onExitGuard?: ExitGuardRegistration; tab?: AppTab; onNavigate?: (tab: AppTab) => Promise<boolean>; onFocusChange?: (focused: boolean) => void
+  catalogOpen?: boolean; onCatalogOpenChange?: (open: boolean) => void
 } = {}) {
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
@@ -285,7 +287,12 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     onFocusChange?.(visible && (focused || tab === 'routines' && editingRoutine))
     return () => onFocusChange?.(false)
   }, [visible, focused, tab, editingRoutine, onFocusChange])
-  if (!visible && !preserveDrafts) return null
+  const catalogMenu = (visible || catalogOpen) && !localOnly && !focused && tab === 'settings' && onCatalogOpenChange
+    ? <CatalogMenu open={catalogOpen} onOpenChange={onCatalogOpenChange}>
+      {onBack => <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null} onInvalid={controller.invalidateScope} onBack={onBack} />}
+    </CatalogMenu>
+    : null
+  if (!visible && !preserveDrafts) return catalogMenu
   const editable = session && session.status === 'ACTIVE' && !session.deletedAt && session.editorDeviceId === state.deviceId && state.copySaved && state.data
   const flush = async () => {
     const before = controller.getSnapshot(), guard = exitGuard.current
@@ -351,8 +358,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
     }} />}</div>
     <div hidden={!visible || focused || tab !== 'history'}>{visible && !localOnly && state.scope && <WorkoutHistory key={'history:' + state.scope.userId + ':' + state.scope.dataGeneration} api={api} scope={state.scope} onInvalid={controller.invalidateScope} refreshKey={session?.status === 'ACTIVE' ? 'active' : session?.id + ':' + session?.version} onOpen={id => void openRecord(id)} />}</div>
-    {visible && !localOnly && !focused && tab === 'settings' && state.data && <Card><h2>세트 사이 휴식</h2><p className="muted small">현재 설정된 휴식 시간입니다.</p><p>1~10회 · {state.data.settings.restLowSeconds}초<br />11~12회 · {state.data.settings.restMediumSeconds}초<br />13회 이상 · {state.data.settings.restHighSeconds}초</p></Card>}
-    {visible && !localOnly && !focused && tab === 'settings' && cardioScope && <PublicCatalog key={cardioKey} api={api} userId={cardioScope.userId} onInvalid={controller.invalidateScope} />}
+    {visible && !localOnly && !focused && tab === 'settings' && !catalogOpen && state.data && <RestTimeCard settings={state.data.settings} />}
+    {catalogMenu}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
     {visible && state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</>
 }
