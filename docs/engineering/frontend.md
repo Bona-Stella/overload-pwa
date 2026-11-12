@@ -644,6 +644,7 @@ iPhone의 화면 구조를 고려합니다.
 
 - 개발 전용 `/routine-preview`는 합성 상태를 사용한다. `npm run dev -- --mode ui-review`의 기본 검토 포트는 4173이고 `?tab=home`으로 홈에서 시작할 수 있다. 이 경로의 합성 상태·오류는 실제 계정, 인증·IndexedDB·운동 기록과 분리된다.
 - 실제 API 검토는 격리 Backend에 연결된 개발 전용 OTP 검토 경로를 사용했다. 2026-11-10에 검토 서버와 일회용 DB의 종료를 확인했다. [검토 환경과 종료 이력](../../../overload-server/docs/engineering/test-environment.md#home-routine-검토-종료-기록)
+- 더미 데이터 대신 사용자와 합의한 실제 운동 구성으로 검토할 때는 승인된 31종과 월~토 루틴을 복원하는 전용 V35 환경을 사용한다. 로컬 검토 화면의 OTP 로그인과 루틴·주간 일정 조회는 실제 Backend API에 연결된다. [시작과 초기화 후 복원](../../../overload-server/docs/dev-data/overload-31-catalog/README.md#실제-운동-데이터로-검토)
 
 #### 표준 운동 DB 확장 2단계
 

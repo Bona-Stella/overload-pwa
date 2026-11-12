@@ -1,6 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { StandardExercise } from './types.ts'
-import { searchExercises } from './catalog.ts'
+import { exerciseVariantLabels, searchExercises } from './catalog.ts'
 import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import { exerciseDescription, exerciseIcon } from './catalog-label.ts'
 
@@ -10,6 +10,7 @@ export function ExerciseSearch({ exercises, onSelect, disabled = false, autoFocu
 }) {
   const id = useId(), [query, setQuery] = useState(''), input = useRef<HTMLInputElement>(null), list = useRef<HTMLUListElement>(null)
   const results = searchExercises(exercises, query)
+  const variants = useMemo(() => exerciseVariantLabels(exercises), [exercises])
   useEffect(() => { if (autoFocus) input.current?.focus() }, [autoFocus])
   return <div className="stack exercise-search" onKeyDown={event => {
     if (event.nativeEvent.isComposing || event.keyCode === 229) return
@@ -25,7 +26,7 @@ export function ExerciseSearch({ exercises, onSelect, disabled = false, autoFocu
     <label htmlFor={id}>표준 운동 검색 · 이름 또는 별칭</label>
     <input id={id} ref={input} type="search" autoComplete="off" disabled={disabled} value={query} placeholder="예: 벤치, barbell" onChange={event => setQuery(event.target.value)} />
     <ul ref={list} aria-label="표준 운동 목록" className="exercise-search-results">
-      {results.map(exercise => <li key={exercise.id}><button type="button" disabled={disabled} onClick={() => { onSelect(exercise); setQuery('') }}><ExerciseIcon kind={exerciseIcon(exercise)} /><span><strong>{exercise.name}</strong><small>{exerciseDescription(exercise)}</small></span></button></li>)}
+      {results.map(exercise => <li key={exercise.id}><button type="button" disabled={disabled} onClick={() => { onSelect(exercise); setQuery('') }}><ExerciseIcon kind={exerciseIcon(exercise)} /><span><strong>{exercise.name}</strong><small>{variants.has(exercise.id) ? variants.get(exercise.id) + ' · ' : ''}{exerciseDescription(exercise)}</small></span></button></li>)}
     </ul>
     {exercises.length === 0 ? <p role="status">등록된 표준 운동이 없습니다. 카탈로그 등록 후 다시 조회해 주세요.</p> : !results.length && <p role="status">일치하는 운동이 없습니다.</p>}
   </div>
