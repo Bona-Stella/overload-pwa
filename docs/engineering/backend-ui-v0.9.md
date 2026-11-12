@@ -17,8 +17,8 @@
 ## 표준 운동 사용자 UI의 V35 연결 경계
 
 - 설정의 일반 검색은 `/catalog` 목록을 소비한다. 웨이트·유산소 신규 선택은 각각 `/search-data`와 `/cardio-choices`를 소비한다. 신규 유산소 선택은 표준 운동 UUID와 기록 설정 `activityId`를 모두 유지한다. 기존 루틴·세션 재개는 저장된 참조를 사용한다.
-- 공개 운동의 UUID 상세 조회는 Backend에서 제공한다. 프런트엔드의 현행 API 전송 허용 목록에는 UUID 상세 경로가 없으므로 화면 연결 때 응답 검증과 함께 추가한다. 일반 조회와 루틴 추가 가능 여부를 구분하고 상세의 `instructionSteps`를 사용한다.
-- 상세 응답에는 보호 GIF 경로가 없다. 대표 경로 전달과 GIF 권리 범위를 먼저 확정한다. 이후 화면은 일반 운동 정보와 GIF 상태를 독립적으로 처리하고, 보호 미디어를 오프라인 캐시에 저장하지 않는다.
+- CATALOG-02는 인증 전송 허용 목록의 UUID 상세 GET을 사용한다. 선택 UUID와 응답을 검증하고, 정렬된 PRIMARY·SECONDARY와 `instructionSteps`를 표시한다. 일반 조회와 루틴 추가 가능 여부는 독립적이다.
+- 공개 상세 응답에는 보호 GIF 경로가 없다. V35 내부 검토에서는 검토 전용 매핑으로 하이 로우 한 종목을 동일 출처의 보호 전송에 연결했다. 정식 제공용 경로 전달은 후속 계약이다. 일반 정보와 GIF 상태를 독립적으로 처리하며 보호 미디어는 오프라인 캐시에서 제외한다. [내부 검토와 배포 경계](../../../overload-server/docs/api/standard-exercise-catalog.md#보호-gif-전송과-ui-계약)
 - 근육 통계는 `contributionSets`와 `groupActuals`를 소비한다. 현행 유산소 통계 화면은 `cardioByKind`를 사용하며, Backend의 `cardioByCategory`는 화면에 아직 연결하지 않았다. [표준 운동 인수인계](../../../overload-server/docs/engineering/standard-exercise-handoff.md#다음-작업인-사용자-ui-연결)
 
 <a id="t02-b-현재-api-소비"></a>
