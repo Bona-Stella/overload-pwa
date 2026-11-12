@@ -4,9 +4,10 @@ import { Button, Card, SectionHeading } from '../../components/ui.tsx'
 import { PwaStatus } from '../../pwa/PwaStatus.tsx'
 import styles from './SettingsMain.module.css'
 
-export function SettingsMain({ hidden = false, busy = false, review = false, onAccount, onRest, onCatalog, onLogout }: {
+export function SettingsMain({ hidden = false, busy = false, review = false, onAccount, onRest, onRestAlerts, onCatalog, onLogout }: {
   hidden?: boolean; busy?: boolean; review?: boolean;
   onAccount: MouseEventHandler<HTMLButtonElement>; onRest: MouseEventHandler<HTMLButtonElement>;
+  onRestAlerts?: MouseEventHandler<HTMLButtonElement>;
   onCatalog: MouseEventHandler<HTMLButtonElement>; onLogout: () => void;
 }) {
   return <section aria-label="설정" className={styles.page} hidden={hidden}>
@@ -16,7 +17,7 @@ export function SettingsMain({ hidden = false, busy = false, review = false, onA
     </SettingsGroup>
     <SettingsGroup title="운동 설정">
       <SettingsRow title="세트 사이 휴식" description="반복 상한별 3개 구간 · 조회 전용" onClick={onRest} busy={busy} />
-      <SettingsRow title="휴식 타이머 알림" description="화면 깜빡임 · 효과음" />
+      <SettingsRow title="휴식 타이머 알림" description="화면 깜빡임 · 효과음" onClick={onRestAlerts} busy={busy} />
       <SettingsRow title="운동 종목 보기" description="관리자 표준 운동 DB · 조회 전용" onClick={onCatalog} busy={busy} />
       <SettingsRow title="디로딩 설정" description="추천 분석 설정 · 적용률 안내" />
     </SettingsGroup>

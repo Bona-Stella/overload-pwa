@@ -119,6 +119,7 @@ export function reviewHome({ schedule, routines, sessions, applied, pastPreset }
   }
 }
 
+export const recoveryOriginal = plans[1]
 export const recoveryRoutine: Routine = {
-  ...plans[1], id: id(25), name: '회복 주간 · 가벼운 하체', weightPlacements: plans[1].weightPlacements.map(p => ({ ...p, setCount: 2, approvedWeightKg: '15' })),
+  ...recoveryOriginal, id: id(25), name: '회복 주간 · 가벼운 하체', weightPlacements: recoveryOriginal.weightPlacements.map(p => ({ ...p, setCount: 2, approvedWeightKg: '15' })),
 }

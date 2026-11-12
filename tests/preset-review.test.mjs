@@ -5,12 +5,15 @@ import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createServer } from 'vite'
+import { verifyWorkoutReview } from './fixtures/workout-review-checks.mjs'
 
-test('isolated HOME, ROUTINE, SETTINGS and CATALOG previews support their mobile workflows', { timeout: 120000 }, async () => {
+test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support their workflows', { timeout: 150000 }, async () => {
+  const liveOrigin = process.env.OVERLOAD_WORKOUT_REVIEW_ORIGIN
+  assert.ok(!liveOrigin || liveOrigin === 'http://127.0.0.1:4173', 'live review uses the known isolated ui-review origin')
   const root = resolve('logs/preset-review')
   await mkdir(root, { recursive: true })
   const profile = await mkdtemp(resolve(root, 'browser-'))
-  const vite = await createServer({ mode: 'ui-review', server: { port: 0, host: '127.0.0.1', watch: { ignored: ['**/logs/**'] } } })
+  const vite = liveOrigin ? null : await createServer({ mode: 'ui-review', server: { port: 0, host: '127.0.0.1', watch: { ignored: ['**/logs/**'] } } })
   let browser, socket, next = 0
   const pending = new Map(), apiRequests = [], errors = [], responses = new Map()
   async function wait(check, label) {
@@ -50,9 +53,9 @@ test('isolated HOME, ROUTINE, SETTINGS and CATALOG previews support their mobile
   }
   const rowIds = () => evaluate('[...document.querySelectorAll("[data-preset-row]")].map(row => row.dataset.presetRow)')
   const rowTops = () => evaluate('[...document.querySelectorAll("[data-preset-row]")].map(row => row.getBoundingClientRect().top)')
-  const drag = async (from, to, { touch = false, cancel = false, during } = {}) => {
+  const drag = async (from, to, { touch = false, cancel = false, during, rows = '[data-preset-row]', handle = '[aria-describedby="preset-order-help"]' } = {}) => {
     const [start, end] = await evaluate(`[${from}, ${to}].map(index => {
-      const handle = document.querySelectorAll('[data-preset-row] [aria-describedby="preset-order-help"]')[index]
+      const handle = document.querySelectorAll(${JSON.stringify(rows + ' ' + handle)})[index]
       const box = handle.getBoundingClientRect()
       return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) }
     })`)
@@ -83,8 +86,8 @@ test('isolated HOME, ROUTINE, SETTINGS and CATALOG previews support their mobile
     assert.deepEqual(await rowIds(), originalOrder, 'pointer capture stays on the original row until release')
   }
   try {
-    await vite.listen()
-    const origin = 'http://127.0.0.1:' + vite.httpServer.address().port
+    await vite?.listen()
+    const origin = liveOrigin ?? 'http://127.0.0.1:' + vite.httpServer.address().port
     browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',
       ['--headless', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0', '--no-first-run',
         '--disable-background-networking', '--no-proxy-server', '--disable-extensions', '--no-default-browser-check', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
@@ -353,7 +356,7 @@ test('isolated HOME, ROUTINE, SETTINGS and CATALOG previews support their mobile
       ['로그인된 계정', '세트 사이 휴식', '휴식 타이머 알림', '운동 종목 보기', '디로딩 설정', '운동 데이터 상태',
         '운동 데이터 내보내기', '앱 설치·오프라인 준비', '전체 운동 데이터 초기화', '회원 탈퇴'])
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button:disabled strong')].map(e => e.textContent)`),
-      ['휴식 타이머 알림', '디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴'])
+      ['디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴'])
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('nav[aria-label="기본 탐색"] button')].map(e => e.textContent)`),
       ['홈', '루틴', '기록', '설정'])
     for (const width of [320, 393]) {
@@ -491,6 +494,7 @@ test('isolated HOME, ROUTINE, SETTINGS and CATALOG previews support their mobile
     await wait(() => evaluate(`document.activeElement.matches('${settingsItem}')`), 'settings focus restored')
     assert.equal(await evaluate(`document.querySelector('${settingsPage}').hidden`), false)
     assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '운동 종목 보기')
+    await verifyWorkoutReview({ origin, send, evaluate, wait, click, set, body, verifyWidth, drag })
     assert.deepEqual(apiRequests, [])
     assert.deepEqual(errors, [])
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)
@@ -502,7 +506,7 @@ test('isolated HOME, ROUTINE, SETTINGS and CATALOG previews support their mobile
     if (socket?.readyState === 1) { try { await send('Browser.close') } catch { /* browser exited */ } }
     if (browser?.exitCode === null) browser.kill()
     if (browser) await wait(() => browser.exitCode !== null || browser.signalCode !== null, 'browser exit')
-    await vite.close()
+    await vite?.close()
     assert.equal(dirname(profile), root)
     assert.match(basename(profile), /^browser-/)
     await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })

@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import type { ComponentPropsWithoutRef, ReactNode } from 'react'
+import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode } from 'react'
 import styles from './ui.module.css'
 
 export function Button({ variant = 'secondary', className = '', type = 'button', ...props }: ComponentPropsWithoutRef<'button'> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger' }) {
   return <button {...props} type={type} className={`${styles.button} ${variant === 'secondary' ? 'outline' : variant} ${className}`} />
 }
-export function Card({ hero = false, className = '', ...props }: ComponentPropsWithoutRef<'section'> & { hero?: boolean }) {
+export function Card({ hero = false, className = '', ...props }: ComponentPropsWithRef<'section'> & { hero?: boolean }) {
   return <section {...props} className={`${styles.card} ${hero ? styles.hero : ''} ${className}`} />
 }
 export function SectionHeading({ title, eyebrow, children }: { title: string; eyebrow?: string; children?: ReactNode }) {

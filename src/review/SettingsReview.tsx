@@ -8,12 +8,14 @@ import { SettingsMain } from '../features/settings/SettingsMain.tsx'
 import { catalogInstructionNotes, catalogSamples } from './catalog-samples.ts'
 import styles from './SettingsReview.module.css'
 import { useReviewMedia } from './useReviewMedia.ts'
+import type { RestAlerts } from '../features/workout-flow/types.ts'
+import flowStyles from '../features/workout-flow/WorkoutFlow.module.css'
+import { reviewRest } from './workout-model.ts'
 
-type View = 'account' | 'rest' | 'catalog'
-const restExample = { restLowSeconds: 180, restMediumSeconds: 120, restHighSeconds: 90 }
+type View = 'account' | 'rest' | 'catalog' | 'alerts'
 const reviewNote = 'UI 검토용 예시 데이터입니다.'
 
-export function SettingsReview() {
+export function SettingsReview({ alerts, onAlerts }: { alerts?: RestAlerts; onAlerts?: (value: RestAlerts) => void }) {
   const mediaSources = useReviewMedia()
   const [view, setView] = useState<View | null>(null)
   const [logoutOpen, setLogoutOpen] = useState(false)
@@ -26,7 +28,7 @@ export function SettingsReview() {
     if (!view && trigger.current) {
       trigger.current.focus({ preventScroll: true })
       window.scrollTo(0, menuScroll.current)
-    } else if (view === 'account' || view === 'rest') {
+    } else if (view === 'account' || view === 'rest' || view === 'alerts') {
       heading.current?.focus({ preventScroll: true })
       window.scrollTo(0, 0)
     }
@@ -41,6 +43,7 @@ export function SettingsReview() {
   return <>
     <SettingsMain hidden={view !== null} review
       onAccount={event => open('account', event.currentTarget)} onRest={event => open('rest', event.currentTarget)}
+      onRestAlerts={alerts && onAlerts ? event => open('alerts', event.currentTarget) : undefined}
       onCatalog={event => open('catalog', event.currentTarget)} onLogout={() => setLogoutOpen(true)} />
     {view === 'catalog' && <CatalogView items={catalogSamples} reviewNote={reviewNote} instructionNotes={catalogInstructionNotes} mediaSources={mediaSources} onBack={back} />}
     {view === 'account' && <div className={styles.account}>
@@ -56,7 +59,21 @@ export function SettingsReview() {
         <Button variant="quiet" onClick={back}>‹ 설정으로</Button>
         <h1 ref={heading} tabIndex={-1}>세트 사이 휴식</h1>
       </header>
-      <RestTimeCard settings={restExample} review />
+      <RestTimeCard settings={reviewRest} review />
+    </section>}
+    {view === 'alerts' && alerts && onAlerts && <section className={styles.page}>
+      <header className={styles.detailHeader}>
+        <Button variant="quiet" onClick={back}>‹ 설정으로</Button>
+        <h1 ref={heading} tabIndex={-1}>휴식 타이머 알림</h1>
+      </header>
+      <Card>
+        <label className={flowStyles.checkbox}><input type="checkbox" checked={alerts.flash} onChange={event => onAlerts({ ...alerts, flash: event.target.checked })} />화면 깜빡임</label>
+        <label>시작 시점<select value={alerts.threshold} disabled={!alerts.flash} onChange={event => onAlerts({ ...alerts, threshold: event.target.value === '10' ? 10 : 5 })}>
+          <option value="5">5초 전</option><option value="10">10초 전</option>
+        </select></label>
+        <label className={flowStyles.checkbox}><input type="checkbox" checked={alerts.sound} onChange={event => onAlerts({ ...alerts, sound: event.target.checked })} />효과음</label>
+        <p className="muted small">효과음은 마지막 5초에 재생됩니다. 설정은 현재 검토 탭에 적용됩니다.</p>
+      </Card>
     </section>}
     {logoutOpen && <Dialog title="로그아웃할까요?" onClose={() => setLogoutOpen(false)}>
       <div className="stack">

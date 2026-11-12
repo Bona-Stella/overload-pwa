@@ -16,6 +16,8 @@
 .shell .homeContent { padding-top: calc(18px + env(safe-area-inset-top)); padding-inline: 15px; }
 .content > :global(#auth-feedback:empty) { position: absolute; width: 1px; height: 1px; overflow: hidden; }
 .shell .withTabs { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+/* WorkoutFrame owns the measured fixed-action and Safe Area clearance. */
+.shell .content:has(> [data-workout-frame]) { padding-bottom: 0; }
 .tabs {
   position: fixed;
   inset: auto 0 0;

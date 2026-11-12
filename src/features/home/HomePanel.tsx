@@ -87,7 +87,9 @@ type HomeViewData = Pick<HomeData, 'summaries' | 'routines' | 'recent' | 'recent
   overview: Pick<HomeData['overview'], 'plannedDays'>
 }
 
-type HomeViewProps = Pick<Props, 'active' | 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onOpen'> & {
+type HomeViewProps = Pick<Props, 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onOpen'> & {
+  active: Pick<Session, 'initialPlan'> | null
+  resumeDetails?: ReactNode
   data?: HomeViewData | null
   today: string
   loading?: boolean
@@ -139,7 +141,7 @@ export function HomeView(props: HomeViewProps) {
         {!props.todayNotice && chosen?.tag && <span className={styles.routineTag}>{chosen.tag}</span>}
         {!props.todayNotice && (chosen ? <RoutinePlan routine={chosen} /> : <p className="muted small">{chosenId ? '이 루틴의 최신 구성을 확인하지 못했습니다. 새로고침하거나 다른 루틴을 선택하세요.' : data.schedule.version !== '0' ? '정해진 휴식일입니다. 원하면 오늘만 다른 루틴을 선택할 수 있습니다.' : '루틴 탭에서 운동과 주간 일정을 등록할 수 있습니다.'}</p>)}
       </Card>
-      {props.active ? <><StatusNotice>진행 중 · {props.active.initialPlan.routineName}</StatusNotice><Button className={styles.start} variant="primary" disabled={props.busy} onClick={props.onResume}>운동 이어가기</Button></>
+      {props.active ? <><StatusNotice>진행 중 · {props.active.initialPlan.routineName}</StatusNotice>{props.resumeDetails}<Button className={styles.start} variant="primary" disabled={props.busy} onClick={props.onResume}>운동 이어가기</Button></>
         : props.attempt ? <><StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice><Button className={styles.start} variant="primary" disabled={props.busy || !props.localReady} onClick={props.onRetry}>기존 시작 요청 다시 확인</Button></>
           : <Button className={styles.start} variant="primary" disabled={props.busy || !props.canStart || props.protectedView || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length} onClick={() => { if (chosen) void props.onStart(chosen) }}>운동 시작</Button>}
       {!props.hideChooser && <details className={styles.chooser} ref={chooser}><summary><b>오늘만 다른 루틴 선택</b><span className={styles.plus} aria-hidden="true" /></summary>
