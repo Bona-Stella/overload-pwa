@@ -4,6 +4,8 @@
 
 ## 확인한 계약과 적용 범위
 
+**2026-11-13 후속 정책 / 미구현:** [제품 10.21절](../product/Overload_UI_Decision_Log_v0.9.md#1021--루틴-중심-중량메모대체-정책--2026-11-13-후속-확정), [Frontend 지침](frontend.md#루틴-중심-중량메모대체-후속-구현--2026-11-13)을 함께 적용한다. 공식 중량은 정규 배치별이며 조합 변경 저장은 NEW·평가 새 시작이다. 오늘만 원계획 조합 변경은 세션 공식 평가 전체 제외지만 인정된 대체 슬롯은 ST-17~23·DL-08/G4에 반영한다. 실제 운동 통계·G4 산식·G5의 원본 승인 중량 편성은 유지한다. 아래 기존 API 연결만으로 새 최근값·조합 메모·대체 연결이 구현됐다고 해석하지 않는다. 이 갱신은 HTML·코드 변경이 아니다.
+
 | 영역 | 기존 구조 그대로 사용 가능 | 수정 또는 추가 검토 |
 |---|---|---|
 | 루틴·주간 일정 | [루틴 관리](../../../overload-server/docs/api/routine-management.md)와 [다중 프리셋 API](../../../overload-server/docs/api/weekly-schedule.md)가 현재 서버 계약이다. 과거 적용 근거는 내부 이력과 overview에서 읽는다. | T02의 계정 경로는 V30·V31 프리셋 계약을 사용한다. 디로딩 임시 일정·원본과 일반 일정은 분리한다. |
@@ -20,6 +22,8 @@
 - CATALOG-02는 인증 전송 허용 목록의 UUID 상세 GET을 사용한다. 선택 UUID와 응답을 검증하고, 정렬된 PRIMARY·SECONDARY와 `instructionSteps`를 표시한다. 일반 조회와 루틴 추가 가능 여부는 독립적이다.
 - 공개 상세 응답에는 보호 GIF 경로가 없다. V35 내부 검토에서는 검토 전용 매핑으로 하이 로우 한 종목을 동일 출처의 보호 전송에 연결했다. 정식 제공용 경로 전달은 후속 계약이다. 일반 정보와 GIF 상태를 독립적으로 처리하며 보호 미디어는 오프라인 캐시에서 제외한다. [내부 검토와 배포 경계](../../../overload-server/docs/api/standard-exercise-catalog.md#보호-gif-전송과-ui-계약)
 - 근육 통계는 `contributionSets`와 `groupActuals`를 소비한다. 현행 유산소 통계 화면은 `cardioByKind`를 사용하며, Backend의 `cardioByCategory`는 화면에 아직 연결하지 않았다. [표준 운동 인수인계](../../../overload-server/docs/engineering/standard-exercise-handoff.md#다음-작업인-사용자-ui-연결)
+
+**2026-11-13 근육 집계 후속 개정 / 분석 확장 구현 필요:** [ST-24~31·4.3절](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md#4-근육별-세트-집계)의 전면/후면·PPL·부위는 검수된 운동 분류와 원본 세트에서 독립 계산하고, 세부 근육에만 계획/실제 각각 PRIMARY 1.0 / SECONDARY 0.5를 적용한다. 물리적 전체/참여 정수와 기여 소수를 구분하며 하위 합산으로 상위를 만들지 않는다. 위 현재 `contributionSets`는 실제 기여, `groupActuals`는 근육 매핑 부위별 실제 중복 제거 결과다. 계획 기여·운동 직접 분류·선택한 활성/비활성 프리셋의 월~일 현재 계획 분석은 [후속 HTTP 경계](../../../overload-server/docs/api/statistics.md#분류별-독립-집계와-선택-프리셋-계획--2026-11-13)를 따라 구현해야 한다. 과거 적용 계획·실제 수행·디로딩 임시 계획·공식 평가·G4를 변경하지 않는다. [Frontend 지침](frontend.md#근육별-독립-집계와-선택-프리셋-계획--2026-11-13)과 연결하며 이번 갱신은 요구사항·구현 경계만 반영하고 UI 디자인·HTML은 확정/수정하지 않았다.
 
 <a id="t02-b-현재-api-소비"></a>
 
