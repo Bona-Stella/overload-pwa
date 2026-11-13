@@ -620,7 +620,7 @@ iPhone의 화면 구조를 고려합니다.
 
 ### 8.7 v0.9 적용 범위와 구현 상태
 
-**마지막 확인** 2026-11-10 (KST). 검토한 HEAD는 `e34e433`이다. `302bc00`의 HOME·ROUTINE UI와 `e34e433`의 실제 API 연동·이름 변경을 이전 검증 결과와 대조했다.
+**마지막 확인** 2026-11-13 (KST). 일반 운동 코드 기준은 `15a0f6bee4421f799cd691fa435bc8103c1e28e2`이며 Backend는 `a56103e39e9821657da3ef98b047f3ce136116c8`이다. 아래 HOME·ROUTINE 확인 기록은 당시 근거로 보존한다. 검토한 HEAD는 `e34e433`이다. `302bc00`의 HOME·ROUTINE UI와 `e34e433`의 실제 API 연동·이름 변경을 이전 검증 결과와 대조했다.
 
 | 범위 | 상태와 근거 |
 | --- | --- |
@@ -631,9 +631,31 @@ iPhone의 화면 구조를 고려합니다.
 | 표준 운동 DB 확장 3단계 | 근육 통계 화면에 세부 기여와 상위 그룹 실제 세트를 구분해 표시한다. [통계 계약](../../../overload-server/docs/api/statistics.md) |
 | 표준 운동 DB 확장 2단계 | 설정에서 공개 운동을 검색하고, 루틴·세션은 현재 기록할 수 있는 종목만 선택한다. [카탈로그 계약](../../../overload-server/docs/api/standard-exercise-catalog.md) · [검증 범위](#표준-운동-db-확장-2단계) |
 | CATALOG-01·02 및 SETTING-01 | **실제 API 연동·격리 검증·사용자 최종 승인 및 마감.** 계정 설정의 전체 메뉴와 공개 운동 목록·UUID 상세를 연결했다. 하이 로우 보호 GIF는 내부 검토 계정에서 확인했다. [최종 마감](#catalog-0102--setting-01-실제-계정-마감) |
+| 일반 운동 UI 및 실제 API | **구현·사용자 검수 피드백·로컬 코드 커밋 완료.** UI 승인 `e2965d8` 이후 일반 계정 경로를 실제 API에 연결했다. 메모는 기기·세션 범위이며 서버 저장은 미구현이다. 2026-11-13 문서 동기화, 검토 서버 종료. 실기기·운영 경계와 당시 검증은 [마감 기록](../tasks/ui-v09-workout-api-integration.md#최종-마감--2026-11-13)을 따른다. |
 | T03·T04 및 G6 | **후속.** 홈의 디로딩 분석·기간 조회와 일반 쓰기 보호는 연결했다. 기간·임시 계획의 편집, 디로딩 START 및 혼재 세션의 검증·로컬 저장·동기화는 G6 범위다. [G6 선행조건](backend-ui-v0.9.md#g6-실제-연동-선행조건) |
-| T03.5 휴식 타이머 알림 | **별도 범위.** 정책과 HTML 시연이 확정됐다. [구현 지침](#t035-휴식-타이머-시각효과음-알림) |
+| T03.5 휴식 타이머 알림 | **일반 운동의 5~1초 기본 효과음·시각 강조 및 수동 무음 종료 구현.** 독립 알림 설정의 서버 동기화는 별도 범위다. [구현 지침](#t035-휴식-타이머-시각효과음-알림) |
 | 실기기·후속 통합 | **검증 대기.** 최신 HOME·ROUTINE의 iPhone Safari, 설치형 PWA 및 신뢰된 로컬 HTTPS START는 이번 PC 검증에 포함되지 않았다. [실기기 검증 규칙](#167-실제-iphone-테스트) |
+
+#### 일반 운동 실제 API 연결 — 2026-11-13
+
+계정 화면은 `WorkoutWorkspace → LocalWorkoutScreen → LocalWorkoutFlow`에서 승인된 `workout-flow` UI를 재사용한다. `routine-preview?review=workout`의 Mock은 격리 시연이며 실제 계정의 데이터 출처가 아니다. [연동 기록](../tasks/ui-v09-workout-api-integration.md)과 [현행 API](../../../overload-server/docs/api/workout-sessions.md)를 함께 확인한다.
+
+| 연결 지점 | 현재 구현 |
+|---|---|
+| 진행·복원 | 기존 AuthController/WorkoutApi, LocalWorkoutController/WorkoutSynchronizer 및 IndexedDB DB3/schema2를 사용한다. 서버 소유자·세대·기기 epoch·revision·ACK를 검증한다. 현재 종목·준비운동·입력·타이머는 기기 사본으로 복원하며 원본/새 초안을 오래된 응답으로 덮어쓰지 않는다. |
+| 순서·세트 | AppliedPlan의 안정 UUID로 탐색과 번호를 계산한다. 목록 드래그 초안은 목록 닫기로 취소, 변경하기로 적용한다. 세트 중량·반복 휠과 직접 입력, 완료·취소·제외·추가, 장비 변경은 기존 직렬 저장 경계를 사용한다. |
+| 휴식·유산소 | 마지막 계획 세트는 휴식을 만들지 않는다. 수동 휴식 종료는 즉시 숨기고 재생 중 음을 끄며 진행 중 연장 뒤에 직렬 적용한다. 자동 5~1초 효과음과 구별한다. 유산소 준비/진행/일시정지/완료 확인/확정 및 실제 측정 출처를 유지한다. |
+| 저장·오류 | 전체 확정 snapshot을 고정 전송한다. 정상 저장 성공 문구·빈 상태 영역은 상시 노출하지 않는다. 미저장·오프라인·실패·승인 확인과 재시도는 노출하며 입력을 보존한다. FINISH의 최초 시각·최종 snapshot을 고정하고 ACK 보존 후 요약으로 전환한다. |
+| 평가·요약 | useProgressAssessment는 CLEAN 및 서버 확인 revision의 ACTIVE 잠정 평가만 사용한다. summary-data는 세션/version과 수행 UUID/ordinal/reps를 검증해 weightReview를 연결하고, BigInt 소수 산술로 실제 볼륨을 표시한다. 공식 평가 자격·기준 기록은 서버가 소유한다. |
+| 종료 기록 | ClosedWorkout은 WorkoutSummary를 공유한다. 상세/정정/복구/삭제/평가 변경 이력은 기존 ClosedWorkoutController와 API를 사용한다. 실패 입력, expectedVersion, tombstone 및 원본 UUID를 보존한다. |
+| 검색 | ExerciseSearch를 설정 공개 목록·루틴·세션 선택에서 공유한다. 이름/별칭·부위 필터·공식32px 아이콘·대분류/PRIMARY를 표시한다. 공개 열람과 신규 선택 가능 여부는 별개다. |
+| 메모 | equipmentMemos와 미저장 메모 버퍼는 해당 기기·세션에만 저장한다. snapshot·서버 revision·다른 기기 동기화에는 포함하지 않는다. 서버 메모 계약은 없다. |
+
+WorkoutFrame의 본문 스크롤 소유자는 document/window다. 메모 포커스 중 footer를 hidden으로 완전히 숨기고 실제 footer 높이 예약을 해제한다. VisualViewport의 pan offset에 따라 문서 높이를 바꾸지 않는다. 하나의 160ms 안정 대기 작업이 카드 전체와 상단 고정 헤더/가시 viewport 경계를 측정하며 하단 48px 및 실제 부족 스크롤 거리만 보정한다. 보정 후 수동 touch/wheel/drag가 우선이며 pan/툴바 변화마다 원위치로 되돌리지 않는다. 회전 등 필요한 경우만 재측정한다. blur와 실제 viewport 닫힘을 함께 확인한 뒤 임시 공간을 제거하고 footer를 복원한다. 수동 이동이 없고 같은 메모일 때 입력 전 위치를 가능한 스크롤 범위 안에서 복원한다.
+
+고정 액션의 ResizeObserver 실측 높이에는 Safe Area가 포함된다. 액션이 없으면 버튼 예약 대신 최소 Safe Area+8px만 사용한다. AppShell의 하단 예약은 보이는 운동 프레임에만 해제한다. useFitWorkoutTitle은 번호/이름 전체의 실제 폭을 측정해 최소16px까지 축소하고 남으면 말줄임한다. 숫자 휠·다른 입력에 메모 전용 보정을 적용하지 않는다.
+
+Web Locks 없는 환경의 편집 차단을 유지한다. iPhone LAN HTTP는 secure context가 아니므로 전체 편집 검증을 대신하지 못한다. UI 1차의 사용자 실기기 승인과 API 연동 후 에이전트 실기기 미검증을 구분한다. HTTPS/설치형 PWA/운영 검증 및 디로딩 G6는 후속이다. 이번 문서 작업에서 제품 테스트·Lint·타입 검사·빌드를 다시 실행하지 않았다.
 
 #### HOME·ROUTINE 마감 범위
 

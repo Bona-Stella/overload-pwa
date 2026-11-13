@@ -8,7 +8,7 @@
 |---|---|---|
 | 루틴·주간 일정 | [루틴 관리](../../../overload-server/docs/api/routine-management.md)와 [다중 프리셋 API](../../../overload-server/docs/api/weekly-schedule.md)가 현재 서버 계약이다. 과거 적용 근거는 내부 이력과 overview에서 읽는다. | T02의 계정 경로는 V30·V31 프리셋 계약을 사용한다. 디로딩 임시 일정·원본과 일반 일정은 분리한다. |
 | 세션·기록 | `WorkoutSessionController`의 START, ACTIVE/상세/종료 목록, snapshot, FINISH, takeover, 종료 후 정정·논리 삭제·선택 복구·평가·변경 이력. `InitialPlan`과 `AppliedPlan`, 완료 세트 장비·부하 방식, 유산소 실제값을 제공한다. | 디로딩 START와 세션 소속은 서버 계약을 따른다. G6에서 기간별 조회와 혼재 세션 검증기를 연결한다. |
-| 볼륨·카탈로그 | V17 표준 운동 ID와 장비 원본, V18 `joint_type` 및 PRIMARY/SECONDARY 링크, V21 유산소 실제 측정과 V22 `bodyweightLoad`. 기존 세션 상세의 실제 수행값과 계획으로 세트별·종목별 볼륨 UI를 구성할 수 있다. | 공식 볼륨과 동일한 산식으로 파생한다. 숫자 표현이나 계산 위치는 구현 검증에서 정하며, 별도 저장 볼륨 컬럼을 전제로 삼지 않는다. 6종 대표 아이콘 매핑과 운영 카탈로그 분류를 확인한다. |
+| 볼륨·카탈로그 | V17 표준 운동 ID와 장비 원본, V18 `joint_type` 및 PRIMARY/SECONDARY 링크, V21 유산소 실제 측정과 V22 `bodyweightLoad`. 기존 세션 상세의 실제 수행값과 계획으로 일반 운동 요약·상세 볼륨 UI를 구성한다. | 공식 볼륨과 동일한 산식으로 파생한다. 일반 운동은 summary-data의 BigInt 소수 표시 계산을 사용하며, 별도 저장 볼륨 컬럼을 전제로 삼지 않는다. 6종 대표 아이콘 매핑과 운영 카탈로그 분류를 확인한다. |
 | 통계·성장 | `StatisticsController`의 `/api/v1/statistics/overview`와 `/api/v1/statistics/growth/exercises` 및 배치별 조회. 전체·종목·대분류·세부 근육과 역할별 집계, 기간별 실제 수행 및 계획 근거, 승인 사건을 재사용한다. | 그래프 필터에 대응하는 날짜별 종목·근육 집계 및 제조사별 참고 통계는 현재 응답의 제공 범위를 넘는다. 추가 조회 또는 응답 확장을 검토한다. 디로딩 연결 뒤 전체 실적 집계와 해당 기간만 조회하는 화면을 구분하고, 일반 계획 달성·유효 주수 및 승인 경로에는 일반 실적만 적용한다. |
 | 설정 | `GET/PATCH /api/v1/workout-settings`로 고정된 세 휴식 시간(초)을 읽고 한 번에 변경할 수 있다. 로그인 세션과 CSRF 계약을 유지한다. | 분석 설정과 추천 누적은 기존 휴식 API와 분리한다. 홈의 분석 조회는 연결했다. 분석 설정 쓰기와 별도 기간 자격 조회는 G6에서 연결한다. |
 
@@ -82,3 +82,7 @@
 ### 2026-11-07 디로딩 정책 표현 정정
 
 초기 ON과 OFF→ON epoch, 시작 자격·누적 계산은 [제품 v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md)과 [G4 분석 API](../../../overload-server/docs/api/deload-analysis.md)를 적용한다.
+
+## 일반 운동 연결 마감 — 2026-11-13
+
+일반 START/ACTIVE/상세/snapshot/FINISH와 종료 기록 정정·복구·평가 UI는 실제 계정 경로에 연결됐다. ACTIVE progress-assessment는 잠정 안내, 종료 assessment의 weightReview는 화면 권고이며 공식 기준 자격을 바꾸지 않는다. [Frontend 구현 구조](frontend.md#일반-운동-실제-api-연결--2026-11-13), [마감·검증 기록](../tasks/ui-v09-workout-api-integration.md#최종-마감--2026-11-13)을 따른다. 메모 서버 저장과 G6 혼재 세션·디로딩 전용 연동은 완료 범위 밖이다. 초기 설계 표의 가능/예정 표현을 현재 일반 운동 미구현으로 해석하지 않는다.

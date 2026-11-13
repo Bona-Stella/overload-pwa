@@ -10,3 +10,5 @@
 - 파일 크기·SHA-256·원본 키는 [manifest.json](manifest.json)에 기록했습니다.
 - [추출 미리보기](Overload_Icons_v0.9_Extracted_Preview.png)에는 초기 6종이 담겨 있습니다.
 - 색상·배경·표시 기준은 [Visual Theme Spec](../../Overload_UI_Visual_Theme_Spec_v0.9.md)을 따릅니다.
+
+2026-11-13 일반 운동 API/UI 마감에서도 설정·루틴·세션 검색은 공통 `ExerciseSearch`와 위 원본32px 자산을 재사용한다. 표준 운동 이름/별칭·대분류/PRIMARY가 목록 메타데이터이며 제조사나 모델을 운동 아이콘/중복 표준 운동의 식별자로 사용하지 않는다. [현행 UI 결정](../../Overload_UI_Decision_Log_v0.9.md#1020--일반-운동-실제-api와-최종-검수--2026-11-13)
