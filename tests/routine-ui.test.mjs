@@ -71,7 +71,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await searchVisible()
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="표준 운동 목록"] button').length`),2,'catalog list is visible before typing/focusing')
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"] button')).backgroundColor`),'rgba(0, 0, 0, 0)','results are inline rows, not autocomplete cards')
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"] button')).borderRadius`),'0px')
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"] button')).borderRadius`),'10px','picker reuses the approved catalog row shape')
     assert.match(await evaluate(`document.querySelector('[aria-label="표준 운동 목록"] button').textContent`),/벤치프레스.*가슴.*대흉근/)
     assert.equal(await evaluate(`document.querySelector('[aria-label="표준 운동 목록"] img').width`),32)
     assert.equal(await evaluate(`document.querySelectorAll('[role="combobox"],[role="listbox"],[role="option"]').length`),0,'no autocomplete popup is rendered')

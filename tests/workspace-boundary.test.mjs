@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react'
 test('real React reconciliation removes statistics across workout, account, generation and late-response boundaries', { timeout: 60000 }, async () => {
   const directory = resolve('logs/workspace-boundary'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
   await mkdir(profile, { recursive: true })
-  const stub = `export class WorkoutApi {cardioActivities=async()=>[];};
+  const stub = `export class WorkoutApi {cardioActivities=async()=>[];closed=async()=>({sessions:[]});};
     export class WorkoutOnlineController { getSnapshot=()=>window.boundaryState; subscribe=()=>()=>{}; connect=()=>()=>{}; invalidateScope=()=>{}; }
     export class StatisticsApi { overview=(scope,period,signal)=>window.boundaryOverview(scope,period,signal); }
     export function useTrainingSchedule(){return {loading:false,canWrite:false,refresh:()=>{}}};

@@ -155,7 +155,8 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     actions = <RestActions remaining={remaining}
       onEnd={() => {
         const at = reviewClock()
-        if (weight.rest) updateWeight({ ...weight, rest: { ...weight.rest, ends: at } })
+        if (weight.rest) audio.silence(weight.rest.ends)
+        updateWeight({ ...weight, rest: undefined })
         setNow(at)
       }}
       onExtend={() => {
@@ -176,7 +177,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     const running = activity?.phase === 'running'
     actions = <div className={flow.actions}>
       <Button onClick={() => cardioPhase(running ? 'paused' : 'running')}>{running ? '일시정지' : '재개'}</Button>
-      <Button variant="primary" onClick={() => cardioPhase('review')}>유산소 완료 확인</Button>
+      <Button variant="primary" onClick={() => cardioPhase('review')}>유산소 완료</Button>
     </div>
   }
   const transition = !allDone && !warmup && !remaining && weight ? session.transition : undefined

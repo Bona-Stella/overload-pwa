@@ -33,17 +33,17 @@ export function catalogDetailView(detail: StandardExerciseDetail): CatalogBrowse
   }
 }
 
-export function primaryMuscles(exercise: CatalogExercise) {
+export function primaryMuscles(exercise: StandardExercise) {
   return exercise.muscles?.filter(muscle => muscle.role === 'PRIMARY') ?? []
 }
 
-export function catalogRowGroup(exercise: CatalogExercise, primary?: CatalogMuscle): CatalogGroup {
+export function catalogRowGroup(exercise: StandardExercise & { exerciseType?: CatalogExercise['exerciseType'] }, primary?: CatalogMuscle): CatalogGroup {
   if (exercise.exerciseType === 'CARDIO') return 'CARDIO'
   const group = primary?.groupCode
   return group && Object.hasOwn(groupNames, group) ? group as CatalogGroup : 'OTHER'
 }
 
-export function browseExercises<T extends CatalogExercise>(items: T[], query: string, filter: CatalogGroup | 'ALL') {
+export function browseExercises<T extends StandardExercise & { exerciseType?: CatalogExercise['exerciseType'] }>(items: T[], query: string, filter: CatalogGroup | 'ALL') {
   const candidates = filter === 'ALL' ? items : items.filter(item => {
     const primary = primaryMuscles(item)
     if (filter === 'CARDIO') return item.exerciseType === 'CARDIO'

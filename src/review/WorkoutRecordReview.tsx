@@ -11,10 +11,15 @@ export function WorkoutRecordReview({ record, onBack }: { record: ReviewRecord; 
   const goal = (p: typeof initialPlan.weightExercises[number]) => `목표 ${p.minReps}–${p.maxReps}회 × ${p.setCount}세트`
   const summaryWeights = weights.map(w => {
     const planned = initialPlan.weightExercises.find(p => p.sessionExerciseId === w.id)
+    const advice = sessionAdvice(session, w, true)
     return {
+      referenceKg: planned?.approvedWeightKg ?? null,
       id: w.id, name: w.name, planned: planned?.setCount, goal: planned && goal(planned),
       results: w.sets.flatMap(s => s.result ? [{ id: s.id, result: s.result, volume: setVolume(s.result) }] : []),
-      advice: sessionAdvice(session, w, true),
+      review: planned && advice.kg && (advice.advice === 'increase' || advice.advice === 'decrease') ? {
+        direction: advice.advice, referenceKg: advice.kg, planned: planned.setCount, completed: w.sets.filter(s => s.result).length, incomplete: false,
+        sets: w.sets.flatMap(s => s.result ? [{ id: String(s.id), reps: s.result.reps, contributes: advice.advice === 'increase' || s.result.reps < planned.minReps }] : []),
+      } : undefined,
     }
   })
   const whole = initialPlan.weightExercises.every(p => {
@@ -26,7 +31,7 @@ export function WorkoutRecordReview({ record, onBack }: { record: ReviewRecord; 
   return <WorkoutSummary routine={initialPlan.routineName} date={reviewToday} elapsed={endedAt - session.startedAt} deload={session.deload}
     manufacturers={manufacturers} plannedSets={plannedSets} whole={whole} onBack={onBack}
     weights={[...summaryWeights, ...removed.map(p => ({ id: p.sessionExerciseId, name: p.exerciseName, planned: p.setCount, goal: goal(p),
-      results: [], advice: { text: '이번 운동에서 제외한 종목' } }))]}
+      results: [], referenceKg: p.approvedWeightKg }))]}
     cardio={[
       ...cardio.map(item => ({ ...item, added: !initialPlan.cardioActivities.some(p => p.sessionActivityId === item.id) })),
       ...initialPlan.cardioActivities.filter(p => !cardio.some(c => c.id === p.sessionActivityId)).map(p => ({ ...makeCardio(p.plan, p.sessionActivityId), added: false })),

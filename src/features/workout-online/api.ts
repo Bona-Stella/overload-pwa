@@ -1,5 +1,5 @@
 import type { AuthController } from '../auth/controller.ts'
-import type { CardioActivity, CatalogExercise, StandardExerciseDetail, WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
+import type { ProgressAssessment, CardioActivity, CatalogExercise, StandardExerciseDetail, WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
   ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents, ClosedPage, ClosedCursor } from './types.ts'
 import * as v from './validation.ts'
 
@@ -128,10 +128,17 @@ export class WorkoutApi {
   records(scope: Scope, id: string, body: RecordEdit, signal: AbortSignal) { return this.call<RecordAck>(scope, idPath(root, id) + '/records', 'PATCH', body, signal, recordAck, id) }
   recover(scope: Scope, id: string, body: Recovery, signal: AbortSignal) { return this.call<RecordAck>(scope, idPath(root, id) + '/recoveries', 'POST', body, signal, recordAck, id) }
   deleteSession(scope: Scope, id: string, expectedVersion: string, signal: AbortSignal) { return this.call<RecordAck>(scope, idPath(root, id), 'DELETE', { dataGeneration: scope.dataGeneration, expectedVersion }, signal, recordAck, id) }
+  progressAssessment(scope: Scope, id: string, signal: AbortSignal) {
+    return this.call<ProgressAssessment>(scope, idPath(root, id) + '/progress-assessment', 'GET', undefined, signal,
+      x => v.object(x) && v.uuid(x.sessionId) && x.status === 'ACTIVE' && x.kind === 'PROVISIONAL'
+        && v.counter(x.version) && v.counter(x.writerEpoch) && v.counter(x.localRevision) && v.array(x.reasonCodes, v.text)
+        && (x.evaluation === null || v.assessment(x.evaluation) && x.evaluation.sessionVersion === x.version), id)
+  }
   assessment(scope: Scope, id: string, signal: AbortSignal) { return this.call<AssessmentView>(scope, idPath(root, id) + '/assessment', 'GET', undefined, signal,
     x => v.object(x) && v.uuid(x.sessionId) && v.status(x.status) && v.counter(x.version) && v.nullable(x.completionAssessment, v.assessment) && v.object(x.currentAssessment)
       && ['EVALUATED', 'EXCLUDED'].includes(String(x.currentAssessment.state)) && v.array(x.currentAssessment.reasonCodes, v.text)
-      && (x.currentAssessment.advice === null || x.currentAssessment.advice === 'UNAVAILABLE') && v.nullable(x.currentAssessment.evaluation, v.assessment), id) }
+      && (x.currentAssessment.advice === null || x.currentAssessment.advice === 'UNAVAILABLE') && v.nullable(x.currentAssessment.evaluation, v.assessment)
+      && (x.weightReview === null || v.weightReview(x.weightReview) && x.weightReview.sessionVersion === x.version), id) }
   changes(scope: Scope, id: string, signal: AbortSignal) { return this.call<ChangeEvents>(scope, idPath(root, id) + '/record-change-events', 'GET', undefined, signal,
     x => v.object(x) && v.uuid(x.sessionId) && v.counter(x.version) && v.array(x.events, e => v.object(e) && v.uuid(e.id) && v.uuid(e.recordId)
       && ['SET', 'CARDIO', 'SESSION'].includes(String(e.recordKind)) && ['CORRECTED', 'DELETED', 'RECOVERED'].includes(String(e.changeKind))

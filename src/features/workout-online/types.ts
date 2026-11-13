@@ -81,10 +81,16 @@ export type RecordAck = Scope & { sessionId: UUID; status: Session['status']; ve
 export type FinishAck = SnapshotAck & { status: 'FINISHED'; currentVersion: Counter; deletedAt: Instant | null; endedAt: Instant; closedAt: Instant; completionAssessment: CompletionAssessment }
 export type ResolutionAck = Scope & { sessionId: UUID; writerEpoch: Counter; localRevision: Counter; version: Counter; lastWorkoutSyncedAt: Instant; approvalResults: ApprovalResult[] }
 export type ClosedResolutionAck = Scope & { sessionId: UUID; status: Session['status']; version: Counter; changed: boolean; approvalResults: ApprovalResult[] }
-export type AssessmentView = Scope & { sessionId: UUID; status: Session['status']; version: Counter; completionAssessment: CompletionAssessment | null;
+export type WeightReview = { schemaVersion: 1; ruleVersion: 'workout-weight-review-v1'; sessionVersion: Counter; assessedAt: Instant;
+  exercises: { sessionExerciseId: UUID; advice: Advice; reasonCodes: string[]; referenceWeightKg: Decimal | null; plannedSetCount: number;
+    completedSetCount: number; minReps: number; maxReps: number; incomplete: boolean;
+    sets: { performedSetId: UUID; ordinal: number; reps: number; contributes: boolean }[] }[] }
+export type AssessmentView = Scope & { sessionId: UUID; status: Session['status']; version: Counter; completionAssessment: CompletionAssessment | null; weightReview: WeightReview | null;
   currentAssessment: { state: 'EVALUATED' | 'EXCLUDED'; reasonCodes: string[]; advice: 'UNAVAILABLE' | null; evaluation: CompletionAssessment | null } }
 export type ChangeEvents = Scope & { sessionId: UUID; version: Counter; events: { id: UUID; recordKind: 'SET' | 'CARDIO' | 'SESSION'; recordId: UUID;
   changeKind: 'CORRECTED' | 'DELETED' | 'RECOVERED'; before: Record<string, unknown> | null; after: Record<string, unknown> | null; changeContext: Record<string, unknown> | null; recordedAt: Instant }[] }
 export type ClosedCursor = { beforeClosedAt: Instant; beforeId: UUID }
+export type ProgressAssessment = Scope & { sessionId: UUID; status: 'ACTIVE'; version: Counter; writerEpoch: Counter; localRevision: Counter;
+  kind: 'PROVISIONAL'; reasonCodes: string[]; evaluation: CompletionAssessment | null }
 export type ClosedPage = Scope & { sessions: { id: UUID; routineName: string; status: 'FINISHED' | 'AUTO_CLOSED'; version: Counter; workoutDate: string;
   startedAt: Instant; endedAt: Instant | null; closedAt: Instant; deletedAt: Instant | null }[]; next: ClosedCursor | null }

@@ -30,7 +30,7 @@ export function reviewAccess(evidence, origins, lan) {
       try { id = JSON.parse(body.toString()).challengeId } catch { json(res, 400, { code: 'INVALID_REQUEST' }); return }
       if (!issued.has(id)) { json(res, 403, { code: 'REVIEW_DELIVERY_DENIED' }); return }
       await withV22Connection(evidence, 'backend'); await withV22Connection(evidence, 'control')
-      if ([30, 31].includes(evidence.migrations) || evidence.approvedCatalogReview?.approvedExercises === 31) {
+      if ([30, 31].includes(evidence.migrations) || evidence.approvedCatalogReview?.approvedExercises === 30) {
         const delivery = await withV22Connection(evidence, 'control', async send => {
           const response = await send('/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' } }, JSON.stringify({ issuanceId: id }))
           const bytes = Buffer.concat(await Array.fromAsync(response))

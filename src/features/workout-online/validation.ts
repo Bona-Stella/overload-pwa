@@ -97,3 +97,13 @@ export function countDraft(value: string): number {
   if (!count(result)) throw new Error('1~2147483647 범위의 정수를 입력해 주세요.')
   return result
 }
+
+export function weightReview(v: unknown): v is import('./types.ts').WeightReview {
+  return object(v) && v.schemaVersion === 1 && v.ruleVersion === 'workout-weight-review-v1' && counter(v.sessionVersion) && instant(v.assessedAt)
+    && array(v.exercises, e => object(e) && uuid(e.sessionExerciseId) && ['INCREASE','DECREASE','MAINTAIN','UNAVAILABLE'].includes(String(e.advice))
+      && array(e.reasonCodes,text) && nullable(e.referenceWeightKg,decimal) && count(e.plannedSetCount) && Number.isSafeInteger(e.completedSetCount) && Number(e.completedSetCount)>=0
+      && count(e.minReps) && count(e.maxReps) && Number(e.minReps)<=Number(e.maxReps) && typeof e.incomplete==='boolean'
+      && array(e.sets,s=>object(s)&&uuid(s.performedSetId)&&count(s.ordinal)&&count(s.reps)&&typeof s.contributes==='boolean')
+      && e.completedSetCount===e.sets.length && e.incomplete===(e.completedSetCount<Number(e.plannedSetCount))
+      && (!['INCREASE','DECREASE'].includes(String(e.advice)) || decimal(e.referenceWeightKg)))
+}

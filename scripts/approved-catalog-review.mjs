@@ -16,7 +16,7 @@ const ready = JSON.parse(await readFile(resolve(directory, 'ready.json'), 'utf8'
 // Human review outlives the automatic fixture's 30-minute startup window.
 // Live Backend/control identities are still checked before serving and every 3 seconds.
 validateV22Ready(ready, runId, Date.now(), { existingApprovedCatalog: true })
-if (ready.approvedCatalogReview?.approvedExercises !== 31 || !ready.approvedCatalogReview.gifAccessGranted) {
+if (ready.approvedCatalogReview?.approvedExercises !== 30 || !ready.approvedCatalogReview.gifAccessGranted) {
   throw Error('Expected the isolated approved catalog fixture')
 }
 await verifyV22Ownership(ready)

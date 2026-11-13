@@ -26,46 +26,47 @@ const {RoutineForm}=await import('../src/features/workout-online/RoutineForm.tsx
 const {RoutineCards}=await import('../src/features/workout-online/RoutineCards.tsx')
 const {LocalWorkoutView}=await import('../src/features/workout-local/LocalWorkoutScreen.tsx')
 const {ClosedWorkoutView}=await import('../src/features/workout-online/ClosedWorkout.tsx')
+const {summaryData}=await import('../src/features/workout-online/summary-data.ts')
 const {createLocalWorkout,applyLocalChange,editDraft,completeSet}=await import('../src/features/workout-local/model.ts')
 const render=(type,props)=>renderToStaticMarkup(React.createElement(type,props))
 const state={...scope,scope,userId:scope.userId,data:bootstrap,selected:null,active:null,detail:null,deviceId:DEVICE,attempt:null,status:'ready',busy:false,localReady:true,copySaved:false,issue:null,notice:''}
-const editorState=workout=>({workout,writable:true,loading:false,pending:0,issue:null,drafts:{},cardioDrafts:{},unsavedDrafts:false})
+const editorState=workout=>({workout:{...workout,warmupCompleted:true},memos:{},writable:true,loading:false,pending:0,issue:null,drafts:{},cardioDrafts:{},unsavedDrafts:false})
 test('AUTO_CLOSED UI keeps actual end absent, distinguishes assessments and hides protocol counters',()=>{
   const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'})
   const html=render(ClosedWorkoutView,{state:{server,assessment:{completionAssessment:null,currentAssessment:{state:'EXCLUDED',reasonCodes:['AUTO_CLOSED'],evaluation:null}},changes:{events:[]},copies:[],pending:null,busy:false,writable:false,issue:null,notice:''},controller:{}})
-  assert.match(html,/실제 운동 종료 없음/);assert.match(html,/최초 종료 평가/);assert.match(html,/현재 기록 기준 평가/);assert.match(html,/현재 평가 자격 없음/);assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/epoch|revision|hash/)
+  assert.match(html,/실제 종료 시각 없음/);assert.match(html,/기록이 자동 마감/);assert.match(html,/평가 변경 이력/);assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/epoch|revision|hash/)
 })
 test('deleted closed-session UI blocks corrections, recovery and deletion controls while retaining its history',()=>{
   const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z',deletedAt:'2026-11-01T01:01:00.000Z'})
   const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
-  assert.match(html,/삭제된 운동/);assert.match(html,/기록 변경 이력/);assert.doesNotMatch(html,/선택한 완료 수행 복구 확인|운동 전체 논리 삭제|세트 정정·삭제/)
+  assert.match(html,/삭제된 운동/);assert.match(html,/평가 변경 이력/);assert.doesNotMatch(html,/선택한 완료 수행 복구 확인|운동 전체 논리 삭제|세트 정정·삭제/)
 })
 test('closed history shows preserved before/after values without exposing request protocol fields',()=>{
   const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'}),event={id:OTHER,recordKind:'SET',changeKind:'CORRECTED',recordedAt:server.closedAt,before:{ordinal:1,weightKg:'60',reps:8},after:{ordinal:1,weightKg:'62.5',reps:9},changeContext:{sessionVersion:'2'}}
   const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[event]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
-  assert.match(html,/변경 전 1세트 · 60 kg × 8회/);assert.match(html,/변경 후 1세트 · 62.5 kg × 9회/);assert.doesNotMatch(html,/sessionVersion|epoch|revision|hash/)
+  assert.match(html,/평가 변경 이력/);assert.doesNotMatch(html,/변경 전|변경 후/);assert.doesNotMatch(html,/sessionVersion|epoch|revision|hash/)
 })
 test('a preserved explicit cardio skip may be deleted without inventing completed measurements',()=>{
   const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'});server.snapshot.state.cardioResults=[{id:OTHER,sessionActivityId:DEVICE,status:'SKIPPED',startedAt:null,occurredAt:server.closedAt,result:null}]
   const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
-  assert.match(html,/명시 건너뜀/);assert.match(html,/건너뜀 기록 삭제/);assert.doesNotMatch(html,/유산소 정정·삭제|거리 0 km|심박수 0/)
+  assert.match(html,/미시작|건너뜀/);assert.match(html,/기록 정정/);assert.doesNotMatch(html,/유산소 정정·삭제|거리 0 km|심박수 0/)
 })
 
-test('real workout view uses original plan, decimal text and local-only labels without a demo assessment or FINISH action',()=>{
+test('real workout view reuses approved layout with exact weight and truthful local status',()=>{
   const w=createLocalWorkout(session(),bootstrap.settings),html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:bootstrap.exercises})
-  assert.match(html,/99999999999999.999999/);assert.match(html,/1세트 중량 kg/);assert.match(html,/1세트 이번 반복 횟수/);assert.match(html,/시작 당시 불변 계획/)
-  assert.doesNotMatch(html,/목표 달성|증량 가능|운동 종료 및 요약|서버 저장 완료/)
+  assert.match(html,/99999999999999.999999/);assert.match(html,/data-workout-frame/);assert.match(html,/1세트 이번 반복 횟수/);assert.match(html,/기구 세팅 메모/);assert.match(html,/운동 종료/)
+  assert.doesNotMatch(html,/목표 달성|증량 가능|합성 데이터|서버 저장 완료/)
 })
 test('real completed set is shown only from persisted facts, and read-only tabs disable edits',()=>{
   const w=applyLocalChange(createLocalWorkout(session(),bootstrap.settings),x=>{editDraft(x,x.currentExerciseId,1,{weight:'0.000001',reps:'8'});completeSet(x,x.currentExerciseId,1,Date.parse(x.startedAt)+1000)})
   const html=render(LocalWorkoutView,{state:{...editorState(w),writable:false},controller:{},definitions:[]})
-  assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/revision|epoch|hash/);assert.match(html,/0.000001/);assert.match(html,/disabled="" aria-label="1세트 완료 취소"/)
+  assert.match(html,/<fieldset disabled=""/);assert.doesNotMatch(html,/revision|epoch|hash/);assert.match(html,/8회/);assert.match(html,/aria-label="1세트 완료 취소"/)
 })
 
 test('BODYWEIGHT recording offers an empty optional extra field without copying the existing weight',()=>{
   const w=createLocalWorkout(session(),bootstrap.settings);w.snapshot.appliedPlan.weightExercises[0].loadType='BODYWEIGHT'
   const html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:[]})
-  assert.match(html,/aria-label="1세트 추가 중량 kg"[^>]*value=""/);assert.match(html,/체중은 포함하지 않습니다/)
+  assert.match(html,/role="group" aria-label="1세트 추가 중량 kg"/);assert.match(html,/체중은 포함하지 않습니다/)
   const ordinary=createLocalWorkout(session(),bootstrap.settings)
   assert.doesNotMatch(render(LocalWorkoutView,{state:editorState(ordinary),controller:{},definitions:[]}),/세트 추가 중량 kg/)
 })
@@ -77,13 +78,13 @@ test('BODYWEIGHT history distinguishes explicit extra from unknown legacy weight
   const before={...record};delete before.bodyweightLoad
   const event={id:DEVICE,recordKind:'SET',recordId:OTHER,changeKind:'CORRECTED',recordedAt:server.closedAt,before,after:record,changeContext:{sessionVersion:'2'}}
   const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[event]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{}})
-  assert.match(html,/명시적 추가 중량 10 kg/);assert.match(html,/추가 중량 근거 없음 · 세트·반복만 집계/)
+  assert.match(html,/추가 10kg × 8회/);assert.match(html,/80kg/)
   assert.doesNotMatch(html,/명시적 추가 중량 80 kg|체중 80/)
 })
 test('INTEGER-sized planned count renders a bounded pending window rather than allocating planned slots',()=>{
   const w=createLocalWorkout(session(),bootstrap.settings);w.snapshot.appliedPlan.weightExercises[0].setCount=2147483647
   const html=render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:[]})
-  assert.equal((html.match(/aria-label="\d+세트 중량 kg"/g)??[]).length,20);assert.match(html,/2147483647세트/)
+  assert.equal((html.match(/role="group" aria-label="\d+세트 이번 반복 횟수"/g)??[]).length,20);assert.match(html,/2147483647세트/)
 })
 test('failed local write is never labeled as successful local saving',()=>{
   const html=render(LocalWorkoutView,{state:{...editorState(createLocalWorkout(session(),bootstrap.settings)),issue:'저장 실패'},controller:{},definitions:[]})
@@ -151,4 +152,88 @@ test('closed completed sets display the recorded manufacturer rather than the cu
   server.snapshot.state.performedSets=[{id:OTHER,sessionExerciseId:server.initialPlan.weightExercises[0].sessionExerciseId,ordinal:1,weightKg:'60',reps:8,completedAt:server.startedAt,weightContext:{kind:'INITIAL_APPROVED',requestId:null},manufacturerId:DEVICE,loadType:'PLATE'}]
   const html=render(ClosedWorkoutView,{state:{server,assessment:null,changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''},controller:{},manufacturers:[{id:DEVICE,name:'파나타'}]})
   assert.match(html,/파나타 · 원판식/)
+})
+
+test('normal saved status reserves no notice while failures, offline and unsaved inputs stay visible',()=>{
+  const w=createLocalWorkout(session(),bootstrap.settings)
+  const view=patch=>render(LocalWorkoutView,{state:{...editorState(w),...patch},controller:{},definitions:[]})
+  assert.doesNotMatch(view({syncStatus:'SAVED',syncIssue:null}),/서버에 저장됨|<aside/)
+  assert.match(view({syncStatus:'WAITING',syncIssue:'연결 복구 후 재시도'}),/연결 복구 후 재시도/)
+  assert.match(view({syncStatus:'CHECK',syncIssue:'서버 저장 실패'}),/서버 저장 실패/)
+  assert.match(view({unsavedDrafts:true}),/입력 보존 확인 필요/)
+})
+test('saved provisional recommendations distinguish increase, decrease and no advice without changing approval',()=>{
+  let w=createLocalWorkout(session(),bootstrap.settings)
+  for(let n=1;n<=3;n++)w=applyLocalChange(w,x=>{editDraft(x,x.currentExerciseId,n,{weight:x.initialPlan.weightExercises[0].approvedWeightKg,reps:'10'});completeSet(x,x.currentExerciseId,n,Date.parse(x.startedAt)+n*1000)})
+  w.rest=null
+  const result={eligible:true,sessionExerciseId:w.currentExerciseId,comparisonContext:{approvedWeightKg:w.initialPlan.weightExercises[0].approvedWeightKg}}
+  const view=advice=>render(LocalWorkoutView,{state:editorState(w),controller:{},definitions:[],progressAssessment:{evaluation:{exercises:[{...result,advice}]}}})
+  assert.match(view('INCREASE'),/증량 가능/);assert.match(view('DECREASE'),/감량 검토/)
+  assert.doesNotMatch(view('MAINTAIN'),/증량 가능|감량 검토/)
+  w.weights[w.currentExerciseId].context={kind:'TODAY_ONLY',requestId:null}
+  assert.doesNotMatch(view('INCREASE'),/증량 가능/)
+})
+
+
+function reviewedSession(advice='INCREASE', reps=[12,12,13],planned=3,min=8,max=12) {
+  const server=session({status:'FINISHED',endedAt:'2026-10-31T12:30:00Z',closedAt:'2026-10-31T12:30:01Z'})
+  const e=server.initialPlan.weightExercises[0];e.approvedWeightKg='40';e.setCount=planned
+  server.snapshot.state.appliedPlan.weightExercises[0].setCount=planned
+  server.snapshot.state.performedSets=reps.map((reps,i)=>({id:crypto.randomUUID(),sessionExerciseId:e.sessionExerciseId,ordinal:i+1,weightKg:'45',reps,completedAt:server.startedAt,manufacturerId:null,loadType:null,weightContext:{kind:'INITIAL_APPROVED',requestId:null}}))
+  const evaluation={schemaVersion:2,ruleVersion:'task009-completion-v1',sessionVersion:server.version,overallWeightPlanComplete:reps.length>=planned,assessedAt:server.closedAt,exercises:[]}
+  const review={sessionExerciseId:e.sessionExerciseId,advice,reasonCodes:[],referenceWeightKg:advice==='UNAVAILABLE'?null:'45',plannedSetCount:planned,completedSetCount:reps.length,minReps:min,maxReps:max,incomplete:reps.length<planned,
+    sets:server.snapshot.state.performedSets.map(s=>({performedSetId:s.id,ordinal:s.ordinal,reps:s.reps,contributes:advice==='INCREASE'||advice==='DECREASE'&&s.reps<min}))}
+  return{server,assessment:{...scope,sessionId:server.id,version:server.version,currentAssessment:{state:'EVALUATED',evaluation,reasonCodes:[]},completionAssessment:evaluation,
+    weightReview:{schemaVersion:1,ruleVersion:'workout-weight-review-v1',sessionVersion:server.version,assessedAt:server.closedAt,exercises:[review]}}}
+}
+const closedState=pair=>({...pair,changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''})
+const endView=pair=>render(ClosedWorkoutView,{state:closedState(pair),controller:{},summary:true,onBack(){}})
+test('summary restores WEIGHT and CARDIO below the weight review, removes only the redundant heading and keeps actual values',()=>{
+  const pair=reviewedSession(),before=structuredClone(pair.server),html=endView(pair)
+  assert.match(html,/운동 기록 요약/);assert.match(html,/토요일/);assert.match(html,/전체 루틴 완료/)
+  assert.match(html,/3\/3세트/);assert.match(html,/기존 45kg/);assert.match(html,/기준 40kg · 6–10회 × 3세트/)
+  assert.match(html,/45kg × 12회/);assert.match(html,/1,665kg/)
+  assert.doesNotMatch(html,/운동 수행<|이번 수행|유지 검토|기록 정정·복구 및 서버 평가 상세|운동 기록 메뉴/)
+  assert(html.indexOf('이번 운동의 중량 검토')<html.indexOf('WEIGHT'))
+  assert.deepEqual(pair.server,before)
+})
+test('repetition contribution colors follow server review and missing planned sets create no fabricated repetitions',()=>{
+  for(const [advice,reps,planned,marked,incomplete] of [
+    ['INCREASE',[12,12,13],3,3,false],
+    ['DECREASE',[12,12,7],3,1,false],
+    ['DECREASE',[8,7,7],3,2,false],
+    ['DECREASE',[10,10,9],4,0,true],
+    ['DECREASE',[10,7,9],4,1,true],
+  ]){
+    const html=endView(reviewedSession(advice,reps,planned))
+    assert.match(html,new RegExp(reps.length+'/'+planned+'세트'))
+    assert.equal((html.match(/data-direction="(?:increase|decrease)"/g)??[]).length,marked+1)
+    assert.equal(html.includes('data-incomplete="true"'),incomplete)
+    assert.match(html,new RegExp('aria-label="'+(advice==='INCREASE'?'증량 검토':'감량 검토')+'"'))
+    assert.doesNotMatch(html,/이번 수행|· 3세트|· 4세트|유지 검토/)
+  }
+})
+test('maintain, unavailable, missing, stale and mismatched review have distinct empty/error states',()=>{
+  assert.match(endView(reviewedSession('MAINTAIN',[13,12,11])),/이번 운동은 중량 변경 검토 대상이 없습니다/)
+  assert.match(endView(reviewedSession('UNAVAILABLE')),/수행·승인 정보가 부족/)
+  const pair=reviewedSession()
+  for(const assessment of [null,{...pair.assessment,version:'1'},{...pair.assessment,sessionId:OTHER}]){
+    const html=endView({...pair,assessment});assert.match(html,/중량 검토 결과를 확인하지 못했습니다/);assert.doesNotMatch(html,/중량 변경 검토 대상이 없습니다/)
+  }
+  pair.assessment.weightReview.exercises[0].sets[0].performedSetId=OTHER
+  assert.match(endView(pair),/중량 검토에 해당하는 수행 기록을 확인하지 못했습니다/)
+})
+test('history detail preserves original reference and actual equipment while exposing lightweight management menu',()=>{
+  const html=render(ClosedWorkoutView,{state:closedState(reviewedSession()),controller:{},onBack(){}})
+  assert.match(html,/운동 기록 상세/);assert.match(html,/웨이트 수행/);assert.match(html,/45kg × 12회/)
+  assert.match(html,/aria-label="운동 기록 메뉴"/);assert.match(html,/기록 정정|누락 수행 복구|기록 전체 삭제|평가 변경 이력/)
+  assert.doesNotMatch(html,/기록 정정·복구 및 서버 평가 상세|명시 종료|서버 종료 확정/)
+})
+test('summary maps independent server recommendation and recorded reference without changing official eligibility',()=>{
+  const pair=reviewedSession('DECREASE',[10,10,9],4)
+  const mapped=summaryData(pair.server,pair.assessment)
+  assert.equal(mapped.weights[0].review.direction,'decrease');assert.equal(mapped.weights[0].review.referenceKg,'45')
+  assert.equal(mapped.weights[0].referenceKg,'40');assert.equal(mapped.weights[0].results[0].result.kg,'45')
+  assert.equal(mapped.reviewState,'ready')
+  pair.server.version='1';assert.equal(summaryData(pair.server,pair.assessment).reviewState,'unavailable')
 })

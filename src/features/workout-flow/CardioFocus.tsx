@@ -35,8 +35,8 @@ export function CardioFocus({ cardio, activeMs, weightProgress, cardioProgress, 
       {(plan.inclinePercent !== null || plan.resistance !== null) && <p className="muted small">{plan.inclinePercent !== null ? `경사 ${plan.inclinePercent}%` : `저항 ${plan.resistance}`}</p>}
     </Card>
     <Card hero className={styles.cardioClock}>
-      <p>{phase === 'ready' ? '시작을 눌러야 측정합니다' : '실제 활동 시간 · 일시정지 제외'}</p>
-      <strong>{formatDuration(result?.activeMs ?? activeMs)}</strong>
+      <p>{phase === 'skipped' ? '미수행 · 명시적으로 건너뜀' : phase === 'ready' ? '시작을 눌러야 측정합니다' : '실제 활동 시간 · 일시정지 제외'}</p>
+      <strong>{phase === 'skipped' ? '—' : formatDuration(result?.activeMs ?? activeMs)}</strong>
       {phase === 'paused' && <small>재개 전까지 활동 시간이 멈춥니다.</small>}
       {!result && activeMs >= plan.targetSeconds * 1000 && <small>목표 시간 도달 · 완료 확인으로 이동할 수 있습니다.</small>}
     </Card>

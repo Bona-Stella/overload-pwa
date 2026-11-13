@@ -10,10 +10,10 @@ import type { SyncOptions, SyncStatus } from './sync.ts'
 
 type Store = Pick<WorkoutStore, 'openLocal' | 'readLocal' | 'saveLocal'> & Partial<Pick<WorkoutStore, 'saveSyncLocal' | 'saveSession'>>
 export type EditorState = { workout: LocalWorkout | null; writable: boolean; loading: boolean; pending: number; issue: string | null;
-  drafts: Record<string, SetDraft>; cardioDrafts: Record<string, Partial<CardioTimer>>; unsavedDrafts: boolean; syncStatus?: SyncStatus; syncIssue?: string | null }
+  drafts: Record<string, SetDraft>; cardioDrafts: Record<string, Partial<CardioTimer>>; memos: Record<string, string>; unsavedDrafts: boolean; syncStatus?: SyncStatus; syncIssue?: string | null }
 /** Serial local transactions. Completion UI only observes committed documents; the sender follows durable changes. */
 export class LocalWorkoutController {
-  private state: EditorState = { workout: null, writable: false, loading: true, pending: 0, issue: null, drafts: {}, cardioDrafts: {}, unsavedDrafts: false }
+  private state: EditorState = { workout: null, writable: false, loading: true, pending: 0, issue: null, drafts: {}, cardioDrafts: {}, memos: {}, unsavedDrafts: false }
   private listeners = new Set<() => void>()
   private lease: EditorLease | null = null
   private stopped = false
@@ -99,7 +99,7 @@ export class LocalWorkoutController {
     void this.change(workout => editDraft(workout, id, ordinal, value)).then(saved => {
       if (saved && this.state.drafts[key] === value) {
         const drafts = { ...this.state.drafts }; delete drafts[key]
-        this.set({ drafts, unsavedDrafts: Object.keys(drafts).length + Object.keys(this.state.cardioDrafts).length > 0 })
+        this.set({ drafts, unsavedDrafts: Object.keys(drafts).length + Object.keys(this.state.cardioDrafts).length + Object.keys(this.state.memos).length > 0 })
       }
     })
   }
@@ -111,17 +111,32 @@ export class LocalWorkoutController {
     void this.change(workout => { workout.timers[id] = { ...(workout.timers[id] ?? emptyTimer()), ...value } }).then(saved => {
       if (saved && this.state.cardioDrafts[id] === value) {
         const cardioDrafts = { ...this.state.cardioDrafts }; delete cardioDrafts[id]
-        this.set({ cardioDrafts, unsavedDrafts: Object.keys(cardioDrafts).length + Object.keys(this.state.drafts).length > 0 })
+        this.set({ cardioDrafts, unsavedDrafts: Object.keys(cardioDrafts).length + Object.keys(this.state.drafts).length + Object.keys(this.state.memos).length > 0 })
+      }
+    })
+  }
+  memo(id: string, value: string) {
+    if (!this.allowed() || !this.state.writable || this.state.workout?.finish) return
+    this.draftSerial++
+    this.set({ memos: { ...this.state.memos, [id]: value }, unsavedDrafts: true })
+    void this.change(w => {
+      if (!w.snapshot.appliedPlan.weightExercises.some(e => e.sessionExerciseId === id)) throw new Error('현재 종목을 확인해 주세요.')
+      w.equipmentMemos = { ...w.equipmentMemos, [id]: value }
+    }).then(saved => {
+      if (saved && this.state.memos[id] === value) {
+        const memos = { ...this.state.memos }; delete memos[id]
+        this.set({ memos, unsavedDrafts: Object.keys(memos).length + Object.keys(this.state.drafts).length + Object.keys(this.state.cardioDrafts).length > 0 })
       }
     })
   }
   async retryDrafts() {
-    const drafts = { ...this.state.drafts }, cardioDrafts = { ...this.state.cardioDrafts }, serial = this.draftSerial
+    const drafts = { ...this.state.drafts }, cardioDrafts = { ...this.state.cardioDrafts }, memos = { ...this.state.memos }, serial = this.draftSerial
     const saved = await this.change(workout => {
       for (const [key, value] of Object.entries(drafts)) { const at = key.lastIndexOf(':'); editDraft(workout, key.slice(0, at), Number(key.slice(at + 1)), value) }
       for (const [id, value] of Object.entries(cardioDrafts)) workout.timers[id] = { ...(workout.timers[id] ?? emptyTimer()), ...value }
+      workout.equipmentMemos = { ...workout.equipmentMemos, ...memos }
     })
-    if (saved && this.draftSerial === serial) this.set({ drafts: {}, cardioDrafts: {}, unsavedDrafts: false })
+    if (saved && this.draftSerial === serial) this.set({ drafts: {}, cardioDrafts: {}, memos: {}, unsavedDrafts: false })
     return saved
   }
   async complete(transform: (workout: LocalWorkout) => void) {

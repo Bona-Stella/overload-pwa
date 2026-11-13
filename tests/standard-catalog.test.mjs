@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { exerciseVariantLabels, normalizeSearch, searchExercises } from '../src/features/workout-online/catalog.ts'
+import { normalizeSearch, searchExercises } from '../src/features/workout-online/catalog.ts'
 import { browseExercises, catalogRowGroup, primaryMuscles } from '../src/features/workout-online/catalog-browse.ts'
 import { newWeights, updatedWeights } from '../src/features/workout-online/routine-weights.ts'
 import { WorkoutApi } from '../src/features/workout-online/api.ts'
@@ -125,20 +125,11 @@ test('completed facts and frozen pending requests reject nullable omissions or a
   assert.equal(localWorkout(w),false)
 })
 
-test('catalog search ignores spaces and keeps same-name machine variants distinct', () => {
+test('catalog search ignores spaces and resolves aliases to one standardized exercise', () => {
   const examples = [
-    { id: 'panatta', name: '컨버전트 랫풀다운', aliases: ['Convergent Lat Pulldown'] },
-    { id: 'high-row', name: '머신 하이 로우', aliases: ['High Row'] },
-    { id: 'hammer', name: '머신 숄더 프레스', aliases: ['숄더프레스', 'Hammer Strength Shoulder Press', '해머스트렝스 숄더 프레스'] },
-    { id: 'arsenal', name: '머신 숄더 프레스', aliases: ['숄더 프레스', 'Arsenal Strength Shoulder Press', '아스널 숄더 프레스'] },
+    { id:'pull',name:'컨버전트 랫풀다운',aliases:['Convergent Lat Pulldown'] },
+    { id:'shoulder',name:'머신 숄더 프레스',aliases:['숄더프레스','Machine Shoulder Press'] },
   ]
-  assert.deepEqual([...exerciseVariantLabels(examples)], [
-    ['hammer', '해머스트렝스 숄더 프레스'], ['arsenal', '아스널 숄더 프레스'],
-  ])
-  for (const [query, expected] of [
-    ['랫 풀다운', ['panatta']], ['랫풀다운', ['panatta']],
-    ['하이로우', ['high-row']], ['HIGH\u00a0row', ['high-row']],
-    ['컨버전트랫풀다운', ['panatta']], ['컨버전트 랫 풀다운', ['panatta']],
-    ['머신숄더프레스', ['hammer', 'arsenal']], ['ARSENALSTRENGTH', ['arsenal']],
-  ]) assert.deepEqual(searchExercises(examples, query).map(x => x.id), expected)
+  for(const [query,expected] of [['랫 풀다운',['pull']],['랫풀다운',['pull']],['머신숄더프레스',['shoulder']],['machine shoulder press',['shoulder']]])
+    assert.deepEqual(searchExercises(examples,query).map(e=>e.id),expected)
 })

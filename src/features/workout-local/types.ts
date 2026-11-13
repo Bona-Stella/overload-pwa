@@ -26,6 +26,10 @@ export type LocalWorkout = LocalKey & {
   weights: Record<string, { value: string; context: ActiveWeightContext }>
   timers: Record<string, CardioTimer>
   currentExerciseId: string
+  warmupCompleted?: boolean
+  // The current server contract has no equipment memo field. Never send these as snapshots.
+  equipmentMemos?: Record<string, string>
+  excludedSetOrdinals?: Record<string, number[]>
   exerciseNames: Record<string, string>
   restPolicy: RestPolicy
   rest: { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number } | null

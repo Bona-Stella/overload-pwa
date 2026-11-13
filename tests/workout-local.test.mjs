@@ -238,3 +238,19 @@ test('operational local editor imports neither demo model/storage nor a snapshot
     assert.doesNotMatch(source,/workout\/(?:model|storage|useWorkout|cardio)|overload\.core\.v1|localStorage\s*[.[]|(?:api|transport)\.(?:snapshot|finish)\(|\bfetch\(/)
   }
 })
+
+test('memo failure retains latest text through retry and never changes the server snapshot revision',async()=>{
+  const e=await editor(), original=structuredClone(e.stored().snapshot)
+  e.fail(true);e.c.memo(E,'의자 3');await e.c.settled()
+  assert.equal(e.c.getSnapshot().memos[E],'의자 3');assert.equal(e.c.getSnapshot().unsavedDrafts,true)
+  assert.equal(e.stored().equipmentMemos[E],undefined)
+  e.c.memo(E,'의자 3\n손잡이 2');await e.c.settled()
+  e.fail(false);assert.equal(await e.c.flushDrafts(),true)
+  assert.equal(e.stored().equipmentMemos[E],'의자 3\n손잡이 2')
+  assert.equal(e.stored().localRevision,'0');assert.deepEqual(e.stored().snapshot,original)
+  assert.equal(e.c.getSnapshot().unsavedDrafts,false);assert.ok(localWorkout(e.stored()));e.c.stop()
+})
+test('last planned set removes rest without manufacturing another completed set',()=>{
+  let w=change(local(),x=>m.updateTargets(x,E,1,6,10));w=set(w)
+  assert.equal(w.rest,null);assert.equal(w.snapshot.performedSets.length,1)
+})

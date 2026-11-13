@@ -1,13 +1,12 @@
-import { useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { Ref } from 'react'
-import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import { ReviewExerciseMediaContext } from '../../review/context.ts'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
 import type { WorkoutApi } from './api.ts'
-import { browseExercises, catalogDetailView, catalogGroups, catalogRowGroup, primaryMuscles } from './catalog-browse.ts'
-import type { CatalogBrowseExercise, CatalogGroup, CatalogMuscle } from './catalog-browse.ts'
+import { catalogDetailView, primaryMuscles } from './catalog-browse.ts'
+import type { CatalogBrowseExercise, CatalogMuscle } from './catalog-browse.ts'
 import { groupNames } from './catalog-label.ts'
-import { exerciseVariantLabels } from './catalog.ts'
+import { ExerciseSearch } from './ExerciseSearch.tsx'
 import styles from './PublicCatalog.module.css'
 
 export function PublicCatalog({ api, userId, onInvalid, onBack }: {
@@ -47,24 +46,17 @@ function CatalogHeading({ title, backLabel, onBack, headingRef }: {
   </header>
 }
 
-const filters = Object.entries(catalogGroups) as [CatalogGroup, (typeof catalogGroups)[CatalogGroup]][]
-
 type DetailLoader = (id: string, signal: AbortSignal) => Promise<CatalogBrowseExercise>
 
 export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, loadDetail, onBack }: {
   items: CatalogBrowseExercise[] | null; failed?: boolean; reviewNote?: string
   instructionNotes?: Readonly<Record<string, string>>; mediaSources?: Readonly<Record<string, string>>; loadDetail?: DetailLoader; onBack: () => void
 }) {
-  const searchId = useId()
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState<CatalogGroup | 'ALL'>('ALL')
   const [selected, setSelected] = useState<CatalogBrowseExercise | null>(null)
   const listTitle = useRef<HTMLHeadingElement>(null)
   const detailTitle = useRef<HTMLHeadingElement>(null)
   const selectedRow = useRef<HTMLButtonElement>(null)
   const listScroll = useRef(0)
-  const results = useMemo(() => items ? browseExercises(items, query, filter) : [], [items, query, filter])
-  const variants = useMemo(() => exerciseVariantLabels(items ?? []), [items])
 
   useLayoutEffect(() => {
     if (selected) {
@@ -85,37 +77,8 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
       <Card className={styles.catalogCard}>
         <div className={styles.sectionHeader}><h2>표준 운동 DB</h2><span className={styles.tag}>조회 전용</span></div>
         <p className={styles.description}>등록·편집·삭제는 관리자가 수행합니다. 사용자는 이름·별칭으로 검색하고 정보를 확인합니다.</p>
-        <div className={styles.search}>
-          <label htmlFor={searchId}>표준 운동 검색 · 이름 또는 별칭</label>
-          <input id={searchId} type="search" autoComplete="off" placeholder="예: 벤치, barbell" value={query} onChange={event => setQuery(event.target.value)} />
-        </div>
-        <div className={styles.filters}>
-          <p className={styles.filterLabel}>운동 부위</p>
-          <div className={styles.filterStrip} role="group" aria-label="운동 부위 필터">
-            <button type="button" aria-pressed={filter === 'ALL'} onClick={() => setFilter('ALL')}><span>전체</span></button>
-            {filters.map(([code, { label }]) => <button type="button" key={code} aria-pressed={filter === code} onClick={() => setFilter(code)}><span>{label}</span></button>)}
-          </div>
-        </div>
-        {failed ? <StatusNotice error>운동 정보를 불러오지 못했습니다.</StatusNotice>
-          : items === null ? <StatusNotice>운동 정보를 불러오는 중입니다.</StatusNotice>
-          : <ul role="list" aria-label="표준 운동 목록" className={styles.results}>{results.map(item => {
-            const first = primaryMuscles(item)[0]
-            const group = catalogGroups[catalogRowGroup(item, first)]
-            return <li key={item.id}>
-              <button type="button" className={styles.result} onClick={event => {
-                selectedRow.current = event.currentTarget
-                listScroll.current = window.scrollY
-                setSelected(item)
-              }}>
-                <ExerciseIcon kind={group.icon} />
-                <span className={styles.resultText}><strong>{item.name}</strong>
-                  <Metadata>{[group.label, first?.name ?? '등록 정보 없음', variants.get(item.id)].filter(Boolean).join(' · ')}</Metadata>
-                </span>
-                <span className={styles.arrow} aria-hidden="true">›</span>
-              </button>
-            </li>
-          })}</ul>}
-        <p role="status" className={styles.empty}>{!failed && items && !results.length ? '검색 결과가 없습니다.' : ''}</p>
+        <ExerciseSearch exercises={items ?? []} loading={items === null && !failed} failed={failed} resetOnSelect={false}
+          onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item) }} />
         {reviewNote && <p className={styles.description}>{reviewNote}</p>}
       </Card>
     </div>

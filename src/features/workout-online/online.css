@@ -8,9 +8,3 @@
 .workout-online time { overflow-wrap: anywhere; font-size: .85rem; }
 .workout-online summary { cursor: pointer; padding-block: .7rem; }
 .workout-online [aria-pressed="true"] { border-color: #3b82f6; }
-
-.exercise-search-results { list-style:none; padding:0; margin:0; }
-.exercise-search-results li + li { border-top:1px solid var(--border-subtle); }
-.exercise-search .exercise-search-results button { width:100%; text-align:left; min-height:62px; padding:10px 0; display:flex; align-items:center; gap:10px; background:transparent; border:0; border-radius:0; }
-.exercise-search-results button > span { min-width:0; overflow-wrap:anywhere; }
-.exercise-search-results small { display:block; color:var(--text-muted); font-size:12px; font-weight:400; }

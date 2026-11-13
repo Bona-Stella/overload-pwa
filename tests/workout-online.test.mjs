@@ -179,3 +179,36 @@ test('routine deletion version conflict preserves selection without automatic re
   assert.equal(calls,1);assert.equal(s.controller.getSnapshot().selected.version,routine.version)
   assert.ok(s.controller.getSnapshot().issue.includes('다른 곳에서 루틴이 수정'));s.disconnect()
 })
+
+test('provisional assessment validates owner, generation, session, kind and matching saved version',async()=>{
+  const evaluation={schemaVersion:2,ruleVersion:'task009-completion-v1',sessionVersion:'3',assessedAt:'2026-11-13T00:00:00Z',overallWeightPlanComplete:false,exercises:[]}
+  const valid={...scope,sessionId:start.id,status:'ACTIVE',version:'3',writerEpoch:'0',localRevision:'2',kind:'PROVISIONAL',reasonCodes:[],evaluation}
+  let data=valid
+  const paths=[],api=new WorkoutApi({workoutRequest:async(_user,path)=>{paths.push(path);return{status:200,data}}}),signal=new AbortController().signal
+  assert.equal((await api.progressAssessment(scope,start.id,signal)).kind,'PROVISIONAL')
+  assert.equal(paths[0],'/api/v1/workout-sessions/'+start.id+'/progress-assessment')
+  for(const patch of [{userId:OTHER},{dataGeneration:'0'},{sessionId:OTHER},{status:'FINISHED'},{kind:'OFFICIAL'},{writerEpoch:0},{localRevision:'01'},{evaluation:{...evaluation,sessionVersion:'2'}}]){
+    data={...valid,...patch};await assert.rejects(()=>api.progressAssessment(scope,start.id,signal))
+  }
+  data={...valid,evaluation:null,reasonCodes:['DELOAD_SESSION']};assert.equal((await api.progressAssessment(scope,start.id,signal)).evaluation,null)
+})
+
+test('assessment response validates independent weight-review version, baseline and complete-set evidence',async()=>{
+  const evaluation={schemaVersion:2,ruleVersion:'task009-completion-v1',sessionVersion:'3',assessedAt:'2026-11-13T00:00:00Z',overallWeightPlanComplete:false,exercises:[]}
+  const review={schemaVersion:1,ruleVersion:'workout-weight-review-v1',sessionVersion:'3',assessedAt:evaluation.assessedAt,
+    exercises:[{sessionExerciseId:OTHER,advice:'DECREASE',reasonCodes:[],referenceWeightKg:'45',plannedSetCount:4,completedSetCount:3,minReps:8,maxReps:12,incomplete:true,
+      sets:[OTHER,DEVICE,ROUTINE].map((id,i)=>({performedSetId:id,ordinal:i+1,reps:10,contributes:false}))}]}
+  const valid={...scope,sessionId:start.id,status:'FINISHED',version:'3',completionAssessment:evaluation,currentAssessment:{state:'EVALUATED',reasonCodes:[],advice:null,evaluation},weightReview:review}
+  let data=structuredClone(valid)
+  const api=new WorkoutApi({workoutRequest:async()=>({status:200,data})}),signal=new AbortController().signal
+  assert.equal((await api.assessment(scope,start.id,signal)).weightReview.exercises[0].advice,'DECREASE')
+  for(const patch of [{sessionVersion:'2'},{schemaVersion:2},{ruleVersion:'unknown'}]){
+    data={...valid,weightReview:{...review,...patch}};await assert.rejects(()=>api.assessment(scope,start.id,signal))
+  }
+  for(const patch of [{referenceWeightKg:null},{referenceWeightKg:45},{completedSetCount:4},{incomplete:false},{sets:[]}]) {
+    data={...valid,weightReview:{...review,exercises:[{...review.exercises[0],...patch}]}};
+    await assert.rejects(()=>api.assessment(scope,start.id,signal))
+  }
+  data={...valid,weightReview:undefined};await assert.rejects(()=>api.assessment(scope,start.id,signal))
+  data={...valid,weightReview:null};assert.equal((await api.assessment(scope,start.id,signal)).weightReview,null)
+})

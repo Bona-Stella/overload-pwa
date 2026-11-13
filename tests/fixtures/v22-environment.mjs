@@ -20,7 +20,7 @@ export function validateV22Ready(value, expectedRunId, now = Date.now(), { exist
   if (value.database !== 'overload_v22_isolated' || !Number.isInteger(value.databasePort) || value.databasePort < 1 || value.databasePort > 65535 || [5432, 5433].includes(value.databasePort)) reject()
   if (value.jdbcUrl !== `jdbc:postgresql://127.0.0.1:${value.databasePort}/${value.database}`) reject()
   const started = Date.parse(value.startedAt), ready = Date.parse(value.readyAt)
-  const ongoingCatalog = existingApprovedCatalog === true && value.approvedCatalogReview?.approvedExercises === 31 && value.approvedCatalogReview?.gifAccessGranted === true
+  const ongoingCatalog = existingApprovedCatalog === true && value.approvedCatalogReview?.approvedExercises === 30 && value.approvedCatalogReview?.gifAccessGranted === true
   if (!Number.isFinite(started) || !Number.isFinite(ready) || started > ready || ready > now || !ongoingCatalog && now - started > 30 * 60000) reject()
   if (value.initialUsers !== 0 || value.preparedUsers !== 1 || value.accountFlow !== 'EMAIL_OTP' || value.migrations !== 35
     || JSON.stringify(value.migrationVersions) !== JSON.stringify(Array.from({ length: 35 }, (_, i) => String(i + 1)))) reject()

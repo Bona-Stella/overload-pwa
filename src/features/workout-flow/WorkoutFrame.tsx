@@ -8,12 +8,12 @@ import styles from './WorkoutFlow.module.css'
 type Step = { id: string; name: string }
 type Navigation = { previous?: Step; next?: Step; onGo: (id: string) => void }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, children, actions, onHome, onEnd, clockRef, navigation, reviewNote }: {
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, children, actions, onHome, onEnd, clockRef, navigation, reviewNote, hidden }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
   timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; children: ReactNode; actions?: ReactNode
   onHome: () => void; onEnd: () => void
   clockRef?: RefObject<HTMLDivElement | null>
-  navigation?: Navigation; reviewNote?: ReactNode
+  navigation?: Navigation; reviewNote?: ReactNode; hidden?: boolean
 }) {
   const root = useRef<HTMLDivElement>(null)
   const ownClock = useRef<HTMLDivElement>(null)
@@ -38,7 +38,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
       restoreScroll.current = null
       const page = document.scrollingElement
       const maxScroll = page ? Math.max(0, page.scrollHeight - page.clientHeight) : position.top
-      window.scrollTo({ left: position.left, top: Math.min(position.top, maxScroll), behavior: 'instant' })
+      if (!root.current?.hidden) window.scrollTo({ left: position.left, top: Math.min(position.top, maxScroll), behavior: 'instant' })
     }
     const observer = new ResizeObserver(measure)
     observer.observe(dock)
@@ -75,7 +75,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
         editing = false
         const currentMemoId = container.querySelector('[data-workout-memo-card]')?.getAttribute('data-workout-memo-card')
         // A user's new position takes priority over the saved entry position.
-        restoreScroll.current = !userControlled && currentMemoId === entryMemoId ? entryScroll : null
+        restoreScroll.current = !container.hidden && !userControlled && currentMemoId === entryMemoId ? entryScroll : null
         entryScroll = null
         memoSpace = 0
         settledSize = null
@@ -128,6 +128,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
       if (editing) settleTimer = setTimeout(settle, 160)
     }
     const resize = () => {
+      if (container.hidden) return
       if (!editing) { writeInset(); return }
       if (!memo) { schedule(); return }
       const next = size()
@@ -135,6 +136,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
       if (changed) schedule()
     }
     const scroll = () => {
+      if (container.hidden) return
       if (!editing) { writeInset(); return }
       // Do not change document height or re-align on a Safari viewport pan.
       if (!memo || !settledSize && !userControlled) schedule()
@@ -197,7 +199,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     }
   }, [timeBar])
 
-  return <div className={styles.flow} ref={root} data-workout-frame data-fixed-actions={hasActions || undefined} data-weight-focus={!!navigation || undefined} data-memo-active={memoActive || undefined}>
+  return <div className={styles.flow} ref={root} hidden={hidden} data-workout-frame data-fixed-actions={hasActions || undefined} data-weight-focus={!!navigation || undefined} data-memo-active={memoActive || undefined}>
     <div className={styles.clockDock} ref={timeBar}>
       <div className={styles.clock} data-flash={flash || undefined} aria-label="운동 시간">
         <div><small>전체 운동 시간</small><strong>{formatDuration(elapsed)}</strong></div>
@@ -250,8 +252,9 @@ export function ExerciseNavigation({ previous, next, onList, onGo }: {
   </nav>
 }
 
-export function WeightRecommendation({ direction, kg }: { direction: 'increase' | 'decrease'; kg?: string }) {
-  return <div className={styles.recommendation} data-direction={direction} role="status">
+export function WeightRecommendation({ direction, kg, provisional = false }: { direction: 'increase' | 'decrease'; kg?: string; provisional?: boolean }) {
+  return <div className={styles.recommendation} data-direction={direction} role="status" aria-label={provisional ? '진행 중 잠정 중량 검토' : undefined}
+    title={provisional ? '현재 종목의 서버 저장 수행 기준 잠정 안내입니다. 공식 평가는 운동 종료 후 전체 계획을 기준으로 다시 계산합니다.' : undefined}>
     <b>{direction === 'increase' ? '증량 가능' : '감량 검토'}{kg && ` · ${kg}kg`}</b>
     <small>{direction === 'increase' ? '중량 증가를 고려해 보세요.' : '중량 감소를 고려해 보세요.'}</small>
   </div>

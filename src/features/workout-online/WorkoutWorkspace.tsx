@@ -12,7 +12,7 @@ import { PublicCatalog } from './PublicCatalog.tsx'
 import { WorkoutApi } from './api.ts'
 import { WorkoutOnlineController } from './controller.ts'
 import type { OnlineState } from './controller.ts'
-import type { CardioActivity, Manufacturer, Routine, Session } from './types.ts'
+import type { CardioActivity, Manufacturer, Routine, Session, StandardExercise } from './types.ts'
 import { equipmentLabel } from './equipment.ts'
 import { RoutineCards } from './RoutineCards.tsx'
 import { RoutineForm } from './RoutineForm.tsx'
@@ -25,7 +25,7 @@ import type { LocalWorkout } from '../workout-local/types.ts'
 import { StatisticsApi } from '../statistics/api.ts'
 import { StatisticsPanel } from '../statistics/StatisticsPanel.tsx'
 import type { AppTab } from '../../app/types.ts'
-import { Button, Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
+import { Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { HomePanel } from '../home/HomePanel.tsx'
 import { RestSettings } from '../settings/RestTimeCard.tsx'
@@ -281,12 +281,54 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   const visible = (localOnly || auth.status === 'authenticated' && auth.pending !== 'logout' && state.userId === auth.userId) && !auth.accountOpen
   const preserveDrafts = auth.offlineNetworkFailure && !!state.scope && state.scope.userId === auth.localWorkoutUserId
   const session = state.detail
+  const [retainedNames, setRetainedNames] = useState<{ key: string; exercises: StandardExercise[] } | null>(null)
+  const nameUser = accountReady ? session?.userId : null
+  const missingNames = JSON.stringify([...new Set(session?.snapshot.state.sessionExercises.filter(e => e.kind === 'WEIGHT'
+    && !state.data?.exercises.some(d => d.id === e.standardExerciseId)
+    && !session.initialPlan.weightExercises.some(p => p.sessionExerciseId === e.id)).map(e => e.standardExerciseId).filter((id): id is string => !!id) ?? [])].sort())
+  const nameKey = [nameUser, session?.dataGeneration, missingNames].join(':')
+  useEffect(() => {
+    const ids: string[] = JSON.parse(missingNames)
+    if (!nameUser || !ids.length) return
+    const abort = new AbortController()
+    void Promise.all(ids.map(id => api.exerciseDetail(nameUser, id, abort.signal))).then(exercises => {
+      if (!abort.signal.aborted) setRetainedNames({ key: nameKey, exercises })
+    }).catch(error => { if (!abort.signal.aborted && boundaryError(error)) controller.invalidateScope(error) })
+    return () => abort.abort()
+  }, [api, controller, nameUser, nameKey, missingNames])
+  const sessionDefinitions = [...(state.data?.exercises ?? []), ...(retainedNames?.key === nameKey ? retainedNames.exercises : [])]
+  const [dismissedRecord, setDismissedRecord] = useState<string | null>(null)
+  const [summaryRecord, setSummaryRecord] = useState<string | null>(null)
+  const recordIdentity = session && session.status !== 'ACTIVE' ? [session.userId, session.dataGeneration, session.id].join(':') : null
+  const recordFocused = !!recordIdentity && dismissedRecord !== recordIdentity
+  const [referenceHistory, setReferenceHistory] = useState<{ key: string; sessions: Session[] } | null>(null)
+  const referenceUser = accountReady && session?.status === 'ACTIVE' ? session.userId : null
+  const referenceGeneration = referenceUser ? session!.dataGeneration : null
+  const referenceId = referenceUser ? session!.id : null
+  const referenceKey = referenceUser ? [referenceUser, referenceGeneration, referenceId].join(':') : null
+  useEffect(() => {
+    if (!referenceUser || !referenceGeneration || !referenceKey) return
+    const abort = new AbortController(), scope = { userId: referenceUser, dataGeneration: referenceGeneration }
+    void api.closed(scope, null, abort.signal).then(async page => {
+      const sessions = await Promise.all(page.sessions.filter(s => !s.deletedAt).map(s => api.detail(scope, s.id, abort.signal)))
+      if (!abort.signal.aborted) setReferenceHistory({ key: referenceKey, sessions })
+    }).catch(error => { if (!abort.signal.aborted) { setReferenceHistory({ key: referenceKey, sessions: [] }); controller.invalidateScope(error) } })
+    return () => abort.abort()
+  }, [api, controller, referenceUser, referenceGeneration, referenceKey])
   const identity = session ? [session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':') : null
   const focused = visible && !!session && session.status === 'ACTIVE' && (localOnly || dismissedWorkout !== identity)
+  const lastFocused = useRef<string | null>(null)
   useEffect(() => {
-    onFocusChange?.(visible && (focused || tab === 'routines' && editingRoutine))
+    if (focused && session?.status === 'ACTIVE') lastFocused.current = session.id
+    else if (session?.status === 'FINISHED' && lastFocused.current === session.id) {
+      lastFocused.current = null
+      if (onNavigate) void onNavigate('history')
+    }
+  }, [focused, session?.id, session?.status, onNavigate])
+  useEffect(() => {
+    onFocusChange?.(visible && (focused || tab === 'history' && recordFocused || tab === 'routines' && editingRoutine))
     return () => onFocusChange?.(false)
-  }, [visible, focused, tab, editingRoutine, onFocusChange])
+  }, [visible, focused, tab, editingRoutine, recordFocused, onFocusChange])
   const settingsDetail = !localOnly && !focused && tab === 'settings' && onSettingsBack
     ? catalogOpen ? <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null} onInvalid={controller.invalidateScope} onBack={onSettingsBack} />
       : restOpen ? <RestSettings settings={accountReady ? state.data?.settings : undefined} onBack={onSettingsBack} /> : null
@@ -305,7 +347,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   }
   const navigate = async (next: AppTab) => onNavigate ? onNavigate(next) : flush()
   const openRecord = async (id: string) => {
-    if (await navigate('history')) await controller.showDetail(id)
+    if (await navigate('history')) { setDismissedRecord(null); setSummaryRecord(null); await controller.showDetail(id); window.scrollTo(0, 0) }
   }
   const resume = async () => {
     if (!state.active || !await flush()) return
@@ -343,20 +385,23 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       <WorkspaceView activities={activities} training={training} enabled={accountReady} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} />
     </div>}
 
-    {visible && !localOnly && !focused && tab === 'history' && <SectionHeading title="운동 기록·분석" eyebrow="YOUR TRAINING" />}
-    <div hidden={!visible || focused || tab !== 'history'}>{visible && !localOnly && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
+    {visible && !localOnly && !focused && !recordFocused && tab === 'history' && <SectionHeading title="운동 기록·분석" eyebrow="YOUR TRAINING" />}
+    <div hidden={!visible || focused || recordFocused || tab !== 'history'}>{visible && !localOnly && !recordFocused && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
       refreshKey={scheduleRevision + ':' + training.schedule?.appliedVersion} onInvalid={controller.invalidateScope} onOpen={id => void openRecord(id)} />}</div>
-    {focused && !localOnly && <Button variant="quiet" disabled={state.busy} onClick={async () => { if (await navigate('home')) setDismissedWorkout(identity) }}>‹ 홈으로 · 운동은 계속 보존</Button>}
-    {session && session.status === 'ACTIVE' && <details hidden={!focused} open={!editable}><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={() => void controller.takeover()} /></details>}
+    {session && session.status === 'ACTIVE' && !editable && <details hidden={!focused} open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={() => void controller.takeover()} /></details>}
     {visible && permissionIssue && <p className="notice" role="status">오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.</p>}
-    <div hidden={!focused}>{editable && <LocalWorkoutScreen key={[session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')}
-      server={session} policy={state.data!.settings} definitions={localOnly ? [] : state.data!.exercises} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
-      sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}</div>
-    <div hidden={!visible || focused || tab !== 'history'}>{visible && !localOnly && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} manufacturers={state.data?.manufacturers} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
+    {editable && <LocalWorkoutScreen key={[session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')}
+      assessmentApi={localOnly ? undefined : api}
+      visible={focused} onHome={() => { void (async () => { if (await navigate('home')) setDismissedWorkout(identity) })() }}
+      history={referenceHistory?.key === referenceKey ? referenceHistory.sessions : []}
+      server={session} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
+      sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: server => { if (server.status === 'FINISHED') setSummaryRecord([server.userId, server.dataGeneration, server.id].join(':')); controller.observeSession(server) }, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
+    <div hidden={!visible || focused || !recordFocused || tab !== 'history'}>{visible && !localOnly && recordFocused && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} summary={summaryRecord === recordIdentity} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions}
+      onBack={() => { setDismissedRecord(recordIdentity); window.scrollTo(0, 0) }} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
     }} />}</div>
-    <div hidden={!visible || focused || tab !== 'history'}>{visible && !localOnly && state.scope && <WorkoutHistory key={'history:' + state.scope.userId + ':' + state.scope.dataGeneration} api={api} scope={state.scope} onInvalid={controller.invalidateScope} refreshKey={session?.status === 'ACTIVE' ? 'active' : session?.id + ':' + session?.version} onOpen={id => void openRecord(id)} />}</div>
+    <div hidden={!visible || focused || recordFocused || tab !== 'history'}>{visible && !localOnly && !recordFocused && state.scope && <WorkoutHistory key={'history:' + state.scope.userId + ':' + state.scope.dataGeneration} api={api} scope={state.scope} onInvalid={controller.invalidateScope} refreshKey={session?.status === 'ACTIVE' ? 'active' : session?.id + ':' + session?.version} onOpen={id => void openRecord(id)} />}</div>
     {settingsDetail}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
     {visible && state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</>
