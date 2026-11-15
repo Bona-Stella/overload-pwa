@@ -2,7 +2,7 @@
 import { dayOfWeek } from '../features/home/model.ts'
 import type { CardioActivity, Equipment, StandardExercise, WeightPlacement } from '../features/workout-online/types.ts'
 import { exercises, manufacturers, reviewSample, reviewToday } from './routine-samples.ts'
-import { addSet, changeWeight, finishSet, startReview } from './workout-model.ts'
+import { addSet, captureReview, changeWeight, finishSet, startReview } from './workout-model.ts'
 
 const longExercise: StandardExercise = {
   id: '20100000-0000-4000-8000-000000000001',
@@ -23,6 +23,7 @@ export function exerciseEquipment(exercise: StandardExercise): Equipment {
 }
 
 export const workoutScenarios = {
+  'workout-complete': '완료 요약 · 중량 승인 검토',
   'workout-mixed': '운동 검토 · 웨이트 + 유산소',
   'workout-weight': '운동 검토 · 웨이트만',
   'workout-edited': '운동 검토 · 장비·세트 편집 후 이어가기',
@@ -49,6 +50,7 @@ export function workoutSample(scenario: WorkoutScenario) {
     routine.cardioPlacements = []
   } else routine.name = '웨이트 + 러닝'
   routine.weightPlacements.push(second)
+  if(scenario==='workout-complete')routine.weightPlacements.push({...first,id:'20100000-0000-4000-8000-000000000099',exerciseName:'덤벨 컬',standardExerciseId:'20100000-0000-4000-8000-000000000098',loadType:'DUMBBELL',approvedWeightKg:'12',initialWeightKg:'12'})
   return data
 }
 
@@ -59,4 +61,12 @@ export function editedSession(data: ReturnType<typeof workoutSample>) {
   const completed = finishSet({ ...session, warmup: false }, weight, set, at - 20000, true)
   completed.weights[0] = addSet(changeWeight({ ...completed.weights[0], manufacturerId: manufacturers[1].id, loadType: 'STACK' }, '22.5', 'today'))
   return completed
+}
+
+export function completedReview(data:ReturnType<typeof workoutSample>) {
+ const endedAt=Date.now(),session=startReview(data.routines[0],false,endedAt-2540000,data.sessions)
+ session.warmup=false
+ session.weights=session.weights.map(w=>({...w,sets:w.sets.map(s=>({...s,result:{kg:w.approved!,reps:w.max,additionalKg:null,mode:'approved' as const,at:endedAt,manufacturerId:w.manufacturerId,loadType:w.loadType}}))}))
+ session.cardio=session.cardio.map(c=>({...c,phase:'completed' as const,result:{activeMs:c.plan.targetSeconds*1000,timerMs:c.plan.targetSeconds*1000,corrected:false,distanceKm:c.plan.targetDistanceKm,averageBpm:130}}))
+ return captureReview(session,endedAt,reviewToday)
 }

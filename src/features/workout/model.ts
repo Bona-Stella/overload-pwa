@@ -1,3 +1,4 @@
+import { roundedDurationMs } from '../../components/duration.ts'
 import { newId } from '../../id.ts'
 export { newId } from '../../id.ts'
 import type { Benchmark, ProgressChange, Routine, RoutineExercise, WorkoutExercise, WorkoutSession, WorkoutState, WorkoutTimer } from './types.ts'
@@ -353,6 +354,6 @@ export function finishWorkout(state: WorkoutState, now: number, confirmIncomplet
 }
 
 export function formatDuration(milliseconds: number) {
-  const seconds = Math.max(0, Math.floor(milliseconds / 1000))
+  const seconds = Number(roundedDurationMs(milliseconds))
   return `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
 }

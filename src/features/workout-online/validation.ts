@@ -48,8 +48,14 @@ export function approvalResults(v: unknown): v is ApprovalResult[] {
 function weightContext(v: unknown) {
   return object(v) && (v.kind === 'APPROVAL_REQUEST' ? uuid(v.requestId) : ['INITIAL_APPROVED', 'TODAY_ONLY', 'UNVERIFIED'].includes(String(v.kind)) && v.requestId === null)
 }
+export function weightTiming(v:unknown):boolean{
+ if(!object(v)||v.schemaVersion!==1||typeof v.complete!=='boolean'||!Array.isArray(v.intervals)||v.intervals.length>10000)return false
+ let end=-Infinity,total=0
+ for(const row of v.intervals){if(!object(row)||!instant(row.startedAt)||!instant(row.endedAt))return false;const a=Date.parse(row.startedAt),b=Date.parse(row.endedAt);if(a<end||b<=a)return false;end=b;total+=b-a}
+ return total<=86400000
+}
 export function snapshot(v: unknown): v is Snapshot {
-  return object(v) && array(v.sessionExercises, x => object(x) && uuid(x.id) && (x.kind === 'WEIGHT' ? uuid(x.standardExerciseId) : x.kind === 'CARDIO' && nullable(x.standardExerciseId, uuid)))
+  return object(v) && (v.weightTiming===undefined||weightTiming(v.weightTiming)) && array(v.sessionExercises, x => object(x) && uuid(x.id) && (x.kind === 'WEIGHT' ? uuid(x.standardExerciseId) : x.kind === 'CARDIO' && nullable(x.standardExerciseId, uuid)))
     && object(v.appliedPlan) && v.appliedPlan.schemaVersion === 2
     && array(v.appliedPlan.weightExercises, x => object(x) && uuid(x.sessionExerciseId) && targets(x) && equipment(x))
     && array(v.appliedPlan.cardioActivities, x => object(x) && uuid(x.sessionActivityId) && cardioPlan(x.plan))

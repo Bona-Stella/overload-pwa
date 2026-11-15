@@ -32,7 +32,7 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave
   }, [popup])
   const canSubmit = !busy && !readOnly && !preset?.stale && (!preset || dirty || preset.initialApply)
   return <form className={styles.scheduleEditor} data-preset={!!preset} aria-label="주간 일정 편집" onSubmit={e => { e.preventDefault(); if (canSubmit) { if (preset) setConfirm(true); else onSave(draft) } }}>
-    <div className="section-heading"><h2>주간 일정 편집</h2><button type="button" className="quiet" disabled={busy} onClick={() => leave(onCancel)}>닫기</button></div>
+    <div className="section-heading"><h2>주간 일정 편집</h2><button data-close-text type="button" className="quiet" disabled={busy} onClick={() => leave(onCancel)}>닫기</button></div>
     <p>{preset && !preset.active ? '조회 중인 일정의 배정만 저장합니다.' : '저장 즉시 적용합니다. 지난 일정과 시작한 운동의 계획은 유지합니다.'}</p>
     {preset?.controls(leave)}
     <fieldset ref={filters} className={styles.candidateFilters} aria-label="루틴 후보 필터" disabled={busy || readOnly} onKeyDown={e=>{if(popup&&e.key==='Escape'){setPopup(null);(popup==='assignment'?first:tagButton).current?.focus()}}}>

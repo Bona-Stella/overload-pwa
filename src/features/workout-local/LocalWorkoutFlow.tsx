@@ -1,3 +1,8 @@
+import { referenceIncrease } from '../workout-online/reference-reminder.ts'
+import type { ReferenceRecord } from '../workout-online/reference-reminder.ts'
+import type { Routine } from '../workout-online/types.ts'
+import { CombinationMemo } from '../workout-online/CombinationMemo.tsx'
+import { changedOriginalCombination } from '../workout-online/approval-weight.ts'
 import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
@@ -20,12 +25,13 @@ import styles from '../workout-flow/WorkoutFlow.module.css'
 
 type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'remove' | 'undo-cardio' | { undo: number }
 const restKey = (rest: LocalWorkout['rest'] | undefined) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
-export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, notices, progressAssessment }: {
+export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, notices, progressAssessment, referenceRecords = [], referenceRoutine = null }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
   activities?: CardioActivity[]; history?: Session[]; visible?: boolean; onHome?: () => void; notices?: ReactNode
-  progressAssessment?: ProgressAssessment
+  progressAssessment?: ProgressAssessment; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
 }) {
   const [now, setNow] = useState(Date.now), [modal, setModal] = useState<Modal | null>(null), [editing, setEditing] = useState(false)
+  const [hiddenRecommendations,setHiddenRecommendations]=useState<Set<string>>(()=>new Set())
   const [completedScroll, setCompletedScroll] = useState(0)
   const [endingRest, setEndingRest] = useState<string | null>(null)
   const manualRest = useRef<string | null>(null)
@@ -110,8 +116,12 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const candidate = progressAssessment?.evaluation?.exercises.find(e => e.sessionExerciseId === id)
   const advice = weight && completeWeight && weight.mode !== 'today' && candidate?.eligible && candidate.comparisonContext
     && decimalDraft(weight.working) === candidate.comparisonContext.approvedWeightKg ? candidate : null
-  const recommendation = advice && (advice.advice === 'INCREASE' || advice.advice === 'DECREASE')
-    ? <WeightRecommendation provisional direction={advice.advice === 'INCREASE' ? 'increase' : 'decrease'} kg={advice.comparisonContext!.approvedWeightKg} /> : null
+  const changedCombination = workout.originalCombinationChanged === true || changedOriginalCombination(workout.initialPlan, workout.snapshot)
+  const prior=weight&&!changedCombination?referenceIncrease({...workout,id:workout.sessionId},id,weight.approved,referenceRoutine,referenceRecords):null
+  const direction=advice?.advice==='INCREASE'?'increase':advice?.advice==='DECREASE'?'decrease':prior?'increase':null
+  const referenceKg=advice?.comparisonContext?.approvedWeightKg??prior?.kg
+  const recommendation=weight&&!changedCombination&&direction&&!hiddenRecommendations.has(workout.sessionId+':'+id)?<WeightRecommendation provisional={!prior} source={advice?.advice==='INCREASE'||advice?.advice==='DECREASE'?'current':'benchmark'} direction={direction} kg={referenceKg} loadType={weight.loadType} onDismiss={()=>setHiddenRecommendations(ids=>new Set(ids).add(workout.sessionId+':'+id))}/>:null
+
   let actions: ReactNode
   if (blocked) actions = <Button onClick={() => void controller.retrySync()}>서버 저장 상태 다시 확인</Button>
   else if (warmup) actions = <Button variant="primary" onClick={() => void act(w => { w.warmupCompleted = true }).then(saved => { if (saved) window.scrollTo(0, 0) })}>준비운동 완료</Button>
@@ -120,7 +130,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     onEnd={endRest}
     onExtend={() => void act(w => { if (w.rest) w.rest.endsAt = new Date(Date.parse(w.rest.endsAt) + 30000).toISOString() })} />
   else if (weight && nextSet) actions = <Button variant="primary" onClick={() => complete(nextSet.id)}>{nextSet.id}세트 완료</Button>
-  else if (weight) actions = <>{recommendation}{finalActions}</>
+  else if (weight) actions = finalActions
   else if (activity?.phase === 'ready') actions = <Button variant="primary" onClick={() => void act(w => model.timerAction(w, id, 'start', Date.now()))}>유산소 시작</Button>
   else if (activity?.phase === 'review') actions = <Button variant="primary" onClick={() => void act(w => model.completeCardio(w, id, Date.now())).then(saved => { if (saved) window.scrollTo(0, 0) })}>유산소 기록 확정</Button>
   else if (activity?.phase === 'completed' || activity?.phase === 'skipped') actions = finalActions
@@ -128,6 +138,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     <Button onClick={() => void act(w => model.timerAction(w, id, activity?.phase === 'running' ? 'pause' : 'start', Date.now()))}>{activity?.phase === 'running' ? '일시정지' : '재개'}</Button>
     <Button variant="primary" onClick={() => void act(w => model.reviewCardio(w, id, Date.now()))}>유산소 완료</Button>
   </div>
+  if(weight&&!warmup&&!editing&&!blocked&&recommendation)actions=<>{recommendation}{actions}</>
   const lastCompleted = Math.max(0, ...workout.snapshot.performedSets.map(s => Date.parse(s.completedAt)))
   const timerHeading = activity ? '유산소 시간' : remaining ? '남은 휴식' : completeWeight && !allDone ? '이전 종목 완료' : '휴식 시간'
   const timerLabel = activity ? activity.phase === 'ready' ? '준비 중' : activity.phase === 'skipped' ? '건너뜀' : '완료'
@@ -153,7 +164,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
           {weight && <WeightFocus additionalInput weight={weight} position={index + 1} workingRef={working} manufacturers={manufacturers}
             description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
             issue={issue} resting={remaining > 0} editing={editing}
-            memoNote={state.memos?.[id] !== undefined ? '메모 입력 보존 중 · 이 기기에만 보관됩니다.' : '메모는 이 기기에만 보관됩니다.'}
+            memoContent={<CombinationMemo exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />}
+            progressNote={workout.replacementSlots?.[id] ? '대체 수행 ' + weight.sets.filter(s => s.result).length + '/' + weight.sets.length + '세트 · 원계획 슬롯 완료 인정은 서버 확인이 필요합니다.' : changedCombination ? '오늘만 조합 변경 · 공식 중량 검토 제외' : undefined}
             approvalNote={workout.approvalResults.some(r => r.sessionExerciseId === id && r.status === 'PENDING') ? '승인 확인 필요' : '승인 요청 상태 확인'}
             onDraft={(ordinal, draft) => {
               const current = controller.getSnapshot().workout
@@ -202,17 +214,14 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     {(modal === 'add' || modal === 'replace') && <SessionExerciseSearch saveIssue={issue} replace={modal === 'replace'} exercises={definitions}
       onClose={() => setModal(null)} onSelect={exercise => void act(w => {
         const index = w.snapshot.appliedPlan.weightExercises.findIndex(e => e.sessionExerciseId === id)
-        model.addWeight(w, exercise.id, exercise.name)
-        if (modal === 'replace') {
-          const added = w.currentExerciseId
-          model.removeExercise(w, id)
-          const plan = w.snapshot.appliedPlan.weightExercises
-          const addition = plan.splice(plan.findIndex(e => e.sessionExerciseId === added), 1)[0]
-          plan.splice(index, 0, addition); w.currentExerciseId = added
-        } else if (index >= 0) {
-          const plan = w.snapshot.appliedPlan.weightExercises
-          const addition = plan.pop()!
-          plan.splice(index + 1, 0, addition)
+        if (modal === 'replace') model.replaceWeight(w, id, exercise.id, exercise.name)
+        else {
+          model.addWeight(w, exercise.id, exercise.name)
+          if (index >= 0) {
+            const plan = w.snapshot.appliedPlan.weightExercises
+            const addition = plan.pop()!
+            plan.splice(index + 1, 0, addition)
+          }
         }
       }, true)} />}
     {modal === 'cardio' && <AddCardio saveIssue={issue} activities={activities} onClose={() => setModal(null)} onSave={plan => void act(w => model.addCardio(w, plan), true)} />}

@@ -1,3 +1,6 @@
+import {SearchExerciseDetails} from '../../components/SearchExerciseDetails.tsx'
+import type { ReferenceRecord } from './reference-reminder.ts'
+import { CombinationMemoProvider } from './CombinationMemo.tsx'
 import type { LiveSchedule } from '../statistics/weekly-schedule.ts'
 import { PresetAssignmentEditor } from '../statistics/WeeklySchedulePanel.tsx'
 import { PresetHeader, PresetMembership, PresetNavigation, RoutineCreatedNotice } from './PresetControls.tsx'
@@ -19,13 +22,15 @@ import { RoutineForm } from './RoutineForm.tsx'
 import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import './online.css'
-import { ClosedWorkout, WorkoutHistory } from './ClosedWorkout.tsx'
+import { ClosedWorkout } from './ClosedWorkout.tsx'
+import { useScreenHistory } from '../../app/navigation.ts'
+import { WeeklyMusclePlan } from '../statistics/MuscleAnalysis.tsx'
 import { offlineAccess } from '../workout-local/offline.ts'
 import type { LocalWorkout } from '../workout-local/types.ts'
 import { StatisticsApi } from '../statistics/api.ts'
 import { StatisticsPanel } from '../statistics/StatisticsPanel.tsx'
 import type { AppTab } from '../../app/types.ts'
-import { Metadata, SectionHeading, StatusNotice } from '../../components/ui.tsx'
+import { Metadata, StatusNotice } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { HomePanel } from '../home/HomePanel.tsx'
 import { RestSettings } from '../settings/RestTimeCard.tsx'
@@ -59,7 +64,27 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   enabled: boolean; activities?: CardioActivity[]; onEditingChange?: (editing: boolean) => void
 }) {
   const { schedule, protection } = training
-  const [editor, setEditor] = useState<RoutineEditorState | null>(null)
+  const [planPreset, setPlanPreset] = useScreenHistory<string | null>('routine-plan:' + state.scope?.userId + ':' + state.scope?.dataGeneration, null)
+  const [editorData, setEditorData] = useState<RoutineEditorState | null>(null)
+  const [editorRoute, setEditorRoute] = useScreenHistory<{ id:string; readOnly:boolean } | null>('routine-editor:' + state.scope?.userId + ':' + state.scope?.dataGeneration, null)
+  const editor = editorData && editorRoute?.id === (editorData.routine?.id ?? 'new') && editorRoute.readOnly === editorData.readOnly ? editorData : null
+  const setEditor = (next: RoutineEditorState | null) => {
+    setEditorData(next)
+    if (next) setEditorRoute({ id:next.routine?.id ?? 'new', readOnly:next.readOnly })
+    else setEditorRoute(null, true)
+  }
+  useEffect(() => {
+    if (!enabled || !editorRoute || editorData && editorRoute.id === (editorData.routine?.id ?? 'new') && editorRoute.readOnly === editorData.readOnly) return
+    let cancelled = false
+    void Promise.resolve().then(async () => {
+      if (cancelled) return
+      if (editorRoute.id === 'new') { setEditorData({ routine:null,readOnly:false }); return }
+      await controller.select(editorRoute.id)
+      const routine = controller.getSnapshot().selected
+      if (!cancelled && routine?.id === editorRoute.id) setEditorData({ routine,readOnly:editorRoute.readOnly })
+    })
+    return () => { cancelled = true }
+  }, [enabled, editorRoute, editorData, controller])
   const [scheduleEditor, setScheduleEditor] = useState<ScheduleEditorState | null>(null)
   const [viewedId, setViewedId] = useState<string | null>(null)
   const [created, setCreated] = useState<{ id: string; name: string } | null>(null)
@@ -128,12 +153,13 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     {training.writeIssue && !renaming && <p className="notice error" role="alert">{training.writeIssue}</p>}
     {state.issue && <p className="notice error" role="alert">{state.issue}</p>}{state.notice && <p className="notice" role="status">{state.notice}</p>}
     {state.data && state.scope && <>
-      <div hidden={focused}>
+      <div hidden={focused || !!planPreset}>
         {created && <RoutineCreatedNotice name={created.name} onLater={() => setCreated(null)} onAssign={() => openSchedule(created.id)} blocked={scheduleBlocked} />}
         <RoutineCards week={viewed} summaries={state.data.routines} details={cards} busy={busy} managementBlocked={managementBlocked}
           onNew={() => { setCreated(null); setEditor({ routine: null, readOnly: false }) }}
           onEdit={id => void openRoutine(id, false)} onSelect={id => void openRoutine(id, true)} onDelete={id => void deleteRoutine(id)}
           presetHeader={schedule && viewed ? viewToggle => <PresetHeader schedule={schedule} viewed={viewed} busy={busy} readOnly={scheduleBlocked} viewToggle={viewToggle}
+            onPlan={() => setPlanPreset(viewed.id)}
             onActivate={() => void training.write({ type: 'activate', id: viewed.id })}
             onToggle={() => void training.write({ type: 'rotate', enabled: !schedule.autoEnabled, entries: schedule.presets })}
             onRename={schedule.renameSupported ? () => {
@@ -151,6 +177,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             }} />}
           presetAssignments={schedule ? membership : undefined} />
       </div>
+      {planPreset && <><button type="button" className="quiet" onClick={() => window.history.back()}>‹ 루틴으로</button><WeeklyMusclePlan definitions={state.data.exercises} api={api} scope={state.scope} schedule={schedule} initialPreset={planPreset} refreshKey={previewKey} onInvalid={controller.invalidateScope} /></>}
       {scheduleEditor?.type === 'assign' && <PresetAssignmentEditor base={scheduleEditor.base} current={schedule} id={scheduleEditor.id}
         priorityId={scheduleEditor.priorityId} routines={state.data.routines} busy={busy} readOnly={scheduleBlocked}
         initialApply={scheduleEditor.base.appliedVersion === null && scheduleEditor.id === scheduleEditor.base.activeId}
@@ -297,24 +324,42 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     return () => abort.abort()
   }, [api, controller, nameUser, nameKey, missingNames])
   const sessionDefinitions = [...(state.data?.exercises ?? []), ...(retainedNames?.key === nameKey ? retainedNames.exercises : [])]
-  const [dismissedRecord, setDismissedRecord] = useState<string | null>(null)
+  const [recordRoute, setRecordRoute] = useScreenHistory<string | null>('record-detail:' + state.scope?.userId + ':' + state.scope?.dataGeneration, null)
   const [summaryRecord, setSummaryRecord] = useState<string | null>(null)
+  const [,setRecordsScreen]=useScreenHistory('records:'+(state.scope?.userId??'')+':'+(state.scope?.dataGeneration??''),'summary')
   const recordIdentity = session && session.status !== 'ACTIVE' ? [session.userId, session.dataGeneration, session.id].join(':') : null
-  const recordFocused = !!recordIdentity && dismissedRecord !== recordIdentity
-  const [referenceHistory, setReferenceHistory] = useState<{ key: string; sessions: Session[] } | null>(null)
+  const recordFocused = !!recordIdentity && recordRoute === session?.id
+  useEffect(() => {
+    if (recordRoute && tab === 'history' && accountReady && state.scope && !state.active && state.detail?.status !== 'ACTIVE' && state.detail?.id !== recordRoute) void controller.showDetail(recordRoute)
+  }, [recordRoute, tab, accountReady, state.scope, state.active, state.detail?.status, state.detail?.id, controller])
+  const [referenceHistory, setReferenceHistory] = useState<{ key: string; sessions: Session[]; references:ReferenceRecord[]; routine:Routine|null } | null>(null)
   const referenceUser = accountReady && session?.status === 'ACTIVE' ? session.userId : null
   const referenceGeneration = referenceUser ? session!.dataGeneration : null
   const referenceId = referenceUser ? session!.id : null
+  const referenceRoutineId = referenceUser ? session!.initialPlan.routineId : null
   const referenceKey = referenceUser ? [referenceUser, referenceGeneration, referenceId].join(':') : null
   useEffect(() => {
-    if (!referenceUser || !referenceGeneration || !referenceKey) return
+    if (!referenceUser || !referenceGeneration || !referenceKey || !referenceRoutineId) return
     const abort = new AbortController(), scope = { userId: referenceUser, dataGeneration: referenceGeneration }
-    void api.closed(scope, null, abort.signal).then(async page => {
-      const sessions = await Promise.all(page.sessions.filter(s => !s.deletedAt).map(s => api.detail(scope, s.id, abort.signal)))
-      if (!abort.signal.aborted) setReferenceHistory({ key: referenceKey, sessions })
-    }).catch(error => { if (!abort.signal.aborted) { setReferenceHistory({ key: referenceKey, sessions: [] }); controller.invalidateScope(error) } })
+    void (async()=>{
+      const routine=await api.routine(scope,referenceRoutineId,abort.signal)
+      const references:ReferenceRecord[]=[], sessions:Session[]=[]
+      let cursor:Parameters<WorkoutApi['closed']>[1]=null
+      do {
+        const page=await api.closed(scope,cursor,abort.signal),rows=page.sessions.filter(s=>!s.deletedAt&&s.status==='FINISHED')
+        let at=0
+        await Promise.all(Array.from({length:Math.min(4,rows.length)},async()=>{
+          while(at<rows.length&&!abort.signal.aborted){const id=rows[at++].id,record=await api.detail(scope,id,abort.signal)
+            sessions.push(record)
+            if(record.initialPlan.routineId===routine.id)references.push({session:record,assessment:await api.assessment(scope,id,abort.signal)})
+          }
+        }))
+        cursor=page.next
+      }while(cursor&&!abort.signal.aborted)
+      if(!abort.signal.aborted)setReferenceHistory({key:referenceKey,sessions,references,routine})
+    })().catch(error=>{if(!abort.signal.aborted){setReferenceHistory({key:referenceKey,sessions:[],references:[],routine:null});controller.invalidateScope(error)}})
     return () => abort.abort()
-  }, [api, controller, referenceUser, referenceGeneration, referenceKey])
+  }, [api, controller, referenceUser, referenceGeneration, referenceKey, referenceRoutineId])
   const identity = session ? [session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':') : null
   const focused = visible && !!session && session.status === 'ACTIVE' && (localOnly || dismissedWorkout !== identity)
   const lastFocused = useRef<string | null>(null)
@@ -322,9 +367,14 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     if (focused && session?.status === 'ACTIVE') lastFocused.current = session.id
     else if (session?.status === 'FINISHED' && lastFocused.current === session.id) {
       lastFocused.current = null
-      if (onNavigate) void onNavigate('history')
+      const finished = session
+      void (async () => {
+        if (onNavigate && !await onNavigate('history')) return
+        const latest = controller.getSnapshot()
+        if (latest.scope?.userId === finished.userId && latest.scope.dataGeneration === finished.dataGeneration && latest.detail?.id === finished.id) setRecordRoute(finished.id, true)
+      })()
     }
-  }, [focused, session?.id, session?.status, onNavigate])
+  }, [focused, session, onNavigate, controller, setRecordRoute])
   useEffect(() => {
     onFocusChange?.(visible && (focused || tab === 'history' && recordFocused || tab === 'routines' && editingRoutine))
     return () => onFocusChange?.(false)
@@ -347,7 +397,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   }
   const navigate = async (next: AppTab) => onNavigate ? onNavigate(next) : flush()
   const openRecord = async (id: string) => {
-    if (await navigate('history')) { setDismissedRecord(null); setSummaryRecord(null); await controller.showDetail(id); window.scrollTo(0, 0) }
+    if (await navigate('history')) { setSummaryRecord(null); await controller.showDetail(id); if (controller.getSnapshot().detail?.id === id) setRecordRoute(id); window.scrollTo(0, 0) }
   }
   const resume = async () => {
     if (!state.active || !await flush()) return
@@ -360,12 +410,12 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       && s.detail.writerEpoch === session.writerEpoch && s.detail.editorDeviceId === session.editorDeviceId && s.detail.status === 'ACTIVE'
       && (a.status === 'authenticated' && a.userId === session.userId || a.localWorkoutUserId === session.userId)
   }
-  return <>
+  return <CombinationMemoProvider key={state.scope?.userId + ':' + state.scope?.dataGeneration}><SearchExerciseDetails api={api} userId={state.scope?.userId}>
     {visible && navigationIssue && <StatusNotice error>입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.</StatusNotice>}
     <div hidden={!visible || focused || tab !== 'home'}>{visible && !localOnly && (state.status === 'ready' && state.scope && state.data ? <HomePanel
       key={'home:' + state.scope.userId + ':' + state.scope.dataGeneration} scope={state.scope} routines={state.data.routines} api={api} training={training} statistics={statistics} visit={visit.count}
       refreshKey={scheduleRevision} active={state.active} attempt={state.attempt !== null} busy={state.busy} localReady={state.localReady}
-      issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void resume()} onRetry={() => void controller.start()}
+      issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void resume()} onRetry={() => void controller.start()}
       onStart={async routine => {
         if (homeStarting.current) return
         homeStarting.current = true
@@ -385,24 +435,23 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       <WorkspaceView activities={activities} training={training} enabled={accountReady} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} />
     </div>}
 
-    {visible && !localOnly && !focused && !recordFocused && tab === 'history' && <SectionHeading title="운동 기록·분석" eyebrow="YOUR TRAINING" />}
-    <div hidden={!visible || focused || recordFocused || tab !== 'history'}>{visible && !localOnly && !recordFocused && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
-      refreshKey={scheduleRevision + ':' + training.schedule?.appliedVersion} onInvalid={controller.invalidateScope} onOpen={id => void openRecord(id)} />}</div>
+    <div hidden={!visible || focused || recordFocused || tab !== 'history'}>{visible && !localOnly && state.status === 'ready' && state.scope && session?.status !== 'ACTIVE' && <StatisticsPanel key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
+      workoutApi={api} schedule={training.schedule} definitions={state.data?.exercises} refreshKey={[scheduleRevision,training.schedule?.appliedVersion,session?.id,session?.version,session?.deletedAt].join(':')} onInvalid={controller.invalidateScope} onOpen={id => void openRecord(id)} />}</div>
     {session && session.status === 'ACTIVE' && !editable && <details hidden={!focused} open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={() => void controller.takeover()} /></details>}
     {visible && permissionIssue && <p className="notice" role="status">오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.</p>}
     {editable && <LocalWorkoutScreen key={[session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')}
       assessmentApi={localOnly ? undefined : api}
       visible={focused} onHome={() => { void (async () => { if (await navigate('home')) setDismissedWorkout(identity) })() }}
       history={referenceHistory?.key === referenceKey ? referenceHistory.sessions : []}
+      referenceRecords={referenceHistory?.key===referenceKey?referenceHistory.references:[]} referenceRoutine={referenceHistory?.key===referenceKey?referenceHistory.routine:null}
       server={session} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
-      sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: server => { if (server.status === 'FINISHED') setSummaryRecord([server.userId, server.dataGeneration, server.id].join(':')); controller.observeSession(server) }, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
+      sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: server => { if (server.status === 'FINISHED') { setSummaryRecord([server.userId, server.dataGeneration, server.id].join(':')) } controller.observeSession(server) }, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
     <div hidden={!visible || focused || !recordFocused || tab !== 'history'}>{visible && !localOnly && recordFocused && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} summary={summaryRecord === recordIdentity} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions}
-      onBack={() => { setDismissedRecord(recordIdentity); window.scrollTo(0, 0) }} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
+      onBack={() => { if (summaryRecord === recordIdentity) { setSummaryRecord(null); setRecordRoute(null, true); void navigate('home') } else if (window.history.state?.overloadNavigation?.index > 0) window.history.back(); else setRecordRoute(null, true); window.scrollTo(0, 0) }} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
     }} />}</div>
-    <div hidden={!visible || focused || recordFocused || tab !== 'history'}>{visible && !localOnly && !recordFocused && state.scope && <WorkoutHistory key={'history:' + state.scope.userId + ':' + state.scope.dataGeneration} api={api} scope={state.scope} onInvalid={controller.invalidateScope} refreshKey={session?.status === 'ACTIVE' ? 'active' : session?.id + ':' + session?.version} onOpen={id => void openRecord(id)} />}</div>
     {settingsDetail}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
-    {visible && state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</>
+    {visible && state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</SearchExerciseDetails></CombinationMemoProvider>
 }

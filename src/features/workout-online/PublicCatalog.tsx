@@ -77,20 +77,21 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
       <Card className={styles.catalogCard}>
         <div className={styles.sectionHeader}><h2>표준 운동 DB</h2><span className={styles.tag}>조회 전용</span></div>
         <p className={styles.description}>등록·편집·삭제는 관리자가 수행합니다. 사용자는 이름·별칭으로 검색하고 정보를 확인합니다.</p>
-        <ExerciseSearch exercises={items ?? []} loading={items === null && !failed} failed={failed} resetOnSelect={false}
+        <ExerciseSearch exercises={items ?? []} loading={items === null && !failed} failed={failed} resetOnSelect={false} defaultOpen
           onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item) }} />
         {reviewNote && <p className={styles.description}>{reviewNote}</p>}
       </Card>
     </div>
-    {selected && <div className={styles.screen}>
-      <CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={() => setSelected(null)} headingRef={detailTitle} />
-      <SelectedExercise key={selected.id} exercise={selected} loadDetail={loadDetail} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} />
-      {reviewNote && <p className={styles.description}>{reviewNote}</p>}
-    </div>}
+    {selected && <CatalogDetail exercise={selected} onBack={()=>setSelected(null)} headingRef={detailTitle} loadDetail={loadDetail} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} reviewNote={reviewNote}/>}
   </>
 }
 
-function SelectedExercise({ exercise, loadDetail, instructionNote, mediaSource }: {
+/** The existing standard catalog detail page, also used by search-result navigation. */
+export function CatalogDetail({exercise,onBack,headingRef,loadDetail,instructionNote,mediaSource,reviewNote}:{exercise:CatalogBrowseExercise;onBack:()=>void;headingRef:Ref<HTMLHeadingElement>;loadDetail?:DetailLoader;instructionNote?:string;mediaSource?:string;reviewNote?:string}){
+ return <div className={styles.screen+" catalog-detail-page"} data-catalog-detail><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={onBack} headingRef={headingRef}/><SelectedExercise key={exercise.id} exercise={exercise} loadDetail={loadDetail} instructionNote={instructionNote} mediaSource={mediaSource}/>{reviewNote&&<p className={styles.description}>{reviewNote}</p>}</div>
+}
+
+export function SelectedExercise({ exercise, loadDetail, instructionNote, mediaSource }: {
   exercise: CatalogBrowseExercise; loadDetail?: DetailLoader; instructionNote?: string; mediaSource?: string
 }) {
   const [result, setResult] = useState<{ detail?: CatalogBrowseExercise; error?: unknown } | null>(null)

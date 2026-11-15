@@ -1,10 +1,11 @@
+import { localToday } from '../features/statistics/period-selection.ts'
 import { activeCardio, activeWeights, dayOfWeek, weekDates } from '../features/home/model.ts'
 import { hasActualPerformance } from '../features/home/achievement.ts'
 import type { PlannedDay } from '../features/statistics/api.ts'
 import type { PresetSchedule } from '../features/workout-online/preset-schedule.ts'
 import type { CardioActivity, Manufacturer, Routine, Scope, Session, StandardExercise } from '../features/workout-online/types.ts'
 
-export const reviewToday = '2026-11-11'
+export const reviewToday = localToday()
 export const scope: Scope = { userId: '10000000-0000-4000-8000-000000000001', dataGeneration: '0' }
 const id = (number: number) => '10000000-0000-4000-8000-' + String(number).padStart(12, '0')
 export const exercises: StandardExercise[] = [

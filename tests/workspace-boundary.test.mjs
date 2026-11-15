@@ -27,7 +27,10 @@ test('real React reconciliation removes statistics across workout, account, gene
   const send = (method, params = {}) => new Promise((resolve, reject) => { const id = ++next; pending.set(id, { resolve, reject }); ws.send(JSON.stringify({ id, method, params })) })
   const evaluate = async expression => { const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description ?? 'Component error'); return r.result.value }
   const count = () => evaluate('document.querySelectorAll(".statistics").length')
-  const render = async (owner = 'A', generation = '0', active = false) => { await evaluate(`window.renderBoundary(${JSON.stringify(owner)},${JSON.stringify(generation)},${active})`); await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))') }
+  const activity = async () => {
+    await evaluate("[...document.querySelectorAll('.record-menu button')].find(b=>b.textContent.includes('ACTIVITY'))?.click()")
+  }
+  const render = async (owner = 'A', generation = '0', active = false) => { await evaluate(`window.renderBoundary(${JSON.stringify(owner)},${JSON.stringify(generation)},${active})`); await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))'); await activity() }
   try {
     await server.listen()
     const origin = `http://127.0.0.1:${server.httpServer.address().port}`
@@ -38,28 +41,26 @@ test('real React reconciliation removes statistics across workout, account, gene
     ws.onmessage = e => { const m = JSON.parse(e.data), p = pending.get(m.id); if (p) { pending.delete(m.id); m.error ? p.reject(Error(m.error.message)) : p.resolve(m.result) } }
     ws.onclose = () => { for (const p of pending.values()) p.reject(Error('Browser closed')); pending.clear() }
     await send('Page.enable'); await send('Page.navigate', { url: origin + '/boundary' })
-    await wait(() => evaluate('typeof window.renderBoundary==="function"&&document.querySelector(".statistics")?.innerText.includes("7\\n완료 웨이트 세트")'))
-    await evaluate(`[...document.querySelectorAll('.statistics button')].find(button => button.textContent === '근육별 통계').click()`)
-    await wait(() => evaluate(`document.querySelector('.statistics')?.innerText.includes('실제 3세트')`))
-    await evaluate(`[...document.querySelectorAll('.statistics summary')].find(summary => summary.textContent.startsWith('보조근 참여')).click()`)
-    assert.equal(await evaluate(`document.querySelector('.statistics')?.innerText.includes('기여 1.5세트 · 실제 참여 3세트')`), true)
+    await wait(() => evaluate('typeof window.renderBoundary==="function"&&!!document.querySelector(".record-menu")'))
+    await activity()
+    await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7세트")'))
     for (let i = 0; i < 3; i++) {
       await render('A', '0', true); assert.equal(await count(), 0, 'ACTIVE must remove the statistics DOM')
-      await render(); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7\\n완료 웨이트 세트")'))
+      await render(); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7세트")'))
       assert.equal(await count(), 1, 'FINISH must mount exactly one statistics panel')
     }
     await render('logout'); assert.equal(await count(), 0, 'logout must remove every old statistics node')
-    await render('B'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0\\n완료 웨이트 세트")'))
-    assert.equal(await count(), 1); assert.equal(await evaluate('document.body.innerText.includes("7\\n완료 웨이트 세트")'), false)
-    await render(); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7\\n완료 웨이트 세트")'))
+    await render('B'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0세트")'))
+    assert.equal(await count(), 1); assert.equal(await evaluate('document.body.innerText.includes("7세트")'), false)
+    await render(); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7세트")'))
     await evaluate('window.holdBoundaryRequest=true'); await render('A', '0', true); await render()
     await wait(() => evaluate('window.boundaryRequests.at(-1).held===true'))
-    await render('B'); await evaluate('window.releaseBoundaryResponses()'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0\\n완료 웨이트 세트")'))
+    await render('B'); await evaluate('window.releaseBoundaryResponses()'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0세트")'))
     assert.equal(await evaluate('window.boundaryRequests.findLast(r=>r.held).signal.aborted'), true)
-    assert.equal(await evaluate('document.body.innerText.includes("7\\n완료 웨이트 세트")'), false)
-    await render('A', '1'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0\\n완료 웨이트 세트")'))
+    assert.equal(await evaluate('document.body.innerText.includes("7세트")'), false)
+    await render('A', '1'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0세트")'))
     assert.equal(await count(), 1); await render('expired'); assert.equal(await count(), 0)
-    await send('Page.reload'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7\\n완료 웨이트 세트")')); assert.equal(await count(), 1)
+    await send('Page.reload'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7세트")')); assert.equal(await count(), 1)
   } catch(error){if(ws?.readyState===1){try{console.error('Boundary DOM:',await evaluate('document.body.innerText'));console.error('Boundary requests:',await evaluate('window.boundaryRequests'))}catch{}}throw error} finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))

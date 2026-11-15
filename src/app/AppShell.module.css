@@ -13,11 +13,12 @@
   min-width: 0;
 }
 .content > * { min-width: 0; }
-.shell .homeContent { padding-top: calc(18px + env(safe-area-inset-top)); padding-inline: 15px; }
+.shell .homeContent { padding-top: calc(18px + env(safe-area-inset-top)); padding-inline: var(--space-page); }
 .content > :global(#auth-feedback:empty) { position: absolute; width: 1px; height: 1px; overflow: hidden; }
 .shell .withTabs { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
 /* WorkoutFrame owns the measured fixed-action and Safe Area clearance. */
-.shell .content:has(> [data-workout-frame]:not([hidden])) { padding-bottom: 0; }
+.shell .content:has(> [data-workout-frame]:not([hidden])),
+.shell .content:has(> [data-exercise-detail-source]:not([hidden]) > [data-workout-frame]:not([hidden])) { padding-bottom: 0; }
 .tabs {
   position: fixed;
   inset: auto 0 0;

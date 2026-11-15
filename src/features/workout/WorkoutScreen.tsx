@@ -1,3 +1,4 @@
+import { WeightRecommendation } from '../workout-flow/WorkoutFrame.tsx'
 import { useState } from 'react'
 import { Dialog } from '../../components/Dialog'
 import { WeightInput } from '../../components/WeightInput'
@@ -8,9 +9,9 @@ import type { WorkoutState } from './types'
 import { CardioScreen, SessionCardioAdder } from './CardioScreen'
 import { CARDIO_STATUS, cardioCounts } from './cardio'
 
-type Props = { state: WorkoutState; now: number; onUpdate: (transform: (s: WorkoutState) => WorkoutState) => boolean; onExit: () => void; onFinish: () => void; onCreate: (name: string) => string }
+type Props = { hiddenRecommendations?:ReadonlySet<string>; onDismissRecommendation?:(key:string)=>void; state: WorkoutState; now: number; onUpdate: (transform: (s: WorkoutState) => WorkoutState) => boolean; onExit: () => void; onFinish: () => void; onCreate: (name: string) => string }
 
-export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate }: Props) {
+export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate, hiddenRecommendations: hidden, onDismissRecommendation }: Props) {
   const [weightOpen, setWeightOpen] = useState(false)
   const [weight, setWeight] = useState('')
   const [mode, setMode] = useState<'today' | 'progress'>('today')
@@ -19,6 +20,9 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
   const [list, setList] = useState(false)
   const [picker, setPicker] = useState<'add' | 'replace' | null>(null)
   const [cardioAdd, setCardioAdd] = useState(false)
+  const [localHidden, setHiddenRecommendations] = useState<Set<string>>(()=>new Set())
+  const hiddenRecommendations=hidden??localHidden
+  const dismissRecommendation=(key:string)=>onDismissRecommendation?onDismissRecommendation(key):setHiddenRecommendations(ids=>new Set(ids).add(key))
   const session = state.active
   if (!session) return null
   const exercise = session.exercises.find(e => e.id === session.currentExerciseId)
@@ -78,7 +82,7 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
         <div className="exercise-heading" aria-live="polite"><p className="eyebrow">FOCUS ON THIS SET</p><h1>{exercise.name}</h1><p className="muted">목표 {exercise.minReps}–{exercise.maxReps}회 × {exercise.sets.length}본세트</p></div>
         <div className="exercise-navigation"><button className="quiet" disabled={index === 0} onClick={() => go(session.exercises[index - 1].id)}>‹ 이전</button><button className="quiet" onClick={() => setList(true)}>종목 목록</button><button className="quiet" disabled={index === session.exercises.length - 1} onClick={() => go(session.exercises[index + 1].id)}>다음 ›</button></div>
         <section className="card weight-card"><div><p className="muted small">{exercise.temporaryWeight ? '오늘만 중량' : '진행 중량 · 잠금'}</p><strong>{exercise.weight}<small> kg</small></strong><p className="muted small">승인 중량 {exercise.approvedWeight} kg</p></div><button className="outline" onClick={() => { setWeight(String(exercise.weight)); setMode('today'); setWeightError(null); setWeightOpen(true) }}>중량 변경</button></section>
-        {achievedBenchmark && <aside className="notice benchmark-advice" aria-label="기준 기록 증량 안내"><div><p>현재 기준 기록에서 증량 조건 달성</p><p className="small muted">승인 {exercise.approvedWeight}kg · {achievedBenchmark.reps.join('/')}회</p></div><button className="outline" onClick={() => { setWeight(String(exercise.approvedWeight)); setMode('progress'); setWeightError(null); setWeightOpen(true) }}>지금 변경</button></aside>}
+
         {!exercise.benchmark && <p className="hint">비교 가능한 기준이 없습니다. 이번 반복 횟수를 직접 입력해 주세요.</p>}
         <section className="sets-card card" aria-label="본세트 기록">
           <div className="set-row set-header"><span>세트</span><span>기준 기록</span><span>이번 기록</span><span>상태</span></div>
@@ -93,13 +97,13 @@ export function WorkoutScreen({ state, now, onUpdate, onExit, onFinish, onCreate
           </div>)}
         </section>
         {advice && <p className={`notice ${advice === 'increase' ? 'success' : 'warning'}`}>{advice === 'increase' ? '목표 달성! 중량 증가를 고려해 보세요.' : '목표 하한 미달 · 중량 감소를 고려해 보세요.'}<br /><span className="small">중량은 직접 확인하기 전까지 유지됩니다.</span></p>}
-        <button className="quiet full" onClick={() => setEdit(!edit)}>{edit ? '임시 편집 닫기' : '현재 세션에서 세트 / 종목 변경'}</button>
+        <button data-close-text={edit||undefined} className="quiet full" onClick={() => setEdit(!edit)}>{edit ? '임시 편집 닫기' : '현재 세션에서 세트 / 종목 변경'}</button>
         {edit && <section className="card stack"><p className="small muted">현재 운동에만 적용됩니다. 완료 기록을 먼저 취소해야 해당 세트나 종목을 제외할 수 있습니다.</p><button className="outline" onClick={() => onUpdate(s => addSessionSet(s, exercise.id))}>＋ 본세트 추가</button><button className="outline" onClick={() => setPicker('add')}>＋ 종목 추가</button><button className="outline" onClick={() => setCardioAdd(true)}>＋ 유산소 추가</button><button className="quiet" disabled={exercise.sets.some(s => s.actual)} onClick={() => setPicker('replace')}>현재 종목 교체</button><button className="quiet danger" disabled={exercise.sets.some(s => s.actual) || session.exercises.length <= 1} onClick={() => { if (window.confirm('현재 종목을 이번 운동에서만 제외할까요?')) onUpdate(s => removeSessionExercise(s, exercise.id)) }}>현재 종목 제외</button></section>}
         <section className="card memo-card"><label>기구 세팅 메모<textarea value={state.memos[exercise.exerciseId] ?? ''} placeholder="예: 의자 높이 3 · 그립 눈금 2" onChange={event => onUpdate(s => ({ ...s, memos: { ...s.memos, [exercise.exerciseId]: event.target.value } }))} rows={3} /></label><p className="small muted">이 종목의 기본 메모로 다음 운동에도 유지됩니다.</p></section>
         <div className="bottom-actions workout-actions">
           {weightDone && <button className="outline full cardio-add-end" onClick={() => setCardioAdd(true)}>＋ 유산소 추가</button>}
           {restWarning && <aside className={`rest-preparation-card${restUrgent ? ' rest-urgent' : ''}`} role="status" aria-label="휴식 종료 준비"><span>다음 세트 준비</span><strong>{restRemaining}<small>초</small></strong></aside>}
-          {increaseReady && <p className="increase-banner" role="status"><strong>증량 가능 · {exercise.approvedWeight}kg</strong><span>다음 운동에서 중량 증가를 고려해 보세요.</span></p>}
+          {(done && (advice==='increase'||advice==='decrease') || achievedBenchmark) && !hiddenRecommendations.has(session.id+':'+exercise.id) && <WeightRecommendation direction={done&&advice==='decrease'?'decrease':'increase'} kg={String(exercise.approvedWeight)} source={done?'current':'benchmark'} onDismiss={()=>dismissRecommendation(session.id+':'+exercise.id)}/>}
           {allDone ? <button className="primary full" onClick={onFinish}>운동 종료 및 요약</button> : resting ? <div className="row full"><button className="primary" onClick={() => onUpdate(s => adjustRest(s, null, Date.now()))}>휴식 종료</button><button className="outline" onClick={() => onUpdate(s => adjustRest(s, 30, Date.now()))}>＋30초</button></div> : nextSet ? <button key={nextSet.id} className="primary full" onClick={() => recordSet(nextSet.id)}>{nextSet.ordinal}세트 완료</button> : !increaseReady && <p className="success-text">이 종목의 본세트를 모두 완료했어요.</p>}
           {done && !allDone && nextExercise && <button className="primary full" onClick={() => go(nextExercise.id)}>다음 종목으로</button>}
           {weightDone && !allDone && <button className="quiet full" onClick={onFinish}>남은 유산소 건너뛰고 종료</button>}

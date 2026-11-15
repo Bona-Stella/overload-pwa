@@ -36,3 +36,5 @@ export function mountPanel(Component, props) {
     get lateUpdates() { return host.lateUpdates },
   }
 }
+
+export const useScreenHistory = (_key, initial) => useState(initial)

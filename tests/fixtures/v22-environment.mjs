@@ -22,8 +22,8 @@ export function validateV22Ready(value, expectedRunId, now = Date.now(), { exist
   const started = Date.parse(value.startedAt), ready = Date.parse(value.readyAt)
   const ongoingCatalog = existingApprovedCatalog === true && value.approvedCatalogReview?.approvedExercises === 30 && value.approvedCatalogReview?.gifAccessGranted === true
   if (!Number.isFinite(started) || !Number.isFinite(ready) || started > ready || ready > now || !ongoingCatalog && now - started > 30 * 60000) reject()
-  if (value.initialUsers !== 0 || value.preparedUsers !== 1 || value.accountFlow !== 'EMAIL_OTP' || value.migrations !== 35
-    || JSON.stringify(value.migrationVersions) !== JSON.stringify(Array.from({ length: 35 }, (_, i) => String(i + 1)))) reject()
+  if (value.initialUsers !== 0 || value.preparedUsers !== 1 || value.accountFlow !== 'EMAIL_OTP' || value.migrations !== 37
+    || JSON.stringify(value.migrationVersions) !== JSON.stringify(Array.from({ length: 37 }, (_, i) => String(i + 1)))) reject()
   for (const field of ['freshDatabase', 'loopbackDatabase', 'tmpfsOnly', 'schemaValidated', 'noDeveloperEnv', 'springSessionTables', 'fakeEmailSender', 'externalAuthDisabled', 'httpSmokePassed']) {
     if (value[field] !== true) reject()
   }
@@ -64,12 +64,12 @@ export async function verifyV22Ownership(value) {
   await Promise.all([withV22Connection(value, 'backend'), withV22Connection(value, 'control')])
 }
 
-export async function readV22Ready(runId, frontendRoot = '.') {
+export async function readV22Ready(runId, frontendRoot = '.', options = {}) {
   if (!isRunId(runId)) throw new Error('Supply a verification run UUID')
   const directory = resolve(frontendRoot, '../overload-server/build/verification-v22', runId)
   try { await access(resolve(directory, 'result.json')); throw new Error('Backend already stopped') }
   catch (error) { if (error.code !== 'ENOENT') throw error }
-  const value = validateV22Ready(JSON.parse(await readFile(resolve(directory, 'ready.json'), 'utf8')), runId)
+  const value = validateV22Ready(JSON.parse(await readFile(resolve(directory, 'ready.json'), 'utf8')), runId, Date.now(), options)
   await verifyV22Ownership(value)
   return value
 }

@@ -1,3 +1,5 @@
+import {savedReview} from './saved-weight-review.ts'
+import type {SavedReview,ReviewApproval} from './saved-weight-review.ts'
 import type { AuthController } from '../auth/controller.ts'
 import type { ProgressAssessment, CardioActivity, CatalogExercise, StandardExerciseDetail, WorkoutSettingsResponse, StandardExercise, Manufacturer, Scope, Start, RoutineList, Routine, CreateRoutine, UpdateRoutine, Session, SnapshotRequest, SnapshotAck, FinishRequest, FinishAck,
   ActiveResolution, ClosedResolution, ResolutionAck, ClosedResolutionAck, RecordEdit, Recovery, RecordAck, AssessmentView, ChangeEvents, ClosedPage, ClosedCursor } from './types.ts'
@@ -35,6 +37,8 @@ export class WorkoutApi {
     if (id && result.data.id !== id && result.data.sessionId !== id) throw new WorkoutApiError('RESPONSE_INVALID', result.status)
     return result.data as T
   }
+  weightReview(scope:Scope,id:string,signal:AbortSignal){return this.call<SavedReview>(scope,'/api/v1/workout-sessions/'+id+'/weight-review','GET',undefined,signal,savedReview,id)}
+  approveReview(scope:Scope,id:string,body:ReviewApproval,signal:AbortSignal){return this.call<SavedReview>(scope,'/api/v1/workout-sessions/'+id+'/weight-review-approvals','POST',body,signal,savedReview,id)}
   async bootstrap(userId: string, signal: AbortSignal): Promise<{ scope: Scope; exercises: StandardExercise[]; manufacturers: Manufacturer[]; settings: WorkoutSettingsResponse; routines: RoutineList['routines'] }> {
     const result = await this.transport.workoutRequest(userId, '/api/v1/routines', 'GET', undefined, signal)
     if (!v.routineList(result.data)) throw new WorkoutApiError('RESPONSE_INVALID')

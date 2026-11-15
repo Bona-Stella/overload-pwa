@@ -32,7 +32,7 @@ const server = await createServer({
   configFile: false,
   envDir: false,
   cacheDir: resolve('.cache/approved-catalog-review', runId),
-  optimizeDeps: { noDiscovery: true, include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime'] },
+  optimizeDeps: { noDiscovery: true, include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'recharts', 'react-is'] },
   define: { 'import.meta.env.VITE_HOME_REVIEW': JSON.stringify('true'), 'import.meta.env.VITE_APPROVED_HIGH_ROW_GIF': JSON.stringify(media ? 'true' : 'false') },
   plugins: [react(), {
     name: 'approved-catalog-review',

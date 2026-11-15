@@ -1,3 +1,4 @@
+import {exercises as coreExercises} from './routine-samples.ts'
 import type { CatalogBrowseExercise, CatalogGroup, CatalogMuscle } from '../features/workout-online/catalog-browse.ts'
 
 type SampleMuscle = [groupCode: Exclude<CatalogGroup, 'CARDIO' | 'OTHER'>, name: string]
@@ -69,11 +70,12 @@ export const catalogSamples: CatalogBrowseExercise[] = samples.map(({
   id: standardId, exerciseType = 'WEIGHT', primary = [], secondary = [], steps,
   muscles: registeredMuscles, equipmentDescription = null, ...exercise
 }, index) => {
-  const id = standardId ?? `catalog-example-${index + 1}`
+  const core=index<3?coreExercises[index]:undefined
+  const id = standardId ?? core?.id ?? `catalog-example-${index + 1}`
   const muscles = (entries: SampleMuscle[], role: CatalogMuscle['role']): CatalogMuscle[] =>
     entries.map(([groupCode, name], order) => ({ id: `${id}-${role}-${order}`, groupCode, name, role }))
   return {
-    ...exercise, id, exerciseType, equipmentDescription,
+    ...exercise, id, name:core?.name??exercise.name, aliases:core?[...new Set([...exercise.aliases,exercise.name,...core.aliases])]:exercise.aliases, exerciseType, equipmentDescription,
     recordMethod: exerciseType === 'WEIGHT' ? 'SETS_REPS' : exerciseType === 'CARDIO' ? 'CARDIO' : 'UNSPECIFIED',
     instructionsKo: steps?.join('\n') ?? null,
     muscles: registeredMuscles ?? [...muscles(primary, 'PRIMARY'), ...muscles(secondary, 'SECONDARY')],

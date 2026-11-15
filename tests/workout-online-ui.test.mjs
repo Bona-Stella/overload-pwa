@@ -190,11 +190,11 @@ const closedState=pair=>({...pair,changes:{events:[]},copies:[],pending:null,bus
 const endView=pair=>render(ClosedWorkoutView,{state:closedState(pair),controller:{},summary:true,onBack(){}})
 test('summary restores WEIGHT and CARDIO below the weight review, removes only the redundant heading and keeps actual values',()=>{
   const pair=reviewedSession(),before=structuredClone(pair.server),html=endView(pair)
-  assert.match(html,/운동 기록 요약/);assert.match(html,/토요일/);assert.match(html,/전체 루틴 완료/)
-  assert.match(html,/3\/3세트/);assert.match(html,/기존 45kg/);assert.match(html,/기준 40kg · 6–10회 × 3세트/)
+  assert.match(html,/운동 기록 요약/);assert.match(html,/10\/31 · 토 · 21:00/);assert.match(html,/전체 루틴 완료/)
+  assert.match(html,/3\/3세트/);assert.match(html,/45kg →/);assert.match(html,/기준 40kg · 6–10회 × 3세트/)
   assert.match(html,/45kg × 12회/);assert.match(html,/1,665kg/)
   assert.doesNotMatch(html,/운동 수행<|이번 수행|유지 검토|기록 정정·복구 및 서버 평가 상세|운동 기록 메뉴/)
-  assert(html.indexOf('이번 운동의 중량 검토')<html.indexOf('WEIGHT'))
+  assert(html.indexOf('중량 검토')<html.indexOf('WEIGHT'))
   assert.deepEqual(pair.server,before)
 })
 test('repetition contribution colors follow server review and missing planned sets create no fabricated repetitions',()=>{
@@ -214,7 +214,7 @@ test('repetition contribution colors follow server review and missing planned se
   }
 })
 test('maintain, unavailable, missing, stale and mismatched review have distinct empty/error states',()=>{
-  assert.match(endView(reviewedSession('MAINTAIN',[13,12,11])),/이번 운동은 중량 변경 검토 대상이 없습니다/)
+  assert.doesNotMatch(endView(reviewedSession('MAINTAIN',[13,12,11])),/aria-label="중량 검토 카드"/)
   assert.match(endView(reviewedSession('UNAVAILABLE')),/수행·승인 정보가 부족/)
   const pair=reviewedSession()
   for(const assessment of [null,{...pair.assessment,version:'1'},{...pair.assessment,sessionId:OTHER}]){

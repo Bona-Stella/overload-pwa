@@ -1,18 +1,23 @@
+import {SearchExerciseDetails} from '../components/SearchExerciseDetails.tsx'
+import {catalogSamples} from './catalog-samples.ts'
+import { CombinationMemoProvider } from '../features/workout-online/CombinationMemo.tsx'
+import { reviewRecordSession } from './record-data.ts'
+import { hasActualPerformance } from '../features/home/achievement.ts'
+import { RecordPreview } from './RecordPreview.tsx'
+import { useScreenHistory, navigateTabRoot } from '../app/navigation.ts'
 import { useEffect, useRef, useState } from 'react'
 import { AppShell } from '../app/AppShell.tsx'
 import type { AppTab } from '../app/types.ts'
 import { Dialog } from '../components/Dialog.tsx'
-import { Button, Card } from '../components/ui.tsx'
+import { Button } from '../components/ui.tsx'
 import { HomeView } from '../features/home/HomePanel.tsx'
 import { activeCardio, activeWeights, dayOfWeek } from '../features/home/model.ts'
-import { RecentWorkout } from '../features/home/RecentWorkout.tsx'
 import { PresetAssignmentEditor } from '../features/statistics/WeeklySchedulePanel.tsx'
 import { PresetHeader, PresetMembership, PresetNavigation, RoutineCreatedNotice } from '../features/workout-online/PresetControls.tsx'
 import { PresetOrderEditor } from '../features/workout-online/PresetOrderEditor.tsx'
 import { RoutineCards } from '../features/workout-online/RoutineCards.tsx'
 import { RoutineForm } from '../features/workout-online/RoutineForm.tsx'
 import type { Routine } from '../features/workout-online/types.ts'
-import { formatDuration } from '../features/workout/model.ts'
 import type { RestAlerts } from '../features/workout-flow/types.ts'
 import { newId } from '../id.ts'
 import { changedSchedule, mockScheduleWrite, unassignRoutine } from './preset-mock.ts'
@@ -26,9 +31,9 @@ import { WorkoutReview } from './WorkoutReview.tsx'
 import { WorkoutRecordReview } from './WorkoutRecordReview.tsx'
 import { WorkoutResumeDetails } from './WorkoutResumeDetails.tsx'
 import { useRestAudio } from './useRestAudio.ts'
-import { defaultRestAlerts, doneCount, startReview } from './workout-model.ts'
+import { captureReview, defaultRestAlerts, startReview } from './workout-model.ts'
 import type { ReviewRecord, ReviewSession } from './workout-model.ts'
-import { editedSession, workoutSample, workoutScenarios } from './workout-samples.ts'
+import { completedReview, editedSession, workoutSample, workoutScenarios } from './workout-samples.ts'
 import type { WorkoutScenario } from './workout-samples.ts'
 import styles from './Review.module.css'
 import '../features/workout-online/online.css'
@@ -45,20 +50,39 @@ const isWorkoutScenario = (scenario: ReviewScenario): scenario is WorkoutScenari
 
 export default function RoutinePreview() {
   const [scenario, setScenario] = useState<ReviewScenario>(() =>
-    new URLSearchParams(location.search).get('review') === 'workout' ? 'workout-mixed' : 'normal')
-  const [tab, setTab] = useState<AppTab>(() => {
+    new URLSearchParams(location.search).get('review') === 'approval' ? 'workout-complete' : new URLSearchParams(location.search).get('review') === 'workout' ? 'workout-mixed' : 'normal')
+  const [initialTab] = useState<AppTab>(() => {
     const requested = new URLSearchParams(location.search).get('tab')
-    return requested === 'home' || requested === 'settings' ? requested : 'routines'
+    return requested === 'home' || requested === 'settings' || requested === 'history' ? requested : 'routines'
   })
+  const [tab] = useScreenHistory<AppTab>('review-tab', initialTab)
   const [epoch, setEpoch] = useState(0)
-  return <Review key={epoch} scenario={scenario} tab={tab} setTab={setTab} reset={next => { setScenario(next); setEpoch(value => value + 1) }} />
+  return <CombinationMemoProvider key={epoch}><Review key={epoch} scenario={scenario} tab={tab} reset={next => { setScenario(next); setEpoch(value => value + 1) }} /></CombinationMemoProvider>
 }
 
-function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; tab: AppTab; setTab: (tab: AppTab) => void; reset: (scenario: ReviewScenario) => void }) {
+function ReviewShell({children,...props}:React.ComponentProps<typeof AppShell>){return <AppShell {...props}><SearchExerciseDetails preview={catalogSamples}>{children}</SearchExerciseDetails></AppShell>}
+
+function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTab; reset: (scenario: ReviewScenario) => void }) {
   const [data, setData] = useState(() => isWorkoutScenario(scenario) ? workoutSample(scenario) : reviewSample(scenario))
   const { schedule, routines } = data
   const [viewedId, setViewedId] = useState(schedule.activeId)
-  const [editor, setEditor] = useState<Editor | null>(null)
+  const [planPreset] = useScreenHistory<string|null>('routine-plan:review',null)
+  const [editorRoute,setEditorRoute]=useScreenHistory<{type:Editor['type'];id?:string}|null>('routine-editor:review',null)
+  const [editorData,setEditorData]=useState<Editor|null>(null)
+  const editor:Editor|null=(()=>{
+    if(!editorRoute)return null
+    const id=editorData&&('routine' in editorData?editorData.routine.id:'id' in editorData?editorData.id:undefined)
+    if(editorData?.type===editorRoute.type&&id===editorRoute.id)return editorData
+    if(editorRoute.type==='new')return {type:'new'}
+    if(editorRoute.type==='order')return {type:'order',base:schedule}
+    if(editorRoute.type==='schedule')return {type:'schedule',id:editorRoute.id??schedule.activeId,base:schedule}
+    const routine=routines.find(r=>r.id===editorRoute.id)
+    return routine?{type:editorRoute.type,routine}:null
+  })()
+  const setEditor=(next:Editor|null)=>{
+    setEditorData(next)
+    setEditorRoute(next?{type:next.type,...('routine' in next?{id:next.routine.id}:'id' in next?{id:next.id}:{})}:null,next===null)
+  }
   const [modal, setModal] = useState<Modal | null>(null)
   const [created, setCreated] = useState<{ id: string; name: string } | null>(null)
   const [fault, setFault] = useState<Fault>('none')
@@ -69,8 +93,10 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
   const [homeVisit, setHomeVisit] = useState(0)
   const [session, setSession] = useState<ReviewSession | null>(() => scenario === 'workout-edited' ? editedSession(data) : null)
   const [workoutOpen, setWorkoutOpen] = useState(false)
-  const [records, setRecords] = useState<ReviewRecord[]>([])
-  const [recordId, setRecordId] = useState<string | null>(null)
+  const [hiddenRecommendations,setHiddenRecommendations]=useState<Set<string>>(()=>new Set())
+  const [records, setRecords] = useState<ReviewRecord[]>(()=>scenario==='workout-complete'?[completedReview(data)]:[])
+  const [recordId, setRecordId] = useState<string | null>(()=>records[0]?.session.id??null)
+  const [immediateSummary,setImmediateSummary]=useState(scenario==='workout-complete')
   const [alerts, setAlerts] = useState<RestAlerts>(defaultRestAlerts)
   const audio = useRestAudio(alerts.sound)
   const [shortRest, setShortRest] = useState(() => isWorkoutScenario(scenario) || scenario === 'active')
@@ -80,6 +106,13 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
   const viewed = schedule.presets.find(preset => preset.id === viewedId) ?? schedule.presets.find(preset => preset.id === schedule.activeId)!
   const details = new Map(routines.map(r => [r.id, { ...r, weightPlacements: activeWeights(r), cardioPlacements: activeCardio(r) }]))
   const home = reviewHome(data)
+  if(records.length){
+    const extra=records.map(reviewRecordSession),details=new Map([...home.recent,...extra.map(s=>[s.id,s] as const)])
+    const rows=[...new Map([...home.recentRows,...extra.map(s=>({...s,routineName:s.initialPlan.routineName,status:'FINISHED' as const,closedAt:s.closedAt!}))].map(r=>[r.id,r])).values()]
+      .filter(r=>!r.deletedAt&&(!details.has(r.id)||hasActualPerformance(details.get(r.id)!)))
+      .toSorted((a,b)=>(b.endedAt??b.closedAt).localeCompare(a.endedAt??a.closedAt)||b.id.localeCompare(a.id)).slice(0,3)
+    home.recentRows=rows;home.recent=new Map(rows.flatMap(r=>details.has(r.id)?[[r.id,details.get(r.id)!] as const]:[]))
+  }
   const recoveryHome = deloadView ? reviewHome({ ...data, sessions: [], pastPreset: null, routines: [recoveryRoutine],
     schedule: { ...schedule, presets: [{ ...viewed, id: schedule.activeId, assignments: [{ dayOfWeek: dayOfWeek(reviewToday), routineId: recoveryRoutine.id }] }] },
   }) : null
@@ -125,9 +158,9 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
   useEffect(() => { window.scrollTo(0, 0) }, [editor?.type])
 
   const closeEditor = () => { setEditor(null); setIssue(null) }
-  const navigate = (next: AppTab) => {
+  const navigate = (next: AppTab, target?:'history') => {
     if (next === 'home' && tab !== 'home') setHomeVisit(visit => visit + 1)
-    setIssue(null); setRecordId(null); setTab(next)
+    setIssue(null); setRecordId(null); setImmediateSummary(false); setEditor(null); navigateTabRoot('review-tab', next,target?{['records:'+scope.userId+':'+scope.dataGeneration]:target}:{})
     window.scrollTo(0, 0)
   }
   const openSchedule = (priorityId?: string) => {
@@ -148,24 +181,24 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
     } catch (error) { setIssue(error instanceof Error ? error.message : '검토용 운동을 시작할 수 없습니다.') }
   }
 
-  if (workoutOpen && session) return <AppShell authenticated tab="home" focused displayTheme={session.deload ? 'deload' : 'normal'} onNavigate={navigate}>
-    <WorkoutReview session={session} onChange={setSession} history={data.sessions} alerts={alerts} shortRest={shortRest} audio={audio}
+  if (workoutOpen && session) return <ReviewShell authenticated tab="home" focused displayTheme={session.deload ? 'deload' : 'normal'} onNavigate={navigate}>
+    <WorkoutReview hiddenRecommendations={hiddenRecommendations} onDismissRecommendation={key=>setHiddenRecommendations(ids=>new Set(ids).add(key))} records={records} session={session} onChange={setSession} history={data.sessions} alerts={alerts} shortRest={shortRest} audio={audio}
       onHome={() => { setWorkoutOpen(false); navigate('home') }}
       onEnd={endedAt => {
-        setRecords(previous => [{ session, endedAt }, ...previous]); setSession(null); setWorkoutOpen(false)
-        navigate('history'); setRecordId(session.id)
+        setRecords(previous => [captureReview(session,endedAt,reviewToday), ...previous]); setSession(null); setWorkoutOpen(false)
+        navigate('history'); setRecordId(session.id); setImmediateSummary(true)
       }} />
-  </AppShell>
+  </ReviewShell>
 
-  if (tab === 'history' && reviewRecord) return <AppShell authenticated tab={tab} onNavigate={navigate}
+  if (tab === 'history' && reviewRecord) return <ReviewShell authenticated tab={tab} onNavigate={navigate}
     displayTheme={reviewRecord.session.deload ? 'deload' : 'normal'}>
-    <WorkoutRecordReview record={reviewRecord} onBack={() => navigate('history')} />
-  </AppShell>
+    <WorkoutRecordReview onPreviewApprove={async choices=>{setRecords(previous=>previous.map(r=>r.session.id!==reviewRecord.session.id?r:{...r,judgments:r.judgments?.map(w=>{const choice=choices.find(c=>c.id===w.id);return choice&&w.review?{...w,review:{...w.review,previewApproval:{nextWeightKg:choice.nextKg,occurredAt:new Date().toISOString()}}}:w})}));return true}} detail={!immediateSummary} record={reviewRecord} onBack={() => navigate(immediateSummary?'home':'history')} />
+  </ReviewShell>
 
-  return <AppShell authenticated tab={tab} focused={!!editor} displayTheme={tab !== 'settings' && deloadView ? 'deload' : 'normal'} onNavigate={navigate}>
-    {tab !== 'settings' && <aside className={styles.controls} aria-label="Mock 검토 설정">
+  return <ReviewShell authenticated tab={tab} focused={!!editor} displayTheme={tab !== 'settings' && deloadView ? 'deload' : 'normal'} onNavigate={navigate}>
+    {tab !== 'settings' && <aside className={styles.controls + (tab === 'history' ? ' record-review-banner' : '')} aria-label="Mock 검토 설정">
       <b>UI 검토 · 합성 데이터</b>
-      <small>이 화면의 변경은 탭을 새로고침하면 초기화됩니다. 시연 날짜는 11월 11일입니다.</small>
+      <small>이 화면의 변경은 탭을 새로고침하면 초기화됩니다. 시연 날짜는 {reviewToday}입니다.</small>
       <label>검토 상태<select value={scenario} disabled={busy || !!editor || !!modal} onChange={e => reset(e.target.value as ReviewScenario)}>
         <optgroup label="운동하기">{Object.entries(workoutScenarios).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</optgroup>
         <optgroup label="홈·루틴">{Object.entries(scenarios).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</optgroup>
@@ -193,7 +226,7 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
         hideChooser={deloadView || scenario === 'completed'}
         issue={scenario === 'completed' ? '디로딩 완료 당일 · 일반 운동은 다음 날부터 시작할 수 있습니다.'
           : scenario === 'active' ? normalView ? '일반 보기 · 디로딩 기간은 계속 진행 중입니다.' : '회복 주간 · 3일차' : null}
-        onRefresh={() => setHomeReady(true)} onNavigate={navigate} onStart={start}
+        onRefresh={() => setHomeReady(true)} onHistory={()=>navigate('history','history')} onNavigate={navigate} onStart={start}
         onOpen={id => setModal({ type: 'record', id })} onResume={() => { audio.unlock(); setWorkoutOpen(true); window.scrollTo(0, 0) }} onRetry={() => {}} />
     </div>
     {tab === 'routines' && <>
@@ -203,6 +236,7 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
         <RoutineCards summaries={routines} details={details} busy={busy} managementBlocked={protectedView}
           week={{ assignments: viewed.assignments, version: viewed.version }}
           presetHeader={viewToggle => <PresetHeader schedule={schedule} viewed={viewed} busy={busy} readOnly={protectedView} viewToggle={viewToggle}
+            onPlan={() => { navigateTabRoot('review-tab','history',{'routine-plan:review':viewed.id}); window.scrollTo(0,0) }}
             onActivate={() => void scheduleWrite({ type: 'activate', id: viewed.id })}
             onToggle={() => void scheduleWrite({ type: 'rotate', enabled: !schedule.autoEnabled, entries: schedule.presets })}
             onRename={() => setModal({ type: 'rename', id: viewed.id })}
@@ -250,15 +284,7 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
         onEdit={editor.type === 'detail' ? () => setEditor({ ...editor, type: 'edit' }) : undefined}
         onDelete={editor.type === 'detail' ? () => setModal({ type: 'deleteRoutine', id: editor.routine.id }) : undefined} />}
     </>}
-    {tab === 'history' && <section className="stack"><h2>최근 운동</h2>
-      {!home.recentRows.length && !records.length && <p>표시할 운동 기록이 없습니다.</p>}
-      {records.map(({ session, endedAt }) => <Card key={session.id}>
-        <small className="muted">합성 데이터 · {reviewToday}</small><h3>{session.initialPlan.routineName}</h3>
-        <p>웨이트 {session.weights.reduce((total, weight) => total + doneCount(weight), 0)}세트 · {formatDuration(endedAt - session.startedAt)}</p>
-        <Button onClick={() => { setRecordId(session.id); window.scrollTo(0, 0) }}>운동 기록 요약 보기</Button>
-      </Card>)}
-      {home.recentRows.map(row => <RecentWorkout key={row.id} row={row} detail={home.recent.get(row.id)} onOpen={id => setModal({ type: 'record', id })} />)}
-    </section>}
+    {tab === 'history' && <RecordPreview days={home.overview.plannedDays} initialPreset={planPreset??undefined} routines={routines} schedule={schedule} sessions={data.sessions} records={records} onReviewRecord={id=>{setImmediateSummary(false);setRecordId(id);window.scrollTo(0,0)}} />}
     {tab === 'settings' && <SettingsReview alerts={alerts} onAlerts={setAlerts} />}
     {modal?.type === 'rename' && modalPreset && <Dialog title="주간 일정 이름 변경" onClose={() => !busy && setModal(null)}>
       <form className="stack" onSubmit={async event => {
@@ -296,5 +322,5 @@ function Review({ scenario, tab, setTab, reset }: { scenario: ReviewScenario; ta
       <h3>CARDIO</h3>
       {modalRecord.initialPlan.cardioActivities.map(p => <p key={p.sessionActivityId}>{p.plan.name} · 목표 {p.plan.targetSeconds / 60}분</p>)}
     </Dialog>}
-  </AppShell>
+  </ReviewShell>
 }

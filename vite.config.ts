@@ -46,7 +46,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
     return {
       plugins: [react(), mockReview(lanIp)],
       cacheDir: 'node_modules/.vite-ui-review',
-      optimizeDeps: { noDiscovery: true, include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime'] },
+      optimizeDeps: { noDiscovery: true, include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'recharts', 'react-is'] },
       server: {
         host: lanIp ? '0.0.0.0' : '127.0.0.1',
         port: 4173,

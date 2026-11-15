@@ -1,4 +1,6 @@
+import {suggestedApproval} from '../features/workout-online/approval-weight.ts'
 
+import type { WeightSummary } from '../features/workout-flow/WorkoutSummary.tsx'
 import { activeCardio, activeWeights } from '../features/home/model.ts'
 import { additionalLoadInput } from '../features/workout-online/bodyweight-load.ts'
 import { measuredCardio } from '../features/workout-online/cardio-measurement.ts'
@@ -22,7 +24,7 @@ export type ReviewSession = {
   id: string; startedAt: number; warmup: boolean; currentId: string; deload: boolean; initialPlan: InitialPlan
   weights: ReviewWeight[]; cardio: ReviewCardio[]; transition?: { exerciseId: string; at: number }
 }
-export type ReviewRecord = { session: ReviewSession; endedAt: number }
+export type ReviewRecord = { session: ReviewSession; endedAt: number; workoutDate?:string; judgments?:WeightSummary[] }
 
 function slot(id: number, kg: string, previous?: SetDraft): SetRow {
   return { id, previous, draft: { kg, reps: previous?.reps ?? '', additional: previous?.additional ?? '' } }
@@ -160,4 +162,39 @@ export function sessionAdvice(session: ReviewSession, weight: ReviewWeight, fina
 export function setVolume(result: SetResult) {
   const kg = result.loadType === 'BODYWEIGHT' ? result.additionalKg : result.kg
   return kg === null ? null : Number(kg) * result.reps
+}
+
+/** Review-only adapter over the existing single-session assessment; never pools sets. */
+export function reviewIncreaseReminder(current: ReviewSession, weight: ReviewWeight, records: ReviewRecord[]) {
+  const placement = current.initialPlan.weightExercises.find(p => p.sessionExerciseId === weight.id)
+  if (current.deload || !placement || weight.approved === null || weight.mode === 'today' ||
+    placement.setCount !== weight.sets.length || placement.minReps !== weight.min || placement.maxReps !== weight.max ||
+    placement.manufacturerId !== weight.manufacturerId || placement.loadType !== weight.loadType) return null
+  const candidates = records.flatMap(record => {
+    const old = record.session
+    if (old.id === current.id || record.endedAt > current.startedAt || old.initialPlan.routineId !== current.initialPlan.routineId || old.deload ||
+      old.initialPlan.weightExercises.some(p => { const w = old.weights.find(w => w.id === p.sessionExerciseId); return !w || w.standardId !== p.standardExerciseId || w.manufacturerId !== p.manufacturerId || w.loadType !== p.loadType }) ||
+      old.weights.some(w => !old.initialPlan.weightExercises.some(p => p.sessionExerciseId === w.id))) return []
+    const original = old.initialPlan.weightExercises.find(p => p.sourcePlacementId === placement.sourcePlacementId &&
+      p.standardExerciseId === placement.standardExerciseId && p.setCount === placement.setCount &&
+      p.minReps === placement.minReps && p.maxReps === placement.maxReps && p.manufacturerId === placement.manufacturerId && p.loadType === placement.loadType)
+    const candidate = old.weights.find(w => w.id === original?.sessionExerciseId)
+    if (!candidate || candidate.manufacturerId !== weight.manufacturerId || candidate.loadType !== weight.loadType) return []
+    const assessment = sessionAdvice(old, candidate, true)
+    return assessment.advice && assessment.kg === weight.approved
+      ? [{ qualifies: assessment.advice === 'increase', kg: assessment.kg!, sum: candidate.sets.reduce((sum,s) => sum+(s.result?.reps??0),0), at: record.endedAt, id: old.id }] : []
+  })
+  const best = candidates.toSorted((a,b) => b.sum-a.sum || b.at-a.at || a.id.localeCompare(b.id))[0]
+  return best?.qualifies ? best : null
+}
+
+/** Capture the existing review result at demo finish, not when a historical detail is opened. */
+export function captureReview(session:ReviewSession,endedAt:number,workoutDate:string):ReviewRecord{
+  const copy=structuredClone(session),changed=copy.initialPlan.weightExercises.some(p=>{const w=copy.weights.find(w=>w.id===p.sessionExerciseId);return !w||w.manufacturerId!==p.manufacturerId||w.loadType!==p.loadType})
+  const judgments:WeightSummary[]=changed?[]:copy.weights.flatMap(w=>{
+    const p=copy.initialPlan.weightExercises.find(p=>p.sessionExerciseId===w.id),a=sessionAdvice(copy,w,true)
+    if(!p||!a.kg||(a.advice!=='increase'&&a.advice!=='decrease'))return []
+    return [{id:w.id,name:w.name,loadType:w.loadType,results:[],review:{direction:a.advice,referenceKg:a.kg,recommendedKg:suggestedApproval(a.kg,a.advice,w.loadType),planned:p.setCount,completed:w.sets.filter(s=>s.result).length,incomplete:false,sets:w.sets.flatMap(s=>s.result?[{id:String(s.id),reps:s.result.reps,contributes:a.advice==='increase'||s.result.reps<p.minReps}]:[])}}]
+  })
+  return {session:copy,endedAt,workoutDate,judgments}
 }

@@ -1,0 +1,25 @@
+import { createContext, useContext, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import type { Equipment } from './types.ts'
+
+type Drafts = { values: Record<string,string>; change: (key: string, value: string) => void }
+const Context = createContext<Drafts | null>(null)
+const combinationKey = (exerciseId: string, equipment: Equipment) => JSON.stringify([exerciseId, equipment.manufacturerId, equipment.loadType])
+
+/** Scoped by the authenticated account/generation at the caller. No fake server persistence. */
+export function CombinationMemoProvider({ children }: { children: ReactNode }) {
+  const [values, setValues] = useState<Record<string,string>>({})
+  const value = useMemo(() => ({ values, change: (key: string, text: string) => setValues(old => ({ ...old, [key]:text })) }), [values])
+  return <Context value={value}>{children}</Context>
+}
+function useCombinationMemo(exerciseId: string, equipment: Equipment, initialText: string) {
+  const key = combinationKey(exerciseId, equipment)
+  const context = useContext(Context), [local, setLocal] = useState<Record<string,string>>(() => ({ [key]:initialText }))
+  return { text: context?.values[key] ?? local[key] ?? '', change: (text: string) => context ? context.change(key,text) : setLocal(old => ({ ...old, [key]:text })), key }
+}
+export function CombinationMemo({ exerciseId, equipment, readOnly = false, initialText = '' }: { exerciseId: string; equipment: Equipment; readOnly?: boolean; initialText?: string }) {
+  const memo = useCombinationMemo(exerciseId, equipment, initialText)
+  return <div className="stack"><label>기구 세팅 메모<textarea data-workout-memo rows={2} value={memo.text} readOnly={readOnly} placeholder="예: 의자 높이 3" onChange={e => memo.change(e.target.value)} /></label>
+    <small className="muted" role="status">같은 운동·장비 조합에서 공유할 메모입니다. 서버 저장 연결 전이며 입력은 아직 저장되지 않았습니다.</small>
+    {!readOnly && !!memo.text && <button type="button" className="quiet" onClick={() => memo.change('')}>메모 지우기</button>}</div>
+}

@@ -63,7 +63,7 @@ export default function AuthPreview() {
       <div className="stack">{dialog === 'export' ? <><p>현재 가상 계정의 예시 JSON입니다. 실제 앱 기록은 포함하지 않습니다. 텍스트를 길게 눌러 복사할 수 있습니다.</p><pre className="preview-export" tabIndex={0}>{JSON.stringify({ mock: true, account: state.owner, routines: account?.routines ?? 0, history: account?.history ?? [], unsynced: account?.pending ?? 0 }, null, 2)}</pre></>
         : dialog === 'terms' || dialog === 'privacy' ? <><p>UX 검토용 문서 위치 예시입니다. 실제 법률 문서가 아니며 서비스 운영용 약관·개인정보 처리방침은 별도로 작성해야 합니다.</p><p className="muted">Google 또는 이메일 인증으로 가입하고, 선택 닉네임만 설정하는 흐름입니다. 이 목업은 입력을 서버로 보내거나 브라우저 저장소에 저장하지 않습니다.</p></>
         : <><p>{dialog === 'reset' ? '계정과 로그인 수단을 유지하고 운동 데이터만 초기화하는 흐름입니다. 새 프로그램을 시작하려면 이력을 유지하는 “새 루틴으로 시작하기”도 이용할 수 있습니다.' : '회원 탈퇴는 계정과 연결된 로그인 수단까지 삭제하는 별도의 흐름입니다. 미동기화 로컬 기록도 탈퇴 대상이며 다른 계정으로 전송하지 않습니다.'}</p><DeletionScope withdraw={dialog === 'withdraw'} /><button className="outline" onClick={() => setDialog('export')}>삭제 전 가상 데이터 내보내기</button><p className="muted small">이후 본인 재인증과 최종 확인을 진행합니다. 실제 데이터 삭제는 하지 않습니다.</p><button className="primary" onClick={() => { dispatch({ type: 'sensitive', intent: dialog === 'reset' ? 'reset' : 'withdraw' }); setDialog(null) }}>본인 재인증으로 계속</button></>}
-        <button className="quiet" onClick={() => setDialog(null)}>닫기</button>
+        <button data-close-text className="quiet" onClick={() => setDialog(null)}>닫기</button>
       </div>
     </Dialog>}
   </div>

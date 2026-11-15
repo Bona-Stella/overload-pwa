@@ -26,9 +26,17 @@ function finish(value: unknown, owner: Record<string, unknown>) {
     && v.counter(a.version) && v.counter(a.currentVersion) && BigInt(a.currentVersion) >= BigInt(a.version) && typeof a.duplicate === 'boolean'
     && v.nullable(a.deletedAt, v.instant) && v.approvalResults(a.approvalResults) && v.assessment(a.completionAssessment)
 }
+function replacementSlots(value: unknown, plan: unknown, snapshot: unknown) {
+  if (value === undefined) return true
+  if (!v.object(value) || !v.initialPlan(plan) || !v.snapshot(snapshot)) return false
+  return Object.entries(value).every(([target, source]) => v.uuid(target) && v.uuid(source)
+    && plan.weightExercises.some(p => p.sessionExerciseId === source)
+    && snapshot.sessionExercises.some(e => e.id === target && e.kind === 'WEIGHT'))
+}
 export function localWorkout(value: unknown): value is LocalWorkout {
   return v.object(value) && value.schemaVersion === 2 && v.uuid(value.userId) && v.counter(value.dataGeneration) && v.uuid(value.sessionId)
     && v.uuid(value.editorDeviceId) && v.counter(value.writerEpoch) && v.instant(value.startedAt) && v.initialPlan(value.initialPlan) && v.snapshot(value.snapshot)
+    && (value.weightClock===undefined||v.object(value.weightClock)&&typeof value.weightClock.visible==='boolean'&&v.nullable(value.weightClock.runningSince,v.instant)&&v.instant(value.weightClock.observedAt))
     && v.counter(value.editVersion) && v.counter(value.localRevision) && v.counter(value.serverRevision) && v.counter(value.serverVersion)
     && frozen(value.pendingSnapshot, 'snapshot', value) && frozen(value.pendingResolution, 'resolution', value)
     && finish(value.finish, value)
@@ -43,6 +51,8 @@ export function localWorkout(value: unknown): value is LocalWorkout {
     && v.text(value.currentExerciseId) && dictionary(value.exerciseNames, v.text) && v.approvalResults(value.approvalResults)
     && (value.warmupCompleted === undefined || typeof value.warmupCompleted === 'boolean')
     && (value.equipmentMemos === undefined || dictionary(value.equipmentMemos, v.text))
+    && replacementSlots(value.replacementSlots, value.initialPlan, value.snapshot)
+    && (value.originalCombinationChanged === undefined || typeof value.originalCombinationChanged === 'boolean')
     && (value.excludedSetOrdinals === undefined || dictionary(value.excludedSetOrdinals, x => v.array(x, v.count) && new Set(x as number[]).size === (x as number[]).length))
     && v.array(value.recordedContexts, x => v.object(x) && v.uuid(x.setId) && v.text(x.approvalStateAtRecording) && v.nullable(x.approvedWeightKgAtRecording, v.decimal))
     && v.object(value.restPolicy) && v.count(value.restPolicy.restLowSeconds) && v.count(value.restPolicy.restMediumSeconds) && v.count(value.restPolicy.restHighSeconds)

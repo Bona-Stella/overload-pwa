@@ -30,7 +30,7 @@ export function KgWheel({ label, value, onChange }: { label: string; value: stri
 }
 
 export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, resting, editing, editTools,
-  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false }: {
+  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
   issue: ReactNode; resting: boolean; editing: boolean; editTools: ReactNode
   onDraft: (id: number, draft: Partial<SetDraft>) => void; onComplete: (id: number) => void
@@ -38,7 +38,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
   onAddSet: () => void; workingRef?: RefObject<HTMLElement | null>
   onWeight: () => void; onEdit: () => void; onMemo: (memo: string) => void
   onList: () => void; onEnd: () => void
-  memoNote?: string; approvalNote?: string; additionalInput?: boolean
+  memoContent?: ReactNode; memoNote?: string; approvalNote?: string; additionalInput?: boolean
 }) {
   const completed = weight.sets.filter(s => s.result).length
   const count = weight.plannedCount ?? weight.sets.length
@@ -110,8 +110,8 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
     {!editing && <Button aria-expanded={false} onClick={onEdit}>세트 기록 / 임시 편집</Button>}
     {editing && editTools}
     <Card data-workout-memo-card={weight.id}>
-      <label>기구 세팅 메모<textarea data-workout-memo rows={2} value={weight.memo} onChange={event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
-      <small className="muted">{memoNote ?? '검토 세션에서 메모를 확인할 수 있습니다.'}</small>
+      {memoContent ?? <><label>기구 세팅 메모<textarea data-workout-memo rows={2} value={weight.memo} onChange={event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
+      <small className="muted">{memoNote ?? '검토 세션에서 메모를 확인할 수 있습니다.'}</small></>}
     </Card>
     <Button className={styles.endWorkout} onClick={onEnd}>운동 종료</Button>
   </>

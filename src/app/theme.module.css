@@ -1,5 +1,6 @@
 :global(body):has(.theme) { background: #111216; }
 .theme {
+  font-family: var(--font-family-app);
   --surface-page: #111216;
   --surface-card: #1B1D22;
   --surface-input: #25282E;
@@ -46,6 +47,7 @@
 .theme :global(button.primary) { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .theme :global(button.outline) { background: transparent; border-color: var(--border-subtle); color: var(--text-primary); }
 .theme :global(button.quiet), .theme :global(button.icon-button) { background: transparent; color: var(--text-muted); }
+.theme :global(button[data-close-text]) { color: var(--status-danger-text); }
 .theme :global(button.danger) { color: var(--status-danger-text); }
 .theme :global(button.auth-google) { color: #242125; background: #F0F1F4; }
 .theme :global(button:focus-visible), .theme :global(input:focus-visible), .theme :global(select:focus-visible), .theme :global(textarea:focus-visible), .theme :global(summary:focus-visible) { outline: 2px solid var(--border-focus); outline-offset: 3px; }
@@ -67,3 +69,7 @@
 .theme :global(summary) { cursor: pointer; }
 @media (max-width: 374px) { .theme { --space-page: 14px; --space-card: 14px; } }
 @media (prefers-reduced-motion: reduce) { .theme *, .theme *::before, .theme *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+
+.theme :global(dialog) {font-family:var(--font-family-app);font-size:14px;line-height:1.6;}
+.theme :global(dialog h2) {font-size:18px;font-weight:700;}
+.theme :global(svg text),.theme :global(.recharts-tooltip-wrapper) {font-family:var(--font-family-app);}

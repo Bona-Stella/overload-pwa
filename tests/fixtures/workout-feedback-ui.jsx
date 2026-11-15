@@ -1,3 +1,6 @@
+import {GrowthPanel} from '../../src/features/statistics/GrowthPanel.tsx'
+import {RecordChart} from '../../src/features/statistics/RecordChart.tsx'
+import '../../src/features/statistics/statistics.css'
 // Component-only deterministic regression fixture. No API, IndexedDB or real account.
 import React,{useState,useSyncExternalStore} from 'react'
 import {createRoot} from 'react-dom/client'
@@ -49,9 +52,27 @@ for(const [i,name]of ['슈퍼 버티컬 체스트 프레스','케이블 오버�
  recordServer.snapshot.state.performedSets.push(...sets)
  reviewExercises.push({sessionExerciseId:id,advice:i===0?'INCREASE':'DECREASE',reasonCodes:[],referenceWeightKg:ref,plannedSetCount:planned,completedSetCount:3,minReps:8,maxReps:12,incomplete:i===2,sets:sets.map(s=>({performedSetId:s.id,ordinal:s.ordinal,reps:s.reps,contributes:i===0||s.reps<8}))})
 }
+const cardioId=crypto.randomUUID(),cardioPlan={kind:'TREADMILL',name:'시간 정정 러닝',targetSeconds:1200,targetDistanceKm:'2',targetSpeedKmh:null}
+recordServer.initialPlan.cardioActivities=[{sourcePlacementId:crypto.randomUUID(),sessionActivityId:cardioId,plan:cardioPlan}]
+recordServer.snapshot.state.appliedPlan.cardioActivities=[{sessionActivityId:cardioId,plan:cardioPlan}]
+recordServer.snapshot.state.cardioResults=[{id:crypto.randomUUID(),sessionActivityId:cardioId,status:'COMPLETED',occurredAt:recordServer.endedAt,startedAt:recordServer.startedAt,result:{activeMs:1230125,timerMs:1200000,corrected:true,distanceKm:'2.05',averageBpm:120,measurement:{actualSpeedKmh:null,distanceSource:'MANUAL'}}}]
+window.feedback.corrections=[]
+const recordController={edit:async body=>{window.feedback.corrections.push(body);return true}}
 const recordState={server:recordServer,assessment:{userId:recordServer.userId,dataGeneration:recordServer.dataGeneration,sessionId:recordServer.id,version:'0',completionAssessment:null,currentAssessment:{state:'EVALUATED',evaluation:null},weightReview:{schemaVersion:1,ruleVersion:'workout-weight-review-v1',sessionVersion:'0',assessedAt:recordServer.closedAt,exercises:reviewExercises}},changes:{events:[]},copies:[],pending:null,busy:false,writable:true,issue:null,notice:''}
 await c.open(session(),bootstrap.settings)
-function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record ? <ClosedWorkoutView key={record} state={recordState} controller={{}} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
+const frozenRecordState=structuredClone(recordState),frozenServer=frozenRecordState.server,first=frozenServer.initialPlan.weightExercises[0]
+frozenServer.initialPlan.weightExercises=[first]
+frozenServer.snapshot.state.appliedPlan.weightExercises=frozenServer.snapshot.state.appliedPlan.weightExercises.slice(0,1)
+frozenServer.snapshot.state.performedSets=frozenServer.snapshot.state.performedSets.filter(s=>s.sessionExerciseId===first.sessionExerciseId).map(s=>({...s,loadType:'PLATE'}))
+const frozenSets=structuredClone(frozenServer.snapshot.state.performedSets)
+frozenServer.completionAssessment={schemaVersion:2,ruleVersion:'task009-completion-v1',sessionVersion:'0',assessedAt:frozenServer.closedAt,overallWeightPlanComplete:true,exercises:[{sessionExerciseId:first.sessionExerciseId,eligible:true,reasonCodes:[],comparisonContext:{routineId:frozenServer.initialPlan.routineId,sourcePlacementId:first.sourcePlacementId,standardExerciseId:first.standardExerciseId,approvedWeightKg:first.approvedWeightKg,plannedSetCount:3,minReps:first.minReps,maxReps:first.maxReps,unit:'KG'},evaluatedPerformedSetIds:frozenSets.map(s=>s.id),evaluatedReps:frozenSets.map(s=>s.reps),repsSum:'37',benchmarkEvidence:null,advice:'INCREASE',adviceReason:'ALL_AT_OR_ABOVE_MAX_REPS'}]}
+frozenServer.snapshot.state.performedSets[0].reps=5
+const growthApi={
+ search:async()=>({exercises:[{standardExerciseId:bootstrap.exercises[0].id,name:'승인 이력 검증을 위한 매우 긴 운동명',lastPerformedAt:recordServer.endedAt,lastApprovalAt:recordServer.endedAt}],nextOffset:null}),
+ options:async()=>({placements:[{placementId:'placement',routineId:'routine',routineName:'검토 루틴',deleted:false}]}),
+ history:async()=>({points:[{id:'first',previousWeightKg:'50.000001',approvedWeightKg:'55.000001',occurredAt:'2026-11-01T10:00:00Z',recordedAt:'2026-11-01T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:false,previousPointId:null},{id:'second',previousWeightKg:'55.000001',approvedWeightKg:'52.500001',occurredAt:'2026-11-11T10:00:00Z',recordedAt:'2026-11-11T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:true,previousPointId:'first'}],nextOffset:null})
+}
+function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={e=>{throw e}} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
 createRoot(document.getElementById('root')).render(<Fixture/>)
 window.feedback.ready=true
 

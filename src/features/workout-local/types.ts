@@ -26,9 +26,13 @@ export type LocalWorkout = LocalKey & {
   weights: Record<string, { value: string; context: ActiveWeightContext }>
   timers: Record<string, CardioTimer>
   currentExerciseId: string
+  weightClock?:{visible:boolean;runningSince:string|null;observedAt:string}
   warmupCompleted?: boolean
   // The current server contract has no equipment memo field. Never send these as snapshots.
   equipmentMemos?: Record<string, string>
+  // Local UI link only; the current snapshot API cannot transmit replacement-slot evidence.
+  replacementSlots?: Record<string, string>
+  originalCombinationChanged?: boolean
   excludedSetOrdinals?: Record<string, number[]>
   exerciseNames: Record<string, string>
   restPolicy: RestPolicy

@@ -53,7 +53,7 @@ export function AccountSettings({ state, controller, now }: { state: AuthState; 
           <label htmlFor="account-code">6자리 인증코드<input id="account-code" className="auth-code" type="text" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} disabled={busy || !remaining || verifyWait > 0} aria-describedby="account-code-hint auth-feedback" onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
           <p className="muted small" id="account-code-hint">{remaining ? `유효시간 ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : '코드 만료'} · 최대 5회 오답 · 재발송 최소 60초. 제한과 권한은 서버가 판단합니다.</p>
           <button type="submit" className="primary full" disabled={busy || code.length !== 6 || !remaining || verifyWait > 0}>{state.pending === 'proof-verify' ? '코드를 확인하는 중…' : verifyWait > 0 ? `${verifyWait}초 후 코드 확인` : '코드 확인'}</button>
-          <button type="button" className="quiet" disabled={busy} onClick={() => { clear(); controller.clearAccountCode() }}>코드 입력 닫기</button>
+          <button data-close-text type="button" className="quiet" disabled={busy} onClick={() => { clear(); controller.clearAccountCode() }}>코드 입력 닫기</button>
         </form>}
       </section>
       <section className="card stack"><h2>최근 이메일 재인증</h2>

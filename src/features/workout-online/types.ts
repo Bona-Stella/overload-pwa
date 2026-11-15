@@ -53,7 +53,8 @@ export type ApprovalRequest = { id: UUID; sessionExerciseId: UUID; sequence: Cou
   previousApprovedWeightKg: Decimal; nextApprovedWeightKg: Decimal; occurredAt: Instant }
 export type ApprovalResult = { id: UUID; sessionExerciseId: UUID; sequence: Counter; status: 'APPLIED' | 'PENDING' | 'NOT_APPLIED'; reason: string | null;
   approvalEventId: UUID | null; routineVersionBefore: Counter | null; routineVersionAfter: Counter | null; resolvedAt: Instant | null; resolvedByRequestId: UUID | null }
-export type Snapshot = { sessionExercises: { id: UUID; kind: 'WEIGHT' | 'CARDIO'; standardExerciseId: UUID | null }[];
+export type WeightTiming={schemaVersion:1;complete:boolean;intervals:{startedAt:string;endedAt:string}[]}
+export type Snapshot = {weightTiming?:WeightTiming; sessionExercises: { id: UUID; kind: 'WEIGHT' | 'CARDIO'; standardExerciseId: UUID | null }[];
   appliedPlan: { schemaVersion: 2; weightExercises: (Equipment & { sessionExerciseId: UUID; setCount: number; minReps: number; maxReps: number })[]; cardioActivities: { sessionActivityId: UUID; plan: CardioPlan }[] };
   performedSets: PerformedSet[]; cardioResults: CardioResult[]; deletedPerformedSetIds: UUID[]; deletedCardioResultIds: UUID[]; approvalRequests: ApprovalRequest[] }
 export type Advice = 'INCREASE' | 'DECREASE' | 'MAINTAIN' | 'UNAVAILABLE'

@@ -18,6 +18,33 @@ const set=(w,n=1,reps='8',weight='62.500000')=>change(w,x=>{m.editDraft(x,E,n,{w
 const gate=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve}}
 const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r))}
 
+test('replacements retain only real initial-slot links, preserve target count and never transmit local linkage',()=>{
+  const original=local(), before=structuredClone(original.initialPlan)
+  const replaced=change(original,w=>m.replaceWeight(w,E,EXERCISE,'대체 운동'))
+  const first=replaced.currentExerciseId
+  assert.equal(replaced.replacementSlots[first],E);assert.deepEqual(replaced.initialPlan,before)
+  assert.equal(replaced.snapshot.appliedPlan.weightExercises[0].setCount,before.weightExercises[0].setCount)
+  assert.ok(localWorkout(replaced));assert.equal('replacementSlots' in replaced.snapshot,false)
+  const again=change(replaced,w=>m.replaceWeight(w,first,EXERCISE,'다시 대체'))
+  assert.equal(again.replacementSlots[again.currentExerciseId],E);assert.ok(localWorkout(again))
+  let temporary=change(local(),w=>m.addWeight(w,EXERCISE,'추가 운동'))
+  const added=temporary.currentExerciseId
+  temporary=change(temporary,w=>m.replaceWeight(w,added,EXERCISE,'추가 운동 교체'))
+  assert.equal(temporary.replacementSlots?.[temporary.currentExerciseId],undefined);assert.ok(localWorkout(temporary))
+  const completed=set(local()), preserved=structuredClone(completed)
+  assert.throws(()=>m.replaceWeight(completed,E,EXERCISE,'교체'),/완료 기록/)
+  assert.deepEqual(completed,preserved)
+})
+
+test('changing original equipment and returning preserves the local review exclusion without changing initial facts or the wire snapshot',()=>{
+  const original=local(), plan=structuredClone(original.initialPlan)
+  const equipment={manufacturerId:original.snapshot.appliedPlan.weightExercises[0].manufacturerId,loadType:original.snapshot.appliedPlan.weightExercises[0].loadType}
+  let w=change(original,x=>m.changeEquipment(x,E,{...equipment,manufacturerId:OTHER}))
+  w=change(w,x=>m.changeEquipment(x,E,equipment))
+  assert.equal(w.originalCombinationChanged,true);assert.ok(localWorkout(w));assert.deepEqual(w.initialPlan,plan)
+  assert.equal('originalCombinationChanged' in w.snapshot,false)
+})
+
 test('initial plan and server copy stay unchanged while applied plan and exact text are independent',()=>{
   const server=session(), original=structuredClone(server), w=m.createLocalWorkout(server,policy)
   const next=change(w,x=>{m.updateTargets(x,E,4,8,12);m.editDraft(x,E,1,{weight:'00062.500000',reps:'0009'})})

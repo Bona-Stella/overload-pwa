@@ -12,7 +12,7 @@ const run = '11111111-1111-4111-8111-111111111111', now = Date.parse('2026-11-04
 const ready = () => ({ runId: run, containerRunId: run, backendOrigin: 'http://127.0.0.1:49152', backendPid: 123, containerId: 'a'.repeat(64), database: 'overload_v22_isolated', databasePort: 49153,
   instanceId: '33333333-3333-4333-8333-333333333333', browserControlOrigin: 'http://127.0.0.1:49154',
   jdbcUrl: 'jdbc:postgresql://127.0.0.1:49153/overload_v22_isolated', startedAt: '2026-11-03T23:59:00Z', readyAt: '2026-11-03T23:59:30Z',
-  initialUsers: 0, preparedUsers: 1, accountFlow: 'EMAIL_OTP', migrations: 35, migrationVersions: Array.from({ length: 35 }, (_, i) => String(i + 1)),
+  initialUsers: 0, preparedUsers: 1, accountFlow: 'EMAIL_OTP', migrations: 37, migrationVersions: Array.from({ length: 37 }, (_, i) => String(i + 1)),
   freshDatabase: true, loopbackDatabase: true, tmpfsOnly: true, schemaValidated: true, noDeveloperEnv: true, springSessionTables: true, fakeEmailSender: true, externalAuthDisabled: true, httpSmokePassed: true })
 
 test('ongoing approved catalog can reconnect without resetting its DB; default fixture age and identity checks remain strict', () => {

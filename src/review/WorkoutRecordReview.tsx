@@ -1,10 +1,11 @@
+import {recordTime} from '../components/record-time.ts'
 
 import { WorkoutSummary } from '../features/workout-flow/WorkoutSummary.tsx'
 import { manufacturers, reviewToday } from './routine-samples.ts'
 import { makeCardio, sessionAdvice, setVolume, weightDone } from './workout-model.ts'
 import type { ReviewRecord } from './workout-model.ts'
 
-export function WorkoutRecordReview({ record, onBack }: { record: ReviewRecord; onBack: () => void }) {
+export function WorkoutRecordReview({ record, onBack, detail = false,onPreviewApprove }: {onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>; record: ReviewRecord; onBack: () => void; detail?: boolean }) {
   const { session, endedAt } = record
   const { initialPlan, weights, cardio } = session
   const removed = initialPlan.weightExercises.filter(p => !weights.some(w => w.id === p.sessionExerciseId))
@@ -14,7 +15,7 @@ export function WorkoutRecordReview({ record, onBack }: { record: ReviewRecord; 
     const advice = sessionAdvice(session, w, true)
     return {
       referenceKg: planned?.approvedWeightKg ?? null,
-      id: w.id, name: w.name, planned: planned?.setCount, goal: planned && goal(planned),
+      id: w.id, loadType:w.loadType, name: w.name, planned: planned?.setCount, goal: planned && goal(planned),
       results: w.sets.flatMap(s => s.result ? [{ id: s.id, result: s.result, volume: setVolume(s.result) }] : []),
       review: planned && advice.kg && (advice.advice === 'increase' || advice.advice === 'decrease') ? {
         direction: advice.advice, referenceKg: advice.kg, planned: planned.setCount, completed: w.sets.filter(s => s.result).length, incomplete: false,
@@ -28,8 +29,11 @@ export function WorkoutRecordReview({ record, onBack }: { record: ReviewRecord; 
   }) && initialPlan.cardioActivities.every(p => cardio.some(c => c.id === p.sessionActivityId && c.phase === 'completed'))
     && weights.every(weightDone) && cardio.every(c => c.phase === 'completed')
   const plannedSets = initialPlan.weightExercises.reduce((sum, p) => sum + p.setCount, 0)
-  return <WorkoutSummary routine={initialPlan.routineName} date={reviewToday} elapsed={endedAt - session.startedAt} deload={session.deload}
-    manufacturers={manufacturers} plannedSets={plannedSets} whole={whole} onBack={onBack}
+  return <WorkoutSummary onPreviewApprove={onPreviewApprove} dataNote={detail?'UI 검토 · 합성 기록과 시연 승인 상태입니다. 실제 서버·DB 이력이 아닙니다.':'UI 검토 · 합성 수행·권고 및 메모리 승인 시연입니다. 실제 서버 요청·영구 저장은 하지 않습니다.'} detail={detail} historicalWeights={record.judgments??[]} previewApproval recordTime={recordTime(new Date(session.startedAt).toISOString(),'Asia/Seoul',record.workoutDate??reviewToday)} routine={initialPlan.routineName} date={record.workoutDate??reviewToday} elapsed={endedAt - session.startedAt} deload={session.deload}
+    reviewExcluded={removed.length > 0 || weights.some(w => {
+      const initial=initialPlan.weightExercises.find(p => p.sessionExerciseId===w.id)
+      return !!initial && (initial.manufacturerId!==w.manufacturerId || initial.loadType!==w.loadType)
+    })} manufacturers={manufacturers} plannedSets={plannedSets} whole={whole} onBack={onBack}
     weights={[...summaryWeights, ...removed.map(p => ({ id: p.sessionExerciseId, name: p.exerciseName, planned: p.setCount, goal: goal(p),
       results: [], referenceKg: p.approvedWeightKg }))]}
     cardio={[

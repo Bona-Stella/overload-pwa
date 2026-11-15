@@ -12,7 +12,8 @@ export async function waitFor(fn, label, timeout = 20000) {
   throw new Error('Timeout: ' + label)
 }
 export async function launchV22Browser(runId, frontendRoot = '.', options = {}) {
-  const evidence = await readV22Ready(runId, frontendRoot), directory = resolve(frontendRoot, 'logs/verification-v22', runId)
+  const frontendPort=options.frontendPort??3000, frontendOrigin='http://127.0.0.1:'+frontendPort
+  const evidence = await readV22Ready(runId, frontendRoot, {existingApprovedCatalog:options.existingApprovedCatalog===true}), directory = resolve(frontendRoot, 'logs/verification-v22', runId)
   const proxy = pwaWriteProxy(evidence)
   await mkdir(directory, { recursive: true })
   // Cache Storage adds deeply nested paths on Windows; keep the PWA test profile root short.
@@ -50,7 +51,7 @@ export async function launchV22Browser(runId, frontendRoot = '.', options = {}) 
     async restartBrowser() { await stopBrowser(); await startBrowser() },
     async openSecondTab() {
       const previous = targetId, target = await driver.send('Target.createTarget', { url: 'about:blank' })
-      await attach(target.targetId); await network(); await driver.send('Page.navigate', { url: 'http://127.0.0.1:3000/' })
+      await attach(target.targetId); await network(); await driver.send('Page.navigate', { url: frontendOrigin+'/' })
       return previous
     },
     async closeTabAndSelect(previous) { try { await driver.send('Target.closeTarget', { targetId }) } catch { /* target detached */ } await attach(previous); await network() },
@@ -59,7 +60,7 @@ export async function launchV22Browser(runId, frontendRoot = '.', options = {}) 
       const ownProfile = relative(profileRoot, profile)
       if (isAbsolute(ownProfile) || ownProfile.startsWith('..') || !/^browser-profile-[a-f0-9-]+$/.test(ownProfile)) throw Error('Profile cleanup boundary mismatch')
       await rm(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
-      await writeFile(resolve(directory, 'browser-result-' + ownProfile + '.json'), JSON.stringify({ runId, backendOrigin: evidence.backendOrigin, frontendOrigin: 'http://127.0.0.1:3000', browserPid: browserPids.at(-1), browserPids, previewPid: process.pid, profile, notes, requests, workerErrors, stopped: true, profileRemoved: true }, null, 2))
+      await writeFile(resolve(directory, 'browser-result-' + ownProfile + '.json'), JSON.stringify({ runId, backendOrigin: evidence.backendOrigin, frontendOrigin: frontendOrigin, browserPid: browserPids.at(-1), browserPids, previewPid: process.pid, profile, notes, requests, workerErrors, stopped: true, profileRemoved: true }, null, 2))
       proxy.assertConnected()
       await verifyV22Ownership(evidence)
     },
@@ -67,7 +68,7 @@ export async function launchV22Browser(runId, frontendRoot = '.', options = {}) 
   async function startPreview() {
     if (server) return
     await verifyV22Ownership(evidence)
-    server = await preview({ root: frontendRoot, configFile: false, envDir: false, plugins: [proxy.plugin], preview: { host: '127.0.0.1', port: 3000, strictPort: true }, clearScreen: false })
+    server = await preview({ root: frontendRoot, configFile: false, envDir: false, plugins: [proxy.plugin], preview: { host: '127.0.0.1', port: frontendPort, strictPort: true }, clearScreen: false })
   }
   async function stopPreview() {
     if (!server) return
@@ -84,7 +85,7 @@ export async function launchV22Browser(runId, frontendRoot = '.', options = {}) 
     ws.onmessage = event => {
       const m = JSON.parse(event.data), p = pending.get(m.id)
       if (p) { pending.delete(m.id); m.error ? p.reject(Error(m.error.message)) : p.resolve(m.result); return }
-      if (m.method === 'Network.requestWillBeSent') { const u = new URL(m.params.request.url); if (u.origin === 'http://127.0.0.1:3000' && u.pathname.startsWith('/api/')) { const row = { method: m.params.request.method, path: u.pathname, query: u.search }; requests.push(row); rows.set(m.params.requestId, row) } }
+      if (m.method === 'Network.requestWillBeSent') { const u = new URL(m.params.request.url); if (u.origin === frontendOrigin && u.pathname.startsWith('/api/')) { const row = { method: m.params.request.method, path: u.pathname, query: u.search }; requests.push(row); rows.set(m.params.requestId, row) } }
       if (m.method === 'Network.responseReceived') { const row = rows.get(m.params.requestId); if (row) row.status = m.params.response.status }
       if (m.method === 'Network.loadingFailed') { const row = rows.get(m.params.requestId); if (row) row.canceled = m.params.canceled === true }
       if (m.method === 'ServiceWorker.workerErrorReported') workerErrors.push(m.params.errorMessage.errorMessage)
@@ -99,7 +100,7 @@ export async function launchV22Browser(runId, frontendRoot = '.', options = {}) 
     browserPids.push(browser.pid)
     devtoolsPort = await waitFor(async () => { try { return Number((await readFile(resolve(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]) } catch { return false } }, 'CDP readiness')
     await attach(); if (offline) await network()
-    await driver.send('Page.navigate', { url: 'http://127.0.0.1:3000/' })
+    await driver.send('Page.navigate', { url: frontendOrigin+'/' })
   }
   async function stopBrowser() {
     if (ws?.readyState === 1) { try { await driver.send('Browser.close') } catch { /* exited */ } }

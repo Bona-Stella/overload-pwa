@@ -2,11 +2,11 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode } from 'react'
 import styles from './ui.module.css'
 
-export function Button({ variant = 'secondary', className = '', type = 'button', ...props }: ComponentPropsWithoutRef<'button'> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger' }) {
-  return <button {...props} type={type} className={`${styles.button} ${variant === 'secondary' ? 'outline' : variant} ${className}`} />
+export function Button({ variant = 'secondary', className = '', type = 'button', children, ...props }: ComponentPropsWithoutRef<'button'> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger' }) {
+  return <button {...props} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined} type={type} className={`${styles.button} ${variant === 'secondary' ? 'outline' : variant} ${className}`}>{children}</button>
 }
 export function Card({ hero = false, className = '', ...props }: ComponentPropsWithRef<'section'> & { hero?: boolean }) {
-  return <section {...props} className={`${styles.card} ${hero ? styles.hero : ''} ${className}`} />
+  return <section {...props} className={`app-card ${styles.card} ${hero ? styles.hero : ''} ${className}`} />
 }
 export function SectionHeading({ title, eyebrow, children }: { title: string; eyebrow?: string; children?: ReactNode }) {
   return <header className={styles.heading}><div>{eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}<h1>{title}</h1></div>{children}</header>

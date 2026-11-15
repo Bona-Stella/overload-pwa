@@ -29,8 +29,8 @@ export class GrowthApi {
     if (x.dataGeneration !== scope.dataGeneration) throw new WorkoutApiError('DATA_GENERATION_MISMATCH', 409)
     return x
   }
-  async search(scope: Scope, period: GrowthPeriod, zone: string, query: string, offset: number, signal: AbortSignal): Promise<GrowthSearch> {
-    const x = await this.read(scope, '', period, zone, signal, { q: query, offset: String(offset) })
+  async search(scope: Scope, period: GrowthPeriod, zone: string, query: string, offset: number, signal: AbortSignal, groupCode?:string): Promise<GrowthSearch> {
+    const x = await this.read(scope, '', period, zone, signal, { q: query, offset: String(offset),...(groupCode&&groupCode!=='ALL'?{groupCode}:{}) })
     if (x.query !== query || x.offset !== offset || !v.nullable(x.nextOffset, integer) || x.nextOffset !== null && x.nextOffset !== offset + 50 || !v.array(x.exercises, e => v.object(e) && v.uuid(e.standardExerciseId) && v.name(e.name) && v.nullable(e.lastPerformedAt, v.instant) && v.nullable(e.lastApprovalAt, v.instant)) || x.exercises.length > 50) throw new WorkoutApiError('RESPONSE_INVALID')
     return x as GrowthSearch
   }

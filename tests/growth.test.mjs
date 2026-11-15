@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { growthChartData } from '../src/features/statistics/growth-chart.ts'
 import { GrowthApi, growthPoint } from '../src/features/statistics/growth.ts'
 import { scope, OTHER } from './fixtures/workout-online-data.mjs'
 registerHooks({load(url,context,next){
+  if(url.endsWith('.css'))return{format:'module',source:'export default new Proxy({}, {get:(_,key)=>String(key)})',shortCircuit:true}
   if(url.endsWith('.tsx'))return{format:'module',shortCircuit:true,source:ts.transpileModule(readFileSync(fileURLToPath(url),'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2023}}).outputText}
   return next(url,context)
 }})
@@ -41,15 +43,15 @@ test('growth keeps exact decimal values and rejects invented sources unsafe numb
 test('growth chart connects only the actual adjacent predecessor and never supplies an initial baseline',()=>{
   const a=point(),b={...point(SECOND),previousWeightKg:'82.5',approvedWeightKg:'85',occurredAt:'2026-11-02T00:00:00Z',recordedAt:'2026-11-02T00:00:01Z',connectFromPrevious:true,previousPointId:ID}
   const render=points=>renderToStaticMarkup(React.createElement(GrowthGraph,{points,zone:'UTC'}))
-  assert.equal((render([b,a]).match(/data-growth-segment/g)||[]).length,1)
-  assert.equal((render([a,{...b,previousPointId:OTHER}]).match(/data-growth-segment/g)||[]).length,0)
-  assert.equal((render([a,{...b,connectFromPrevious:false}]).match(/data-growth-segment/g)||[]).length,0)
-  assert.equal((render([a]).match(/<circle/g)||[]).length,1)
+  assert.deepEqual(growthChartData([b,a],'UTC').map(p=>p.connect),[false,true])
+  assert.deepEqual(growthChartData([a,{...b,previousPointId:OTHER}],'UTC').map(p=>p.connect),[false,false])
+  assert.deepEqual(growthChartData([a,{...b,connectFromPrevious:false}],'UTC').map(p=>p.connect),[false,false])
+  assert.equal(growthChartData([a],'UTC').length,1)
   assert.match(render([]),/승인 중량 변경 기록이 없습니다/)
 })
 test('large decimal and zero approved weights render without floating point loss',()=>{
   const html=renderToStaticMarkup(React.createElement(GrowthGraph,{points:[{...point(),approvedWeightKg:'99999999999999.999999'},{...point(SECOND),occurredAt:'2026-11-02T00:00:00Z',approvedWeightKg:'0'}],zone:'UTC'}))
-  assert.match(html,/99999999999999\.999999/);assert.match(html,/0 kg/);assert.doesNotMatch(html,/NaN|Infinity/)
+  assert.match(html,/99999999999999\.999999/);assert.match(html,/0kg/);assert.doesNotMatch(html,/NaN|Infinity/)
 })
 test('growth screen exposes all four periods and historical search without claiming workout load is approval',()=>{
   const html=renderToStaticMarkup(React.createElement(GrowthPanel,{api:new GrowthApi({workoutRequest:async()=>{throw Error('SSR must not fetch')}}),scope,refreshKey:'test',onInvalid(){},onOpen(){}}))

@@ -449,14 +449,14 @@ function withAchievedBenchmark() {
   return m.beginWorking(m.startWorkout(state, 'push', NOW + 70000))
 }
 
-test('next workout shows a nonblocking approved benchmark reminder with an explicit change action, without claiming last workout', () => {
+test('next workout reuses the footer banner with before/after approved benchmark values', () => {
   const state = withAchievedBenchmark()
   const before = structuredClone(state)
   const markup = html(WorkoutScreen, props(state))
-  assert.match(markup, /기준 기록 증량 안내/)
-  assert.match(markup, /현재 기준 기록에서 증량 조건 달성/)
-  assert.match(markup, /승인 60kg · 10\/10\/10회/)
-  assert.match(markup, /지금 변경<\/button>/)
+  assert.match(markup, /증량 가능 · 60kg → 62kg/)
+  assert.match(markup, /이전 유효 기준 기록/)
+  assert.match(markup, /60kg → 62kg/)
+  assert.match(markup, /중량 안내 숨기기/)
   assert.match(markup, /1세트 완료<\/button>/)
   assert.doesNotMatch(markup, /지난 운동에서|<dialog/)
   assert.deepEqual(state, before)
@@ -466,12 +466,12 @@ test('benchmark reminder keeps approved evidence separate from today-only weight
   let state = m.changeWeight(withAchievedBenchmark(), 'push-bench', 50, 'today')
   let markup = html(WorkoutScreen, props(state))
   assert.match(markup, /오늘만 중량/)
-  assert.match(markup, /승인 60kg · 10\/10\/10회/)
+  assert.match(markup, /60kg → 62kg/)
   assert.equal(state.progress['push-bench'], 60)
   assert.equal(state.active.exercises[0].weight, 50)
   state = m.changeWeight(state, 'push-bench', 62.5, 'progress')
   markup = html(WorkoutScreen, props(state))
-  assert.doesNotMatch(markup, /기준 기록 증량 안내|지금 변경/)
+  assert.doesNotMatch(markup, /이전 유효 기준 기록|60kg → 62kg/)
   assert.match(markup, /62\.5/)
 })
 

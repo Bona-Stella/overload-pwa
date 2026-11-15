@@ -64,6 +64,19 @@ test('all growth routes traverse real transport without changing encoded search,
   for (const { init } of f.calls.slice(2)) { assert.equal(init.method, 'GET'); assert.equal(init.body, undefined); assert.equal(init.credentials, 'include') }
 })
 
+test('growth body tags reach authenticated transport and reject unsupported or misplaced filters',async()=>{
+ const f=await connected(()=>json({...envelope(),query:'',offset:0,exercises:[],nextOffset:null}))
+ for(const group of ['CHEST','BACK','SHOULDERS','ARMS','LEGS','CORE','CARDIO','OTHER']){
+  await f.statistics.growth.search(scope,'3',zone,'',0,signal(),group)
+  assert.equal(new URL(f.calls.at(-1).path,'https://local.invalid').searchParams.get('groupCode'),group)
+ }
+ for(const path of ['/api/v1/statistics/growth/exercises?period=3&timeZone=UTC&groupCode=INVALID','/api/v1/statistics/growth/exercises/'+EXERCISE+'?period=3&timeZone=UTC&groupCode=BACK']){
+  const before=f.calls.length
+  await assert.rejects(f.api.workoutRequest(path,'GET',undefined,signal()))
+  assert.equal(f.calls.length,before)
+ }
+})
+
 test('V30 schedule uses queryless reads, separate versioned writes, and full server responses', async () => {
   const assignments = [{ dayOfWeek: 2, routineId: ROUTINE }]
   const saved = { ...schedule(), stateVersion: '1', appliedScheduleVersion: '1', appliedAt: '2026-11-06T00:00:00Z',

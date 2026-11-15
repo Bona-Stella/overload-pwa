@@ -45,11 +45,12 @@ function statisticsRequest(path: string, method: string, body: unknown) {
     const growth = /^\/api\/v1\/statistics\/growth\/exercises(?:\/([^/]+)(?:\/placements\/([^/]+))?)?$/.exec(pathname)
     if (!growth || growth[1] !== undefined && !uuid(growth[1]) || growth[2] !== undefined && !uuid(growth[2])) return false
     required = ['period', 'timeZone']
-    optional = growth[1] === undefined ? ['q', 'offset'] : growth[2] === undefined ? [] : ['offset']
+    optional = growth[1] === undefined ? ['q', 'offset', 'groupCode'] : growth[2] === undefined ? [] : ['offset']
   }
   const keys = [...query.keys()]
   return new Set(keys).size === keys.length && required.every(key => query.has(key))
     && keys.every(key => required.includes(key) || optional.includes(key))
+    && (!query.has('groupCode') || ['CHEST','BACK','SHOULDERS','ARMS','LEGS','CORE','CARDIO','OTHER'].includes(query.get('groupCode')!))
 }
 
 function exerciseDetailRequest(path: string, method: string, body: unknown) {

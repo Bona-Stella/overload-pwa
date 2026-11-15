@@ -115,7 +115,10 @@ export function updateTargets(workout: LocalWorkout, id: string, setCount: numbe
 }
 export function changeEquipment(workout: LocalWorkout, id: string, settings: Equipment) {
   if (!equipment(settings)) throw new Error('장비 설정을 확인해 주세요.')
-  Object.assign(requireWeight(workout, id), settings)
+  const current = requireWeight(workout, id)
+  if (workout.initialPlan.weightExercises.some(p => p.sessionExerciseId === id)
+    && (current.manufacturerId !== settings.manufacturerId || current.loadType !== settings.loadType)) workout.originalCombinationChanged = true
+  Object.assign(current, settings)
 }
 export function addWeight(workout: LocalWorkout, standardExerciseId: string, name: string, randomId = () => crypto.randomUUID(), settings: Equipment = { manufacturerId: null, loadType: null }) {
   if (!uuid(standardExerciseId) || !equipment(settings)) throw new Error('표준 운동과 장비 설정을 확인해 주세요.')
@@ -123,6 +126,20 @@ export function addWeight(workout: LocalWorkout, standardExerciseId: string, nam
   workout.snapshot.sessionExercises.push({ id, kind: 'WEIGHT', standardExerciseId })
   workout.snapshot.appliedPlan.weightExercises.push({ sessionExerciseId: id, setCount: 3, minReps: 6, maxReps: 10, ...settings })
   workout.weights[id] = { value: '0', context: { kind: 'TODAY_ONLY', requestId: null } }; workout.exerciseNames[id] = name; workout.currentExerciseId = id
+}
+export function replaceWeight(workout: LocalWorkout, id: string, standardExerciseId: string, name: string, randomId = () => crypto.randomUUID()) {
+  const target = requireWeight(workout, id)
+  if (workout.snapshot.performedSets.some(s => s.sessionExerciseId === id)) throw new Error('완료 기록을 먼저 취소해 주세요.')
+  const index = workout.snapshot.appliedPlan.weightExercises.findIndex(e => e.sessionExerciseId === id)
+  const source = workout.replacementSlots?.[id] ?? workout.initialPlan.weightExercises.find(p => p.sessionExerciseId === id)?.sessionExerciseId
+  addWeight(workout, standardExerciseId, name, randomId)
+  const added = workout.currentExerciseId
+  if (source) { workout.replacementSlots = { ...workout.replacementSlots, [added]:source }; workout.originalCombinationChanged = true }
+  updateTargets(workout, added, target.setCount, target.minReps, target.maxReps)
+  removeExercise(workout, id)
+  const plan = workout.snapshot.appliedPlan.weightExercises
+  const addition = plan.splice(plan.findIndex(e => e.sessionExerciseId === added),1)[0]
+  plan.splice(index,0,addition); workout.currentExerciseId = added
 }
 export function updateCardioPlan(workout: LocalWorkout, id: string, plan: CardioPlan) {
   if (!cardioPlan(plan) || plan.name.length > 100) throw new Error('유산소 이름(100자 이내)과 계획을 확인해 주세요.')

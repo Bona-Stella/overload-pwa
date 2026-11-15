@@ -1,4 +1,6 @@
 
+import { suggestedApproval } from '../workout-online/approval-weight.ts'
+import type { LoadType } from '../workout-online/types.ts'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
@@ -252,11 +254,14 @@ export function ExerciseNavigation({ previous, next, onList, onGo }: {
   </nav>
 }
 
-export function WeightRecommendation({ direction, kg, provisional = false }: { direction: 'increase' | 'decrease'; kg?: string; provisional?: boolean }) {
+export function WeightRecommendation({ direction, kg, provisional = false, loadType = null, source = 'current', onDismiss }: {
+  direction: 'increase' | 'decrease'; kg?: string; provisional?: boolean; loadType?: LoadType | null; source?: 'current' | 'benchmark'; onDismiss?: () => void
+}) {
   return <div className={styles.recommendation} data-direction={direction} role="status" aria-label={provisional ? '진행 중 잠정 중량 검토' : undefined}
     title={provisional ? '현재 종목의 서버 저장 수행 기준 잠정 안내입니다. 공식 평가는 운동 종료 후 전체 계획을 기준으로 다시 계산합니다.' : undefined}>
-    <b>{direction === 'increase' ? '증량 가능' : '감량 검토'}{kg && ` · ${kg}kg`}</b>
-    <small>{direction === 'increase' ? '중량 증가를 고려해 보세요.' : '중량 감소를 고려해 보세요.'}</small>
+    <div><b>{direction === 'increase' ? '증량 가능' : '감량 검토'}{kg && ` · ${kg}kg → ${suggestedApproval(kg, direction, loadType)}kg`}</b>
+    <small>{source === 'benchmark' ? '이전 유효 기준 기록' : direction === 'increase' ? '중량 증가를 고려해 보세요.' : '중량 감소를 고려해 보세요.'}</small></div>
+    {onDismiss && <Button variant="quiet" aria-label="중량 안내 숨기기" onClick={onDismiss}>×</Button>}
   </div>
 }
 

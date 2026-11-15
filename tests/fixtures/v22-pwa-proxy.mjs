@@ -1,24 +1,26 @@
-// Opt-in local fault injection. Responses always originate at the verified real Backend.
+// Opt-in local fault injection. Successful responses originate at the verified real Backend.
 import { createHash } from 'node:crypto'
 import { withV22Connection } from './v22-environment.mjs'
 export function pwaWriteProxy(evidence) {
   const origin = evidence.backendOrigin
   const target = new URL(origin)
   if (target.protocol !== 'http:' || target.hostname !== '127.0.0.1' || !target.port || target.username || target.password || target.pathname !== '/' || target.search || target.hash) throw Error('Verified loopback origin required')
-  const fault = { beforeSnapshot: false, dropSnapshot: false, dropFinish: false }, records = []
+  const fault = { beforeReview: false, beforeSnapshot: false, dropSnapshot: false, dropFinish: false }, records = []
   let failed = false
   async function middleware(req, res, next) {
     const url = new URL(req.url, origin), path = url.pathname
     if (url.origin !== target.origin || !/^\/(api|oauth2)(\/|$)/.test(path)) { next(); return }
     if (failed) { res.destroy(); return }
     const snapshot = req.method === 'PUT' && /^\/api\/v1\/workout-sessions\/[a-f0-9-]+\/snapshot$/.test(path)
+    const review=req.method==='POST'&&/^\/api\/v1\/workout-sessions\/[a-f0-9-]+\/weight-review-approvals$/.test(path)
     const finish = req.method === 'POST' && /^\/api\/v1\/workout-sessions\/[a-f0-9-]+\/finish$/.test(path)
     const chunks = []; for await (const chunk of req) chunks.push(chunk)
     const body = Buffer.concat(chunks)
     let revision
     try { revision = JSON.parse(body.toString()).localRevision } catch { /* The real Backend validates the input. */ }
     const row = { method: req.method, path, revision, requestSha256: createHash('sha256').update(body).digest('hex'), bytes: body.length, forwarded: false }
-    if (snapshot || finish) records.push(row)
+    if (snapshot || finish || review) records.push(row)
+    if(review&&fault.beforeReview){row.failure='BEFORE_UPSTREAM';res.writeHead(503,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({code:'VERIFICATION_UPSTREAM_UNAVAILABLE'}));return}
     if (snapshot && fault.beforeSnapshot) { row.failure = 'BEFORE_UPSTREAM'; res.destroy(); return }
     try {
       await withV22Connection(evidence, 'control')

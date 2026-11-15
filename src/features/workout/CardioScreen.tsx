@@ -1,3 +1,4 @@
+import { DurationWheel } from '../../components/DurationWheel.tsx'
 import { useState } from 'react'
 import { Dialog } from '../../components/Dialog'
 import { CardioPlanEditor } from '../routine/CardioPlanEditor'
@@ -37,7 +38,7 @@ export function CardioScreen({ state, now, onUpdate, onExit, onFinish }: { state
         <label>평균 심박수 (BPM) · 수동 선택 입력<input inputMode="numeric" value={a.draft.bpm} onChange={e => onUpdate(s => editCardioDraft(s, a.id, { bpm: e.target.value }))} placeholder="측정하지 않으면 비워두세요" /></label>
         <p className="small muted">거리 0.001–1000km · 심박수 정수 20–300 BPM. 측정 기능은 제공하지 않습니다.</p>
         <label className="radio-option"><input type="checkbox" checked={a.draft.correctedSeconds !== null} onChange={e => onUpdate(s => editCardioDraft(s, a.id, { correctedSeconds: e.target.checked ? String(Math.max(1, Math.floor(a.accumulatedMs / 1000))) : null }))} /><span>방치 등으로 실제 시간 정정</span></label>
-        {a.draft.correctedSeconds !== null && <label>정정 실제 시간 (초) · 1–86400<input inputMode="numeric" value={a.draft.correctedSeconds} onChange={e => onUpdate(s => editCardioDraft(s, a.id, { correctedSeconds: e.target.value }))} /></label>}
+        {a.draft.correctedSeconds !== null && <DurationWheel seconds={a.draft.correctedSeconds} onChange={correctedSeconds=>onUpdate(s=>editCardioDraft(s,a.id,{correctedSeconds}))}/>}
         <button className="quiet" onClick={() => onUpdate(s => cancelCardioReview(s, a.id))}>완료 취소 · 일시정지로 돌아가기</button>
       </section>}
       {a.result && <section className="card stack"><h2>실제 완료 기록</h2><p>{a.result.corrected ? `수동 정정 ${formatDuration(a.result.activeMs)} · 자동 기록 ${formatDuration(a.result.timerMs)}` : `타이머 자동 기록 ${formatDuration(a.result.activeMs)}`}</p><p>실제 거리 {a.result.distance === null ? '미입력' : `${a.result.distance} km`} · 수동 평균 {a.result.bpm === null ? '미입력' : `${a.result.bpm} BPM`}</p></section>}

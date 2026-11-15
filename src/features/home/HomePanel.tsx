@@ -1,3 +1,4 @@
+import { partialAchievement } from '../statistics/display-achievement.ts'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
@@ -30,7 +31,7 @@ type Props = {
   scope: Scope; routines: RoutineList['routines']; api: WorkoutApi; training: TrainingSchedule; statistics: StatisticsApi; visit: number;
   refreshKey: string; active: Session | null; attempt: boolean; busy: boolean; localReady: boolean; issue: string | null;
   onStart: (routine: Routine) => Promise<void>; onResume: () => void; onRetry: () => void; onNavigate: (tab: AppTab) => void;
-  onOpen: (id: string) => void; onInvalid: (error: unknown) => void
+  onHistory?:()=>void; onOpen: (id: string) => void; onInvalid: (error: unknown) => void
 }
 export function HomePanel(props: Props) {
   const review = useContext(HomeReviewContext)
@@ -54,7 +55,7 @@ export function HomePanel(props: Props) {
   const activeVersion = schedule?.presets.find(p => p.id === schedule.activeId)?.version
   const summaryKey = routines.map(r => r.id + ':' + r.version).join(',')
   const requestKey = [scope.userId, scope.dataGeneration, summaryKey, schedule?.activeId, activeVersion,
-    schedule?.appliedVersion, zone, refreshKey, today, reload].join('|')
+    schedule?.appliedVersion, zone, refreshKey, props.visit, today, reload].join('|')
   const inputs = useRef({ scope, schedule, clock, zone })
   useEffect(() => { inputs.current = { scope, schedule, clock, zone } }, [scope, schedule, clock, zone])
   useEffect(() => {
@@ -87,7 +88,7 @@ type HomeViewData = Pick<HomeData, 'summaries' | 'routines' | 'recent' | 'recent
   overview: Pick<HomeData['overview'], 'plannedDays'>
 }
 
-type HomeViewProps = Pick<Props, 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onOpen'> & {
+type HomeViewProps = Pick<Props, 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen'> & {
   active: Pick<Session, 'initialPlan'> | null
   resumeDetails?: ReactNode
   data?: HomeViewData | null
@@ -128,7 +129,8 @@ export function HomeView(props: HomeViewProps) {
   const chosen = chosenId ? data?.routines.get(chosenId) : null
   const selected = dates.includes(selectedDay ?? '') ? selectedDay! : today
   const day = data?.overview.plannedDays.find(d => d.date === selected)
-  const status = dayStatus(day, selected, today)
+  const selectedEvidence=day?.selectedSessionId?data?.recent.get(day.selectedSessionId):undefined
+  const status = dayStatus(day, selected, today, selectedEvidence ? partialAchievement(selectedEvidence) : 'unknown')
   useEffect(() => { if (override?.date === today && chosen?.id === override.id && chooser.current) chooser.current.open = false }, [override, chosen, today])
   return <section className={styles.home} aria-label="홈">
     <header className={styles.homeHeader}><span className={styles.brand}>OVERLOAD</span>{props.header ?? <span className={styles.headerIcon} title="디로딩 분석 상태 미연동"><DeloadMoon /></span>}</header>
@@ -165,7 +167,7 @@ export function HomeView(props: HomeViewProps) {
       <Card aria-label="이번 주 일정" className={styles.week}>
         <div className={styles.sectionTitle}><h2>이번 주 일정</h2><span>{dates[0].slice(5).replace('-', '.')} – {dates[6].slice(5).replace('-', '.')}</span></div>
         <div className={styles.days}>{dates.map((date, index) => {
-          const planned = data.overview.plannedDays.find(d => d.date === date), state = dayStatus(planned, date, today)
+          const planned = data.overview.plannedDays.find(d => d.date === date), state = dayStatus(planned, date, today, planned?.selectedSessionId && data.recent.get(planned.selectedSessionId) ? partialAchievement(data.recent.get(planned.selectedSessionId)!) : 'unknown')
           return <button type="button" key={date} aria-pressed={selected === date} aria-label={`${date} ${weekdays[index]} ${planned?.plan?.name ?? ''} ${state.label}`} aria-current={date === today ? 'date' : undefined} onClick={() => setSelectedDay(date)}>
             <small data-past={date < today}>{date.slice(8)}</small><strong data-status={state.mark === 'X' ? 'missed' : state.kind}>{state.mark}</strong><span data-past={date < today}>{planned?.plan ? scheduleRoutineLabel(planned.plan.name, planned.plan.tag??undefined) : planned?.status === 'REST' ? '휴식' : '미확인'}</span>
           </button>
@@ -177,7 +179,7 @@ export function HomeView(props: HomeViewProps) {
           {day?.selectedSessionId && <Button className={styles.dayLink} variant="quiet" onClick={() => props.onOpen(day.selectedSessionId!)}>기록 ›</Button>}</p>
         <div className={styles.weekFooter}><Button variant="quiet" onClick={() => props.onNavigate('routines')}>주간 일정 관리 ›</Button></div>
       </Card>
-      <section aria-label="최근 운동" className={styles.recent}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button variant="quiet" onClick={() => props.onNavigate('history')}>전체 보기 ›</Button></div>
+      <section aria-label="최근 운동" className={styles.recent}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button variant="quiet" onClick={() => props.onHistory?props.onHistory():props.onNavigate('history')}>전체 보기 ›</Button></div>
         {!data.recentRows.length && <Card><p>표시할 운동 기록이 없습니다.</p><Metadata>실제 수행이 있는 종료 기록이 표시됩니다.</Metadata></Card>}
         {data.recentRows.map(item => <RecentWorkout key={item.id} row={item} detail={data.recent.get(item.id)} onOpen={props.onOpen} />)}
         {(data.recentLimited || data.recentFailed) && <Metadata>{data.recentLimited ? '최근 60개 종료 기록 범위입니다. 이전 기록은 기록 탭에서 확인하세요.' : '일부 수행 상세를 확인하지 못했습니다. 다시 조회해 주세요.'}</Metadata>}

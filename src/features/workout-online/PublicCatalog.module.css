@@ -13,49 +13,6 @@
 .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .description, .aliases { color: var(--text-muted); font-size: 13px; }
 .catalogCard { gap: 14px; }
-.searchList { display: grid; min-width: 0; gap: 14px; }
-.search { display: grid; min-width: 0; gap: 6px; }
-.search input { font-size: 16px; }
-.filters { min-width: 0; }
-.filterLabel { color: var(--text-muted); font-size: 13px; font-weight: 600; }
-
-.filterStrip {
-  display: flex;
-  gap: 6px;
-  max-width: 100%;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-subtle) transparent;
-  padding-inline: 2px;
-}
-.filters .filterStrip button {
-  display: grid;
-  align-items: center;
-  flex: 0 0 auto;
-  min-width: 53px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.filterStrip button:focus-visible { outline-offset: -3px; }
-.filterStrip span {
-  display: grid;
-  place-items: center;
-  min-height: 27px;
-  padding-inline: 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  background: var(--surface-input);
-}
-.filterStrip [aria-pressed='true'] span {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
 .results, .muscles { list-style: none; margin: 0; padding: 0; }
 .results li + li, .muscles li + li { border-top: 1px solid var(--border-subtle); }
 .results .result {
@@ -77,8 +34,6 @@
 }
 .resultText strong { font-size: 14px; }
 .arrow { flex: 0 0 auto; color: var(--text-muted); font-size: 21px; line-height: 1; }
-.empty { padding: 12px 4px; color: var(--text-muted); font-size: 13px; text-align: center; }
-.empty:empty { position: absolute; }
 
 .detailHeader {
   display: flex;
@@ -149,3 +104,44 @@
 .muscles li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 8px; }
 .muscleLabel { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; min-width: 0; font-size: 14px; }
 .coreTag { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+/* Restored from 15a0f6b, shared by exercise and muscle filters. */
+.filters { min-width: 0; }
+.filterLabel { color: var(--text-muted); font-size: 13px; font-weight: 600; }
+
+.filterStrip {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-subtle) transparent;
+  padding-inline: 2px;
+}
+.filters .filterStrip button {
+  display: grid;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 53px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.filterStrip button:focus-visible { outline-offset: -3px; }
+.filterStrip span {
+  display: grid;
+  place-items: center;
+  min-height: 27px;
+  padding-inline: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-input);
+}
+.filterStrip [aria-pressed='true'] span {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}

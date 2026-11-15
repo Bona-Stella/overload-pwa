@@ -1,19 +1,21 @@
+import {compactRecordTime} from '../../components/record-time.ts'
 
 import type { ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { cardioPlanLabel } from '../home/model.ts'
 import { formatDuration } from '../workout/model.ts'
 import { equipmentLabel } from '../workout-online/equipment.ts'
-import type { Manufacturer } from '../workout-online/types.ts'
+import { WeightReview } from './WeightReview.tsx'
+import type { LoadType, Manufacturer } from '../workout-online/types.ts'
 import { CardioActual } from './CardioFocus.tsx'
 import type { CardioFocusData, SetResult } from './types.ts'
 import styles from './WorkoutFlow.module.css'
 
 export type CardioSummary = Omit<CardioFocusData, 'plan'> & { plan?: CardioFocusData['plan']; added: boolean }
 export type WeightSummary = {
-  id: string; name: string; planned?: number; goal?: string; referenceKg?: string | null
+  id: string; name: string; loadType?: LoadType | null; planned?: number; goal?: string; referenceKg?: string | null
   results: { id: number; result: SetResult; volume: number | string | null }[]
-  review?: { direction: 'increase' | 'decrease'; referenceKg: string; planned: number; completed: number; incomplete: boolean;
+  review?: { direction: 'increase' | 'decrease'; referenceKg: string; planned: number; completed: number; incomplete: boolean; recommendedKg?:string; previewApproval?:{nextWeightKg:string;occurredAt:string}; approval?:{previousWeightKg:string;nextWeightKg:string;occurredAt:string;source:string};
     sets: { id: string; reps: number; contributes: boolean }[] }
 }
 
@@ -27,9 +29,9 @@ const formatKg = (value: bigint) => {
   return (value / 1000000n).toLocaleString('ko-KR') + (fraction ? '.' + fraction : '') + 'kg'
 }
 
-export function WorkoutSummary({ routine, date, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewUnavailable = 0 }: {
-  routine: string; date: string; elapsed?: number; deload: boolean; weights: WeightSummary[]; dataNote?: string
-  timing?: { start: string; end: string }; detail?: boolean; recordMenu?: ReactNode; children?: ReactNode; reviewState?: 'ready' | 'unavailable'; reviewIssue?: string; reviewUnavailable?: number
+export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewUnavailable = 0, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent }: {
+  routine: string; date: string; recordTime?:string; elapsed?: number; deload: boolean; weights: WeightSummary[]; dataNote?: string
+  onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>;reviewContent?:ReactNode; historicalWeights?: WeightSummary[]; previewApproval?: boolean; reviewExcluded?: boolean; timing?: { start: string; end: string }; detail?: boolean; recordMenu?: ReactNode; children?: ReactNode; reviewState?: 'ready' | 'unavailable'; reviewIssue?: string; reviewUnavailable?: number
   cardio: CardioSummary[]; manufacturers: Manufacturer[]; plannedSets: number; whole: boolean; onBack: () => void
 }) {
   const results = weights.flatMap(weight => weight.results)
@@ -39,9 +41,9 @@ export function WorkoutSummary({ routine, date, elapsed, deload, weights, cardio
   const weekday = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + 'T12:00:00Z').toLocaleDateString('ko-KR', { weekday: 'long', timeZone: 'UTC' }) : ''
   return <article className={styles.summary}>
     <Button variant="quiet" onClick={onBack}>‹ 기록으로</Button>
-    <Card hero>
+    <Card hero className={styles.summaryHeader}>
       {deload && <p className={styles.eyebrow}>DELOAD</p>}
-      <div className={styles.headingRow}><h1>{detail ? '운동 기록 상세' : '운동 기록 요약'}</h1>{recordMenu}</div><p>{date}{weekday && ' · ' + weekday} · {routine}</p>
+      <div className={styles.headingRow}><h1>{detail ? '운동 기록 상세' : '운동 기록 요약'}</h1><p className={styles.recordDate}>{compactRecordTime(recordTime??date+(weekday?' · '+weekday:''))}</p>{recordMenu}</div><h2 className={styles.recordRoutine}>{routine}</h2>
       {whole && <b className={styles.doneText}>전체 루틴 완료</b>}
       <dl className={styles.metrics}>
         <div><dt>전체 운동 시간</dt><dd>{elapsed === undefined ? '실제 종료 시각 없음' : formatDuration(elapsed)}</dd></div>
@@ -52,20 +54,11 @@ export function WorkoutSummary({ routine, date, elapsed, deload, weights, cardio
       {unknown > 0 && <small>볼륨 미확인 {unknown}세트</small>}
       <p className="muted small">{dataNote ?? '합성 데이터 · 이 탭에서만 확인할 수 있는 시연 결과입니다.'}</p>
     </Card>
-    {weights.length > 0 && <Card>
-      <h2>이번 운동의 중량 검토</h2>
-      {deload ? <p className="muted small">디로딩 운동 · 검토 제외</p> : reviewIssue ? <p role="alert">{reviewIssue}</p> : reviewState !== 'ready' ? <p role="status">중량 검토 결과를 확인하지 못했습니다. 기록을 다시 조회해 주세요.</p>
-        : reviews.length === 0 && reviewUnavailable > 0 ? <p className="muted small">수행·승인 정보가 부족해 중량을 검토할 수 없습니다.</p> : reviews.length === 0 ? <p className="muted small">이번 운동은 중량 변경 검토 대상이 없습니다.</p>
-        : reviews.map(weight => {
-          const review = weight.review!
-          return <section className={styles.recordItem} key={weight.id} data-weight-review={review.direction}>
-            <div className={styles.weightReviewHead}><h3>{weight.name}</h3>
-              <span>기존 {review.referenceKg}kg <b data-direction={review.direction} role="img" aria-label={review.direction === 'increase' ? '증량 검토' : '감량 검토'}>{review.direction === 'increase' ? '↑' : '↓'}</b></span></div>
-            <div className={styles.reviewValues}><span data-incomplete={review.incomplete || undefined}>{review.completed}/{review.planned}세트</span>
-              <span>{review.sets.length ? review.sets.map((set, i) => <span key={set.id}>{i > 0 && ' / '}<span data-direction={set.contributes ? review.direction : undefined}>{set.reps}회</span></span>) : '완료한 세트 없음'}</span></div>
-          </section>
-        })}
-    </Card>}
+    {reviewContent}
+    {reviewContent===undefined&&weights.length > 0 && !detail && !deload && !reviewExcluded && (reviewIssue || reviewState !== 'ready' || reviewUnavailable > 0 || reviews.length > 0) &&
+      (reviewIssue || reviewState !== 'ready' || !reviews.length ? <Card><h2>중량 검토</h2>{reviewIssue ? <p role="alert">{reviewIssue}</p> : reviewState !== 'ready' ? <p role="status">중량 검토 결과를 확인하지 못했습니다. 기록을 다시 조회해 주세요.</p> : <p className="muted small">수행·승인 정보가 부족해 중량을 검토할 수 없습니다.</p>}</Card>
+      : <WeightReview key={JSON.stringify(reviews)} weights={reviews} preview={previewApproval} onApprove={onPreviewApprove} />)}
+    {reviewContent===undefined&&detail&&historicalWeights.length>0&&<WeightReview weights={historicalWeights} readOnly preview={previewApproval}/>}
     {(weights.length > 0 || cardio.length > 0) && <Card className={styles.performance}>
       {weights.length > 0 && <section aria-label="웨이트 수행">
         <h3 className={styles.eyebrow}>WEIGHT</h3>
@@ -95,6 +88,6 @@ export function WorkoutSummary({ routine, date, elapsed, deload, weights, cardio
       </section>}
     </Card>}
     {children}
-    <Button onClick={onBack}>기록으로 돌아가기</Button>
+    <Button onClick={onBack}>{detail?'기록으로 돌아가기':'홈으로 돌아가기'}</Button>
   </article>
 }

@@ -1,3 +1,4 @@
+import {settleWeightClock,resumeWeightClock,weightVisibility,recoverWeightClock} from './weight-timing.ts'
 import { LocalStoreError, LocalWriteBlocked, WorkoutStore } from '../workout-online/storage.ts'
 import type { Session } from '../workout-online/types.ts'
 import { applyLocalChange, editDraft, emptyTimer } from './model.ts'
@@ -48,7 +49,8 @@ export class LocalWorkoutController {
         lease?.release()
         this.set({ workout: await this.store.readLocal(key), loading: false, issue: '다른 탭이 운동을 편집 중이거나 이 환경이 편집 잠금을 지원하지 않습니다. 이 탭은 읽기 전용입니다.' }); return
       }
-      const workout = await this.store.openLocal(server, policy, this.allowed)
+      let workout = await this.store.openLocal(server, policy, this.allowed)
+      if(workout.weightClock){const next=applyLocalChange(workout,w=>recoverWeightClock(w,Date.now()));await this.store.saveLocal(next,workout.editVersion,this.allowed);workout=next}
       if (generation === this.generation) this.set({ workout, loading: false, writable: this.allowed() })
       if (generation === this.generation && this.syncOptions && this.allowed()) {
         this.synchronizer?.stop()
@@ -66,7 +68,7 @@ export class LocalWorkoutController {
   change = (transform: (workout: LocalWorkout) => void): Promise<boolean> => {
     return this.update(transform, false)
   }
-  private update(transform: (workout: LocalWorkout) => void, sync: boolean): Promise<boolean> {
+  private update(transform: (workout: LocalWorkout) => void, sync: boolean,at?:number): Promise<boolean> {
     if (!this.allowed() || !this.state.writable) return Promise.resolve(false)
     const generation = this.generation
     const allowed = () => generation === this.generation && this.allowed()
@@ -74,7 +76,7 @@ export class LocalWorkoutController {
     const operation = this.tail.then(async () => {
       if (!allowed() || !this.state.workout || !this.state.writable || !sync && this.state.workout.finish) return false
       try {
-        const previous = this.state.workout, next = applyLocalChange(previous, transform)
+        const previous = this.state.workout,now=at??Date.now(),next = applyLocalChange(previous,w=>{if(!sync)settleWeightClock(w,now);transform(w);if(!sync)resumeWeightClock(w,now)})
         if (sync) {
           if (!this.store.saveSyncLocal || !this.store.saveSession) throw new LocalStoreError()
           await this.store.saveSyncLocal(next, previous.editVersion, allowed)
@@ -145,13 +147,14 @@ export class LocalWorkoutController {
     if (this.state.unsavedDrafts && !await this.retryDrafts()) return false
     return this.change(transform)
   }
+  observeWeightVisibility=(visible:boolean,now=Date.now())=>this.update(w=>weightVisibility(w,visible,now),false,now)
   async settled() { await this.tail }
   flushDrafts = async () => { await this.tail; return !this.state.unsavedDrafts || this.retryDrafts() }
   retrySync = () => this.synchronizer?.retry()
   finish = async (now: number) => {
     if (this.state.workout?.finish) { await this.retrySync(); return false }
     if (!await this.flushDrafts()) return false
-    return this.change(w => intendFinish(w, now))
+    return this.update(w => intendFinish(w, now),false,now)
   }
   async syncSettled() { await this.synchronizer?.settled(); await this.tail }
   resolveApproval = (exerciseId: string, ids: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE', nextWeight: string) => this.synchronizer?.resolve(exerciseId, ids, decision, nextWeight)

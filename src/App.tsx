@@ -19,6 +19,7 @@ type Screen = 'home' | 'routines' | 'history' | 'settings' | 'workout'
 
 function App() {
   const { state, update, error: storageError, blocked, retry, retryLabel } = useWorkout()
+  const [hiddenRecommendations,setHiddenRecommendations]=useState<Set<string>>(()=>new Set())
   const [screen, setScreen] = useState<Screen>('home')
   const [now, setNow] = useState(() => Date.now())
   const [override, setOverride] = useState<{ date: string; id: string } | null>(null)
@@ -85,7 +86,7 @@ function App() {
     <main className={workout ? 'workout-main' : 'page'}>
       {(storageError || message) && <div className="notice error global-notice" role="alert"><p>{storageError ?? message}</p>{storageError && !blocked && <button className="outline" onClick={retry}>{retryLabel}</button>}</div>}
       <fieldset className="app-controls" disabled={blocked}>
-      {workout ? <WorkoutScreen state={state} now={now} onUpdate={run} onExit={() => navigate('home')} onFinish={finish} onCreate={createDefinition} /> : editor ? <RoutineEditor key={editor.id} state={state} routine={editor} onSave={save} onCancel={() => setEditor(null)} onCreate={createDefinition} /> : screen === 'settings' ? <SettingsScreen settings={state.restSettings} onSave={settings => run(s => ({ ...s, restSettings: settings }))} /> : screen === 'routines' ? <>
+      {workout ? <WorkoutScreen hiddenRecommendations={hiddenRecommendations} onDismissRecommendation={key=>setHiddenRecommendations(ids=>new Set(ids).add(key))} state={state} now={now} onUpdate={run} onExit={() => navigate('home')} onFinish={finish} onCreate={createDefinition} /> : editor ? <RoutineEditor key={editor.id} state={state} routine={editor} onSave={save} onCancel={() => setEditor(null)} onCreate={createDefinition} /> : screen === 'settings' ? <SettingsScreen settings={state.restSettings} onSave={settings => run(s => ({ ...s, restSettings: settings }))} /> : screen === 'routines' ? <>
         <div className="section-heading"><div><p className="eyebrow">YOUR TRAINING PLAN</p><h1>나의 루틴</h1></div><button className="primary" onClick={() => setEditor({ id: newId(), name: '', exercises: [] })}>＋ 새 루틴</button></div>
         <p className="muted intro">다음 운동을 위한 준비. 나에게 맞는 순서로.</p>
         {!state.routines.length && <section className="card empty">아직 루틴이 없습니다. 첫 루틴을 만들어 보세요.</section>}

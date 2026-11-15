@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useScreenHistory, useNavigationGuard, navigateTabRoot } from '../../app/navigation.ts'
 import { Dialog } from '../../components/Dialog'
 import { useAuth } from './context.ts'
 import { LoginScreens } from './LoginScreens'
@@ -17,7 +18,7 @@ export function AuthApp() {
   const [now, setNow] = useState(() => Date.now())
   const [dialog, setDialog] = useState<string | null>(null)
   const [localExitIssue, setLocalExitIssue] = useState(false)
-  const [selection, setSelection] = useState<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' } | null>(null)
+  const [selection, setSelection] = useScreenHistory<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' } | null>('app:' + state.userId, null)
   const [focused, setFocused] = useState(false)
   const [navigating, setNavigating] = useState(false)
   const navigationPending = useRef(false)
@@ -35,11 +36,18 @@ export function AuthApp() {
       const latest = controller.getSnapshot()
       if (!saved || latest.status !== 'authenticated' || latest.pending !== null || latest.userId !== before.userId || localExitGuard.current !== guard) return false
       if (latest.accountOpen) controller.closeAccount()
-      setSelection({ userId: before.userId, tab: next })
+      navigateTabRoot('app:' + before.userId, { userId: before.userId, tab: next })
       window.scrollTo(0, 0)
       return true
     } finally { navigationPending.current = false; setNavigating(false) }
   }, [controller])
+  useNavigationGuard(useCallback(async () => {
+    const before = controller.getSnapshot(), guard = localExitGuard.current
+    if (before.pending !== null || navigationPending.current) return false
+    const saved = await (guard?.() ?? Promise.resolve(true))
+    setLocalExitIssue(!saved)
+    return saved && controller.getSnapshot().userId === before.userId && localExitGuard.current === guard
+  }, [controller]))
   const flushLocal = async () => { const saved = await (localExitGuard.current?.() ?? Promise.resolve(true)); setLocalExitIssue(!saved); return saved }
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
@@ -93,7 +101,7 @@ export function AuthApp() {
     {localExitIssue && <p className="notice error" role="alert">입력 초안을 이 기기에 저장하지 못해 화면을 유지했습니다. 로컬 저장 오류를 해결한 뒤 다시 시도해 주세요.</p>}
     {dialog && <Dialog title={dialog === 'logout' ? '로그아웃할까요?' : dialog} onClose={() => { if (!busy) setDialog(null) }}>
       {dialog === 'logout' ? <div className="stack"><p>이 브라우저의 로그인을 종료합니다. 서버 미전송 수행·입력 초안·타이머·로컬 사본·미확인 시작 요청은 보존하며, 재인증 전에는 표시하지 않습니다. 기존 데모 기록은 실제 계정과 연결되지 않습니다.</p>{localExitIssue && <p className="notice error" role="alert">초안을 저장하지 못했습니다. 로그아웃을 보류했습니다.</p>}<button className="primary" disabled={busy} onClick={async () => { if (await flushLocal()) { setDialog(null); void controller.logout() } }}>로그아웃 확인</button><button className="quiet" onClick={() => setDialog(null)}>취소</button></div>
-        : <div className="stack"><p>서비스 이용 문서를 준비하고 있습니다. 정식 서비스 전에 안내할 예정입니다.</p><button className="outline" onClick={() => setDialog(null)}>닫기</button></div>}
+        : <div className="stack"><p>서비스 이용 문서를 준비하고 있습니다. 정식 서비스 전에 안내할 예정입니다.</p><button data-close-text className="outline" onClick={() => setDialog(null)}>닫기</button></div>}
     </Dialog>}
   </AppShell>
 }

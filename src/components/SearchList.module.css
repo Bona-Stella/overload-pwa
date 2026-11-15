@@ -1,0 +1,13 @@
+.search .controls { display:grid; grid-template-columns:84px minmax(0,1fr) 42px; gap:6px; align-items:center; }
+.search .controls[data-expanded] { grid-template-columns:minmax(0,1fr) 42px; }
+.search .controls > label[hidden] { display:none; }
+.search .controls input,.search .controls select { height:42px; min-height:42px; padding:8px; }
+.search .controls > .disclosure { position:static; display:grid; place-items:center; width:42px; height:42px; min-height:42px; padding:0; border:1px solid var(--border-focus); border-radius:50%; background:var(--accent-soft); color:var(--accent); line-height:1; }
+.disclosure > svg { display:block; }
+.search .controls > .disclosure:focus:not(:focus-visible) { outline:none; box-shadow:none; }
+.search .controls > .disclosure:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
+
+.search .results {padding-right:8px;scrollbar-gutter:stable;}
+.search .results > li {display:flex;align-items:center;gap:4px;}
+.search .results > li > button:first-child {flex:1;min-width:0;}
+.search .results > li > .detail {display:grid;place-items:center;flex:0 0 36px;width:36px;min-height:44px;padding:0 8px 0 0;background:transparent;color:var(--text-muted);font-size:22px;line-height:1;}

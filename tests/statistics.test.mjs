@@ -10,11 +10,13 @@ import { StatisticsApi, overview, periodFor, weightStats } from '../src/features
 import { scope, OTHER, routine } from './fixtures/workout-online-data.mjs'
 
 registerHooks({load(url,context,next){
-  if(url.endsWith('.css'))return{format:'module',source:'export default ""',shortCircuit:true}
+  if(url.endsWith('.css'))return{format:'module',source:'export default new Proxy({}, {get: (_, key) => String(key)})',shortCircuit:true}
   if(url.endsWith('.tsx'))return{format:'module',shortCircuit:true,source:ts.transpileModule(readFileSync(fileURLToPath(url),'utf8'),{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2023}}).outputText}
   return next(url,context)
 }})
 const {StatisticsView,WeightChart}=await import('../src/features/statistics/StatisticsPanel.tsx')
+const { SearchResults } = await import('../src/components/SearchList.tsx')
+const { actualAnalysis } = await import('../src/features/statistics/muscle-analysis.ts')
 const {ScheduleEditor}=await import('../src/features/statistics/WeeklySchedulePanel.tsx')
 const weights={plannedSets:'4',completedSets:'3',reps:'28',volumeLoadKg:'2140',setsWithoutVolume:'0'}
 const period={fromDate:'2026-10-26',toDateExclusive:'2026-11-02'}
@@ -81,17 +83,22 @@ test('week periods are Monday to Sunday and month periods keep true calendar len
   assert.deepEqual(periodFor(new Date(2024,1,29),'month',0),{fromDate:'2024-02-01',toDateExclusive:'2024-03-01'})
 })
 test('summary distinguishes confirmed server records from unsent local facts and does not invent a weekly achievement',()=>{
-  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:partial().statistics,planning:partial(),screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
-  assert.match(html,/완료 웨이트 세트/);assert.match(html,/30분/);assert.match(html,/미전송 기록은 포함되지 않습니다/)
-  assert.match(html,/아직 확인할 수 없습니다/);assert.doesNotMatch(html,/75%|100%/)
-  assert.match(html,/운동 이력 전체 보기/);assert.match(html,/운동 현황/)
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:partial().statistics,planning:partial(),screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/완료 세트/);assert.match(html,/30분/);assert.match(html,/미전송 기록은 포함되지 않습니다/)
+  assert.match(html,/아직 확인할 수 없습니다/);assert.doesNotMatch(html.replace(/<[^>]*>/g,''),/75%|100%/)
+  assert.match(html,/유산소 수행 기록 보기/);assert.match(html,/운동량 추이/)
 })
-test('muscle detail keeps secondary contribution separate and shows partial schedule-history coverage',()=>{
-  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:partial().statistics,planning:partial(),screen:'muscles',onScreen(){},onOpen(){},onHistory(){}}))
-  assert.match(html,/부위별 실제 완료 세트/);assert.match(html,/실제 3세트/)
-  assert.match(html,/보조근 참여 · 주동근과 별도/);assert.match(html,/기여 1\.5세트 · 실제 참여 3세트/)
-  assert.match(html,/전체 주간 계획과는 다를 수 있습니다/)
+test('weekly muscle statistics preserves exact contributions and does not pretend missing independent classifications are zero',()=>{
+  const data=partial(), analysis=actualAnalysis(data.statistics)
+  assert.equal(analysis.muscles.find(m=>m.name==='보조근').actual,'1.5')
+  assert.equal(analysis.muscles.find(m=>m.name==='대퇴사두근').actual,'3')
+  assert.equal(analysis.muscles.find(m=>m.name==='대퇴사두근').planned,null)
+  assert(analysis.groups.every(g=>g.actual===null))
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'muscles',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/주간 근육 통계/);assert.match(html,/이번 주 월~일/)
+  assert.match(html,/당시 계획 확인 필요/);assert.doesNotMatch(html,/>주간<|>월간<|type="date"/)
 })
+
 test('bodyweight-only and no-plan rows retain sets and repetitions without a total-weight toggle',()=>{
   const html=renderToStaticMarkup(React.createElement(WeightChart,{rows:[{key:'body',name:'푸시업',weights:{plannedSets:'0',completedSets:'3',reps:'30',volumeLoadKg:null,setsWithoutVolume:'3'}}]}))
   assert.match(html,/3세트 · 30회/);assert.match(html,/확인된 계획 없음/);assert.doesNotMatch(html,/>총중량<|0 kg/)
@@ -115,9 +122,9 @@ test('overview accepts verified weekly rate and rejects fabricated denominators 
   assert.deepEqual(await api.overview(scope,period,new AbortController().signal),data)
   assert.match(request[1],/^\/api\/v1\/statistics\/overview\?/)
 })
-test('weekly summary displays 2.25 out of 4 and 56.25 percent without adding extra workouts',()=>{
-  const data=planned(),html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
-  assert.match(html,/2\.25 \/ 4일/);assert.match(html,/56\.25%/);assert.doesNotMatch(html,/아직 확인할 수 없습니다/)
+test('weekly summary displays 2.25 out of 4 and rounded 56 percent without adding extra workouts',()=>{
+  const data=planned(),html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/2\.25 \/ 4일/);assert.match(html,/56%/);assert.doesNotMatch(html,/아직 확인할 수 없습니다/)
 })
 test('schedule editor has seven routine or rest choices and makes immediate first registration explicit',()=>{
   const html=renderToStaticMarkup(React.createElement(ScheduleEditor,{state:weekly(),routines:[{id:OTHER,name:'routine',version:'0'}],busy:false,onSave(){},onCancel(){}}))
@@ -134,8 +141,8 @@ test('first registration week renders two out of three without inventing plans b
   const data=planned();data.statistics.plannedWorkoutDays=3;data.statistics.routineAchievementPercent='66.666667';data.effectiveWorkoutDays='2'
   data.plannedDays=[{date:'2026-11-09',status:'BEFORE_REGISTRATION',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}]
   assert.equal(overview(data),true)
-  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
-  assert.match(html,/2 \/ 3일/);assert.match(html,/66\.666667%/);assert.match(html,/최초 등록 전 · 달성률 제외/);assert.doesNotMatch(html,/과거 계획 확인 불가|undefined|null종목/)
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,achievementAnchor:'2026-11-09',screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(html,/2 \/ 3일/);assert.match(html,/67%/);assert.match(html,/일정 등록 전/);assert.doesNotMatch(html,/과거 계획 확인 불가|undefined|null종목/)
 })
 test('cardio totals keep different kinds separate and label manual calculated and unknown legacy distances',()=>{
   const data=planned();data.cardioByKind=[{kind:'TREADMILL',activeMs:'1800000',distanceKm:'4',manualDistanceKm:null,calculatedDistanceKm:'4',unknownSourceDistanceKm:null,manualRecords:'0',calculatedRecords:'1',unknownSourceRecords:'0',recordsWithoutDistance:'0'},
@@ -149,7 +156,7 @@ test('cardio totals keep different kinds separate and label manual calculated an
 test('overview exercise names are escaped when rendered in the current statistics view',()=>{
   const data=planned();data.statistics.exercises[0].name='<img src=x onerror=alert(1)>'
   assert.equal(overview(data),true)
-  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  const html=renderToStaticMarkup(React.createElement(SearchResults,{options:[{id:OTHER,name:data.statistics.exercises[0].name,description:'운동'}],onSelect(){}}))
   assert.match(html,/&lt;img src=x onerror=alert\(1\)&gt;/)
   assert.doesNotMatch(html,/<img|<script/)
 })
@@ -188,11 +195,11 @@ test('overview requires planning fields while preserving null evidence and unkno
   assert.equal(overview(data),true)
   const activity=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(activity,/러닝머신 · 30분/);assert.match(activity,/거리 미입력 기록 포함/);assert.doesNotMatch(activity,/ km/)
-  const summary=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
-  assert.match(summary,/과거 계획 확인 불가/);assert.doesNotMatch(summary,/0%|100%|null종목|undefined/)
+  const summary=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
+  assert.match(summary,/확인 불가/);assert.doesNotMatch(summary.replace(/<[^>]*>/g,''),/0%|100%|null종목|undefined/)
   const unverifiable=planned();unverifiable.unverifiableDays=1;unverifiable.effectiveWorkoutDays=null;unverifiable.statistics.routineAchievementPercent=null
   assert.equal(overview(unverifiable),true)
-  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:unverifiable.statistics,planning:unverifiable,screen:'summary',onScreen(){},onOpen(){},onHistory(){}}))
+  const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:unverifiable.statistics,planning:unverifiable,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/확인 중/);assert.match(html,/유산소 목표 달성 확인 필요/)
 })
 
@@ -240,8 +247,8 @@ test('cardio period comparison sums each dated plan once across kinds while pres
     { kind: 'BIKE', activeMs: '3600000', distanceKm: '20', manualDistanceKm: null, calculatedDistanceKm: '20', unknownSourceDistanceKm: null, manualRecords: '0', calculatedRecords: '1', unknownSourceRecords: '0', recordsWithoutDistance: '0' },
   ]
   const html = renderCardioTime(data)
-  assert.match(html, /실제 누적 90분 \/ 계획 60분/)
-  for (const text of ['러닝머신 · 30분 · 3.8 km', '자전거 · 60분 · 20 km', '직접 입력 3.8 km', '계산 거리 20 km']) assert.ok(html.includes(text))
+  assert.match(html, /실제 누적 1시간 30분 \/ 계획 1시간/)
+  for (const text of ['러닝머신 · 30분 · 3.8 km', '자전거 · 1시간 · 20 km', '직접 입력 3.8 km', '계산 거리 20 km']) assert.ok(html.includes(text))
   assert.doesNotMatch(html, /23.8 km|총 거리/)
 })
 
@@ -275,16 +282,16 @@ test('an explicit zero cumulative actual time and empty performed arrays retain 
   const data = cardioTimeData('0')
   assert.deepEqual(data.cardioByKind, []); assert.deepEqual(data.statistics.cardio, [])
   const html = renderCardioTime(data)
-  assert.match(html, /실제 누적 0분 \/ 계획 30분/); assert.match(html, /유산소 기록이 없습니다/)
+  assert.match(html, /실제 누적 0초 \/ 계획 30분/); assert.match(html, /유산소 기록이 없습니다/)
 })
 
-test('cardio comparison preserves milliseconds and large counter precision instead of rounding positive goals to zero minutes', () => {
+test('cardio display rounds seconds and preserves large integer counter precision', () => {
   const plans = [{ date: period.fromDate, targets: [{ kind: 'OTHER', seconds: 1 }] }]
-  assert.match(renderCardioTime(cardioTimeData('1', plans)), /실제 누적 0.001초 \/ 계획 1초/)
-  assert.match(renderCardioTime(cardioTimeData('1', plans)), /기타 · 0.001초/)
-  assert.match(renderCardioTime(cardioTimeData('59999', plans)), /실제 누적 59.999초 \/ 계획 1초/)
-  assert.match(renderCardioTime(cardioTimeData('60001', plans)), /실제 누적 1분 0.001초 \/ 계획 1초/)
-  assert.match(renderCardioTime(cardioTimeData('9007199254740993', plans)), /실제 누적 150119987579분 0.993초 \/ 계획 1초/)
+  assert.match(renderCardioTime(cardioTimeData('1', plans)), /실제 누적 0초 \/ 계획 1초/)
+  assert.match(renderCardioTime(cardioTimeData('1', plans)), /기타 · 0초/)
+  assert.match(renderCardioTime(cardioTimeData('59999', plans)), /실제 누적 1분 \/ 계획 1초/)
+  assert.match(renderCardioTime(cardioTimeData('60001', plans)), /실제 누적 1분 \/ 계획 1초/)
+  assert.match(renderCardioTime(cardioTimeData('9007199254740993', plans)), /실제 누적 2501999792시간 59분 1초 \/ 계획 1초/)
 })
 
 test('missing or null actual time and unsupported zero/missing/null plan targets are rejected by the unchanged API validator', async () => {

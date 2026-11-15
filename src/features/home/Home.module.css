@@ -49,13 +49,13 @@
 .weekFooter span { color: var(--text-muted); font-size: 10px; }
 .weekFooter button { padding: 6px; font-size: 11px; min-height: 32px; }
 .recent { display: grid; gap: 7px; }
-.home .record { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; text-align: left; padding: 10px; background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); }
-.recordDate { flex: none; font-size: 12px; color: var(--accent); }
+.home .record { display:grid; grid-template-columns:minmax(0,1fr) max-content 18px 6px; align-items:center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; text-align: left; padding: 10px; background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); }
+.recordDate { grid-column:1 / -1; font-size:11px; white-space:nowrap; color: var(--accent); }
 .recordName { flex: 1; min-width: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
 .recordFacts { display: flex; flex: none; gap: 8px; color: var(--text-primary); font-size: 13px; line-height: 18px; }
-.recordFacts > span { display: inline-flex; gap: 5px; align-items: center; white-space: nowrap; }
+.recordFacts > span { display:grid; grid-template-columns:18px minmax(0,1fr); gap:5px; align-items:center; white-space:nowrap; min-width:48px; }
 .recordFacts svg, .recordFacts img { flex: none; width: 18px; height: 18px; object-fit: contain; }
-.recordState { flex: none; font-size: 16px; color: var(--text-muted); }
+.recordState { flex:0 0 18px; width:18px; height:18px; font-size:16px; color:var(--text-muted); }
 .recordState[data-state='complete'] { color: var(--status-done); }
 .recordState[data-state='incomplete'] { color: var(--status-missed); }
 .home .sectionTitle h2 { font-size: 14px; }
@@ -71,3 +71,22 @@
 .trainingGauge b { white-space:nowrap; }
 .trainingGauge > span:last-child { flex:1; min-width:20px; height:5px; border-radius:20px; background:var(--border-subtle); overflow:hidden; }
 .trainingGauge i { display:block; height:100%; border-radius:20px; background:var(--accent); }
+
+.recordState {display:grid;place-items:center;line-height:18px;}
+.recordState small {font-size:9px;white-space:nowrap;}
+.recordState[data-state='partial'] {color:var(--status-warning);}
+.recordState[data-state='missed'] {color:var(--status-missed);}
+
+.home .record {grid-template-columns:minmax(0,1fr) 18px 6px;}
+.recordDate {grid-column:1;grid-row:1;}
+.recordName {grid-column:1;grid-row:2;}
+.recordFacts {grid-column:1;grid-row:3;}
+.recordState {grid-column:2;grid-row:1;}
+.record > span:last-child {grid-column:3;grid-row:1;}
+
+.home .record {display:flex;gap:6px;}
+.recordDate {flex:none;white-space:nowrap;font-size:10px;}
+.recordName {flex:1;min-width:0;}
+.recordFacts {gap:5px;font-size:11px;}
+.recordFacts > span {min-width:0;gap:3px;}
+.recordState {flex:none;margin-left:0;}

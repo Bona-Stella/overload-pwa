@@ -9,21 +9,21 @@ const rowHeight = 52
 type Props = {
   label: string; value: string; onChange: (value: string) => void; disabled?: boolean; unit: string
   adjust: (value: string, direction: -1 | 1) => string | null
-  validate: (value: string) => string; start: string; stepLabel?: string; plainSteps?: boolean
+  validate: (value: string) => string; start: string; stepLabel?: string; plainSteps?: boolean; hideSteps?: boolean
 }
 
-export function NumberWheel({ label, value, onChange, disabled, unit, adjust, validate, start, stepLabel = '', plainSteps }: Props) {
+export function NumberWheel({ label, value, onChange, disabled, unit, adjust, validate, start, stepLabel = '', plainSteps, hideSteps }: Props) {
   const [seed, setSeed] = useState<string | null>(null)
   const change = (direction: -1 | 1) => {
     const next = adjust(value, direction)
     if (next !== null) onChange(next)
   }
-  return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''}`} role="group" aria-label={label}>
-    <Button aria-label={label + ' 감소'} disabled={disabled || adjust(value, -1) === null} onClick={() => change(-1)}>−{stepLabel}</Button>
+  return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''} ${hideSteps ? styles.hideSteps : ''}`} role="group" aria-label={label}>
+    {!hideSteps&&<Button aria-label={label + ' 감소'} disabled={disabled || adjust(value, -1) === null} onClick={() => change(-1)}>−{stepLabel}</Button>}
     <Button aria-label={label} disabled={disabled} onClick={() => setSeed(value || start)}>
       {value || '입력'}{value && <small> {unit}</small>}
     </Button>
-    <Button aria-label={label + ' 증가'} disabled={disabled || adjust(value, 1) === null} onClick={() => change(1)}>+{stepLabel}</Button>
+    {!hideSteps&&<Button aria-label={label + ' 증가'} disabled={disabled || adjust(value, 1) === null} onClick={() => change(1)}>+{stepLabel}</Button>}
     {seed !== null && <WheelDialog label={label} seed={seed} value={value} unit={unit} adjust={adjust}
       validate={validate} onChange={onChange} onClose={() => setSeed(null)} />}
   </div>
@@ -80,17 +80,19 @@ function WheelDialog({ label, seed, value, unit, adjust, validate, onChange, onC
   }
 
   return <Dialog title={label} onClose={onClose}>
-    {direct ? <form className={styles.body} onSubmit={event => {
+    {direct ? <div className={styles.body} onKeyDown={event => {
+      if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
       event.preventDefault()
+      event.stopPropagation()
       if (apply(draft)) onClose()
     }}>
       <label>{label} ({unit})<input inputMode={unit === 'kg' ? 'decimal' : 'numeric'} value={draft} autoFocus onChange={event => setDraft(event.target.value)} /></label>
       {issue && <p className="notice error" role="alert">{issue}</p>}
       <div className={styles.actions}>
         <Button onClick={onClose}>취소</Button>
-        <Button variant="primary" type="submit">확인</Button>
+        <Button variant="primary" onClick={() => { if (apply(draft)) onClose() }}>확인</Button>
       </div>
-    </form> : <div className={styles.body}>
+    </div> : <div className={styles.body}>
       <div className={styles.viewport}>
         <div className={styles.selection} aria-hidden="true" data-wheel-selection />
         <div className={styles.scroll} aria-label={label + ' 선택값'} ref={list}
@@ -108,7 +110,7 @@ function WheelDialog({ label, seed, value, unit, adjust, validate, onChange, onC
             const next = centered()
             setSelected(next)
           }}>
-          {choices.map((choice, index) => <button key={choice} type="button" aria-pressed={choice === selected}
+          {choices.map((choice, index) => <button key={choice} type="button" aria-pressed={choice === selected} data-distance={Math.min(3, Math.abs(index-choices.indexOf(selected)))}
             style={{ '--digits': choice.length } as CSSProperties}
             onClick={() => choose(index)}>{choice} <small>{unit}</small></button>)}
         </div>

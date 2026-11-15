@@ -1,3 +1,4 @@
+import { CombinationMemo } from '../features/workout-online/CombinationMemo.tsx'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -19,15 +20,15 @@ import { useReviewClock } from './useReviewClock.ts'
 import type { useRestAudio } from './useRestAudio.ts'
 import {
   addSet, cancelSet, cardioElapsed, changeWeight, doneCount, finishSet, makeCardio,
-  newReviewWeight, nextPending, previousSets, recordCardio, restRemaining, reviewClock, sessionAdvice, weightDone,
+  newReviewWeight, nextPending, previousSets, recordCardio, restRemaining, reviewClock, reviewIncreaseReminder, sessionAdvice, weightDone,
 } from './workout-model.ts'
-import type { ReviewCardio, ReviewSession, ReviewWeight } from './workout-model.ts'
+import type { ReviewCardio, ReviewRecord, ReviewSession, ReviewWeight } from './workout-model.ts'
 
 type Modal = 'weight' | 'list' | 'add' | 'replace' | 'cardio' | 'end' | 'remove' | 'undo-cardio' | { undo: number }
 
-export function WorkoutReview({ session, onChange, onHome, onEnd, history, alerts, shortRest, audio }: {
+export function WorkoutReview({ session, onChange, onHome, onEnd, history, alerts, shortRest, audio, records = [], hiddenRecommendations, onDismissRecommendation }: {
   session: ReviewSession; onChange: (session: ReviewSession) => void; onHome: () => void
-  onEnd: (endedAt: number) => void; history: Session[]; alerts: RestAlerts; shortRest: boolean; audio: ReturnType<typeof useRestAudio>
+  onEnd: (endedAt: number) => void; history: Session[]; records?: ReviewRecord[]; hiddenRecommendations:ReadonlySet<string>; onDismissRecommendation:(key:string)=>void; alerts: RestAlerts; shortRest: boolean; audio: ReturnType<typeof useRestAudio>
 }) {
   const [modal, setModal] = useState<Modal | null>(null)
   const [editing, setEditing] = useState(false)
@@ -146,6 +147,9 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
       : <Button variant="primary" onClick={finish}>운동 종료 및 요약</Button>}
   </>
   const advice = weight && currentDone ? sessionAdvice(session, weight) : undefined
+  const prior = weight ? reviewIncreaseReminder(session, weight, records) : null
+  const direction = advice?.advice === 'increase' || advice?.advice === 'decrease' ? advice.advice : prior ? 'increase' : null
+  const notice = weight && direction && !hiddenRecommendations.has(session.id+':'+weight.id) ? <WeightRecommendation direction={direction} kg={advice?.kg ?? prior?.kg} loadType={weight.loadType} source={advice?.advice==='increase'||advice?.advice==='decrease'?'current':'benchmark'} onDismiss={() => onDismissRecommendation(session.id+':'+weight.id)}/> : null
   let actions: ReactNode
   if (warmup) {
     actions = <Button variant="primary" onClick={() => { onChange({ ...session, warmup: false }); window.scrollTo(0, 0) }}>준비운동 완료</Button>
@@ -165,7 +169,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   } else if (weight && nextSet) {
     actions = <Button variant="primary" onClick={() => complete(nextSet.id)}>{nextSet.id}세트 완료</Button>
   } else if (weight) {
-    actions = <>{advice?.advice && advice.advice !== 'maintain' && <WeightRecommendation direction={advice.advice} kg={advice.kg} />}
+    actions = <>
       {weightsDone ? finalActions : <Button variant="primary" onClick={() => next && go(next)}>다음 종목으로</Button>}</>
   } else if (activity?.phase === 'ready') {
     actions = <Button variant="primary" onClick={() => cardioPhase('running')}>유산소 시작</Button>
@@ -189,6 +193,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   const source = session.initialPlan.weightExercises.find(p => p.sessionExerciseId === currentId)
   const original = weight && session.deload ? recoveryOriginal.weightPlacements.find(p => p.id === source?.sourcePlacementId) : undefined
 
+  if (weight && !warmup && !editing && notice) actions = <>{notice}{actions}</>
   return <>
     <WorkoutFrame routine={session.initialPlan.routineName} deload={session.deload}
       clockRef={clockRef}
@@ -203,7 +208,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
         : { name: activity!.plan.name, target: '목표 ' + cardioPlanLabel(activity!.plan) }} /> : <>
         {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
         {weight && <WeightFocus weight={weight} position={index + 1}
-          workingRef={workingRef} onAddSet={() => updateWeight(addSet(weight))}
+          memoContent={<CombinationMemo exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />} workingRef={workingRef} onAddSet={() => updateWeight(addSet(weight))}
           description={exerciseDescription(sessionExercises.find(e => e.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
           manufacturers={manufacturers} progressNote={original ? `디로딩 목표 ${source?.approvedWeightKg}kg · 원본 목표 ${original.approvedWeightKg}kg × ${original.setCount}세트` : undefined}
           issue={issueView} resting={remaining > 0} editing={editing}
