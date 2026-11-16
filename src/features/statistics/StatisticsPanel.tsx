@@ -26,6 +26,20 @@ import { useRecordPreview } from './RecordDisplayContext.ts'
 import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import './statistics.css'
 import { GrowthPanel } from './GrowthPanel.tsx'
+import styles from './RecordMain.module.css'
+
+function RecordMainIcon({ kind }: { kind: 'activity' | 'growth' | 'plan' | 'muscles' | 'clock' | 'weight' | 'footprints' }) {
+  const paths = {
+    activity: 'M4 20V10h3v10M10.5 20V4h3v16M17 20V7h3v13',
+    growth: 'M3 18l6-6 4 3 8-10M15 5h6v6',
+    plan: 'M8 3v4m8-4v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M8 14h1m6 0h1m-8 3h1m6 0h1',
+    muscles: 'M12 3v9h9M9 3.5a9 9 0 1 0 11.5 11.5M15 3.5a9 9 0 0 1 5.5 5.5H15z',
+    clock: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
+    weight: 'M3 9v6m3-8v10m0-5h12m0-5v10m3-8v6',
+    footprints: 'M7 2c-2 0-3 2-3 5v3c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2V7c0-3-1-5-3-5ZM5 15h4v3a2 2 0 0 1-4 0ZM17 5c-2 0-3 2-3 5v3c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-3c0-3-1-5-3-5ZM15 18h4v3a2 2 0 0 1-4 0Z',
+  }
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[kind]} /></svg>
+}
 
 const cardioKinds: Record<string, string> = { TREADMILL: '러닝머신', BIKE: '자전거', OUTDOOR: '야외 운동', STAIRS: '계단', OTHER: '기타', UNCLASSIFIED: '미분류' }
 const cardioTime = durationLabel
@@ -80,16 +94,22 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   const values = monthly ? Array.from({length:Math.ceil(daily.length/7)},(_,i)=>daily.slice(i*7,i*7+7).some(v=>v===null)?null:sumDecimals(daily.slice(i*7,i*7+7) as string[])) : daily
   const labels = monthly ? values.map((_,i)=>(i*7+1)+'–'+Math.min((i+1)*7,daily.length)+'일') : ['월','화','수','목','금','토','일']
   if (screen === 'summary') return <>
-    <div className="section-heading"><h1>운동 기록 분석</h1></div><p className="muted small record-week-label">이번 주 · {data.fromDate} ~ {addDays(data.toDateExclusive,-1)}</p>
-    <Card><h2>이번 주 요약</h2><div className="statistics-summary">
-      <div><small>계획 대비 운동일</small><strong>{format(planning.effectiveWorkoutDays)} / {data.plannedWorkoutDays??'—'}일</strong></div>
-      <div><small>완료 웨이트 세트</small><strong>{format(data.summary.completedSets)}세트</strong></div>
-      <div><small>루틴 달성률</small><strong>{format(data.routineAchievementPercent,0)}{data.routineAchievementPercent!==null?'%':' · 확인 불가'}</strong></div>
-      <div><small>유산소 운동 시간</small><strong>{durationMinutesLabel(data.cardioActiveMs)}</strong></div>
-    </div><p className="record-note muted small">계획을 확인할 수 없는 경우 운동일/달성률은 ‘— · 확인 불가’로 표시합니다. 미동기화 원본은 포함하지 않습니다.</p></Card>
-    <Card><h2>운동 분석</h2><div className="record-menu" aria-label="운동 분석 메뉴">
-      {([['activity','운동 현황'],['growth','성장 추적'],['plan','주간 근육 계획'],['muscles','주간 근육 통계']] as const).map(([id,label])=><button type="button" className="outline" key={id} onClick={()=>onScreen(id)}>{label} ›</button>)}
-    </div></Card>
+    <Card className={styles.weeklySummary}>
+      <div className={styles.summaryHeading}><h2>이번 주 요약</h2><span>{data.fromDate.slice(5).replace('-','.')} – {addDays(data.toDateExclusive,-1).slice(5).replace('-','.')}</span></div>
+      <div className={styles.achievement}><strong>{format(data.routineAchievementPercent,0)}{data.routineAchievementPercent!==null?'%':''}</strong><span>루틴 달성률{data.routineAchievementPercent===null&&' · 확인 불가'}</span></div>
+      <div className={styles.progress} role="progressbar" aria-label="루틴 달성률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={data.routineAchievementPercent===null?undefined:Number(data.routineAchievementPercent)} aria-valuetext={data.routineAchievementPercent===null?'확인 불가':format(data.routineAchievementPercent,0)+'%'}><span style={{width:(data.routineAchievementPercent??'0')+'%'}} /></div>
+      <p className={styles.completion}>계획한 {data.plannedWorkoutDays??'—'}일 중 {format(planning.effectiveWorkoutDays)}일 운동 완료</p>
+      <div className={styles.metrics}>
+        <div><RecordMainIcon kind="clock" /><strong>미확인</strong><small>총 운동 시간</small></div>
+        <div><RecordMainIcon kind="weight" /><strong>{format(data.summary.completedSets)}세트</strong><small>웨이트 세트</small></div>
+        <div><RecordMainIcon kind="footprints" /><strong>{durationMinutesLabel(data.cardioActiveMs)}</strong><small>유산소 시간</small></div>
+      </div>
+    </Card>
+    <section className={styles.analysis} aria-label="운동 분석">
+      <h2>운동 분석</h2><div className={styles.analysisGrid} aria-label="운동 분석 메뉴">
+        {([['activity','운동 현황','운동량과 추이'],['growth','성장 추적','중량과 기록 변화'],['plan','주간 근육 계획','운동 부위별 계획'],['muscles','주간 근육 통계','근육별 운동 분석']] as const).map(([id,label,description])=><button type="button" className={styles.analysisCard} aria-label={label} key={id} onClick={()=>onScreen(id)}><span className={styles.analysisTop}><RecordMainIcon kind={id} /><span aria-hidden="true">↗</span></span><span className={styles.analysisText}><strong>{label}</strong><small>{description}</small></span></button>)}
+      </div>
+    </section>
   </>
   if (screen === 'muscles') return <WeeklyMuscleStatistics data={data} />
   const achievementRange=periodFor(new Date((achievementAnchor??data.fromDate)+'T12:00:00'),'week',0)
@@ -182,7 +202,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
     return()=>abort.abort()
   },[workoutApi,preview,screen,weekly,evidenceKey,scope])
   const back = () => { if (window.history.state?.overloadNavigation?.index > 0) window.history.back(); else setScreen('summary', true) }
-  return <section className="stack statistics record-screen" aria-label="운동 기록·분석">
+  return <section className={`stack statistics record-screen ${screen==='summary'?styles.main:''}`} aria-label="운동 기록·분석">
     {screen !== 'summary' && <div className="record-back"><Button variant="quiet" onClick={back}>{initialPreset?'‹ 루틴으로':'‹ 기록으로'}</Button><span className="muted small">기록 · 분석</span></div>}
     {screen === 'activity' && <><h1>운동 현황</h1><PeriodControls days={current?.plannedDays} value={activityPeriod} onChange={value => setActivityPeriod(value, true)} /></>}
     {screen === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} />
@@ -191,7 +211,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
       : <>{state.issue&&<Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>}
         {!current&&!display&&<p role="status" className="muted small">통계 불러오는 중…</p>}
         {display&&<div className="stack record-statistics-body" aria-busy={!current}>{screen==='activity'&&<p className="muted small record-data-range">표시 데이터 · {display.statistics.fromDate} ~ {addDays(display.statistics.toDateExclusive,-1)}</p>}<StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={display.statistics} planning={display} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions}/></div>}
-        {screen === 'summary' && <Card className="recent-records"><div className="section-heading"><h2>최근 운동 기록</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} recent /> : <p>최근 7일 데이터 연결 필요</p>}</Card>}</>}
+        {screen === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>setScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
     {preview&&screen!=='plan'&&screen!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
   </section>
 }

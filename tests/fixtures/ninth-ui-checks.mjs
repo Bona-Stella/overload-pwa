@@ -8,7 +8,7 @@ export async function verifyNinthUi({go,title,click,set,evaluate,send,wait,width
  for(const screen of ['운동 현황','성장 추적','전체 운동 이력','운동 종목 보기']){
   await go('/routine-preview?tab=history')
   if(screen==='운동 종목 보기'){await tab('설정');await click('운동 종목 보기','strong')}
-  else{await tab('기록');await title('운동 기록 분석');await click(screen==='전체 운동 이력'?'전체 보기 ›':screen+' ›')}
+  else{await tab('기록');await title('이번 주 요약');await click(screen==='전체 운동 이력'?'전체 보기 ›':screen+' ›')}
   await title(screen)
   if(screen==='운동 종목 보기')assert.equal(await evaluate('document.querySelectorAll(".record-search [role=group]").length'),1)
   else assert.equal(await evaluate('document.querySelectorAll(".record-search [role=group]").length'),0)
@@ -35,10 +35,10 @@ export async function verifyNinthUi({go,title,click,set,evaluate,send,wait,width
   }
   for(const w of [320,375,390,430])await capture('ninth-search-'+screen,'react',w)
  }
- await go('/routine-preview?tab=history');await tab('기록');await title('운동 기록 분석')
+ await go('/routine-preview?tab=history');await tab('기록');await title('이번 주 요약')
  await wait(()=>evaluate('document.querySelectorAll(".recent-records .session-record-card").length>1'),'recent cards')
  const rows=await evaluate('[...document.querySelectorAll(".session-record-card")].map(e=>({id:e.dataset.sessionId,name:e.querySelector("h4").textContent,time:e.querySelector(".record-durations").textContent,text:e.textContent}))')
- assert(rows.every(r=>!/(?:\d{2}:){2}\d{2}/.test(r.time)))
+ assert(rows.every(r=>/^총 (?:\d+시간(?: \d+분)?|\d+분|미확인)$/.test(r.time)))
  const cardioOnly=rows.find(r=>r.name==='아침 유산소');assert(cardioOnly);assert.doesNotMatch(cardioOnly.text,/웨이트|총중량|세트/)
  for(const w of [320,375,390,430])await capture('ninth-recent','react',w)
  await click('전체 보기 ›');await title('전체 운동 이력')
@@ -55,5 +55,5 @@ export async function verifyNinthUi({go,title,click,set,evaluate,send,wait,width
   assert.equal(columns.sections,3);assert.equal(columns.values,6);assert(columns.widths.every(n=>n>0));assert(columns.badge)
   await capture('ninth-detail-partial','react',w)
  }
- report.interactions.push('ninth: real pointer X nonempty/empty/selected and input blur; shared tag visibility on all four searches; recent HH:MM and conditional cardio-only facts; same IDs/names across history; two time rows; three-column six-fact detail and only actual partial reasons; four widths')
+ report.interactions.push('ninth: real pointer X nonempty/empty/selected and input blur; shared tag visibility on all four searches; recent Korean minute labels and conditional cardio-only facts; same IDs/names across history; two time rows; three-column six-fact detail and only actual partial reasons; four widths')
 }

@@ -21,11 +21,11 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
  const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert.ok(!r.exceptionDetails,r.exceptionDetails?.exception?.description);return r.result.value}
  const wait=async(fn,label)=>{const end=Date.now()+15000;while(Date.now()<end){const r=await fn();if(r)return r;await delay(40)}assert.fail('Timed out: '+label)}
- const click=async(text,selector='button')=>wait(()=>evaluate('(()=>{const e=[...document.querySelectorAll('+JSON.stringify(selector)+')].find(e=>e.getClientRects().length&&!e.disabled&&e.textContent.trim()==='+JSON.stringify(text)+');if(!e)return false;e.click();return true})()'),text)
+ const click=async(text,selector='button')=>wait(()=>evaluate('(()=>{const e=[...document.querySelectorAll('+JSON.stringify(selector)+')].find(e=>e.getClientRects().length&&!e.disabled&&(e.textContent.trim()==='+JSON.stringify(text)+'||e.getAttribute("aria-label")==='+JSON.stringify(text.replace(/ ›$/,''))+'));if(!e)return false;e.click();return true})()'),text)
  const set=(selector,value)=>evaluate('(()=>{const e=document.querySelector('+JSON.stringify(selector)+');if(!e)throw Error("missing field");Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e),"value").set.call(e,'+JSON.stringify(value)+');e.dispatchEvent(new Event(e.tagName==="SELECT"?"change":"input",{bubbles:true}))})()')
  const body=()=>evaluate('document.body.innerText')
  const tab=name=>click(name,'nav button')
- const title=async name=>wait(()=>evaluate('[...document.querySelectorAll("h1")].some(e=>e.getClientRects().length&&e.textContent==='+JSON.stringify(name)+')'),name)
+ const title=async name=>wait(()=>evaluate('[...document.querySelectorAll("h1,h2")].some(e=>e.getClientRects().length&&e.textContent==='+JSON.stringify(name)+')'),name)
  const width=async (w,side)=>{await send('Emulation.setDeviceMetricsOverride',{width:w,height:844,deviceScaleFactor:1,mobile:true});if(side!=='html'){await wait(()=>evaluate('innerWidth==='+w),'viewport width');assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'horizontal overflow')}}
  const capture=async(name,side,w)=>{
   await width(w,side)
@@ -50,12 +50,12 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   socket.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}if(m.method==='Page.javascriptDialogOpening'){dialogCount++;void send('Page.handleJavaScriptDialog',{accept:acceptDialogs})}if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(m.method==='Network.requestWillBeSent'&&new URL(m.params.request.url).pathname.startsWith('/api/'))api.push(m.params.request.url)}
   socket.onclose=()=>{for(const p of pending.values())p.reject(Error('Chrome closed'));pending.clear()}
   await send('Page.enable');await send('Page.addScriptToEvaluateOnNewDocument',{source:`{const BaseDate=Date,offset=Date.parse('2026-11-11T03:00:00Z')-BaseDate.now();window.Date=class extends BaseDate{constructor(...args){super(...(args.length?args:[BaseDate.now()+offset]))}static now(){return BaseDate.now()+offset}}}`});await send('Runtime.enable');await send('Network.enable')
-  await go('/routine-preview?tab=history');await title('운동 기록 분석')
-  await click('운동 현황 ›');await title('운동 현황');await tab('홈');await tab('기록');await title('운동 기록 분석');report.navigation.push('records/activity/home/records/root')
-  await click('주간 근육 계획 ›');await title('주간 근육 계획');await tab('루틴');await tab('기록');await title('운동 기록 분석');report.navigation.push('records/plan/routines/records/root')
+  await go('/routine-preview?tab=history');await title('이번 주 요약')
+  await click('운동 현황 ›');await title('운동 현황');await tab('홈');await tab('기록');await title('이번 주 요약');report.navigation.push('records/activity/home/records/root')
+  await click('주간 근육 계획 ›');await title('주간 근육 계획');await tab('루틴');await tab('기록');await title('이번 주 요약');report.navigation.push('records/plan/routines/records/root')
   await click('전체 보기 ›');await title('전체 운동 이력');await click((await evaluate('document.querySelector(".session-record-card").textContent.trim()')),'.session-record-card');await title('운동 기록 상세');assert.doesNotMatch(await body(),/중량 검토/);await click('‹ 기록으로');await title('전체 운동 이력');report.navigation.push('history/detail/back/history')
-  await tab('기록');await click('운동 현황 ›');await title('운동 현황');await click('‹ 기록으로');await title('운동 기록 분석');report.navigation.push('activity/back/root')
-  await send('Runtime.evaluate',{expression:'history.forward()'});await title('운동 현황');await tab('기록');await title('운동 기록 분석');report.navigation.push('browser forward and same tab root')
+  await tab('기록');await click('운동 현황 ›');await title('운동 현황');await click('‹ 기록으로');await title('이번 주 요약');report.navigation.push('activity/back/root')
+  await send('Runtime.evaluate',{expression:'history.forward()'});await title('운동 현황');await tab('기록');await title('이번 주 요약');report.navigation.push('browser forward and same tab root')
   const captures=[]
   async function reactCapture(name){for(const w of [320,375,390,430])await capture(name,'react',w);captures.push(name)}
   await reactCapture('records-main')

@@ -17,24 +17,39 @@ import type { RecordRow } from './record-feed.ts'
 import { completionDate, recentRecordRows, recordRows, recordWeek } from './record-feed.ts'
 import { useRecordPreview } from '../statistics/RecordDisplayContext.ts'
 import type { Session } from '../workout-online/types.ts'
+import styles from '../statistics/RecordMain.module.css'
+
+function recentDuration(milliseconds: number | null) {
+ const value=recordDuration(milliseconds,'minute')
+ if(value==='미확인')return value
+ const [hours,minutes]=value.split(':').map(Number)
+ return [hours?hours+'시간':'',minutes||!hours?minutes+'분':''].filter(Boolean).join(' ')
+}
 
 export function SessionRecordCard({row,session,onOpen,timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone,recent=false}:{row:RecordRow;session?:Session;timeZone?:string;recent?:boolean;onOpen:(id:string)=>void}) {
  const summary=session?recordSummary(session):null,status=summary?.status
  const elapsed=summary?.totalMs??(row.endedAt?Date.parse(row.endedAt)-Date.parse(row.startedAt):null)
  const stamp=recordTime(summary?.startedAt??row.startedAt,session?.startedTimeZone??timeZone,row.workoutDate)
- const date=recent?stamp.replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · /,'$1.$2 $3 '):stamp
+ const date=recent?stamp.replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · /,'$1.$2 · $3 · '):stamp
  const counts=summary?[summary.hasWeight?'웨이트 '+summary.achievement.weight.completed+'/'+summary.achievement.weight.planned+'종목':null,summary.hasCardio?'유산소 '+summary.achievement.cardio.completed+'/'+summary.achievement.cardio.planned+'종목'+(summary.achievement.cardio.unknown?' · 일부 확인 불가':''):null].filter(Boolean).join(' · '):'종목 완료 수 · 상세 조회 필요'
- const totals=summary?[summary.hasWeight?'총 '+summary.completedSets+'세트':null,summary.hasCardio?summary.distanceKm===null?'거리 미입력':summary.distanceKm+'km'+(summary.unknownDistance?' · 일부 거리 미입력':''):null].filter(Boolean).join(' · '):''
  const volume=summary?.hasWeight?<span>총중량 {recordKg(summary.volumeKg)}{summary.volumeKg!==null&&summary.unknownVolume?' + 미확인':''}</span>:null
+ if(recent){
+  const label=status?.kind==='complete'?'전체 완료':status?.kind==='partial'?'부분 완료':status?.label??'달성 확인 중'
+  const facts=summary?[summary.hasWeight?'웨이트 '+summary.achievement.weight.completed+'종목':null,summary.hasCardio?'유산소 '+summary.achievement.cardio.completed+'종목'+(summary.achievement.cardio.unknown?' · 일부 확인 불가':''):null].filter(Boolean).join(' · '):counts
+  return <button type="button" className={`session-record-card ${styles.recentCard}`} data-session-id={row.id} data-session-version={summary?.version} onClick={()=>onOpen(row.id)}>
+   <div className={styles.recentCardHeading}><time>{date}</time><span className={`record-card-status ${styles.recentStatus}`} data-state={status?.kind??'unknown'}><b aria-hidden="true">{status?.mark??'?'}</b>{label}</span><span aria-hidden="true">›</span></div>
+   <h4>{summary?.routineName??row.routineName}</h4>
+   <div className={styles.recentFacts}>{facts}{facts&&' · '}<span className="record-durations">총 {recentDuration(elapsed)}</span></div>
+  </button>
+ }
  return <button type="button" className="session-record-card" data-session-id={row.id} data-session-version={summary?.version} onClick={()=>onOpen(row.id)}>
   <div className="record-card-heading"><time>{date}</time><span className="record-card-status" aria-label={status?.label??'달성 확인 중'} title={status?.label} data-state={status?.kind??'unknown'}>{status?<b aria-hidden="true">{status.mark}</b>:'?'}</span><span aria-hidden="true">›</span></div><h4>{summary?.routineName??row.routineName}</h4>
-  <div className="record-exercise-line muted small"><span>{counts}</span>{recent&&<span>{totals}</span>}</div>
-  {recent?<div className="record-pair small"><span className="record-durations">총 운동 {recordDuration(elapsed,'minute')}{summary?.hasWeight&&<> · 웨이트 {recordDuration(summary.weightMs,'minute')}</>}{summary?.hasCardio&&<> · 유산소 {recordDuration(summary.cardioMs,'minute')}</>}</span>{volume}</div>
-   :<><div className="record-pair record-total"><strong>총 운동 {recordDuration(elapsed)}</strong>{volume&&<strong>{volume}</strong>}</div><div className="record-pair muted small record-type-times">{summary?.hasWeight&&<span>웨이트 {recordDuration(summary.weightMs)}</span>}{summary?.hasCardio&&<span>유산소 {recordDuration(summary.cardioMs)}</span>}</div></>}
+  <div className="record-exercise-line muted small"><span>{counts}</span></div>
+  <div className="record-pair record-total"><strong>총 운동 {recordDuration(elapsed)}</strong>{volume&&<strong>{volume}</strong>}</div><div className="record-pair muted small record-type-times">{summary?.hasWeight&&<span>웨이트 {recordDuration(summary.weightMs)}</span>}{summary?.hasCardio&&<span>유산소 {recordDuration(summary.cardioMs)}</span>}</div>
  </button>
 }
 
-export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true }: { enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage)=>void} }) {
+export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true, onViewAll }: { enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage)=>void}; onViewAll?:()=>void }) {
   const preview=useRecordPreview()
   const zone=timeZone??Intl.DateTimeFormat().resolvedOptions().timeZone
   const today = preview?.today??new Intl.DateTimeFormat('sv-SE',{timeZone:zone}).format(new Date()), { userId, dataGeneration } = scope
@@ -85,7 +100,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   if(tag==='CARDIO')for(const session of preview?.sessions??[])for(const c of session.initialPlan.cardioActivities)matchingNames.add(c.plan.name)
   const candidates = options.filter(o => (search.scope!=='exercise'||tag==='ALL'||matchingNames.has(o.name))&&o.name.toLocaleLowerCase().includes(search.query.trim().toLocaleLowerCase()))
   return <section className="stack record-feed" aria-label={recent ? '최근 7일 운동 기록' : '전체 운동 이력'}>
-    {recent && <p className="muted small">{range.fromDate} ~ {today} · 오늘 포함 최근 7일{preview?' · 합성 완료 기록':''}</p>}
+    {recent && <div className={styles.recentHeading}><h2>최근 운동</h2><span className={styles.recentRange}>{range.fromDate.slice(2)} ~ {today.slice(2)}</span>{onViewAll&&<Button variant="quiet" onClick={onViewAll}>전체 보기 ›</Button>}</div>}
     {!recent && <><h1 id="workout-history-title">전체 운동 이력</h1><Card><PeriodControls value={period} onChange={value => setPeriod(value, true)} monthOnly compact />
       <SearchList scopes={[{ id: 'routine', name: '루틴별' }, { id: 'exercise', name: '운동별' }]} scope={search.scope}
         onScope={value => setSearch({ ...search, scope: value, selected: '',query:'',tag:'ALL' }, true)}

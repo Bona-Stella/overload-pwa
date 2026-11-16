@@ -32,17 +32,19 @@ export function mixedRecord(){
  s.snapshot.state.cardioResults=[{id:'cardio',sessionActivityId:OTHER,status:'COMPLETED',startedAt:'2026-10-31T12:50:00Z',occurredAt:s.endedAt,result:{timerMs:1200000,activeMs:1200000,corrected:false,distanceKm:'2.5',averageBpm:null}}]
  return s
 }
-test('one persisted record supplies six facts, actual totals and the same recent/history values',()=>{
+test('recent cards show three compact rows while history retains detailed totals',()=>{
  const s=mixedRecord(),f=recordSummary(s),before=structuredClone(s)
  assert.deepEqual([f.totalMs,f.weightMs,f.cardioMs,f.inactiveMs],[4200000,2400000,1200000,600000])
  assert.deepEqual([f.completedSets,f.plannedSets,f.volumeKg,f.distanceKm],[3,3,'750','2.5'])
  assert.equal(f.status.kind,'complete');assert.deepEqual(achievementReasons(s),{})
  const row={...s,routineName:s.initialPlan.routineName},props={row,session:s,onOpen:()=>{}}
  const recent=render(SessionRecordCard,{...props,recent:true}),history=render(SessionRecordCard,props)
- assert.match(recent,/01:10/);assert.match(recent,/00:40/);assert.match(recent,/00:20/)
- assert.match(recent,/총 3세트 · 2.5km/);assert.match(recent,/750kg/)
+ assert.match(recent,/10.31 · 토 · 21:00/);assert.match(recent,/총 1시간 10분/)
+ assert.match(history,/2026-10-31 · 토요일 · 21:00/)
+ assert.match(recent,/웨이트 1종목 · 유산소 1종목/);assert.match(recent,/전체 완료/)
+ assert.doesNotMatch(recent,/00:40|00:20|총 3세트|2.5km|750kg|총중량/)
  assert.match(history,/1:10:00/);assert.match(history,/40:00/);assert.match(history,/20:00/)
- assert.doesNotMatch(recent,/범례|전체 완료|부분 완료/);assert.deepEqual(s,before)
+ assert.doesNotMatch(history,/전체 완료|부분 완료/);assert.deepEqual(s,before)
 })
 test('unknown coverage and inconsistent durations cannot manufacture nonperformance time',()=>{
  const s=mixedRecord();delete s.snapshot.state.weightTiming
@@ -61,13 +63,32 @@ test('reasons explain the existing judgment and only highlight contributors to t
  s.snapshot.state.cardioResults[0].result.distanceKm=null
  assert.equal(sessionDisplayStatus(s).kind,'unknown');assert.deepEqual(achievementReasons(s),{})
 })
-test('recent cards hide unplanned types and retain only measured distances',()=>{
+test('recent cards retain existing completion counts and unknown judgments without detail metrics',()=>{
  const s=mixedRecord();s.initialPlan.weightExercises=[];s.snapshot.state.performedSets=[];s.snapshot.state.sessionExercises=s.snapshot.state.sessionExercises.filter(e=>e.kind==='CARDIO')
  let html=render(SessionRecordCard,{row:{...s,routineName:'러닝'},session:s,recent:true,onOpen:()=>{}})
- assert.match(html,/유산소 1\/1종목/);assert.match(html,/2.5km/);assert.doesNotMatch(html,/웨이트|총중량|세트/)
+ assert.match(html,/유산소 1종목/);assert.match(html,/전체 완료/);assert.doesNotMatch(html,/웨이트|총중량|세트|2.5km/)
  s.snapshot.state.cardioResults[0].result.distanceKm=null
  html=render(SessionRecordCard,{row:{...s,routineName:'러닝'},session:s,recent:true,onOpen:()=>{}})
- assert.match(html,/거리 미입력/);assert.doesNotMatch(html,/2.5km/)
+ assert.match(html,/달성 확인 불가/);assert.match(html,/일부 확인 불가/);assert.doesNotMatch(html,/2.5km|기준 미달/)
+ const partial=mixedRecord();partial.snapshot.state.cardioResults[0].result.distanceKm='1.5'
+ html=render(SessionRecordCard,{row:{...partial,routineName:'혼합'},session:partial,recent:true,onOpen:()=>{}})
+ assert.match(html,/부분 완료/);assert.equal(recordSummary(partial).status.kind,'partial')
+ partial.snapshot.state.performedSets=[]
+ html=render(SessionRecordCard,{row:{...partial,routineName:'혼합'},session:partial,recent:true,onOpen:()=>{}})
+ assert.match(html,/기준 미달/);assert.equal(recordSummary(partial).status.kind,'missed')
+ const unknown={...partial,endedAt:null}
+ html=render(SessionRecordCard,{row:{...unknown,routineName:'미확인'},session:unknown,recent:true,onOpen:()=>{}})
+ assert.match(html,/총 미확인/)
+})
+
+test('recent Korean duration labels preserve minute truncation and unknown measurements',()=>{
+ for(const [milliseconds,label] of [[2520000,'42분'],[3600000,'1시간'],[4200000,'1시간 10분'],[8100000,'2시간 15분'],[3599999,'59분'],[59999,'0분'],[null,'미확인']]){
+  const s=mixedRecord()
+  s.endedAt=milliseconds===null?null:new Date(Date.parse(s.startedAt)+milliseconds).toISOString()
+  const before=structuredClone(s),html=render(SessionRecordCard,{row:{...s,routineName:s.initialPlan.routineName},session:s,recent:true,onOpen:()=>{}})
+  assert.ok(html.includes('총 '+label),label)
+  assert.deepEqual(s,before)
+ }
 })
 test('detail uses three columns, actual six values and frozen approvals without repeated timestamps or controls',()=>{
  const s=mixedRecord(),data=summaryData(s,null),html=render(WorkoutSummary,{...data,detail:true,manufacturers:[],onBack:()=>{}})

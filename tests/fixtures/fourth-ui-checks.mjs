@@ -32,7 +32,7 @@ export async function verifyFourthUi({go,title,click,set,evaluate,send,wait,widt
  await wait(()=>evaluate('document.querySelector("dialog[open]:not(:has(dialog[open])) [aria-pressed=true]").textContent.trim()!=="30 kg"'),'wheel touch scroll selects a new value')
  await click('확인',dialog+' button');await click('취소',dialog+' button')
  assert.match(await evaluate('document.querySelector(".approval-values").textContent'),/25kg → 30kg/)
- await click('수정 완료');await tab('기록');await title('운동 기록 분석')
+ await click('수정 완료');await tab('기록');await title('이번 주 요약')
  const cards=await evaluate('[...document.querySelectorAll(".recent-records .session-record-card")].map(b=>({id:b.dataset.sessionId,date:b.querySelector("time").textContent}))')
  assert(cards.length>0);assert.equal(cards.length,new Set(cards.map(c=>c.id)).size);assert(cards.every(c=>c.date.slice(0,5)>='11.05'&&c.date.slice(0,5)<='11.11'))
  assert.doesNotMatch(await body(),/운동 기록 요약 보기/)

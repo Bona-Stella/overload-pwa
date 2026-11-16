@@ -28,7 +28,7 @@ test('real React reconciliation removes statistics across workout, account, gene
   const evaluate = async expression => { const r = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (r.exceptionDetails) throw Error(r.exceptionDetails.exception?.description ?? 'Component error'); return r.result.value }
   const count = () => evaluate('document.querySelectorAll(".statistics").length')
   const activity = async () => {
-    await evaluate("[...document.querySelectorAll('.record-menu button')].find(b=>b.textContent.includes('ACTIVITY'))?.click()")
+    await evaluate("[...document.querySelectorAll('[aria-label=\"운동 분석 메뉴\"] button')].find(b=>b.getAttribute('aria-label')==='운동 현황')?.click()")
   }
   const render = async (owner = 'A', generation = '0', active = false) => { await evaluate(`window.renderBoundary(${JSON.stringify(owner)},${JSON.stringify(generation)},${active})`); await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))'); await activity() }
   try {
@@ -41,7 +41,7 @@ test('real React reconciliation removes statistics across workout, account, gene
     ws.onmessage = e => { const m = JSON.parse(e.data), p = pending.get(m.id); if (p) { pending.delete(m.id); m.error ? p.reject(Error(m.error.message)) : p.resolve(m.result) } }
     ws.onclose = () => { for (const p of pending.values()) p.reject(Error('Browser closed')); pending.clear() }
     await send('Page.enable'); await send('Page.navigate', { url: origin + '/boundary' })
-    await wait(() => evaluate('typeof window.renderBoundary==="function"&&!!document.querySelector(".record-menu")'))
+    await wait(() => evaluate(`typeof window.renderBoundary==="function"&&!!document.querySelector('[aria-label="운동 분석 메뉴"]')`))
     await activity()
     await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7세트")'))
     for (let i = 0; i < 3; i++) {

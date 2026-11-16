@@ -3,7 +3,7 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
  const settle=()=>evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))')
  const tag=async name=>{await evaluate('(()=>{const g=document.querySelector("[aria-label=\\"운동 부위 필터\\"]")??document.querySelector("[aria-label=\\"근육 분류 필터\\"]");[...g.querySelectorAll("button")].find(b=>b.textContent==='+JSON.stringify(name)+').click()})()');await settle()}
  const names=()=>evaluate('[...document.querySelectorAll(".record-search li > button:first-child strong")].map(e=>e.textContent)')
- await go('/routine-preview?tab=history');await tab('기록');await title('운동 기록 분석');await click('운동 현황 ›');await title('운동 현황')
+ await go('/routine-preview?tab=history');await tab('기록');await title('이번 주 요약');await click('운동 현황 ›');await title('운동 현황')
  await set('.record-search select','exercise');await settle()
  assert.deepEqual(await evaluate('[...document.querySelectorAll(".record-search [role=group] button")].map(b=>b.textContent)'),['전체','가슴','등','어깨','팔','하체','코어','유산소','기타'])
  await tag('가슴');assert.deepEqual(await names(),['벤치 프레스','인클라인 덤벨 프레스'])
@@ -20,9 +20,9 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
   await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:g.x,y:g.y,deltaX:-1000,deltaY:0})
   await capture('seventh-tags','react',w)
  }
- await tab('기록');await title('운동 기록 분석')
+ await tab('기록');await title('이번 주 요약')
  await wait(()=>evaluate('document.querySelectorAll(".recent-records .session-record-card").length>0'),'record cards')
- assert.match(await evaluate('document.querySelector(".recent-records .session-record-card").textContent'),/웨이트 3\/3종목 · 유산소 1\/1종목/)
+ assert.match(await evaluate('document.querySelector(".recent-records .session-record-card").textContent'),/웨이트 3종목 · 유산소 1종목/)
  for(const w of [320,375,390,430]){
   await width(w,'react')
   assert(await evaluate('(()=>{const c=document.querySelector(".session-record-card"),t=c.querySelector("time").getBoundingClientRect(),s=c.querySelector(".record-card-status").getBoundingClientRect();return t.right<=s.left&&Math.abs(t.y+t.height/2-s.y-s.height/2)<1})()'))
