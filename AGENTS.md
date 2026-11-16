@@ -95,6 +95,7 @@ README에 작성된 예정 기능을
 
 | 작업 영역 | 현행 기준 |
 |---|---|
+| 최신 기능 정책·구현 경계 | [2026-11-16 확정 정책 10.25절](docs/product/Overload_UI_Decision_Log_v0.9.md#1025--2026-11-16-최신-정책-확정과-구현-경계)의 정책 3-1~3-8을 확인합니다. 달성 판정의 [ST-19](../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md#31-하루-종목-완료-기준)와 [양쪽 구현 상태·후속 과제](docs/engineering/frontend.md#2026-11-16-확정-정책별-구현-점검)를 함께 읽고, 확정 정책과 미완성 구현을 구분합니다. 세부 제품 규칙은 이 문서에 복제하지 않습니다. |
 | 화면 구조·조작 | [UI/UX 적용 지점](docs/product/ui-ux.md)에서 화면별 구성과 동작을, 연결된 [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md)에서 확정 결정과 변경 근거를 확인합니다. 다중 프리셋 UI는 [10.16절](docs/product/Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)을 적용합니다. |
 | 시각 디자인·자산 | [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md)이 실제 Onyx 색상과 토큰을 소유합니다. [HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 시연입니다. 검색·선택은 [원본 6종](docs/product/assets/exercise-icons/README.md)을 32 CSS px로 표시합니다. |
 | 주간 일정·자동 순환 | [주간 일정 계약](../overload-server/docs/api/weekly-schedule.md)이 적용·순환·복구·G3 날짜 근거와 API의 기준입니다. 현행 V30·V31 계정 경로와 과거 PWA 단일 일정 기록을 구분합니다. |
@@ -129,6 +130,9 @@ README에 작성된 예정 기능을
 운동 쓰기·진행 세션·복구는 Task 009 v1.0과 이후 확정된 관련 설계·계약을 따릅니다.
 그 밖의 Task 006 운동·인증 정책은 이후 설계가 명시적으로 변경한 부분을 제외하고 유지합니다.
 단계별 보고서는 당시 구현·검증 기록이며 최신 확정 설계보다 우선하지 않습니다.
+최신 확정 정책과 현재 코드·기존 테스트 기대값이 다르면 정책 확정과 구현 차이를 구분해 기록합니다.
+이미 확정된 정책을 미정으로 되돌리거나 기존 코드에 맞춰 조용히 바꾸지 않으며,
+요청 범위 안에서 필요한 구현·검증 과제를 정리합니다.
 확정되지 않은 API·도메인·보안 정책을 기존 코드만으로 확정하지 않습니다.
 보안·데이터 무결성·제품 정책 사이의 충돌이나 최신 확정 근거가 불명확한 경우에는
 충돌 내용과 영향을 보고하고, 그와 무관하게 진행 가능한 작업은 계속합니다.
@@ -646,12 +650,13 @@ npm run test
 ### Documentation Principles
 
 - 문서는 실제 구현과 일치해야 합니다.
-- 구현되지 않은 기능은 예정 상태로 구분합니다.
+- 구현되지 않은 기능은 예정 또는 구현 필요 상태로 구분하고, 정책 확정·문서 반영·소스 구현·실행 검증을 별도로 기록합니다.
 - 중요한 설계 결정을 문서화합니다.
 - API 변경 시 관련 계약 문서를 갱신합니다.
 - 불필요한 문서를 대량 생성하지 않습니다.
 - 공통 V1 원칙은 양쪽 루트 `AGENTS.md`에서 일관되게 관리하고, 기술별 문서는 이를 참조합니다.
 - 제품 정책·기술 구현 지침·과거 검증 기록을 구분하며, 같은 규칙을 여러 문서에 불필요하게 복제하지 않습니다.
+- 과거 결정·검증 이력은 보존하며, 최신 정책이 대체한 범위·날짜·근거를 명시합니다.
 
 ### Engineering Decision
 
