@@ -80,7 +80,7 @@ Task 006의 나머지 운동·인증 정책과 기존 Task 008 조회 계약은 
 | Server State | 전용 라이브러리 미도입, TanStack Query 채택 검토 |
 | Client State | React 상태 (현재), Zustand (미도입, 채택 검토) |
 | Local Database | localStorage (개발 목업), 진행 운동 보호용 native IndexedDB (5A~5D 구현), Dexie.js (미도입) |
-| Charts | CSS·SVG (현재), Recharts (채택, 통계 구현 단계에서 설치) |
+| Charts | Recharts 3.10.1 · react-is 19.3.1 (설치·RecordChart 사용) |
 | Unit Testing | Node.js 내장 test (현재), Vitest (미도입, 채택 검토) |
 | Component Testing | 기존 TypeScript 컴파일러 + React SSR (현재), React Testing Library (미도입, 채택 검토) |
 | E2E Testing | Playwright (미도입, 채택 검토) |
@@ -620,15 +620,54 @@ iPhone의 화면 구조를 고려합니다.
 
 ### 8.7 v0.9 적용 범위와 구현 상태
 
-**마지막 확인** 2026-11-13 (KST). 일반 운동 코드 기준은 `15a0f6bee4421f799cd691fa435bc8103c1e28e2`이며 Backend는 `a56103e39e9821657da3ef98b047f3ce136116c8`이다. 아래 HOME·ROUTINE 확인 기록은 당시 근거로 보존한다. 검토한 HEAD는 `e34e433`이다. `302bc00`의 HOME·ROUTINE UI와 `e34e433`의 실제 API 연동·이름 변경을 이전 검증 결과와 대조했다.
+**마지막 코드 확인** 2026-11-16 (KST). Frontend `56993a0`·Backend `732e0c3`를 기준으로 1차 개발의 기능·호출 경로·저장 모델과 테스트 내용을 조사했다. 이번 문서 작업에서 테스트·빌드·실기기·DB 적용을 재실행하지 않았다. 아래 과거 커밋·자동 테스트 수·승인 기록은 각각 당시 근거로 보존한다.
 
-**근육 집계 후속 정책:** [14.3절 후속 경계](#근육별-독립-집계와-선택-프리셋-계획--2026-11-13)에 따라 실제 기여의 기존 구현과 계획 기여·네 수준·선택 프리셋 계획의 미구현을 구분한다. 최종 UI는 아래 2026-11-14 확정을 적용하며 기존 검증 이력으로 신규 정책 구현을 완료 처리하지 않는다.
+| 현행 영역 | 실제 모듈·연결 | 남은 범위 |
+|---|---|---|
+| 검색 | SearchList의 IDLE/EDITING/SELECTED, ExerciseSearch·SearchExerciseDetails, GrowthPanel·RecordFeed | 호출부별 초기화 다름. 전체 이력의 실제 운동명 검색 미연결 |
+| 루틴 | RoutineForm → 온라인 루틴 API. 명시 weightApprovals, 조합 변경 NEW, 초안·고정 요청 보호 | 최근 실제값 자동 제안 없음 |
+| 운동·시간 | LocalWorkoutController·LocalWorkoutFlow → IndexedDB/snapshot/FINISH, weight-timing·record-summary | 미관찰 시간/과거 구간 미확인, 기기 간 로컬 초안 복원 보장 아님 |
+| 권고·승인 | reference-reminder·SavedWeightReview → GET weight-review / POST weight-review-approvals, 승인 후 재조회 | 공식 evaluate의 전체 조합 제외·대체 슬롯 인정은 미완성 |
+| 달성·기록 | achievement·display-achievement·achievementReasons, RecordFeed/ClosedWorkout, 최초/현재 평가 구분 | loaded closed 페이지 범위. UI 이유는 파생값이며 서버 영구 판정 사건 아님 |
+| 통계·성장 | plannedAnalysis·actualAnalysis·RecordChart, Overview·성장 API | 선택 프리셋/근육 기여 일부 구현. 네 수준 독립 집계·선택 대상 일별 추이·권장 범위 미완성 |
+| 메모·후속 | CombinationMemo의 계정/세대별 마운트 메모리, 프리뷰 분리 | 서버/기기 영속 메모 없음. G6·운영/실기기 검증 별도 |
+
+사용자 조작의 세부 상태 전환과 실패 처리는 [UI/UX 현행 기능 흐름](../product/ui-ux.md#1차-기능의-실제-동작과-연결-범위--2026-11-16), DTO·원자 처리·DB 근거는 [세션 API](../../../overload-server/docs/api/workout-sessions.md), [통계](../../../overload-server/docs/api/statistics.md), [성장](../../../overload-server/docs/api/approved-weight-growth.md)을 참조한다.
+
+#### 2026-11-16 확정 정책별 구현 점검
+
+[사용자 확정 3-1~3-8](../product/Overload_UI_Decision_Log_v0.9.md#1025--2026-11-16-최신-정책-확정과-구현-경계)과 현행 코드를 대조한 상태다. ‘구현 확인’은 소스·테스트 assertion 확인이며 이번 문서 작업의 실행 검증·실제 DB 적용/실기기 승인이 아니다.
+
+| 정책 | Frontend | Backend |
+|---|---|---|
+| 3-1 원계획·거리 미입력 | **정책 확정 / 일부 구현.** sessionAchievement는 InitialPlan이나 목표거리+실제null을 unknown 처리. partialAchievement/achievementReasons도 전환 필요. summaryData는 AppliedPlan 분모·별도 whole 조건으로 통일 필요 | **정책 확정 / 일부 구현.** InitialPlanCompletion·PlanningCalculator는 원계획 기준이나 거리null을 unknown 처리. 날짜 검사와 G4 공통 완료 입력도 전환 영향 확인 |
+| 3-2 Benchmark | **정책 확정 / 구현 확인.** reference-reminder는 총 반복·최신 종료·UUID 순. 공식 판정 원본은 서버 | **정책 확정 / 구현 확인.** WorkoutAssessment.benchmarkOrder가 같은 순서. 초기 동점 유지 설명은 대체됨 |
+| 3-3 웨이트 시간 A안 | **정책 확정 / 구현 확인.** weight-timing은 보이는 수행 화면 구간만 측정, 불완전은 null. 백그라운드 추정 요구 없음 | **정책 확정 / 구현 확인.** V37 parser/서비스·종료 불변 구간 보존. 실제 동작 감지나 미관찰 시간 복원 아님 |
+| 3-4 조합 변경 NEW | **정책 확정 / 일부 구현.** RoutineForm의 교체/장비 변경은 NEW 처리. 조합 왕복 편집·취소 등 전체 경계 실행 검증은 별도 | **정책 확정 / 구현 필요.** 기존 EDIT가 같은 배치 장비 변경을 수용하므로 서버 강제가 미완성 |
+| 3-5 오늘만 대체 | **정책 확정 / 일부 구현.** 조합 변경 감지·검토 제외 일부. 원슬롯 완료 연결 없음 | **정책 확정 / 일부 구현.** V36 봉인 권고 제외와 공식 evaluate의 전체 제외는 다름. 원슬롯·홈/통계/G4 연결 필요 |
+| 3-6 최근 실제·메모 | **정책 확정 / 구현 필요.** NEW 중량 수동 입력. CombinationMemo는 메모리만 있으며 blur/LWW/온라인 서버 저장 없음 | **정책 확정 / 구현 필요.** FINISHED 전용 최근 마지막 세트·조합별 최신 메모 API 없음. 저장 시점·동시 수정은 이제 확정 정책 |
+| 3-7 전체 과거 검색 | **정책 확정 / 일부 구현.** 월 복귀·순차 closed 조회는 있음. 루틴 검색은 로드 범위, 실제 운동명 검색 미연결 | **정책 확정 / 구현 필요.** closed의 cursor/limit에는 월·루틴명·실제 운동명 필터 없음. 전체 다운로드 대신 서버 필터/페이지 필요 |
+| 3-8 독립 집계·일별 추이 | **정책 확정 / 일부 구현.** 선택 프리셋/근육 기여 일부. 실제 독립 분류·선택 대상 일별 값 없음 | **정책 확정 / 일부 구현.** 근육 기여·전체 days 존재. groups는 근육 매핑 참여이며 검수 운동 부위 직접 집계와 다름 |
+
+거리 미입력 정책의 기존 테스트는 이전 동작을 검증한다. 예를 들어 InitialPlanCompletionTests.missingRequiredCardioMeasurementsPreserveUnknownBounds는 거리null도 unknown으로 기대한다. 테스트 존재를 최신 정책 충족 증거로 사용하지 않는다. 코드와 정책의 차이를 문서에 기록했으며 실행 코드/테스트는 수정하지 않았다.
+
+#### 확정 정책의 남은 구현 순서
+
+| 우선순위 | 작업 | 의존성·완료 근거 |
+|---|---|---|
+| P1 | 3-1 공통 InitialPlan 달성·종료 요약 통일, 거리null 시간 비교·부분 인정/이유 반영 | 서버 공통 완료 → 날짜 검사/G4 입력·Frontend/summaryData. 시간 부재/다른 강도 보호·거리 입력/미입력·순수 유산소·목표 편집 경계 회귀 필요 |
+| P1 | 3-4 서버 NEW 강제 및 3-5 공식 세션 전체 제외·대체 슬롯 연결 | 조합 변경 이력/원슬롯 근거와 검수 분류·첫 PRIMARY 확인이 선행. 저장 표현·DTO는 구현 검토이며 정책 재선택 아님 |
+| P2 | 3-6 FINISHED 최근 실제 조회 및 온라인 메모 blur/LWW 저장 | 사용자/세대/정확한 조합·현재 유효 정정값·오래된 응답 배제. HTTP/저장 구조 설계 후 양쪽 연결, 새로고침 초안 보장은 미확정 |
+| P2 | 3-7 전체 과거 검색의 서버 필터·페이지 조회 | 날짜 범위·정렬·월 복귀·세션 실제 운동명 검색 근거 검증. 기존20건만 검색하거나 전체 이력 다운로드로 대체하지 않음 |
+| P2 | 3-8 네 수준 독립 집계·선택 대상 실제 일별 추이 | 검수된 운동 분류의 판정 원본 확인 후 날짜별 집계·프리셋/당시 계획 분리. 분류 불명확은 미확인 유지 |
+
+**근육 집계 후속 정책(2026-11-13 당시 기록, 현행 범위는 위 표):** [14.3절 후속 경계](#근육별-독립-집계와-선택-프리셋-계획--2026-11-13)에 따라 실제 기여의 기존 구현과 계획 기여·네 수준·선택 프리셋 계획의 미구현을 구분한다. 최종 UI는 아래 2026-11-14 확정을 적용하며 기존 검증 이력으로 신규 정책 구현을 완료 처리하지 않는다.
 
 **2026-11-14 UI 1차 최종화(당시 기록):** [Decision Log 10.23절](../product/Overload_UI_Decision_Log_v0.9.md#1023--ui-와이어프레임-최종-확정--2026-11-14)과 [UI/UX 적용 지점](../product/ui-ux.md)을 동기화했다. 기존 HTML의 분석·중량 승인 합성 시연을 보존하고 전체 보기 스위치를 제목 우측으로 이동했다. **설계 확정 / React·API 연결·통합 검증 필요**이며 신규 분석 페이지, 전체/선택 승인, 공유 서버 메모, 대체 슬롯·공식 평가 전체 제외, iOS History·모달 포커스는 구현 완료가 아니다. 코드·DB·기존 테스트는 변경하지 않았다. 기존 정정·PENDING 승인 해결 안전장치는 유지한다.
 
 **기록 탭 후속 설계 동기화(당시 기록):** [10.24절](../product/Overload_UI_Decision_Log_v0.9.md#1024--기록-탭-최종-개편--2026-11-14)의 최종 HTML을 소스·기존 시연 검증과 대조했다. 이번 갱신은 문서 전용이며 HTML 기존 변경분·React·Backend·DB·테스트는 수정하지 않았다. 주간 근육 통계의 이번 주 고정, 공통 기간/검색, 날짜별 △, 최근 7일·월간 피드/범위 검색/주차 구분은 **설계·합성 시연 완료 / 실제 UI·데이터 연결 필요**다. 10.23.5~7절 중량 승인·정정/PENDING·iOS UX는 유지한다.
 
-**2026-11-14 후속 React 구현 / 최종 UI 승인 전:** [구현·검증 보고](../tasks/ui-v09-frontend-record-implementation.md)의 ①~⑦을 반영했다. 기록 2×2·분석/기간/검색/월간 피드·승인 초안·조합 메모 초안·History/포커스를 기존 컴포넌트로 구현하고 읽기 API를 연결했다. 확인된 현재 계획·실제값만 표시하며 권장 범위·검수 부위·선택 추이·완전한 이력 검색·△의 서버 근거·일반 일괄 승인·서버 메모/최근값은 연결 대기다. 조합 변경 NEW는 기존 루틴 저장을 사용하고 대체 연결/재전환 제외는 로컬 UI 근거와 서버 공식 판정을 구분한다. 공식 완료율·승인 사건·G4·정정/PENDING 계약과 Backend·HTML은 변경하지 않았다. 테스트 600건·build·lint 통과, 실기기·실제 Backend 통합·사용자 최종 승인은 미완료다.
+**2026-11-14 후속 React 구현 / 최종 UI 승인 전(당시 기록):** [구현·검증 보고](../tasks/ui-v09-frontend-record-implementation.md)의 ①~⑦을 반영했다. 기록 2×2·분석/기간/검색/월간 피드·승인 초안·조합 메모 초안·History/포커스를 기존 컴포넌트로 구현하고 읽기 API를 연결했다. 확인된 현재 계획·실제값만 표시하며 권장 범위·검수 부위·선택 추이·완전한 이력 검색·△의 서버 근거·일반 일괄 승인·서버 메모/최근값은 연결 대기다. 조합 변경 NEW는 기존 루틴 저장을 사용하고 대체 연결/재전환 제외는 로컬 UI 근거와 서버 공식 판정을 구분한다. 공식 완료율·승인 사건·G4·정정/PENDING 계약과 Backend·HTML은 변경하지 않았다. 테스트 600건·build·lint 통과, 실기기·실제 Backend 통합·사용자 최종 승인은 미완료다.
 
 | 범위 | 상태와 근거 |
 | --- | --- |
@@ -639,14 +678,14 @@ iPhone의 화면 구조를 고려합니다.
 | 표준 운동 DB 확장 3단계 | 근육 통계 화면에 세부 기여와 상위 그룹 실제 세트를 구분해 표시한다. [통계 계약](../../../overload-server/docs/api/statistics.md) |
 | 표준 운동 DB 확장 2단계 | 설정에서 공개 운동을 검색하고, 루틴·세션은 현재 기록할 수 있는 종목만 선택한다. [카탈로그 계약](../../../overload-server/docs/api/standard-exercise-catalog.md) · [검증 범위](#표준-운동-db-확장-2단계) |
 | CATALOG-01·02 및 SETTING-01 | **실제 API 연동·격리 검증·사용자 최종 승인 및 마감.** 계정 설정의 전체 메뉴와 공개 운동 목록·UUID 상세를 연결했다. 하이 로우 보호 GIF는 내부 검토 계정에서 확인했다. [최종 마감](#catalog-0102--setting-01-실제-계정-마감) |
-| 일반 운동 UI 및 실제 API | **구현·사용자 검수 피드백·로컬 코드 커밋 완료.** UI 승인 `e2965d8` 이후 일반 계정 경로를 실제 API에 연결했다. 메모는 기기·세션 범위이며 서버 저장은 미구현이다. 2026-11-13 문서 동기화, 검토 서버 종료. 실기기·운영 경계와 당시 검증은 [마감 기록](../tasks/ui-v09-workout-api-integration.md#최종-마감--2026-11-13)을 따른다. |
+| 일반 운동 UI 및 실제 API (2026-11-13 기록) | **구현·사용자 검수 피드백·로컬 코드 커밋 완료.** UI 승인 `e2965d8` 이후 일반 계정 경로를 실제 API에 연결했다. 메모는 기기·세션 범위이며 서버 저장은 미구현이다. 2026-11-13 문서 동기화, 검토 서버 종료. 실기기·운영 경계와 당시 검증은 [마감 기록](../tasks/ui-v09-workout-api-integration.md#최종-마감--2026-11-13)을 따른다. |
 | T03·T04 및 G6 | **후속.** 홈의 디로딩 분석·기간 조회와 일반 쓰기 보호는 연결했다. 기간·임시 계획의 편집, 디로딩 START 및 혼재 세션의 검증·로컬 저장·동기화는 G6 범위다. [G6 선행조건](backend-ui-v0.9.md#g6-실제-연동-선행조건) |
 | T03.5 휴식 타이머 알림 | **일반 운동의 5~1초 기본 효과음·시각 강조 및 수동 무음 종료 구현.** 독립 알림 설정의 서버 동기화는 별도 범위다. [구현 지침](#t035-휴식-타이머-시각효과음-알림) |
 | 실기기·후속 통합 | **검증 대기.** 최신 HOME·ROUTINE의 iPhone Safari, 설치형 PWA 및 신뢰된 로컬 HTTPS START는 이번 PC 검증에 포함되지 않았다. [실기기 검증 규칙](#167-실제-iphone-테스트) |
 
 #### 일반 운동 실제 API 연결 — 2026-11-13
 
-**후속 정책 주의:** 아래는 기존 코드 연결 기록이다. 같은 날 이후 확정된 조합 변경 NEW·최근 실제값 조회·메모 서버 저장·오늘만 조합 변경의 세션 공식 평가 전체 제외·대체 슬롯 완료는 [후속 구현 지침](#루틴-중심-중량메모대체-후속-구현--2026-11-13)을 적용하며 아직 구현하지 않았다.
+**후속 정책 주의:** 아래는 2026-11-13 기존 코드 연결 기록이며 위 현행 표로 구현 범위를 갱신한다. 같은 날 이후 확정된 조합 변경 NEW·최근 실제값 조회·메모 서버 저장·오늘만 조합 변경의 세션 공식 평가 전체 제외·대체 슬롯 완료는 [후속 구현 지침](#루틴-중심-중량메모대체-후속-구현--2026-11-13)을 적용하며 아직 구현하지 않았다.
 
 계정 화면은 `WorkoutWorkspace → LocalWorkoutScreen → LocalWorkoutFlow`에서 승인된 `workout-flow` UI를 재사용한다. `routine-preview?review=workout`의 Mock은 격리 시연이며 실제 계정의 데이터 출처가 아니다. [연동 기록](../tasks/ui-v09-workout-api-integration.md)과 [현행 API](../../../overload-server/docs/api/workout-sessions.md)를 함께 확인한다.
 
@@ -846,8 +885,8 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보�
 - 조회는 `로딩 / 실제 기록 있음 / 기록 없음 / 실패`를 구분한다. 없음일 때만 0kg을 제안하며 실패를 0으로 저장하지 않는다. 사용자·세대·조합·요청 차수를 확인해 늦은 응답을 배제하고 조회 후 사용자가 수정한 초안을 덮지 않는다. 재렌더·정규 START·기존 운동 복원 때마다 최근값을 덮어씌우지 않는다.
 - `LocalWorkoutFlow`·`workout-local/model.ts`·`flow-data.ts`: 오늘만 추가·대체의 중량·메모도 선택 조합으로 읽는다. 현재 `previousRecords`의 종료 첫 페이지·ordinal별 Map은 최근 마지막 세트 조회의 완성 계약이 아니다. `changeEquipment`의 단순 대입과 원본 승인 문맥 유지도 후속 검증 대상이다. 실제 완료 세트·미완료 입력·타이머·고정 snapshot/FINISH를 보호한다.
 - `WeightFocus`의 기존 textarea와 `WorkoutFrame` 키보드 보정을 재사용한다. `LocalWorkoutController.memo`·`equipmentMemos[sessionExerciseId]`의 세션별 원본은 조합별 최신 서버값과 로컬 미저장 초안으로 정리한다. 조합 변경 시 해당 메모로 전환하고 없음/실패를 구분한다. 메모는 루틴·기기에 공통이며 메모 이력/수행별 스냅샷을 만들지 않고 루틴 승인값·version·서버 운동 revision을 올리는 변경으로 취급하지 않는다.
-- `WorkoutSummary`·`summary-data.ts`·`ClosedWorkout`: 루틴 슬롯 완료와 세션 공식 평가 전체 제외를 별도로 표시한다. 현재 `overallWeightPlanComplete`를 루틴 완료 표시에도 사용하는 연결은 분리해야 한다. 임시 대체가 있으면 다른 정규 종목도 공식 증감 평가하지 않으며 단순 추가·초과 세트만으로 제외하지 않는다. `weightReview`를 공식 평가 자격으로 재해석하지 않는다. 중량 검토 카드의 제외·전체/선택 승인과 기존 정정/PENDING 해결 분리는 10.23.5~6절을 적용하며 세션 단위 제외 근거·승인 계약은 후속 구현이다.
-- 최근값의 정렬·동률·ACTIVE 포함, 메모 자동 저장 시점·오프라인 재시도·동시 수정, 대체 연결/제외 결과의 HTTP·DTO는 구현 확인으로 남긴다. 개인 장비/공식 중량 프로필·새 팝업·범용 Outbox를 추가하지 않는다. 기존 개발 데이터·구 API 호환을 위한 변환 계층은 기본 요구가 아니지만 신규 구현의 사용자/세대·원본 수행·초안 보호는 유지한다.
+- `WorkoutSummary`·`summary-data.ts`·`ClosedWorkout`: 루틴 슬롯 완료와 세션 공식 평가 전체 제외를 별도로 표시한다. 현재 `overallWeightPlanComplete`를 루틴 완료 표시에도 사용하는 연결은 정책 3-1에 따라 공통 InitialPlan 달성으로 분리해야 한다. 임시 대체가 있으면 다른 정규 종목도 공식 증감 평가하지 않으며 단순 추가·초과 세트만으로 제외하지 않는다. `weightReview`를 공식 평가 자격으로 재해석하지 않는다. 중량 검토 카드의 제외·전체/선택 승인과 기존 정정/PENDING 해결 분리는 10.23.5~6절을 적용하며 세션 단위 공식 제외 근거는 미완성이며, 종료 후 명시 승인은 V36 계약으로 이미 구현돼 둘을 구분한다.
+- **2026-11-16 확정으로 대체:** 최근값은 FINISHED만·ACTIVE 제외, 가장 최근 종료의 마지막 유효 완료 세트다. 메모는 변경 blur/입력 종료 시 온라인 저장·서버 최종 반영값 우선 LWW·실패 초안/재시도 보호다. 별도 오프라인 자동 동기화는 추가하지 않는다. 동률의 구체 해소 순서·HTTP/DTO·새로고침 초안은 구현 검토로 남긴다. 개인 장비/공식 중량 프로필·새 팝업·범용 Outbox를 추가하지 않는다. 기존 개발 데이터·구 API 호환을 위한 변환 계층은 기본 요구가 아니지만 신규 구현의 사용자/세대·원본 수행·초안 보호는 유지한다.
 
 **변경 기록:** 2026-11-13 후속 정책을 문서에만 반영했다. 기존 8.7절 코드·검증 기록과 구분하며 HTML·소스·테스트·DB는 변경하지 않았다.
 
@@ -1217,7 +1256,9 @@ Vite 환경변수는 다음 원칙을 따릅니다.
 
 #### 근육별 독립 집계와 선택 프리셋 계획 — 2026-11-13
 
-**정책·UI 설계 확정 / 분석 확장 구현 필요.** [ST-24~31·4.3절](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md#4-근육별-세트-집계), [현재 HTTP·후속 경계](../../../overload-server/docs/api/statistics.md#분류별-독립-집계와-선택-프리셋-계획--2026-11-13), [기록 탭 최신 UI](../product/Overload_UI_Decision_Log_v0.9.md#1024--기록-탭-최종-개편--2026-11-14)을 따른다.
+**2026-11-16 현행 구분:** 선택 프리셋의 반복 월~일과 전면/후면·PPL·세부 근육 계획 기여, 이번 주 실제 근육 기여와 완전한 일정 근거의 계획 기여는 구현됐다. 부위 계획은 미확인이며 실제 전면/후면·PPL·검수 부위의 독립 집계·전체 근육/권장 범위는 미완성이다. 상세는 [현행 통계 연결](../../../overload-server/docs/api/statistics.md#1차-frontend-연결과-계산의-실제-범위--2026-11-16)을 따른다. 아래 2026-11-13 지침의 일괄 ‘미구현’은 당시 기록으로 읽는다.
+
+**정책·UI 설계 기준.** [ST-24~31·4.3절](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md#4-근육별-세트-집계), [현재 HTTP·후속 경계](../../../overload-server/docs/api/statistics.md#분류별-독립-집계와-선택-프리셋-계획--2026-11-13), [기록 탭 최신 UI](../product/Overload_UI_Decision_Log_v0.9.md#1024--기록-탭-최종-개편--2026-11-14)을 따른다.
 
 - 현재 [StatisticsPanel.tsx](../../src/features/statistics/StatisticsPanel.tsx)의 `WeightChart`·`StatisticsView`는 실제 `contributionSets`와 정수 `weights.completedSets`를 기여/실제 참여로 구분하고 `groupActuals`를 표시한다. `weights.plannedSets`는 현재 가중하지 않은 계획 참여다. 이 구현은 계획 기여·네 수준 전체·선택 프리셋 현재 계획 분석까지 지원하지 않는다.
 - 전면/후면·PPL·부위는 검수된 운동 분류와 원본 세트에서 각자 계산한 서버 결과를 사용한다. 프론트에서 세부 근육 기여나 `groups` 역할 행을 더해 상위 분류·전체 세트를 만들지 않는다. 세부 근육 기여는 계획/실제 각각 PRIMARY 1.0 / SECONDARY 0.5이며 참여 정수·기여 소수·반복/볼륨의 의미와 정확한 십진 표현을 유지한다.
@@ -1232,7 +1273,7 @@ Vite 환경변수는 다음 원칙을 따릅니다.
 
 ### 14.4 그래프
 
-- UI v0.9의 차트는 Recharts를 사용합니다. 현재 운영 앱은 CSS·SVG 차트이며 Recharts 설치와 전환은 실제 통계 구현 단계에서 진행합니다.
+- 현행 package.json·lockfile에는 Recharts 3.10.1과 React 19.3.1에 대응하는 react-is 19.3.1이 설치돼 있으며 RecordChart.tsx가 사용합니다. 수치 변환은 렌더링에만 적용하고 정확한 십진 원본·승인 사건을 보존합니다.
 - 기존 통계 데이터 처리와 승인 중량 계산·연결 규칙을 보존합니다. 날짜·단위·결측값·승인 사건의 연결 구간을 만드는 변환 로직을 렌더러와 분리합니다.
 - 차트를 터치하면 날짜·정확한 값·단위를 확인할 수 있게 하고, 동일한 수치를 접근 가능한 텍스트로 제공합니다.
 - 데이터 양과 차트 사용 빈도를 보고 지연 로딩 여부를 결정합니다. 스파이크에서 Recharts 선택 시 내려받는 청크는 약 109.3 kB(gzip)였습니다.
