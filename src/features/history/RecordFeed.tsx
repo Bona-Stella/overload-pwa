@@ -1,7 +1,6 @@
-import {measuredWeightMs} from '../workout-local/weight-timing.ts'
+import {recordSummary,recordDuration,recordKg} from '../workout-online/record-summary.ts'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
-import {sessionAchievement} from '../home/achievement.ts'
 import {recordTime} from '../../components/record-time.ts'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
@@ -18,24 +17,24 @@ import type { RecordRow } from './record-feed.ts'
 import { completionDate, recentRecordRows, recordRows, recordWeek } from './record-feed.ts'
 import { useRecordPreview } from '../statistics/RecordDisplayContext.ts'
 import type { Session } from '../workout-online/types.ts'
-import { formatDuration } from '../workout/model.ts'
-import { sessionDisplayStatus } from '../statistics/display-achievement.ts'
 
-export function SessionRecordCard({ row, session, onOpen, timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone }: { row: RecordRow; session?: Session; timeZone?:string; onOpen: (id: string) => void }) {
- const facts=session?.snapshot.state.performedSets
- const volume=facts?.reduce((n,f)=>n+Number(f.loadType==='BODYWEIGHT'?f.bodyweightLoad?.additionalWeightKg??0:f.weightKg)*f.reps,0)
- const duration=row.endedAt&&row.startedAt?Date.parse(row.endedAt)-Date.parse(row.startedAt):null
- const status=session?sessionDisplayStatus(session):null
- const weightMs=session?measuredWeightMs({snapshot:session.snapshot.state}):null,cardioMs=session?session.snapshot.state.cardioResults.reduce((n,c)=>n+(c.status==='COMPLETED'?c.result.activeMs:0),0):null
- const achieved=session?sessionAchievement(session):null
- return <button type="button" className="session-record-card" data-session-id={row.id} onClick={()=>onOpen(row.id)}>
-  <div className="record-card-heading"><time>{recordTime(row.startedAt,session?.startedTimeZone??timeZone,row.workoutDate)}</time><span className="record-card-status" aria-label={status?.label??'달성 확인 중'} title={status?.label} data-state={status?.kind??'unknown'}>{status?<b aria-hidden="true">{status.mark}</b>:'?'}</span><span aria-hidden="true">›</span></div><h4>{row.routineName}</h4>
-  <div className="muted small">{achieved?'웨이트 '+achieved.weight.completed+'/'+achieved.weight.planned+'종목 · 유산소 '+achieved.cardio.completed+'/'+achieved.cardio.planned+'종목'+(achieved.cardio.unknown?' · 일부 확인 불가':''):'종목 완료 수 · 상세 조회 필요'}</div>
-  <div className="record-pair small"><span className="record-durations">{duration!==null?'총 운동 '+formatDuration(duration):'총 운동 미확인'} · 웨이트 {weightMs===null?'미확인':formatDuration(weightMs)} · 유산소 {cardioMs===null?'미확인':formatDuration(cardioMs)}</span><span>총중량 {volume===undefined?'—':volume.toLocaleString('ko-KR')+'kg'}</span></div>
+export function SessionRecordCard({row,session,onOpen,timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone,recent=false}:{row:RecordRow;session?:Session;timeZone?:string;recent?:boolean;onOpen:(id:string)=>void}) {
+ const summary=session?recordSummary(session):null,status=summary?.status
+ const elapsed=summary?.totalMs??(row.endedAt?Date.parse(row.endedAt)-Date.parse(row.startedAt):null)
+ const stamp=recordTime(summary?.startedAt??row.startedAt,session?.startedTimeZone??timeZone,row.workoutDate)
+ const date=recent?stamp.replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · /,'$1.$2 $3 '):stamp
+ const counts=summary?[summary.hasWeight?'웨이트 '+summary.achievement.weight.completed+'/'+summary.achievement.weight.planned+'종목':null,summary.hasCardio?'유산소 '+summary.achievement.cardio.completed+'/'+summary.achievement.cardio.planned+'종목'+(summary.achievement.cardio.unknown?' · 일부 확인 불가':''):null].filter(Boolean).join(' · '):'종목 완료 수 · 상세 조회 필요'
+ const totals=summary?[summary.hasWeight?'총 '+summary.completedSets+'세트':null,summary.hasCardio?summary.distanceKm===null?'거리 미입력':summary.distanceKm+'km'+(summary.unknownDistance?' · 일부 거리 미입력':''):null].filter(Boolean).join(' · '):''
+ const volume=summary?.hasWeight?<span>총중량 {recordKg(summary.volumeKg)}{summary.volumeKg!==null&&summary.unknownVolume?' + 미확인':''}</span>:null
+ return <button type="button" className="session-record-card" data-session-id={row.id} data-session-version={summary?.version} onClick={()=>onOpen(row.id)}>
+  <div className="record-card-heading"><time>{date}</time><span className="record-card-status" aria-label={status?.label??'달성 확인 중'} title={status?.label} data-state={status?.kind??'unknown'}>{status?<b aria-hidden="true">{status.mark}</b>:'?'}</span><span aria-hidden="true">›</span></div><h4>{summary?.routineName??row.routineName}</h4>
+  <div className="record-exercise-line muted small"><span>{counts}</span>{recent&&<span>{totals}</span>}</div>
+  {recent?<div className="record-pair small"><span className="record-durations">총 운동 {recordDuration(elapsed,'minute')}{summary?.hasWeight&&<> · 웨이트 {recordDuration(summary.weightMs,'minute')}</>}{summary?.hasCardio&&<> · 유산소 {recordDuration(summary.cardioMs,'minute')}</>}</span>{volume}</div>
+   :<><div className="record-pair record-total"><strong>총 운동 {recordDuration(elapsed)}</strong>{volume&&<strong>{volume}</strong>}</div><div className="record-pair muted small record-type-times">{summary?.hasWeight&&<span>웨이트 {recordDuration(summary.weightMs)}</span>}{summary?.hasCardio&&<span>유산소 {recordDuration(summary.cardioMs)}</span>}</div></>}
  </button>
 }
 
-export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache }: { api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage)=>void} }) {
+export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true }: { enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage)=>void} }) {
   const preview=useRecordPreview()
   const zone=timeZone??Intl.DateTimeFormat().resolvedOptions().timeZone
   const today = preview?.today??new Intl.DateTimeFormat('sv-SE',{timeZone:zone}).format(new Date()), { userId, dataGeneration } = scope
@@ -47,15 +46,16 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const flight = useRef<AbortController | null>(null), failure = useRef(onInvalid)
   useEffect(() => { failure.current = onInvalid }, [onInvalid])
   const load = useCallback(async (cursor: ClosedPage['next'] = null) => {
+    if(!enabled)return
     flight.current?.abort(); const abort = new AbortController(); flight.current = abort
     await Promise.resolve(); if (abort.signal.aborted) return
     setBusy(true); setIssue(false)
     try {
-      const next = await api.closed({ userId, dataGeneration }, cursor, abort.signal)
+      const next = await api.closed(scope, cursor, abort.signal)
       if(!abort.signal.aborted){const old=pageRef.current,merged=cursor&&old?{...next,sessions:[...old.sessions,...next.sessions.filter(s=>!old.sessions.some(o=>o.id===s.id))]}:next;pageRef.current=merged;setPage(merged);cacheRef.current?.set(merged)}
     } catch (error) { if (!abort.signal.aborted) { setIssue(true); if (boundaryError(error)) failure.current(error) } }
     finally { if (!abort.signal.aborted) setBusy(false) }
-  }, [api, userId, dataGeneration])
+  }, [api, scope, enabled])
   useEffect(() => { let cancelled = false; void Promise.resolve().then(() => { if (!cancelled) void load() }); return () => { cancelled = true; flight.current?.abort() } }, [load, refreshKey])
   const range = recent ? { fromDate: addDays(today, -6), toDateExclusive: addDays(today, 1) } : selectedPeriod(period)
   const appliedTerm=search.selected||search.query.trim()
@@ -66,20 +66,20 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const options = search.scope === 'exercise' ? (preview ? [...new Set(preview.sessions.flatMap(s=>[...s.initialPlan.weightExercises.map(e=>e.exerciseName),...s.initialPlan.cardioActivities.map(c=>c.plan.name)]))].map(name=>({id:name,exerciseId:preview.definitions.find(e=>e.name===name)?.id,name,description:'실제 세션 포함 운동 · 합성 기록'})) : definitions.map(e => ({ id: e.id, exerciseId:e.id, name: e.name, description: '실제 포함 운동 검색 · 서버 연결 대기' })))
     : [...new Set(source.map(s => s.routineName))].map(name => ({ id: name, name, description: '루틴명 · 불러온 종료 기록' }))
   const [details,setDetails]=useState<{key:string;rows:Map<string,Session>}|null>(null)
-  const detailKey=userId+':'+dataGeneration,detailIds=JSON.stringify(rows.map(r=>r.id))
+  const detailIds=JSON.stringify(rows.map(r=>r.id)),detailKey=JSON.stringify([userId,dataGeneration,refreshKey,rows.map(r=>[r.id,r.version])])
   useEffect(()=>{
-    if(preview)return
+    if(preview||!enabled)return
     const abort=new AbortController(),ids:string[]=JSON.parse(detailIds),loaded=new Map<string,Session>()
     let at=0
     void Promise.all(Array.from({length:Math.min(4,ids.length)},async()=>{
       while(at<ids.length&&!abort.signal.aborted){
         const id=ids[at++]
-        try{loaded.set(id,await api.detail({userId,dataGeneration},id,abort.signal))}
+        try{loaded.set(id,await api.detail(scope,id,abort.signal))}
         catch(error){if(!abort.signal.aborted&&boundaryError(error))failure.current(error)}
       }
     })).then(()=>{if(!abort.signal.aborted)setDetails({key:detailKey,rows:loaded})})
     return()=>abort.abort()
-  },[api,userId,dataGeneration,detailIds,detailKey,preview])
+  },[api,scope,detailIds,detailKey,preview,enabled])
   const tag=search.tag??'ALL'
   const matchingNames=new Set(browseExercises(preview?.definitions??definitions,'',tag as CatalogGroup|'ALL').map(e=>e.name))
   if(tag==='CARDIO')for(const session of preview?.sessions??[])for(const c of session.initialPlan.cardioActivities)matchingNames.add(c.plan.name)
@@ -100,7 +100,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
     {!busy && !issue && (!exerciseSearch || !!preview) && page && !rows.length && <p>{page.next ? '불러온 기록에서 조건에 맞는 운동을 찾지 못했습니다.' : recent ? '최근 7일 운동 기록이 없습니다.' : '조건에 맞는 운동 기록이 없습니다.'}</p>}
     <div className="stack">{rows.map((row, index) => {
       const week = recordWeek(row.workoutDate), header = !recent && (index === 0 || week.key !== recordWeek(rows[index - 1].workoutDate).key)
-      return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={preview?.sessions.find(s=>s.id===row.id)??(details?.key===detailKey?details.rows.get(row.id):undefined)} onOpen={onOpen} timeZone={zone}/></Fragment>
+      return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={preview?.sessions.find(s=>s.id===row.id)??(details?.key===detailKey?details.rows.get(row.id):undefined)} onOpen={onOpen} timeZone={zone} recent={recent}/></Fragment>
     })}</div>
     {page?.next && <Button disabled={busy} onClick={() => void load(page.next)}>이전 기록 더 불러오기</Button>}
     {issue && <Button disabled={busy} onClick={() => void load()}>다시 조회</Button>}

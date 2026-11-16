@@ -128,7 +128,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   </>
 }
 
-export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, workoutApi, schedule = null, definitions = [], initialPreset }: {
+export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, workoutApi, schedule = null, definitions = [], initialPreset, enabled=true }: { enabled?:boolean;
   api: StatisticsApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; workoutApi?: WorkoutApi; schedule?: LiveSchedule | null; definitions?: StandardExercise[]
   recentContent?: ReactNode
   initialPreset?: string
@@ -146,26 +146,26 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
   const range = screen === 'activity' ? selectedPeriod(activityPeriod) : periodFor(new Date((preview?.today??localToday())+'T12:00:00'), 'week', 0)
   const { fromDate, toDateExclusive } = range
   useEffect(() => {
-    if (['growth','plan','history'].includes(screen)) return
+    if (!enabled||['growth','plan','history'].includes(screen)) return
     const abort = new AbortController()
-    void api.overview({ userId:scope.userId, dataGeneration:scope.dataGeneration }, { fromDate, toDateExclusive }, abort.signal).then(data => {
+    void api.overview(scope, { fromDate, toDateExclusive }, abort.signal).then(data => {
       if (!abort.signal.aborted) setState({ data, issue:false })
     }).catch(error => {
       if (!abort.signal.aborted) { if (error && typeof error === 'object' && 'code' in error && ['OWNER_MISMATCH','DATA_GENERATION_MISMATCH'].includes(String(error.code))) invalid.current(error); setState(previous=>({ data:previous.data, issue:true })) }
     })
     return () => abort.abort()
-  }, [api, scope.userId, scope.dataGeneration, fromDate, toDateExclusive, refreshKey, reload, screen])
+  }, [api, scope, scope.userId, scope.dataGeneration, fromDate, toDateExclusive, refreshKey, reload, screen, enabled])
   const current = state.data?.statistics.userId===scope.userId&&state.data.statistics.dataGeneration===scope.dataGeneration&&state.data.statistics.fromDate === fromDate && state.data.statistics.toDateExclusive === toDateExclusive ? state.data : null
   const display=current??(screen==='activity'&&state.data?.statistics.userId===scope.userId&&state.data.statistics.dataGeneration===scope.dataGeneration?state.data:null)
   const weekRange=periodFor(new Date(activityPeriod.anchor+'T12:00:00'),'week',0)
   const weekFrom=weekRange.fromDate,weekTo=weekRange.toDateExclusive
   const [weekLoaded,setWeekLoaded]=useState<Overview|null>(null)
   useEffect(()=>{
-    if(screen!=='activity'||activityPeriod.mode!=='month')return
+    if(!enabled||screen!=='activity'||activityPeriod.mode!=='month')return
     const abort=new AbortController()
     void api.overview({userId:scope.userId,dataGeneration:scope.dataGeneration},{fromDate:weekFrom,toDateExclusive:weekTo},abort.signal).then(data=>{if(!abort.signal.aborted)setWeekLoaded(data)}).catch(error=>{if(!abort.signal.aborted&&error&&typeof error==='object'&&'code' in error&&['OWNER_MISMATCH','DATA_GENERATION_MISMATCH'].includes(String(error.code)))invalid.current(error)})
     return()=>abort.abort()
-  },[api,scope.userId,scope.dataGeneration,screen,activityPeriod.mode,weekFrom,weekTo,refreshKey,reload])
+  },[api,scope,scope.userId,scope.dataGeneration,screen,activityPeriod.mode,weekFrom,weekTo,refreshKey,reload,enabled])
   const weekly=current&&activityPeriod.mode==='week'?current:weekLoaded?.statistics.userId===scope.userId&&weekLoaded.statistics.dataGeneration===scope.dataGeneration&&weekLoaded.statistics.fromDate===weekFrom&&weekLoaded.statistics.toDateExclusive===weekTo?weekLoaded:null
   const [evidence,setEvidence]=useState<{key:string;rows:Session[]}|null>(null)
   const evidenceKey=[identity,weekFrom,weekTo].join(':')
@@ -187,11 +187,11 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
     {screen === 'activity' && <><h1>운동 현황</h1><PeriodControls days={current?.plannedDays} value={activityPeriod} onChange={value => setActivityPeriod(value, true)} /></>}
     {screen === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} />
       : screen === 'plan' ? workoutApi ? <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} /> : <p role="status">주간 계획 데이터 연결을 기다리고 있습니다.</p>
-      : screen === 'history' ? workoutApi ? <RecordFeed cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
+      : screen === 'history' ? workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
       : <>{state.issue&&<Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>}
         {!current&&!display&&<p role="status" className="muted small">통계 불러오는 중…</p>}
         {display&&<div className="stack record-statistics-body" aria-busy={!current}>{screen==='activity'&&<p className="muted small record-data-range">표시 데이터 · {display.statistics.fromDate} ~ {addDays(display.statistics.toDateExclusive,-1)}</p>}<StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={display.statistics} planning={display} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions}/></div>}
-        {screen === 'summary' && <Card className="recent-records"><div className="section-heading"><h2>최근 운동 기록</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div>{workoutApi ? <RecordFeed cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} recent /> : <p>최근 7일 데이터 연결 필요</p>}</Card>}</>}
+        {screen === 'summary' && <Card className="recent-records"><div className="section-heading"><h2>최근 운동 기록</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} recent /> : <p>최근 7일 데이터 연결 필요</p>}</Card>}</>}
     {preview&&screen!=='plan'&&screen!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
   </section>
 }

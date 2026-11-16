@@ -182,7 +182,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await evaluate("window.feedback.record('frozen')")
     await wait(()=>evaluate('!!document.querySelector(\'[aria-label="당시 중량 검토"]\')'))
     const past=await evaluate('(()=>{const c=document.querySelector(\'[aria-label="당시 중량 검토"]\');return{text:c.textContent,buttons:c.querySelectorAll("button").length,inputs:c.querySelectorAll("input").length}})()')
-    assert.equal(past.buttons,0);assert.equal(past.inputs,0);assert.match(past.text,/기준 45kg/);assert.match(past.text,/12회.*12회.*13회/)
+    assert.equal(past.buttons,0);assert.equal(past.inputs,0);assert.match(past.text,/45kg/);assert.match(past.text,/12회.*12회.*13회/)
     assert.match(await evaluate('document.querySelector(\'[aria-label="웨이트 수행"]\').textContent'),/45kg × 5회/)
     assert.equal(await evaluate('!!document.querySelector(\'summary[aria-label="운동 기록 메뉴"]\')'),true,'record correction menu remains available')
     await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts},null,2))

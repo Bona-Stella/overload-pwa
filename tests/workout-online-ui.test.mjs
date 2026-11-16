@@ -34,7 +34,7 @@ const editorState=workout=>({workout:{...workout,warmupCompleted:true},memos:{},
 test('AUTO_CLOSED UI keeps actual end absent, distinguishes assessments and hides protocol counters',()=>{
   const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z'})
   const html=render(ClosedWorkoutView,{state:{server,assessment:{completionAssessment:null,currentAssessment:{state:'EXCLUDED',reasonCodes:['AUTO_CLOSED'],evaluation:null}},changes:{events:[]},copies:[],pending:null,busy:false,writable:false,issue:null,notice:''},controller:{}})
-  assert.match(html,/실제 종료 시각 없음/);assert.match(html,/기록이 자동 마감/);assert.match(html,/평가 변경 이력/);assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/epoch|revision|hash/)
+  assert.match(html,/종료 미확인/);assert.match(html,/기록이 자동 마감/);assert.match(html,/평가 변경 이력/);assert.match(html,/읽기 전용/);assert.doesNotMatch(html,/epoch|revision|hash/)
 })
 test('deleted closed-session UI blocks corrections, recovery and deletion controls while retaining its history',()=>{
   const server=session({status:'AUTO_CLOSED',closedAt:'2026-11-01T01:00:00.000Z',deletedAt:'2026-11-01T01:01:00.000Z'})

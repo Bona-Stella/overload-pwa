@@ -1,4 +1,6 @@
 import {compactRecordTime} from '../../components/record-time.ts'
+import {recordDuration,recordKg} from '../workout-online/record-summary.ts'
+import type {RecordSummary} from '../workout-online/record-summary.ts'
 
 import type { ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
@@ -29,7 +31,8 @@ const formatKg = (value: bigint) => {
   return (value / 1000000n).toLocaleString('ko-KR') + (fraction ? '.' + fraction : '') + 'kg'
 }
 
-export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewUnavailable = 0, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent }: {
+export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewUnavailable = 0, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent, recordFacts, recordRange, achievementReasons = {} }: {
+  recordFacts?:RecordSummary;recordRange?:string;achievementReasons?:Record<string,string[]>
   routine: string; date: string; recordTime?:string; elapsed?: number; deload: boolean; weights: WeightSummary[]; dataNote?: string
   onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>;reviewContent?:ReactNode; historicalWeights?: WeightSummary[]; previewApproval?: boolean; reviewExcluded?: boolean; timing?: { start: string; end: string }; detail?: boolean; recordMenu?: ReactNode; children?: ReactNode; reviewState?: 'ready' | 'unavailable'; reviewIssue?: string; reviewUnavailable?: number
   cardio: CardioSummary[]; manufacturers: Manufacturer[]; plannedSets: number; whole: boolean; onBack: () => void
@@ -43,14 +46,19 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
     <Button variant="quiet" onClick={onBack}>‹ 기록으로</Button>
     <Card hero className={styles.summaryHeader}>
       {deload && <p className={styles.eyebrow}>DELOAD</p>}
-      <div className={styles.headingRow}><h1>{detail ? '운동 기록 상세' : '운동 기록 요약'}</h1><p className={styles.recordDate}>{compactRecordTime(recordTime??date+(weekday?' · '+weekday:''))}</p>{recordMenu}</div><h2 className={styles.recordRoutine}>{routine}</h2>
-      {whole && <b className={styles.doneText}>전체 루틴 완료</b>}
-      <dl className={styles.metrics}>
+      <div className={styles.headingRow}><h1>{detail ? '운동 기록 상세' : '운동 기록 요약'}</h1><p className={styles.recordDate}>{detail&&recordRange?recordRange:compactRecordTime(recordTime??date+(weekday?' · '+weekday:''))}</p>{recordMenu}</div><div className={styles.recordRoutineRow}><h2 className={styles.recordRoutine} title={routine}>{routine}</h2>{detail&&recordFacts&&<span className={styles.achievementTag} data-state={recordFacts.status.kind}>{recordFacts.status.mark} {recordFacts.status.kind==='unknown'?'미확인':recordFacts.status.label}</span>}</div>
+      {!detail && whole && <b className={styles.doneText}>전체 루틴 완료</b>}
+      {detail&&recordFacts?<div className={styles.recordColumns} aria-label="운동 기록 요약">
+        <section><h3>전체</h3><strong>{recordDuration(recordFacts.totalMs)}</strong><small>전체 경과 시간</small><strong>{recordDuration(recordFacts.inactiveMs)}</strong><small>비수행 시간</small></section>
+        <section><h3>웨이트</h3><strong>{recordDuration(recordFacts.weightMs)}</strong><small>수행 시간</small><strong>{recordFacts.achievement.weight.completed}/{recordFacts.achievement.weight.planned}</strong><small>수행/계획 종목</small></section>
+        <section><h3>유산소</h3><strong>{recordDuration(recordFacts.cardioMs)}</strong><small>수행 시간</small><strong>{recordFacts.achievement.cardio.completed}{recordFacts.achievement.cardio.unknown?'+?':''}/{recordFacts.achievement.cardio.planned}</strong><small>수행/계획 종목</small></section>
+      </div>:<dl className={styles.metrics}>
         <div><dt>전체 운동 시간</dt><dd>{elapsed === undefined ? '실제 종료 시각 없음' : formatDuration(elapsed)}</dd></div>
         <div><dt>완료 세트</dt><dd>{results.length}/{plannedSets}</dd></div>
         <div><dt>총 볼륨</dt><dd>{unknown && unknown === results.length ? '미확인' : formatKg(volume)}</dd></div>
-      </dl>
-      {timing && <dl className={styles.recordTimes}><div><dt>운동 시작</dt><dd>{timing.start}</dd></div><div><dt>운동 종료</dt><dd>{timing.end}</dd></div></dl>}
+      </dl>}
+      {detail&&recordFacts?.timingIssue&&<p className="notice" role="status">{recordFacts.timingIssue}</p>}
+      {!detail&&timing && <dl className={styles.recordTimes}><div><dt>운동 시작</dt><dd>{timing.start}</dd></div><div><dt>운동 종료</dt><dd>{timing.end}</dd></div></dl>}
       {unknown > 0 && <small>볼륨 미확인 {unknown}세트</small>}
       <p className="muted small">{dataNote ?? '합성 데이터 · 이 탭에서만 확인할 수 있는 시연 결과입니다.'}</p>
     </Card>
@@ -61,10 +69,10 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
     {reviewContent===undefined&&detail&&historicalWeights.length>0&&<WeightReview weights={historicalWeights} readOnly preview={previewApproval}/>}
     {(weights.length > 0 || cardio.length > 0) && <Card className={styles.performance}>
       {weights.length > 0 && <section aria-label="웨이트 수행">
-        <h3 className={styles.eyebrow}>WEIGHT</h3>
+        <div className={styles.performanceHeading}><h3 className={styles.eyebrow}>WEIGHT</h3>{detail&&recordFacts&&<b>총 {recordFacts.completedSets}/{recordFacts.plannedSets}세트 · 총 {recordKg(recordFacts.volumeKg)}</b>}</div>
         {weights.map(weight => {
           const known = weight.results.filter(set => set.volume !== null)
-          return <section className={styles.recordItem} key={weight.id}>
+          return <section className={styles.recordItem} data-achievement={detail&&achievementReasons[weight.id]?.length?recordFacts?.status.kind:undefined} key={weight.id}>
             <div className={styles.recordHead}><h4>{weight.name}</h4>
               <b>{weight.planned === undefined ? `${weight.results.length}세트` : `${weight.results.length}/${weight.planned}세트`}
                 {' · '}{known.length || !weight.results.length ? '총 ' + formatKg(sumVolume(known)) : '볼륨 미확인'}</b></div>
@@ -74,15 +82,17 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
                 <small>{equipmentLabel(result, manufacturers)}</small></div>
               <span>{volume === null ? '미확인' : formatKg(micros(volume))}</span>
             </div>)}
+            {detail&&achievementReasons[weight.id]?.map(reason=><p className={styles.achievementReason} key={reason}>{recordFacts?.status.mark} {reason}</p>)}
             {!weight.results.length && <p className="muted small">완료한 세트 없음</p>}
           </section>
         })}
       </section>}
       {cardio.length > 0 && <section aria-label="유산소 수행">
-        <h3 className={styles.eyebrow}>CARDIO</h3>
-        {cardio.map(item => <section className={styles.recordItem} key={item.id}>
+        <div className={styles.performanceHeading}><h3 className={styles.eyebrow}>CARDIO</h3>{detail&&recordFacts&&<b>총 {recordFacts.achievement.cardio.completed}/{recordFacts.achievement.cardio.planned}종목</b>}</div>
+        {cardio.map(item => <section className={styles.recordItem} data-achievement={detail&&achievementReasons[item.id]?.length?recordFacts?.status.kind:undefined} key={item.id}>
           <h4>{item.plan?.name ?? '운동 정보 확인 필요'}{item.added && <small className="muted"> · 세션에서 추가</small>}</h4>
           <p className="muted small">{item.plan ? '목표 ' + cardioPlanLabel(item.plan) : '계획 정보 확인 필요'}</p>
+          {detail&&achievementReasons[item.id]?.map(reason=><p className={styles.achievementReason} key={reason}>{recordFacts?.status.mark} {reason}</p>)}
           {item.result ? <CardioActual result={item.result} /> : <p className="muted small">{item.phase === 'ready' ? '미시작' : '미완료 · 건너뜀'}</p>}
         </section>)}
       </section>}

@@ -89,6 +89,7 @@ export async function launchV22Browser(runId, frontendRoot = '.', options = {}) 
       if (m.method === 'Network.responseReceived') { const row = rows.get(m.params.requestId); if (row) row.status = m.params.response.status }
       if (m.method === 'Network.loadingFailed') { const row = rows.get(m.params.requestId); if (row) row.canceled = m.params.canceled === true }
       if (m.method === 'ServiceWorker.workerErrorReported') workerErrors.push(m.params.errorMessage.errorMessage)
+      if (m.method === 'Page.javascriptDialogOpening' && options.confirmDialogs === true && m.params.type === 'confirm') void driver.send('Page.handleJavaScriptDialog', { accept: true })
     }
     ws.onclose = () => { for (const p of pending.values()) p.reject(Error('Browser closed')); pending.clear() }
     await driver.send('Page.enable'); await driver.send('Network.enable')

@@ -22,11 +22,11 @@ export function SearchList({scopes=[],scope='exercise',onScope,tags,onDetail,que
  const close=()=>{setState({mode:selected?'SELECTED':'IDLE',hideScope:false});onCloseSearch?.()}
  useEffect(()=>{if(!open)return;const outside=(e:PointerEvent)=>{if(!region.current?.getClientRects().length)return;if(e.target instanceof Node&&!region.current?.contains(e.target)){setState({mode:selected?'SELECTED':'IDLE',hideScope:false});onCloseSearch?.()}};document.addEventListener('pointerdown',outside);return()=>document.removeEventListener('pointerdown',outside)},[open,selected,onCloseSearch])
  const action=()=>{
-  if(mode==='SELECTED'){onClear();setState({mode:'IDLE',hideScope:false});return}
+  if(mode==='SELECTED'||mode==='EDITING'&&!query){onClear();setState({mode:'IDLE',hideScope:false});region.current?.querySelector('input')?.blur();return}
   if(mode==='EDITING'){onQuery('');region.current?.querySelector('input')?.focus();return}
   edit();region.current?.querySelector('input')?.focus()
  }
- const actionLabel=mode==='SELECTED'?'선택 해제':mode==='EDITING'?'검색어 지우기':'검색 목록 열기'
+ const actionLabel=mode==='SELECTED'?'선택 해제':mode==='EDITING'?query?'검색어 지우기':'검색 닫기':'검색 목록 열기'
  return <div className={'record-search '+searchStyles.search} data-search-state={mode} ref={region} onKeyDown={e=>{
   if(e.nativeEvent.isComposing)return
   if(e.key==='Escape'){e.preventDefault();close();region.current?.querySelector<HTMLButtonElement>('.search-disclosure')?.focus()}
@@ -44,7 +44,7 @@ export function SearchList({scopes=[],scope='exercise',onScope,tags,onDetail,que
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">{mode==='IDLE'?<><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></>:<path d="m6 6 12 12M18 6 6 18"/>}</svg>
    </button>
   </div>
-  {tags&&<div className={styles.filters}><p className={styles.filterLabel}>{tags.label}</p><div className={styles.filterStrip} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}
+  {tags&&open&&<div className={styles.filters}><p className={styles.filterLabel}>{tags.label}</p><div className={styles.filterStrip} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}
   {issue?<p className="notice" role="status">{issue}</p>:open&&<><SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled} onSelect={(id,event)=>{onSelect(id,event);if(closeOnSelect)setState({mode:'SELECTED',hideScope:false})}}/>{!options.length&&<p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
  </div>
 }

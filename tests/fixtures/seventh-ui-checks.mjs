@@ -31,7 +31,7 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
  const first=await evaluate('document.querySelector(".session-record-card").textContent.trim()');await click(first,'.session-record-card');await title('운동 기록 상세')
  for(const w of [320,375,390,430]){
   await width(w,'react')
-  assert(await evaluate('(()=>{const h=document.querySelector("article h1"),d=h.parentElement.querySelector("p"),a=h.getBoundingClientRect(),b=d.getBoundingClientRect();return b.left>=a.right&&Math.abs(a.y+a.height/2-b.y-b.height/2)<1&&b.right<=innerWidth})()'))
+  assert(await evaluate('(()=>{const h=document.querySelector("article h1"),d=h.parentElement.querySelector("p"),a=h.getBoundingClientRect(),b=d.getBoundingClientRect();return (innerWidth<=360?b.top>=a.bottom:b.left>=a.right&&Math.abs(a.y+a.height/2-b.y-b.height/2)<1)&&b.right<=innerWidth})()'))
   assert.match(await evaluate('document.querySelector("article h1").parentElement.querySelector("p").textContent'),/\d{2}\/\d{2} · [월화수목금토일] · \d{2}:\d{2}/)
   await capture('seventh-detail-header','react',w)
  }

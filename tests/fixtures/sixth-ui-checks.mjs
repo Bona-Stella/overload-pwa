@@ -44,7 +44,7 @@ export async function verifySixthUi({go,title,click,set,evaluate,send,wait,width
  await go('/routine-preview?tab=history');await tab('기록');await title('운동 기록 분석')
  await wait(()=>evaluate('document.querySelectorAll(".recent-records .session-record-card").length>0'),'cached records')
  const texts=await evaluate('[...document.querySelectorAll(".recent-records .session-record-card time")].map(e=>e.textContent)')
- assert(texts.length);for(const t of texts)assert.match(t,/^\d{4}-\d{2}-\d{2} · .요일 · \d{2}:\d{2}$/)
+ assert(texts.length);for(const t of texts)assert.match(t,/^\d{2}\.\d{2} [월화수목금토일] \d{2}:\d{2}$/)
  await evaluate('window.__sixthFlickers=[];window.__sixthWatch=new MutationObserver(()=>{if(document.querySelector(".recent-records")&&document.body.innerText.includes("운동 기록을 불러오는 중입니다"))window.__sixthFlickers.push("loading")});window.__sixthWatch.observe(document.body,{subtree:true,childList:true,characterData:true})')
  for(let i=0;i<6;i++){await tab('홈');await tab('기록');await title('운동 기록 분석');assert(await evaluate('document.querySelectorAll(".recent-records .session-record-card").length>0'))}
  assert.deepEqual(await evaluate('window.__sixthWatch.disconnect();window.__sixthFlickers'),[])

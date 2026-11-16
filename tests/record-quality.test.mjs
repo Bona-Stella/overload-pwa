@@ -1,3 +1,4 @@
+import {verifyNinthUi} from './fixtures/ninth-ui-checks.mjs'
 import {verifyEighthUi} from './fixtures/eighth-ui-checks.mjs'
 import {verifySeventhUi} from './fixtures/seventh-ui-checks.mjs'
 import {verifySixthUi} from './fixtures/sixth-ui-checks.mjs'
@@ -145,6 +146,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await verifySixthUi({go,title,click,set,evaluate,send,wait,width,capture,tab,body,report})
   await verifySeventhUi({go,title,click,set,evaluate,send,wait,width,capture,tab,body,report})
   await verifyEighthUi({go,title,click,set,evaluate,send,wait,width,capture,tab,body,report})
+  await verifyNinthUi({go,title,click,set,evaluate,send,wait,width,capture,tab,body,report})
   // The reference authoring shell is removed only inside this isolated test page.
   // The original HTML, its phone contents, styles and data remain unchanged on disk.
   await go('/docs/product/Overload_UI_Baseline_Wireframe_v0.9.html')

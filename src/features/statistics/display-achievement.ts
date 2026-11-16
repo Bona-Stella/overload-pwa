@@ -1,5 +1,5 @@
 import type { CardioPlan, Session } from '../workout-online/types.ts'
-import { sessionAchievement } from '../home/achievement.ts'
+import { cardioComplete, sessionAchievement } from '../home/achievement.ts'
 
 const scale = (s: string) => { const [a,b=''] = s.split('.'); return BigInt(a) * 1000000n + BigInt(b.padEnd(6,'0')) }
 export type PartialResult = 'met' | 'below' | 'unknown'
@@ -37,4 +37,35 @@ export function partialAchievement(session: Session): PartialResult {
   const total = plan.weightExercises.length + plan.cardioActivities.length
   if (!total) return 'unknown'
   return (!plannedSets || performed * 2 >= plannedSets) && recognized * 2 >= total ? 'met' : 'below'
+}
+
+/** Explanations of the existing full/partial predicates; never weight-approval advice. */
+export function achievementReasons(session:Session) {
+ const status=sessionDisplayStatus(session),plan=session.initialPlan,facts=session.snapshot.state
+ const result:Record<string,string[]>={}
+ if(status.kind!=='partial'&&status.kind!=='missed')return result
+ const counts=plan.weightExercises.map(p=>({plan:p,count:new Set(facts.performedSets.filter(s=>s.sessionExerciseId===p.sessionExerciseId).map(s=>s.ordinal)).size}))
+ const plannedSets=counts.reduce((n,e)=>n+e.plan.setCount,0),performed=counts.reduce((n,e)=>n+Math.min(e.count,e.plan.setCount),0)
+ const cardio=plan.cardioActivities.map(p=>{
+  const actual=facts.cardioResults.find(c=>c.sessionActivityId===p.sessionActivityId&&c.status==='COMPLETED')
+  const record=actual?.status==='COMPLETED'?actual:undefined,goal=p.plan
+  const half=!!record&&(goal.targetSeconds<=0||record.result.activeMs*2>=goal.targetSeconds*1000)
+   &&(goal.targetDistanceKm===null||record.result.distanceKm!==null&&scale(record.result.distanceKm)*2n>=scale(goal.targetDistanceKm))
+  return {plan:p,record,half}
+ })
+ const recognized=counts.filter(e=>e.count>=Math.min(2,e.plan.setCount)).length+cardio.filter(c=>c.half).length
+ const setsBelow=performed*2<plannedSets,exercisesBelow=recognized*2<counts.length+cardio.length
+ for(const {plan:p,count} of counts)if(count<p.setCount&&(status.kind==='partial'||setsBelow||exercisesBelow&&count<Math.min(2,p.setCount)))result[p.sessionExerciseId]=[count?'계획 세트 미달':'계획 세트 미수행']
+ for(const {plan:p,record,half} of cardio){
+  if(status.kind==='missed'&&(!exercisesBelow||half))continue
+  if(!record){result[p.sessionActivityId]=['계획 종목 미수행'];continue}
+  if(cardioComplete(p.plan,record)===true)continue
+  const multiplier=status.kind==='partial'?1:2,reasons:string[]=[]
+  if(record.result.activeMs*multiplier<p.plan.targetSeconds*1000)reasons.push('시간 목표 미달')
+  if(p.plan.targetDistanceKm!==null&&record.result.distanceKm!==null&&scale(record.result.distanceKm)*BigInt(multiplier)<scale(p.plan.targetDistanceKm))reasons.push('거리 목표 미달')
+  const intensity=p.plan.intensity,speed=record.result.measurement?.actualSpeedKmh
+  if(status.kind==='partial'&&intensity&&speed!=null&&(intensity.mode==='SPEED'?scale(speed)<scale(intensity.value):scale(speed)*scale(intensity.value)<60n*1000000n*1000000n))reasons.push('강도 목표 미달')
+  if(reasons.length)result[p.sessionActivityId]=reasons
+ }
+ return result
 }

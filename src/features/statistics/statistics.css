@@ -231,3 +231,9 @@ dialog [data-dialog-heading]:focus { outline: none; }
 .record-card-heading .record-card-status {display:grid;place-items:center;width:18px;height:18px;margin:0;font-size:16px;line-height:18px;}
 
 .session-record-card .record-durations {white-space:normal;overflow-wrap:anywhere;line-height:1.5;}
+.session-record-card .record-exercise-line {display:flex;justify-content:space-between;align-items:baseline;gap:4px 8px;flex-wrap:wrap;font-size:11px;}
+.record-exercise-line > span:last-child:not(:first-child) {margin-left:auto;text-align:right;}
+.session-record-card .record-pair {flex-wrap:wrap;gap:4px 8px;}
+.session-record-card .record-pair > :last-child:not(:first-child) {margin-left:auto;text-align:right;}
+.session-record-card .record-total {font-size:12px;}
+.session-record-card .record-type-times {margin-top:4px;}

@@ -5,7 +5,7 @@ export type Achievement = { planned: number; completed: number; unknown: number 
 const scale = (value: string) => { const [a,b=''] = value.split('.'); return BigInt(a) * 1000000n + BigInt(b.padEnd(6,'0')) }
 
 /** Projection of the existing PlanningCalculator.judge / weekly-schedule contract, not approval eligibility. */
-function cardioComplete(goal: CardioPlan, actual: CompletedCardio | undefined): boolean | null {
+export function cardioComplete(goal: CardioPlan, actual: CompletedCardio | undefined): boolean | null {
   if (!actual || actual.result.activeMs < goal.targetSeconds * 1000) return false
   const distance = actual.result.distanceKm, speed = actual.result.measurement?.actualSpeedKmh
   if (goal.targetDistanceKm !== null && distance !== null && scale(distance) < scale(goal.targetDistanceKm)) return false

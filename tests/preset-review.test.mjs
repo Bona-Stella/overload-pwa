@@ -392,6 +392,9 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${group} button')].map(b=>b.textContent)`),parts)
     assert.equal(await evaluate('document.querySelectorAll(".exercise-search select").length'),0)
     await evaluate('document.querySelector(".exercise-search .search-disclosure").click()')
+    assert.equal((await names()).length,0)
+    assert.equal(await evaluate('document.querySelectorAll(".exercise-search [role=group]").length'),0)
+    await evaluate('document.querySelector(".exercise-search input").click()')
     assert.equal((await names()).length,12)
     for(const width of [320,375,390,430])await verifyWidth(width)
     for(const part of parts.slice(1)){

@@ -1,25 +1,21 @@
 import {recordTime as formatRecordTime} from '../../components/record-time.ts'
 import { changedOriginalCombination } from './approval-weight.ts'
-import type { AssessmentView, PerformedSet, Session, StandardExercise } from './types.ts'
+import type { AssessmentView, Session, StandardExercise } from './types.ts'
 import type { WeightSummary, CardioSummary } from '../workout-flow/WorkoutSummary.tsx'
 import { resultView } from '../workout-local/flow-data.ts'
 
-/** Display arithmetic only; the server owns completion eligibility and advice. */
-export function setVolume(set: PerformedSet): string | null {
-  const kg = set.loadType === 'BODYWEIGHT' ? set.bodyweightLoad?.additionalWeightKg : set.weightKg
-  if (kg == null) return null
-  const [whole, fraction = ''] = kg.split('.')
-  const volume = (BigInt(whole) * 1000000n + BigInt(fraction.padEnd(6, '0'))) * BigInt(set.reps)
-  const decimals = String(volume % 1000000n).padStart(6, '0').replace(/0+$/, '')
-  return String(volume / 1000000n) + (decimals ? '.' + decimals : '')
-}
+export {setVolume} from './record-summary.ts'
+import {setVolume,recordSummary} from './record-summary.ts'
+import {achievementReasons} from '../statistics/display-achievement.ts'
+import {recordRange} from '../../components/record-time.ts'
+
 export function summaryData(server: Session, assessment: AssessmentView | null, definitions: StandardExercise[] = [], localCombinationChanged = false) {
   const snapshot = server.snapshot.state, initial = server.initialPlan
   const current = assessment?.sessionId === server.id && assessment.version === server.version ? assessment : null
   const evaluation = current?.currentAssessment.evaluation
   const review = current?.weightReview?.sessionVersion === server.version ? current.weightReview : null
   let reviewIssue: string | undefined
-  const ids = [...new Set([...snapshot.appliedPlan.weightExercises.map(e => e.sessionExerciseId), ...snapshot.performedSets.map(s => s.sessionExerciseId)])]
+  const ids = [...new Set([...initial.weightExercises.map(e=>e.sessionExerciseId), ...snapshot.appliedPlan.weightExercises.map(e => e.sessionExerciseId), ...snapshot.performedSets.map(s => s.sessionExerciseId)])]
   const weights: WeightSummary[] = ids.map(id => {
     const planned = initial.weightExercises.find(e => e.sessionExerciseId === id)
     const target = snapshot.appliedPlan.weightExercises.find(e => e.sessionExerciseId === id)
@@ -41,7 +37,7 @@ export function summaryData(server: Session, assessment: AssessmentView | null, 
         .map(s => ({ id: s.ordinal, result: resultView(s), volume: setVolume(s) })),
       review: guidance }
   })
-  const cardioIds = [...new Set([...snapshot.appliedPlan.cardioActivities.map(e => e.sessionActivityId), ...snapshot.cardioResults.map(e => e.sessionActivityId)])]
+  const cardioIds = [...new Set([...initial.cardioActivities.map(e=>e.sessionActivityId), ...snapshot.appliedPlan.cardioActivities.map(e => e.sessionActivityId), ...snapshot.cardioResults.map(e => e.sessionActivityId)])]
   const cardio: CardioSummary[] = cardioIds.flatMap(id => {
     const original = initial.cardioActivities.find(e => e.sessionActivityId === id)
     const plan = snapshot.appliedPlan.cardioActivities.find(e => e.sessionActivityId === id)?.plan ?? original?.plan
@@ -49,7 +45,7 @@ export function summaryData(server: Session, assessment: AssessmentView | null, 
     return [{ id, plan, added: !original, phase: record?.status === 'COMPLETED' ? 'completed' : record?.status === 'SKIPPED' ? 'skipped' : 'ready',
       draft: { distance: '', speed: '', bpm: '', correctedSeconds: null }, result: record?.result ?? undefined }]
   })
-  return { historicalWeights: historicalReviews(server), reviewExcluded: localCombinationChanged || changedOriginalCombination(initial, snapshot), reviewUnavailable: review?.exercises.filter(e => e.advice === 'UNAVAILABLE').length ?? 0, reviewState: review ? 'ready' as const : 'unavailable' as const, reviewIssue, routine: initial.routineName, recordTime:formatRecordTime(server.startedAt,server.startedTimeZone,server.workoutDate), date: server.workoutDate, deload: false,
+  return { recordFacts:recordSummary(server),achievementReasons:achievementReasons(server),recordRange:recordRange(server.startedAt,server.endedAt,server.startedTimeZone,server.workoutDate), historicalWeights: historicalReviews(server), reviewExcluded: localCombinationChanged || changedOriginalCombination(initial, snapshot), reviewUnavailable: review?.exercises.filter(e => e.advice === 'UNAVAILABLE').length ?? 0, reviewState: review ? 'ready' as const : 'unavailable' as const, reviewIssue, routine: initial.routineName, recordTime:formatRecordTime(server.startedAt,server.startedTimeZone,server.workoutDate), date: server.workoutDate, deload: false,
     elapsed: server.endedAt ? Math.max(0, Date.parse(server.endedAt) - Date.parse(server.startedAt)) : undefined,
     plannedSets: weights.reduce((sum, w) => sum + (w.planned ?? w.results.length), 0), weights, cardio,
     whole: evaluation?.overallWeightPlanComplete === true && cardio.every(c => c.phase === 'completed'),

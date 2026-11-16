@@ -9,3 +9,10 @@ export function recordTime(startedAt:string|null|undefined,timeZone:string,date:
 export function compactRecordTime(value:string){return value.replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · /,'$1/$2 · $3 · ')}
 
 export function homeRecordTime(startedAt:string|null|undefined,timeZone:string,date:string){return recordTime(startedAt,timeZone,date).replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · (\d{2}):\d{2}$/,(_,month,day,weekday,hour)=>month+'.'+day+' '+weekday+' '+Number(hour)+'시')}
+
+export function recordRange(startedAt:string,endedAt:string|null,timeZone:string,date:string){
+ const start=compactRecordTime(recordTime(startedAt,timeZone,date))
+ if(!endedAt)return start+'–종료 미확인'
+ const end=compactRecordTime(recordTime(endedAt,timeZone,date))
+ return start+'–'+(start.slice(0,5)===end.slice(0,5)?end.slice(-5):end.slice(0,5)+' '+end.slice(-5))
+}
