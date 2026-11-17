@@ -165,7 +165,10 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   const reference=async(screen)=>{await set('#screen',screen);await delay(50)}
   await reference('recorddash');for(const w of [320,375,390,430])await capture('records-main','html',w)
   await reference('activity');for(const w of [320,375,390,430])await capture('activity','html',w)
-  for(const scope of ['all','exercise','group','muscle']){await set('#recordTabScope',scope);await set('#recordTabSearch',scope==='all'?'프레스':'');for(const w of [320,375,390,430])await capture('search-'+scope,'html',w)}
+  for(const scope of ['all','exercise','group','muscle']){
+   await evaluate(`document.querySelector('#recordTabScope').click();document.querySelector('[data-act="recordtab-scope-${scope}"]').click()`)
+   await set('#recordTabSearch',scope==='all'?'프레스':'');for(const w of [320,375,390,430])await capture('search-'+scope,'html',w)
+  }
   await reference('plananalysis');await set('#analysisPreset',await evaluate('document.querySelector("#analysisPreset").options[1].value'));for(const w of [320,375,390,430])await capture('plan-groups','html',w)
   await click('근육별');for(const w of [320,375,390,430])await capture('plan-muscles','html',w)
   await reference('muscles');for(const w of [320,375,390,430])await capture('stats-groups','html',w)

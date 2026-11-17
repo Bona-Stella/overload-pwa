@@ -27,10 +27,10 @@ export async function verifyEighthUi({go,title,click,set,evaluate,wait,width,cap
  await back();await title('운동 현황');assert.equal(await evaluate('document.querySelector(".record-search input").value'),'벤치')
  await tab('기록');await title('이번 주 요약');await click('성장 추적 ›');await title('성장 추적')
  assert.equal(await evaluate('document.querySelectorAll(".growth-screen .record-search select").length'),0)
- assert.equal(await evaluate('document.querySelectorAll(".growth-screen [role=group]").length'),0)
+ assert.equal(await evaluate('document.querySelectorAll(".growth-screen .record-search [role=group]").length'),0)
  await evaluate('document.querySelector(".growth-screen input").click()');await settle()
- assert.deepEqual(await evaluate('[...document.querySelectorAll(".growth-screen [role=group] button")].map(b=>b.textContent)'),['전체','가슴','등','어깨','팔','하체','코어','유산소','기타'])
- await evaluate('[...document.querySelectorAll(".growth-screen [role=group] button")].find(b=>b.textContent==="가슴").click()');await settle()
+ assert.deepEqual(await evaluate('[...document.querySelectorAll(".growth-screen .record-search [role=group] button")].map(b=>b.textContent)'),['전체','가슴','등','어깨','팔','하체','코어','유산소','기타'])
+ await evaluate('[...document.querySelectorAll(".growth-screen .record-search [role=group] button")].find(b=>b.textContent==="가슴").click()');await settle()
  assert.deepEqual(await evaluate('[...document.querySelectorAll(".growth-screen .record-search li strong")].map(e=>e.textContent)'),['벤치 프레스'])
  await evaluate('document.querySelector(".growth-screen li button[aria-label$=\\"상세 보기\\"]").click()');await title('운동 상세')
  for(const w of sizes){await width(w,'react');assert.deepEqual(await detail(),reference.get(w),'growth/settings same detail '+w)}

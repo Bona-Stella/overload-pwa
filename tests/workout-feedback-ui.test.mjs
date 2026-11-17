@@ -149,10 +149,10 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...candidate});await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...candidate})
     await wait(()=>evaluate('document.querySelectorAll(".growth-event").length===2&&document.querySelectorAll(".recharts-line-curve").length>0'))
     assert.equal(await evaluate('document.querySelector(".search-disclosure").getAttribute("aria-expanded")'),'false','selected result closes the search')
-    for(const width of [320,375,390,430]){
+    for(const width of [320,375,393,430]){
      await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true})
-     const growth=await evaluate('(()=>{const row=document.querySelector(".growth-event[data-direction=decrease]");return{overflow:document.documentElement.scrollWidth>innerWidth,color:getComputedStyle(row.querySelector("b")).color,text:row.textContent,nameStyle:getComputedStyle(row.querySelector("strong")).textOverflow,weightWrap:getComputedStyle(row.querySelector("b")).whiteSpace}})()')
-     assert.equal(growth.overflow,false);assert.equal(growth.color,'rgb(214, 188, 101)');assert.match(growth.text,/55.000001kg → 52.500001kg/);assert.equal(growth.nameStyle,'ellipsis');assert.equal(growth.weightWrap,'nowrap')
+     const growth=await evaluate('(()=>{const row=document.querySelector(".growth-event:has([data-direction=decrease])"),badge=row.querySelector("[data-direction=decrease]");return{overflow:document.documentElement.scrollWidth>innerWidth,color:getComputedStyle(badge).color,text:row.textContent,delta:badge.textContent,date:row.querySelector("time").textContent,latest:document.querySelector(".growth-latest").textContent,interactive:row.matches("button")}})()')
+     assert.equal(growth.overflow,false);assert.equal(growth.color,'rgb(214, 188, 101)');assert.match(growth.text,/55\.000001kg → 52\.500001kg/);assert.equal(growth.delta,'−2.5kg');assert.match(growth.date,/^2026\.11\.11 · \d{2}시$/);assert.equal(growth.latest,'52.500001kg');assert.equal(growth.interactive,false)
      await writeFile(resolve(directory,'growth-library-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
     }
     await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))')

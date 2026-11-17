@@ -1,0 +1,68 @@
+.screen:global(.stack) { gap: 16px; min-width: 0; }
+.screen .header { display: flex; align-items: center; gap: 2px; min-height: 44px; }
+.screen .header h1 { margin: 0; font-size: 22px; line-height: 1.4; }
+.screen .back { flex: none; display: grid; place-items: center; width: 44px; min-height: 44px; margin-left: -12px; padding: 0; background: transparent; font-size: 26px; line-height: 1; }
+.screen :global(.app-card) { min-width: 0; padding: 14px 12px; border-radius: 5px; gap: 12px; }
+.screen h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.4; }
+.screen .searchCard h2 { font-size: 15px; }
+.screen .searchCard :global(.record-search) { margin: 0; }
+.screen .searchCard :global(.record-search input) { border: 0; border-radius: 999px; background: var(--surface-input); padding-inline: 12px; font-size: 16px; }
+.screen .searchCard :global(.record-search input::placeholder) { font-size: 12px; }
+.screen .searchCard :global(.record-search[data-search-state='IDLE'] .search-disclosure) { border-color: var(--border-subtle); background: var(--surface-input); color: var(--text-muted); }
+.screen .searchCard :global(.record-search [role='group']) { scrollbar-width: none; }
+.screen .searchCard :global(.record-search [role='group'] > button) { flex: none; }
+.screen .searchCard :global(.record-search [role='group'] > button > span) { min-height: 32px; padding-inline: 12px; border-radius: 999px; white-space: nowrap; }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.heading > span { flex: none; color: var(--text-muted); font-size: 11px; }
+
+.periods { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-page); }
+.periods::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 20px) / 4); border-radius: 7px; background: var(--accent); pointer-events: none; transform: translateX(calc((100% + 4px) * var(--period-index, 0))); transition: transform 200ms ease; }
+.periods[data-period='3'] { --period-index: 1; }
+.periods[data-period='6'] { --period-index: 2; }
+.periods[data-period='all'] { --period-index: 3; }
+.screen .periods > button { position: relative; min-width: 0; min-height: 40px; padding: 8px 2px; border: 0; border-radius: 7px; background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 600; }
+.screen .periods > button[aria-pressed='true'] { color: var(--on-accent); }
+@media (prefers-reduced-motion: reduce) { .periods::before { transition: none; } }
+
+.placement { min-width: 0; font-size: 12px; }
+.placement select { min-width: 0; width: 100%; }
+.summary { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 5px; background: var(--accent-soft); }
+.latestRow { --latest-label-font: 12px; --latest-label-line: 1.6; --latest-gap: 3px; display: flex; align-items: flex-start; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.latest { display: grid; gap: var(--latest-gap); min-width: 0; }
+.latest > span, .latest time { color: var(--text-muted); font-size: var(--latest-label-font); }
+.latest > span { line-height: var(--latest-label-line); }
+.latest strong:global(.growth-latest) { display: block; margin: 0; font-size: 26px; line-height: 1.25; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.latest strong small { margin-inline-start: 3px; font-size: 15px; }
+.countRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--border-subtle); font-size: 13px; }
+.countRow > span:first-child { display: inline-flex; align-items: center; gap: 5px; }
+.countRow svg { flex: none; color: var(--text-muted); }
+.countRow > span:last-child { font-weight: 600; }
+.delta { display: inline-flex; align-items: center; justify-content: center; max-width: 100%; padding: 3px 7px; border-radius: 999px; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.delta[data-direction='increase'] { color: var(--status-done); background: color-mix(in srgb, var(--status-done) 15%, transparent); }
+.delta[data-direction='decrease'] { color: var(--status-warning); background: color-mix(in srgb, var(--status-warning) 15%, transparent); }
+.comparison { flex-direction: column; gap: 3px; margin-block-start: calc(var(--latest-label-font) * var(--latest-label-line) + var(--latest-gap)); margin-inline-start: auto; padding: 7px 9px; border-radius: 7px; font-size: 16px; }
+.comparison small { font-size: 10px; }
+
+.chart { display: grid; gap: 4px; min-width: 0; }
+.chart h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.chart .legend { display: inline-flex; align-items: center; gap: 4px; }
+.legend::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--chart-primary); }
+.screen .chart .plot { margin: 4px 0 0; padding: 4px 0; border: 0; border-radius: 5px; background: var(--surface-input); }
+.chart .plot > p:not(:global(.sr-only)) { padding: 8px; color: var(--text-muted); font-size: 12px; }
+
+.historyList { min-width: 0; margin: 0; padding: 0; list-style: none; }
+.historyList > li + li { border-top: 1px solid var(--border-subtle); }
+.screen .historyList .event { display: grid; grid-template-columns: minmax(0,1fr) 12px; align-items: center; gap: 6px; width: 100%; min-height: 52px; padding: 9px 0; border: 0; background: transparent; color: var(--text-primary); text-align: start; font-size: 12px; font-weight: 400; }
+.eventBody, .eventValues { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 8px; min-width: 0; }
+.eventBody { justify-content: space-between; }
+.eventValues { justify-content: flex-end; margin-inline-start: auto; }
+.event time { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.weights { color: var(--text-muted); overflow-wrap: anywhere; }
+.weights b { color: var(--text-primary); font-weight: 650; }
+.detail { color: var(--text-muted); font-size: 18px; text-align: center; }
+
+@media (max-width: 350px) {
+  .screen :global(.app-card) { padding-inline: 10px; }
+  .screen h2 { font-size: 16px; }
+  .screen .periods > button { font-size: 12px; }
+}
