@@ -610,12 +610,10 @@ a{color:inherit;text-decoration:underline}
 /* 운동 현황 승인 배치 · 기존 무채색 시안 전용 */
 .record-activity{display:grid;gap:16px;min-width:0}
 .record-activity .wire{margin:0;padding:14px 12px}
-.record-activity .ra-header,.record-activity .ra-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.record-activity .ra-header{justify-content:flex-start;gap:2px;min-height:44px}
+.record-activity .ra-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .record-activity h1,.record-activity h2,.record-activity h3,.record-activity p{margin:0}
 .record-activity h2{font-size:18px;line-height:1.4;font-weight:650}
 .record-activity .ra-quiet{padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
-.record-activity .ra-header button{width:36px;height:44px;margin-left:-8px;font-size:25px}
 .record-activity .ra-period{display:grid;grid-template-columns:36px minmax(0,1fr) 36px 36px;gap:4px;align-items:center;margin:8px 0 0;text-align:center}
 .record-activity .ra-period b{white-space:nowrap;font-size:14px;line-height:21px}
 .record-activity .ra-period button{position:relative;display:grid;place-items:center;width:36px;height:44px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
@@ -687,9 +685,7 @@ a{color:inherit;text-decoration:underline}
 .growth-wire .wire{margin:0;padding:14px 12px;display:grid;gap:12px}
 .growth-wire h1,.growth-wire h2,.growth-wire h3,.growth-wire p{margin:0}
 .growth-wire h1{font-size:22px}.growth-wire h2{font-size:18px}.growth-wire h3{font-size:15px}
-.growth-wire .gw-header,.growth-wire .gw-heading{display:flex;align-items:center;gap:8px}
-.growth-wire .gw-header{min-height:44px}.growth-wire .gw-heading{justify-content:space-between}
-.growth-wire .gw-header button{width:36px;height:44px;border:0;background:transparent;font-size:26px;cursor:pointer}
+.growth-wire .gw-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .growth-wire .gw-search-title{font-size:15px}
 .growth-wire .gw-search{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:6px;align-items:center}
 .growth-wire .gw-search>input,.growth-wire .gw-search>button{height:42px;border:1px solid #bbb;border-radius:999px;background:#f4f4f4;color:inherit}
@@ -726,6 +722,62 @@ a{color:inherit;text-decoration:underline}
 .growth-wire .gw-values b{color:#222}
 .growth-wire .gw-history-arrow{flex:none;display:grid;place-items:center;width:12px;font-size:18px;line-height:1;color:#666}
 .growth-wire :is(button,input):focus-visible,.growth-wire svg circle:focus-visible{outline:2px solid #555;outline-offset:2px}
+/* 승인된 네 기록 하위 화면의 공통 헤더 · 기존 무채색 팔레트 유지 */
+.phone .record-subpage-header{display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:2px;min-height:44px;margin:0;padding:0}
+.record-subpage-header button{display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;margin-left:-12px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
+.record-subpage-header svg{display:block;width:24px;height:24px}
+.phone .record-subpage-header h1{grid-column:2;min-width:0;margin:0;font-size:22px;font-weight:750;line-height:1.4;overflow-wrap:anywhere}
+.record-subpage-header button:focus-visible{outline:2px solid #555;outline-offset:2px}
+/* 주간 근육 계획·통계: 같은 통합 카드 골격, 서로 다른 기존 시연 원본 */
+.muscle-wire{display:grid;gap:16px;min-width:0}
+.muscle-wire .wire{min-width:0;margin:0;padding:14px 12px}
+.muscle-wire h2,.muscle-wire p{margin:0}
+.muscle-wire h2{font-size:18px;font-weight:600;line-height:1.4}
+.muscle-wire .ma-controls,.ma-control{display:grid;gap:12px;min-width:0}
+.ma-control{gap:6px;font-size:12px;color:#666}
+.ma-control select{width:100%;min-width:0;min-height:44px;padding:8px 30px 8px 12px;border:0;border-radius:10px;background:#f4f4f4;color:#222;font-size:16px;text-overflow:ellipsis}
+.ma-segment{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:#e8e8e8}
+.ma-segment::before{content:'';position:absolute;inset:4px auto 4px 4px;width:calc((100% - 12px)/2);border:1px solid #bbb;border-radius:7px;background:#fff;pointer-events:none}
+.ma-segment[data-side=right]::before{transform:translateX(calc(100% + 4px))}
+.ma-segment button{position:relative;min-width:0;min-height:40px;padding:8px 4px;border:0;border-radius:7px;background:transparent;color:#222;font-size:14px;font-weight:600;cursor:pointer}
+.ma-segment button[aria-pressed=true]{font-weight:750}
+.ma-plan-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+.ma-plan-summary>div{display:grid;gap:6px;min-width:0;padding-right:10px}
+.ma-plan-summary>div+div{border-left:1px solid #bbb;padding-right:0;padding-left:12px}
+.ma-plan-summary span{color:#666;font-size:12px}
+.ma-plan-summary strong{font-size:19px;line-height:1.4;overflow-wrap:anywhere}
+.ma-plan-summary strong small{margin-left:3px;font-size:12px;font-weight:400}
+.ma-section-title,.ma-zero-label{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.ma-zero-label{gap:6px;font-size:11px;white-space:nowrap}
+.ma-zero{position:relative;display:grid;align-items:center;width:40px;height:44px;min-height:44px;padding:0 3px;border:0;background:transparent;cursor:pointer}
+.ma-zero::before{content:'';position:absolute;inset:10px 0;border-radius:99px;background:#ddd}
+.ma-zero[aria-checked=true]::before{background:#888}
+.ma-zero i{position:relative;display:block;width:18px;height:18px;border-radius:50%;background:#fff}
+.ma-zero[aria-checked=true] i{transform:translateX(16px)}
+.muscle-wire .ma-distribution{display:block}
+.ma-group+.ma-group{margin-top:20px}
+.ma-group-title{display:flex;align-items:center;gap:8px;margin:0 0 6px;min-width:0}
+.ma-group-title h3{margin:0;min-width:0;font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.ma-group-title hr{flex:1;min-width:8px;margin:0;border:0;border-top:1px solid #bbb}
+.ma-group-title>span{flex:none;max-width:65%;font-size:11px;color:#666;overflow-wrap:anywhere;text-align:right}
+.muscle-wire .analysis-row{padding:8px 0;font-size:13px}
+.muscle-wire .analysis-row .stat-pair{flex-wrap:wrap;gap:4px 8px;margin:0 0 6px}
+.muscle-wire .analysis-row b{max-width:100%;margin-left:auto;font-size:12px;font-weight:400;overflow-wrap:anywhere;text-align:right}
+.muscle-wire .stat-bar{height:8px;margin:0;border-radius:4px}
+.muscle-wire .analysis-track{margin-top:12px}
+.ma-period,.ma-period>span{display:flex;align-items:center;gap:7px;min-width:0}
+.ma-period{justify-content:space-between;min-height:28px;font-size:13px;font-variant-numeric:tabular-nums}
+.ma-period svg{width:16px;height:16px;color:#666;flex:none}
+.ma-period small{padding:3px 12px;border-radius:99px;background:#eee;color:#666;font-size:11px;white-space:nowrap}
+.muscle-wire .ma-achievement{display:grid;gap:14px}
+.ma-achievement>div{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.ma-achievement h2{font-size:14px}
+.ma-achievement strong{color:#666;font-size:16px}
+.ma-achievement div>span:last-child{flex:none;color:#666;font-size:11px;font-variant-numeric:tabular-nums}
+.ma-progress{flex:1;min-width:24px;height:7px;border-radius:4px;background:#ddd}
+.muscle-wire .ma-notes{color:#666;font-size:11px;line-height:1.5}
+.ma-notes p+p{margin-top:6px}
+.muscle-wire :is(button,select):focus-visible{outline:2px solid #555;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -1354,6 +1406,7 @@ function finishRoutineSave(){const wasNew=!state.editingId;const f=deepCopy(stat
 
 /* 기록·분석 전용 저충실도 화면; 모든 수치와 추이 시연값 */
 function statHeader(title,back='recorddash',right='') {return `<div class="stat-head">${bsm('‹ 뒤로',back)}<span class="sm muted">기록 · 분석</span></div><div class="stat-title${right?' analysis-title-row':''}">${right?`<span>${title}</span>${right}`:title}</div>`}
+function recordSubpageHeader(title,back='recorddash'){return `<header class="record-subpage-header"><button type="button" data-act="${back}" aria-label="${back==='routinelist'?'루틴으로':'기록으로'}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button><h1>${escapeHtml(title)}</h1></header>`}
 function statsFilter(items,active,prefix,klass='') {return `<div class="stat-filter ${klass}">${items.map(([val,label])=>`<button type="button" class="${active===val?'active':''}" data-act="${prefix+val}">${label}</button>`).join('')}</div>`}
 function getStatsPeriod(){return state.statsPeriods[state.screen]||'week'}
 function getStatsOffset(){return state.statsOffsets[state.screen]||0}
@@ -1423,15 +1476,40 @@ function analysisAggregate(rows,level){const names=level==='side'?['전면','후
  for(const row of rows){const e=analysisExercise[row.name];if(!e){unknown++;continue}const links=level==='muscle'?[...new Set(e.primary)].map(name=>[name,1]).concat([...new Set(e.secondary)].map(name=>[name,.5])):[[e[level],1]];for(const [name,factor] of links){const value=totals.get(name);if(!value){unknown++;continue}value.actual+=row.actual*factor;if(row.planned!==null){value.planned+=row.planned*factor;value.hasPlan=true}if(row.volume===null)value.volume=null;else if(value.volume!==null)value.volume+=row.volume;}}
  return {rows:[...totals.values()],unknown}}
 function analysisBar(row,plan,max){const n=plan?row.planned:analysisDemo.metric==='volume'?row.volume:row.actual;const text=plan?String(n):analysisDemo.metric==='volume'?(n===null?'—':n.toLocaleString()):`${row.actual} / ${row.hasPlan?row.planned:'—'}`;const ratio=n===null?0:Math.max(0,Math.min(100,n/Math.max(max,1)*100));return `<div class="analysis-row"><div class="stat-pair"><span>${escapeHtml(row.name)}</span><b>${text}${plan||analysisDemo.metric==='sets'?'세트':n===null?' · 근거 없음':'kg'}</b></div><div class="stat-bar"><span style="width:${ratio}%"></span></div></div>`}
-function analysisClassifications(rows,plan){return [['side','전면 / 후면'],['ppl','PPL'],['group','부위']].map(([level,title])=>{const data=analysisAggregate(rows,level);const shown=data.rows.filter(r=>plan?analysisDemo.showZero||r.planned>0:r.actual>0||r.hasPlan);const max=Math.max(1,...shown.map(r=>plan?r.planned:analysisDemo.metric==='volume'?r.volume||0:Math.max(r.actual,r.planned)));return box(`<h3 class="stat-card-title">${title}</h3>${shown.map(r=>analysisBar(r,plan,max)).join('')||'<p class="tiny muted">표시할 '+(plan?'계획':'수행·계획')+' 세트가 없습니다.</p>'}${data.unknown?'<p class="tiny muted">분류 확인 필요 · 원본을 0세트로 처리하지 않습니다.</p>':''}`)}).join('')}
-function analysisMuscleRows(rows,plan){const data=analysisAggregate(rows,'muscle');return box(analysisGroups.map(group=>{const entries=analysisMuscles.filter(m=>m.group===group).map(m=>data.rows.find(r=>r.name===m.name)).filter(r=>plan?analysisDemo.showZero||r.planned>0:r.actual>0||r.hasPlan);if(!entries.length)return '';return `<h3 class="analysis-group">${group}</h3>`+entries.map(r=>{if(!plan)return analysisBar(r,false,analysisDemo.metric==='volume'?Math.max(1,...entries.map(r=>r.volume||0)):Math.max(r.actual,r.planned,1));const guide={start:4,max:12};return `<div class="analysis-row"><div class="stat-pair"><span>${escapeHtml(r.name)}</span><b>${r.planned} / ${guide.max}세트</b></div><div class="analysis-track"><span class="analysis-marker" style="left:${guide.start/guide.max*100}%" aria-label="합성 권장 시작 ${guide.start}세트">▼</span><div class="stat-bar"><span style="width:${Math.min(100,r.planned/guide.max*100)}%"></span></div></div></div>`}).join('')}).join('')||'<p class="tiny muted">표시할 세부 근육 세트가 없습니다.</p>')+(data.unknown?'<p class="tiny muted">근육 매핑 확인 필요 · 추정하지 않습니다.</p>':'')}
+function analysisGroupTitle(title,total){return `<div class="ma-group-title"><h3>${escapeHtml(title==='다리'?'하체':title)}</h3><hr>${total?`<span>${total}</span>`:''}</div>`}
+function analysisClassifications(rows,plan){return [['side','전면 / 후면'],['ppl','PPL'],['group','신체 부위']].map(([level,title])=>{
+ const data=analysisAggregate(rows,level),shown=data.rows.filter(r=>plan?analysisDemo.showZero||r.planned>0:r.actual>0||r.hasPlan);
+ const max=Math.max(1,...shown.map(r=>plan?r.planned:analysisDemo.metric==='volume'?r.volume||0:Math.max(r.actual,r.planned)));
+ const total=plan?(data.unknown?'합계 확인 불가':'합계 '+rows.reduce((n,r)=>n+r.planned,0)+'세트'):analysisDemo.metric==='sets'?'합계 확인 불가':'';
+ return `<section class="ma-group">${analysisGroupTitle(title,total)}${shown.map(r=>analysisBar(r,plan,max)).join('')||'<p class="tiny muted">표시할 '+(plan?'계획':'수행·계획')+' 세트가 없습니다.</p>'}${data.unknown?'<p class="tiny muted">분류 확인 필요 · 원본을 0세트로 처리하지 않습니다.</p>':''}</section>`
+ }).join('')}
+function analysisMuscleRows(rows,plan){const data=analysisAggregate(rows,'muscle');return analysisGroups.map(group=>{
+ const entries=analysisMuscles.filter(m=>m.group===group).map(m=>data.rows.find(r=>r.name===m.name)).filter(r=>plan?analysisDemo.showZero||r.planned>0:r.actual>0||r.hasPlan);
+ if(!entries.length)return '';
+ const planned=entries.reduce((n,r)=>n+r.planned,0),actual=entries.reduce((n,r)=>n+r.actual,0);
+ const total=plan?(data.unknown?'합계 확인 불가':'합계 '+planned+'세트'):analysisDemo.metric==='sets'?'합계 '+actual+' / '+(entries.some(r=>r.hasPlan)?planned:'—')+'세트':'';
+ return `<section class="ma-group">${analysisGroupTitle(group,total)}`+entries.map(r=>{
+  if(!plan)return analysisBar(r,false,analysisDemo.metric==='volume'?Math.max(1,...entries.map(r=>r.volume||0)):Math.max(r.actual,r.planned,1));
+  const guide={start:4,max:12};
+  return `<div class="analysis-row"><div class="stat-pair"><span>${escapeHtml(r.name)}</span><b>${r.planned} / ${guide.max}세트</b></div><div class="analysis-track"><span class="analysis-marker" style="left:${guide.start/guide.max*100}%" aria-label="합성 권장 시작 ${guide.start}세트">▼</span><div class="stat-bar"><span style="width:${Math.min(100,r.planned/guide.max*100)}%"></span></div></div></div>`
+ }).join('')+'</section>'
+ }).join('')||'<p class="tiny muted">표시할 세부 근육 세트가 없습니다.</p>'}
 function analysisCalendar(owner='activity'){return recordTabCalendar(owner)}
 function analysisStatus(date){if(date>=analysisToday)return {mark:'·',label:'판정 대기 또는 미래'};const day=analysisDate(date).getUTCDay();if(day===0||day===3)return {mark:'–',label:'휴식일'};const rows=analysisFacts.filter(r=>r.date===date&&r.planned!==null);if(!rows.length)return {mark:'·',label:'확인 불가'};const complete=rows.every(r=>r.actual>=r.planned);return {mark:complete?'✓':'×',label:complete?'완료':'확정 미완료·미수행'}}
-function analysisScreen(s){const plan=s==='plananalysis',range=recordTabRange('week',recordTabToday),rows=plan?analysisPlan():analysisFacts.filter(r=>r.date>=range.from&&r.date<=range.end),tab=plan?analysisDemo.tab:analysisDemo.actualTab;let controls;
- if(plan)controls=`<div class="analysis-controls"><label>분석 대상<select id="analysisPreset"><option value="">프리셋을 선택해 주세요</option>${presetDemo.list.map(p=>`<option value="${p.id}" ${p.id===analysisDemo.preset?'selected':''}>${presetNumber(p.id)} · ${escapeHtml(p.name||'이름 없는 일정')}${p.id===presetDemo.active?' (진행중)':''}</option>`).join('')}</select></label></div>`;
- else controls='';
- const body=plan&&!presetFor(analysisDemo.preset)?box('<p>분석할 주간 프리셋을 선택해 주세요.</p>'):tab==='classification'?analysisClassifications(rows,plan):analysisMuscleRows(rows,plan);
- return {html:`${statHeader(plan?'주간 근육 계획':'주간 근육 통계',plan?analysisDemo.back:'recorddash',plan?`<div class="analysis-toggle"><span>전체 보기</span><span>${analysisDemo.showZero?'ON':'OFF'} <button id="analysisShowZero" type="button" role="switch" aria-label="전체 보기" aria-checked="${analysisDemo.showZero}" class="v9-toggle ${analysisDemo.showZero?'on':''}" data-act="analysis-show-zero"><i aria-hidden="true"></i></button></span></div>`:'')}${box(controls+statsFilter([['classification','분류별'],['muscle','근육별']],tab,'analysis-tab-')+(plan?'':statsFilter([['sets','세트'],['volume','총중량']],analysisDemo.metric,'analysis-metric-')))}${plan?'<p class="tiny muted">현재 월~일 계획 · 권장값은 참고용 합성 가이드입니다.</p>':'<p class="tiny muted">'+(analysisDemo.metric==='sets'?'이번 주 · '+range.from+' ~ '+range.end+' · 실제 / 당시 계획 · — 계획 없음':'이번 주 · '+range.from+' ~ '+range.end+' · 실제 총중량 · 중량 × 실제 반복 합계')+'</p>'}${body}<p class="stat-floating-note">합성 시연 데이터 · 계획과 실제는 별도 원본입니다. 상위 분류는 원본 세트로 독립 집계하며 세부 근육 기여만 PRIMARY 1.0 / SECONDARY 0.5입니다.${plan?' ▼ 시작 4 · 최대 12세트는 UI 검토용 예시이며 제품 권장 기준이 아닙니다.':''}</p>`,bottom:nav(plan&&analysisDemo.back==='routinelist'?'routine':'history'),top:'[분석 시연 · 합성 데이터 / 서버 전송 없음]'}}
+function analysisSegment(items,value,prefix,label){return `<div class="ma-segment" role="group" aria-label="${label}" data-side="${items[1][0]===value?'right':'left'}">${items.map(([id,name])=>`<button type="button" aria-pressed="${id===value}" data-act="${prefix+id}">${name}</button>`).join('')}</div>`}
+function analysisScreen(s){
+ const plan=s==='plananalysis',range=recordTabRange('week',recordTabToday),rows=plan?analysisPlan():analysisFacts.filter(r=>r.date>=range.from&&r.date<=range.end),tab=plan?analysisDemo.tab:analysisDemo.actualTab;
+ const total=rows.reduce((n,r)=>n+(plan?r.planned:r.actual),0),preset=plan?presetFor(analysisDemo.preset):null;
+ const view=analysisSegment([['classification','분류별'],['muscle','근육별']],tab,'analysis-tab-',plan?'계획 보기':'분석 기준');
+ const controls=plan?`<label class="ma-control">분석 대상 프리셋<select id="analysisPreset"><option value="">프리셋을 선택해 주세요</option>${presetDemo.list.map(p=>`<option value="${p.id}" ${p.id===analysisDemo.preset?'selected':''}>${presetNumber(p.id)} · ${escapeHtml(p.name||'이름 없는 일정')}${p.id===presetDemo.active?' (진행중)':''}</option>`).join('')}</select></label>${view}`:`<div class="ma-control"><span>분석 기준</span>${view}</div><div class="ma-control"><span>측정 지표</span>${analysisSegment([['sets','세트'],['volume','총중량']],analysisDemo.metric,'analysis-metric-','측정 지표')}</div>`;
+ const body=plan&&!preset?'<p>분석할 주간 프리셋을 선택해 주세요.</p>':tab==='classification'?analysisClassifications(rows,plan):analysisMuscleRows(rows,plan);
+ const summary=plan?box(`<div><span>계획 세트</span><strong>${preset?total.toLocaleString()+'<small>세트</small>':'미확인'}</strong></div><div><span>운동 예정일</span><strong>미확인</strong></div>`,'ma-plan-summary'):box(`<div><h2>주간 세트 달성</h2><strong>미확인</strong></div><div><span class="ma-progress" role="progressbar" aria-label="주간 세트 달성률" aria-valuetext="당시 계획과 달성률 미확인"></span><span>${total.toLocaleString()} / 미확인 세트</span></div>`,'ma-achievement');
+ const heading=plan?'계획 세트 분포':tab==='classification'?'분류별 달성 현황':'근육별 달성 현황';
+ const zero=plan?`<label class="ma-zero-label">0세트 포함<button id="analysisShowZero" type="button" role="switch" aria-label="0세트 포함" aria-checked="${analysisDemo.showZero}" class="ma-zero" data-act="analysis-show-zero"><i aria-hidden="true"></i></button></label>`:'';
+ const period=plan?'':`<div class="ma-period" aria-label="이번 주 조회 기간"><span>${recordActivityIcon('calendar')}<time datetime="${range.from}">${range.from.slice(5).replace('-','.')}</time><span aria-hidden="true">–</span><time datetime="${range.end}">${range.end.slice(5).replace('-','.')}</time></span><small>이번 주</small></div>`;
+ const missingMuscles=tab==='muscle'&&analysisAggregate(rows,'muscle').unknown;
+ return {html:`<div class="muscle-wire" data-analysis="${plan?'plan':'actual'}">${recordSubpageHeader(plan?'주간 근육 계획':'주간 근육 통계',plan?analysisDemo.back:'recorddash')}${period}${box(controls,'ma-controls')}${summary}<div class="ma-section-title"><h2>${heading}</h2>${zero}</div>${box(body,'ma-distribution')}<div class="ma-notes">${plan?'':'<p>주간 전체 당시 계획 세트와 세트 달성률은 확인할 수 없습니다. 분류별 독립 합계는 운영 미연결 상태입니다.</p>'}${missingMuscles?'<p>근육 매핑 확인 필요 · 추정하지 않습니다.</p>':''}<p>합성 시연 데이터 · 계획과 실제는 별도 원본입니다. 상위 분류는 원본 세트로 독립 집계하며 세부 근육 기여만 PRIMARY 1.0 / SECONDARY 0.5입니다.${plan?' ▼ 시작 4 · 최대 12세트는 UI 검토용 예시이며 제품 권장 기준이 아닙니다.':' 합성 분류 수치는 운영 API 연결을 의미하지 않습니다.'}</p></div></div>`,bottom:nav(plan&&analysisDemo.back==='routinelist'?'routine':'history'),top:'[분석 시연 · 합성 데이터 / 서버 전송 없음]'}
+}
 function analysisAction(to){if(to==='analysis-plan-record'||to==='analysis-plan-preset'){analysisDemo.back=to==='analysis-plan-preset'?'routinelist':'recorddash';analysisDemo.preset=to==='analysis-plan-preset'?presetDemo.viewed:(presetFor(presetDemo.active)?.id||null);state.screen='plananalysis'}else if(to==='analysis-show-zero'){analysisDemo.showZero=!analysisDemo.showZero}else if(to.startsWith('analysis-tab-')){analysisDemo[state.screen==='plananalysis'?'tab':'actualTab']=to.slice(13)}else if(to.startsWith('analysis-metric-'))analysisDemo.metric=to.slice(16);else if(to.startsWith('analysis-period-')){analysisDemo.mode=to.slice(16);analysisDemo.calendar=null}else if(to==='analysis-prev'||to==='analysis-next'){const d=analysisDate(analysisRange().from),n=to==='analysis-prev'?-1:1;if(analysisDemo.mode==='week')d.setUTCDate(d.getUTCDate()+7*n);else d.setUTCMonth(d.getUTCMonth()+n,1);analysisDemo.anchor=analysisIso(d)}else if(to==='analysis-calendar')analysisDemo.calendar=analysisRange().from;else if(to==='analysis-calendar-close')analysisDemo.calendar=null;else if(to==='analysis-calendar-prev'||to==='analysis-calendar-next'){const d=analysisDate(analysisDemo.calendar);d.setUTCMonth(d.getUTCMonth()+(to.endsWith('prev')?-1:1),1);analysisDemo.calendar=analysisIso(d)}else if(to.startsWith('analysis-date-')){analysisDemo.anchor=to.slice(14);analysisDemo.calendar=null}else return false;draw();return true}
 document.addEventListener('change',e=>{if(e.target.id==='analysisPreset'){analysisDemo.preset=e.target.value||null;draw()}});
 
@@ -1590,7 +1668,7 @@ function growthWireScreen(vals,all){
     return `<span class="gw-delta${comparison?' gw-comparison':''}" aria-label="${value>0?'증가':'감소'} ${Math.abs(value)}kg"><strong>${value>0?'+':'−'}${Math.abs(value)}kg</strong>${comparison?'<small>직전 대비</small>':''}</span>`;
   };
   const date=row=>'2026.'+row[0].replace('/','.');
-  return `<div class="growth-wire"><header class="gw-header"><button type="button" data-act="recorddash" aria-label="기록으로">‹</button><h1>성장 추적</h1></header>
+  return `<div class="growth-wire">${recordSubpageHeader('성장 추적')}
     ${box(`<h2 class="gw-search-title">분석할 운동</h2><div data-v10-search-root data-v10-selected="전체"><div class="gw-search">
       <input type="search" id="growthSearch" data-v10-query aria-label="운동·분류·근육 검색" placeholder="운동·분류·근육 검색" autocomplete="off" value="${state.growthPickerOpen?'':escapeHtml(state.growthExercise)}">
       <button type="button" data-act="${state.growthPickerOpen||!state.growthExercise?'v8-growth-toggle':'gw-search-clear'}" aria-pressed="${state.growthPickerOpen||!!state.growthExercise}" aria-label="${state.growthPickerOpen?'검색 닫기':state.growthExercise?'선택 해제':'검색 목록 열기'}">${recordActivityIcon(state.growthPickerOpen||state.growthExercise?'close':'search')}</button></div>
@@ -1607,7 +1685,7 @@ function growthWireScreen(vals,all){
 function recordTabActivity(){
   const a=recordTabDemo.activity,range=recordTabRange(a.mode,a.anchor),current=recordTabTrend(),rows=analysisFacts.filter(r=>r.date>=range.from&&r.date<=range.end);
   const sets=rows.reduce((n,r)=>n+r.actual,0),volume=rows.reduce((n,r)=>n+(r.volume||0),0),showSets=state.statMetric==='sets';
-  return `<div class="record-activity"><header class="ra-header"><button type="button" class="ra-quiet" data-act="recorddash" aria-label="기록으로">‹</button><h1>운동 현황</h1></header>
+  return `<div class="record-activity">${recordSubpageHeader('운동 현황')}
   ${recordActivityPeriod(a,range)}
   <section aria-label="운동량 요약"><div class="ra-heading"><h2>운동량 요약</h2><span class="tiny muted">선택 기간 전체</span></div><div class="ra-grid">
     ${box(`<span class="tiny muted">완료 세트</span><strong>${sets}<small>세트</small></strong>`)}${box(`<span class="tiny muted">총중량</span><strong>${volume.toLocaleString()}<small>kg</small></strong>`)}</div></section>
@@ -1676,7 +1754,7 @@ function recordTabHistory(){
   return `${statHeader('운동 이력')}${box(recordTabPeriod('history')+recordTabHistorySearch()+(q?'<div class="headerrow"><p class="tiny muted" role="status">전체 기간 검색 결과 · 월 필터 미적용</p>'+bsm('검색 해제','recordtab-history-clear')+'</div>':'<p class="tiny muted">선택 월의 합성 완료 세션 · 최신순</p>'))}<div class="recordtab-feed" aria-label="${q?'전체 기간 검색 결과':'월간 운동 기록'}">${recordTabFeed(rows)||'<p class="stat-floating-note">'+(q?'검색 결과가 없습니다.':'선택한 월에 운동 기록이 없습니다.')+'</p>'}</div><p class="stat-floating-note">합성 메모리 피드입니다. 실제 서버 검색·페이지네이션·색인·저장에는 연결하지 않습니다.</p>`;
  }
 function recordTabAction(to){if(dl.status!=='idle'||!to.startsWith('recordtab-'))return false;if(recordActivityAction(to))return true;const a=recordTabDemo.activity,h=recordTabDemo.history;let m;if(to.startsWith('recordtab-open-')){wdRememberRecord();const r=recordTabSessions().find(r=>r.id===to.slice(15));if(r){wd.record=r;wd.copy=wd.recordCopies[r.id]||null;wd.recordMode=null;state.screen='recorddetail'}}else if(to.startsWith('recordtab-select-')){const c=recordTabCandidates().find(c=>c.id===to.slice(17));if(c){a.selected=c;a.query=''}}else if(to==='recordtab-clear'){a.selected=null;a.scope='all';a.query=''}else if(to.startsWith('recordtab-history-select-')){const candidate=recordTabHistoryCandidates().find(c=>c.id===to.slice('recordtab-history-select-'.length));if(candidate){h.query=candidate.name;h.searchOpen=false}}else if(to==='recordtab-history-clear'){h.query='';h.searchOpen=false}else if(to.startsWith('recordtab-period-')){a.mode=to.slice(17);a.calendar=null}else if((m=to.match(/^recordtab-(prev|next)-(activity|history)$/))){const v=recordTabDemo[m[2]],mode=m[2]==='history'?'month':v.mode,d=analysisDate(v.anchor),n=m[1]==='prev'?-1:1;if(mode==='week')d.setUTCDate(d.getUTCDate()+7*n);else d.setUTCMonth(d.getUTCMonth()+n,1);v.anchor=analysisIso(d);v.calendar=null}else if((m=to.match(/^recordtab-(calendar|calclose|calprev|calnext)-(activity|history)$/))){const v=recordTabDemo[m[2]];if(m[1]==='calendar')v.calendar=v.calendar?null:v.anchor;else if(m[1]==='calclose')v.calendar=null;else{const d=analysisDate(v.calendar);d.setUTCMonth(d.getUTCMonth()+(m[1]==='calprev'?-1:1),1);v.calendar=analysisIso(d)}}else if((m=to.match(/^recordtab-date-(activity|history)-(\d{4}-\d{2}-\d{2})$/))){recordTabDemo[m[1]].anchor=m[2];recordTabDemo[m[1]].calendar=null}else return false;wdDraw();return true}
-function recordTabSyncNotes(){if(recordTabDemo.notesReady)return;recordTabDemo.notesReady=true;notes.activity={title:'STATS-02 · 운동 현황',items:[['기간과 달성','주간 MM/DD ~ MM/DD, 월간 YYYY/MM 형식을 사용합니다. 주간 달성은 선택 날짜가 속한 주를 표시합니다.'],['통합 검색','전체/운동별/분류별/근육별 팝오버와 내부 스크롤 목록을 사용합니다. 후보와 추이는 합성 예시입니다.'],['유산소','상세를 같은 카드에서 펼치고 운동 이력으로 이동합니다. 운영 응답의 누적 일수는 미확인이며 수행 요일은 생략합니다.'],['상태 시연','파일 주소에 ?activity-demo=states를 추가하면 40% 달성률과 유산소 요일·일수 등의 합성 표본이 표시됩니다.']]};notes.history={title:'RECORD-02 · 월간 운동 이력',items:[['목록','완료 세션을 최신순 월간 피드로 표시하고 기록이 있는 주의 첫 카드 위에만 얇은 주차 구분선을 둡니다.'],['검색','루틴별/운동별 이름 검색은 공통 검색 목록을 사용합니다. 검색 시 전체 과거 합성 이력으로 전환하고 해제하면 선택 월로 돌아갑니다.']]};notes.muscles={title:'STATS-04 · 주간 근육 통계',items:[['기간','이번 주 월~일 실제 기록 고정. 기간 이동은 운동 현황에서 제공합니다.'],['집계','기존 독립 분류·세부 기여·실제/당시 계획·세트/총중량을 유지합니다.']]};v8ReviewHints.activity='통합 기간 · 운동량 요약/추이 · 주간 달성 · 유산소 상세 펼침. 모든 수치는 합성 시연입니다.';v8ReviewHints.muscles='이번 주 고정 · 분류별/근육별 · 세트/총중량';}
+function recordTabSyncNotes(){if(recordTabDemo.notesReady)return;recordTabDemo.notesReady=true;notes.activity={title:'STATS-02 · 운동 현황',items:[['기간과 달성','주간 MM/DD ~ MM/DD, 월간 YYYY/MM 형식을 사용합니다. 주간 달성은 선택 날짜가 속한 주를 표시합니다.'],['통합 검색','전체/운동별/분류별/근육별 팝오버와 내부 스크롤 목록을 사용합니다. 후보와 추이는 합성 예시입니다.'],['유산소','상세를 같은 카드에서 펼치고 운동 이력으로 이동합니다. 운영 응답의 누적 일수는 미확인이며 수행 요일은 생략합니다.'],['상태 시연','파일 주소에 ?activity-demo=states를 추가하면 40% 달성률과 유산소 요일·일수 등의 합성 표본이 표시됩니다.']]};notes.history={title:'RECORD-02 · 월간 운동 이력',items:[['목록','완료 세션을 최신순 월간 피드로 표시하고 기록이 있는 주의 첫 카드 위에만 얇은 주차 구분선을 둡니다.'],['검색','루틴별/운동별 이름 검색은 공통 검색 목록을 사용합니다. 검색 시 전체 과거 합성 이력으로 전환하고 해제하면 선택 월로 돌아갑니다.']]};notes.plananalysis={title:'STATS-07 · 주간 근육 계획',items:[['승인 배치','공통 헤더 → 프리셋/보기 카드 → 계획 세트·운동 예정일 요약 → 계획 세트 분포/0세트 포함 → 통합 카드. 예정일은 기존 집계가 없어 미확인입니다.'],['원본 유지','기존 프리셋·반복 계획과 분류/근육·정확한 0 필터·▼ 가이드를 유지합니다. 합성 분류·권장 범위는 운영 API 근거가 아닙니다.']]};notes.muscles={title:'STATS-04 · 주간 근육 통계',items:[['승인 배치','공통 헤더 → 읽기 전용 이번 주 → 분석 기준·측정 지표 2줄 → 압축 요약 → 통합 카드. 기간 이동·0세트 토글은 없습니다.'],['데이터 경계','주간 전체 당시 계획·세트 달성률과 분류별 독립 합계는 운영 미연결로 미확인입니다. 기존 합성 항목값·기여 소계·세트/총중량·막대는 유지하며 새 %나 계획 kg를 만들지 않습니다.']]};v8ReviewHints.activity='통합 기간 · 운동량 요약/추이 · 주간 달성 · 유산소 상세 펼침. 모든 수치는 합성 시연입니다.';v8ReviewHints.muscles='이번 주 고정 · 분류별/근육별 · 세트/총중량';}
 function recordTabAfterDraw(){if(state.screen==='activity'&&dl.status==='idle'){const cases=recordTabBoundaryCases();$('#notes').insertAdjacentHTML('beforeend',`<div class="flow"><b>부분 달성 경계 검수 · 합성 표본</b><p>개별 종목 인정과 날짜 △를 구분합니다. 공식 달성률·G4와 별도입니다.</p>${cases.map((c,i)=>{const p=recordTabPartial(c),r=recordTabDayResult(c);return `<p data-boundary-case="${i+1}">${i+1}. ${c.name}<br><b>${r.mark}</b> · 종목 인정 ${p.recognized}/${p.total}${p.planned?' · 세트 '+p.performed+'/'+p.planned:''}</p>`}).join('')}</div>`)}}
 document.addEventListener('input',e=>{if(e.target.id==='recordTabSearch'){const a=recordTabDemo.activity;a.query=e.target.value;a.searchOpen=true;wdDraw()}else if(e.target.id==='recordTabHistorySearch'){recordTabDemo.history.query=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
 document.addEventListener('change',e=>{if(e.target.id==='recordTabHistoryScope'){recordTabDemo.history.scope=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
