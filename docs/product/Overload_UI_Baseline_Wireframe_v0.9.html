@@ -682,6 +682,50 @@ a{color:inherit;text-decoration:underline}
 .record-activity .ra-details-button{min-height:44px;margin-block:-7px;font-size:12px}
 .record-activity :is(button,summary,input):focus-visible{outline:2px solid #555;outline-offset:2px}
 @media(max-width:350px){.record-activity .wire{padding-inline:9px}.record-activity h2{font-size:16px}.record-activity .ra-grid strong{font-size:22px}}
+/* 성장 추적 승인 배치 · 밝은 무채색 시안 */
+.growth-wire{display:grid;gap:16px;min-width:0}
+.growth-wire .wire{margin:0;padding:14px 12px;display:grid;gap:12px}
+.growth-wire h1,.growth-wire h2,.growth-wire h3,.growth-wire p{margin:0}
+.growth-wire h1{font-size:22px}.growth-wire h2{font-size:18px}.growth-wire h3{font-size:15px}
+.growth-wire .gw-header,.growth-wire .gw-heading{display:flex;align-items:center;gap:8px}
+.growth-wire .gw-header{min-height:44px}.growth-wire .gw-heading{justify-content:space-between}
+.growth-wire .gw-header button{width:36px;height:44px;border:0;background:transparent;font-size:26px;cursor:pointer}
+.growth-wire .gw-search-title{font-size:15px}
+.growth-wire .gw-search{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:6px;align-items:center}
+.growth-wire .gw-search>input,.growth-wire .gw-search>button{height:42px;border:1px solid #bbb;border-radius:999px;background:#f4f4f4;color:inherit}
+.growth-wire .gw-search>input{min-width:0;width:100%;padding:0 12px;font-size:16px}
+.growth-wire .gw-search>input::placeholder{font-size:12px}
+.growth-wire .gw-search>button{display:grid;place-items:center;width:42px;padding:0;cursor:pointer}
+.growth-wire .gw-search>button[aria-pressed=true]{background:#ddd}
+.growth-wire .gw-search>input::-webkit-search-cancel-button{display:none}
+.growth-wire .v8-growth-search{border:0;padding:0;background:transparent}
+.growth-wire .v10-search-field{font-size:16px;border-radius:999px}
+.growth-wire .gw-periods{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:#e8e8e8}
+.growth-wire .gw-periods button{min-height:40px;border:1px solid transparent;border-radius:7px;background:transparent;color:inherit;cursor:pointer}
+.growth-wire .gw-periods button[aria-pressed=true]{background:#fff;border-color:#bbb;font-weight:700}
+.growth-wire .gw-summary{padding:12px;border:1px solid #bbb;border-radius:5px;background:#f4f4f4;display:grid;gap:12px}
+.growth-wire .gw-latest-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.growth-wire .gw-latest{display:grid;gap:3px;min-width:0}
+.growth-wire .gw-latest>span{font-size:12px;line-height:1.6;color:#666}
+.growth-wire .gw-latest>strong{font-size:26px;line-height:1.25}
+.growth-wire .gw-latest>strong small{font-size:15px;margin-left:3px}
+.growth-wire .gw-delta{display:inline-flex;justify-content:center;padding:3px 7px;border-radius:999px;background:#ddd;font-size:11px;white-space:nowrap}
+.growth-wire .gw-comparison{flex-direction:column;align-items:center;gap:3px;margin-top:22.2px;padding:7px 9px;border-radius:7px;font-size:16px;line-height:1.35}
+.growth-wire .gw-comparison small{font-size:10px}
+.growth-wire .gw-count{border-top:1px solid #bbb;padding-top:10px;font-size:13px}
+.growth-wire .gw-graph{display:grid;gap:4px;min-width:0}
+.growth-wire .gw-graph svg{width:100%;height:220px;background:#f4f4f4;border-radius:5px;overflow:visible}
+.growth-wire .gw-graph svg text{font-size:10px;fill:#666}
+.growth-wire .gw-legend::before{content:'●';margin-right:4px;color:#666}
+.growth-wire .gw-history{list-style:none;margin:0;padding:0}
+.growth-wire .gw-history li{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;min-height:52px;padding:9px 0;font-size:12px}
+.growth-wire .gw-history li+li{border-top:1px solid #bbb}
+.growth-wire .gw-history time{font-size:11px;color:#666;white-space:nowrap}
+.growth-wire .gw-values{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap}
+.growth-wire .gw-values>span:first-child{color:#666}
+.growth-wire .gw-values b{color:#222}
+.growth-wire .gw-history-arrow{flex:none;display:grid;place-items:center;width:12px;font-size:18px;line-height:1;color:#666}
+.growth-wire :is(button,input):focus-visible,.growth-wire svg circle:focus-visible{outline:2px solid #555;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -1406,8 +1450,7 @@ if(s==='recorddash'){
  }else if(s==='growth'){
   let list={'바벨 벤치프레스':[['08/18',50],['09/20',55],['10/25',60]],'바벨 스쿼트':[['08/12',50],['09/18',55],['10/26',60]],'랫 풀다운':[]};
   let selected=list[state.growthExercise]||[];let vals=state.growthPeriod==='1개월'?selected.slice(-1):state.growthPeriod==='3개월'?selected:selected;let empty=vals.length===0;
-  let dots=vals.map((d,i)=>[24+(vals.length===1?120:i*120/(vals.length-1)),96-(d[1]-45)*3.5]);let poly=dots.map(x=>x.join(',')).join(' ');
-  html=`${statHeader('성장 추적')}${box(`<div class="stat-card-title">운동 종목 선택</div>${state.growthPickerOpen?'':`<button type="button" class="v10-compact-trigger" data-act="v8-growth-toggle" aria-expanded="false"><span class="v10-trigger-icon" aria-hidden="true">⌕</span><span class="v10-trigger-value">${escapeHtml(state.growthExercise)}</span><span aria-hidden="true">⌄</span></button>`}${state.growthPickerOpen?`<div class="v8-growth-search v10-expanded">${v10SearchUi('growthSearch',growthChoices.map((e,i)=>({...e,group:e.muscle.split(' · ')[0],primary:e.muscle.split(' · ')[1],aliases:[e.alias],id:i})),(e)=>'v8-growth-choose-'+e.id,{close:'v8-growth-toggle',limited:true,note:'선택 기간에 유효한 완료 웨이트 세트 또는 공식 승인 중량 변경 이력이 있는 운동을 검색합니다.'})}</div>`:''}<p class="tiny muted">현재 루틴에서 빠졌거나 비활성화된 종목도 해당 기록이 있으면 조회할 수 있습니다.</p>`)}${box(`<div class="stat-card-title">기간</div>${statsFilter([['1개월','1개월'],['3개월','3개월'],['6개월','6개월'],['전체','전체']],state.growthPeriod,'growth-period-','four')}<div class="spacer"></div><b>공식 승인 중량 (kg)</b>${empty?`<div class="stat-floating-note">선택한 기간에 승인 중량 이력이 없습니다. 실제 수행 중량으로 대신 표시하지 않습니다.</div>`:`<div class="big">${vals[vals.length-1][1]}kg</div><div style="border:1px solid #ccc;background:#f6f6f6;padding:10px 7px"><svg viewBox="0 0 165 118" width="100%" role="img" aria-label="승인 중량 변화 예시"><path d="M24 8V102H152" fill="none" stroke="#999"/><path d="M24 43H152 M24 77H152" stroke="#ccc" stroke-dasharray="3 3"/>${dots.length>1?`<polyline points="${poly}" fill="none" stroke="#666" stroke-width="2.4"/>`:''}${dots.map(([x,y])=>`<circle cx="${x}" cy="${y}" r="4" fill="#fff" stroke="#333" stroke-width="2"/>`).join('')}</svg><div class="headerrow tiny muted"><span>${vals[0][0]}</span><span>${vals[vals.length-1][0]}</span></div></div>`}`)}${box(`<div class="stat-card-title">승인 중량 변경 이력</div>${empty?'<p class="tiny muted">승인 중량 변경 기록이 없습니다.</p>':vals.slice().reverse().map(([d,kg])=>`<div class="stat-detail"><span>${d}</span><b>${kg}kg</b></div>`).join('')}<p class="tiny muted">디로딩 중량·일반 세트 수행 중량은 공식 승인 성장선에 포함하지 않음.</p>`)}${sampleNote}`;
+  html=growthWireScreen(vals,selected);
 }else if(s==='history'){
   html=recordTabHistory();
 
@@ -1523,6 +1566,44 @@ function recordActivityTrendChart({name,values,labels},unit){
     <div class="ra-trend-x" aria-hidden="true">${labels.map(label=>`<span>${escapeHtml(label)}</span>`).join('')}</div>
   </div>`;
 }
+function growthWireGraph(vals){
+  if(!vals.length)return '<p class="tiny muted">이 기간의 승인 중량 변경 기록이 없습니다.</p>';
+  const width=320,left=44,right=width-18,top=14,bottom=186;
+  const numbers=vals.map(row=>row[1]),low=Math.min(...numbers),high=Math.max(...numbers);
+  const step=Math.max(1,Math.ceil((high-low||4)/4)),minimum=Math.max(0,Math.floor(low/step)*step-(low===high?step:0)),maximum=Math.max(high,minimum+step*4);
+  const dates=vals.map(row=>Date.parse('2026-'+row[0].replace('/','-')+'T10:00:00Z'));
+  const first=dates[0],last=dates.at(-1);
+  const points=vals.map((row,i)=>({x:last===first?(left+right)/2:left+(dates[i]-first)/(last-first)*(right-left),y:bottom-(row[1]-minimum)/(maximum-minimum)*(bottom-top),row}));
+  return `<svg viewBox="0 0 ${width} 220" preserveAspectRatio="none" role="img" aria-label="공식 승인 중량 변화 · 합성 예시">
+    ${Array.from({length:5},(_,i)=>{const value=minimum+(maximum-minimum)*i/4,y=bottom-(bottom-top)*i/4;return `<line x1="${left}" x2="${right}" y1="${y}" y2="${y}" stroke="#bbb" stroke-dasharray="3 3"/><text x="${left-8}" y="${y}" text-anchor="end" dominant-baseline="middle">${value}</text>`}).join('')}
+    <path d="M${left} ${top}V${bottom}H${right}" fill="none" stroke="#bbb"/>
+    ${points.length>1?`<polyline points="${points.map(p=>p.x+','+p.y).join(' ')}" stroke="#666" stroke-width="2" fill="none"/>`:''}
+    ${points.map(p=>`<circle tabindex="0" cx="${p.x}" cy="${p.y}" r="4" fill="#fff" stroke="#666" stroke-width="2" aria-label="${p.row[0]} · ${p.row[1]}kg"><title>${p.row[0]} · ${p.row[1]}kg</title></circle>`).join('')}
+    ${points.filter((_,i)=>i===0||i===points.length-1).map(p=>`<text x="${p.x}" y="202" text-anchor="middle">${p.row[0].replace('/','.')}</text>`).join('')}
+  </svg>`;
+}
+function growthWireScreen(vals,all){
+  const latest=vals.at(-1),previous=latest?all[all.indexOf(latest)-1]:null;
+  const delta=(current,prior,comparison=false)=>{
+    if(!prior||current[1]===prior[1])return '';
+    const value=current[1]-prior[1];
+    return `<span class="gw-delta${comparison?' gw-comparison':''}" aria-label="${value>0?'증가':'감소'} ${Math.abs(value)}kg"><strong>${value>0?'+':'−'}${Math.abs(value)}kg</strong>${comparison?'<small>직전 대비</small>':''}</span>`;
+  };
+  const date=row=>'2026.'+row[0].replace('/','.');
+  return `<div class="growth-wire"><header class="gw-header"><button type="button" data-act="recorddash" aria-label="기록으로">‹</button><h1>성장 추적</h1></header>
+    ${box(`<h2 class="gw-search-title">분석할 운동</h2><div data-v10-search-root data-v10-selected="전체"><div class="gw-search">
+      <input type="search" id="growthSearch" data-v10-query aria-label="운동·분류·근육 검색" placeholder="운동·분류·근육 검색" autocomplete="off" value="${state.growthPickerOpen?'':escapeHtml(state.growthExercise)}">
+      <button type="button" data-act="${state.growthPickerOpen||!state.growthExercise?'v8-growth-toggle':'gw-search-clear'}" aria-pressed="${state.growthPickerOpen||!!state.growthExercise}" aria-label="${state.growthPickerOpen?'검색 닫기':state.growthExercise?'선택 해제':'검색 목록 열기'}">${recordActivityIcon(state.growthPickerOpen||state.growthExercise?'close':'search')}</button></div>
+      ${state.growthPickerOpen?`<div class="v8-growth-search v10-expanded"><div class="v10-filter-area"><div class="v10-filter-heading">운동 부위</div><div class="v10-filter-strip" role="group" aria-label="운동 부위 필터">${v10CatalogGroups.map(g=>`<button type="button" class="v10-filter-chip" data-v10-filter="${g}" aria-pressed="${g==='전체'}">${g}</button>`).join('')}</div></div><div class="v10-result-list v10-result-limited">${v10SearchRows(growthChoices.map((e,i)=>({...e,group:e.muscle.split(' · ')[0],primary:e.muscle.split(' · ')[1],aliases:[e.alias],id:i})),e=>'v8-growth-choose-'+e.id)}<div class="v10-no-results" hidden>검색 결과가 없습니다.</div></div></div>`:''}</div>`)}
+    ${box(`<div class="gw-heading"><h2>성장 분석</h2><span class="tiny muted">공식 승인 중량</span></div>
+      <div class="gw-periods" aria-label="성장 추적 기간">${['1개월','3개월','6개월','전체'].map(period=>`<button type="button" data-act="growth-period-${period}" aria-pressed="${period===state.growthPeriod}">${period}</button>`).join('')}</div>
+      <div class="gw-summary"><div class="gw-latest-row"><div class="gw-latest"><span>최신 공식 승인 중량</span><strong>${latest?latest[1]+'<small>kg</small>':'미확인'}</strong>${latest?`<span>최근 승인 · ${date(latest)}</span>`:''}</div>${latest?delta(latest,previous,true):''}</div><div class="gw-heading gw-count"><span>승인 중량 변경</span><strong>${vals.length}건</strong></div></div>
+      <section class="gw-graph"><div class="gw-heading"><h3>중량 변화 그래프</h3>${latest?'<span class="tiny muted gw-legend">승인 중량</span>':''}</div><p class="tiny muted">공식 승인 기록 기준 · kg</p>${growthWireGraph(vals)}</section>
+      <p class="tiny muted">공식 승인 중량만 성장 그래프에 반영하며 일반 운동 세트와 디로딩 중량은 포함하지 않습니다.</p>`)}
+    ${box(`<div class="gw-heading"><h2>승인 중량 변경 이력</h2><span class="tiny muted">${vals.length}건</span></div><ul class="gw-history">${vals.slice().reverse().map(row=>{const prior=all[all.indexOf(row)-1]||[null,45];return `<li><time>${date(row)} · 19시</time><span class="gw-values"><span>${prior[1]}kg → <b>${row[1]}kg</b></span>${delta(row,prior)}<span class="gw-history-arrow" aria-hidden="true">›</span></span></li>`}).join('')}</ul>${!vals.length?'<p class="tiny muted">승인 중량 변경 기록이 없습니다.</p>':''}`)}
+    <p class="stat-floating-note">UI 검토 · 승인 이력의 중량과 시각은 배치 검토용 합성 예시입니다. 이력 화살표는 상세 이동 배치 예시입니다.</p>
+  </div>`;
+}
 function recordTabActivity(){
   const a=recordTabDemo.activity,range=recordTabRange(a.mode,a.anchor),current=recordTabTrend(),rows=analysisFacts.filter(r=>r.date>=range.from&&r.date<=range.end);
   const sets=rows.reduce((n,r)=>n+r.actual,0),volume=rows.reduce((n,r)=>n+(r.volume||0),0),showSets=state.statMetric==='sets';
@@ -1600,6 +1681,7 @@ function recordTabAfterDraw(){if(state.screen==='activity'&&dl.status==='idle'){
 document.addEventListener('input',e=>{if(e.target.id==='recordTabSearch'){const a=recordTabDemo.activity;a.query=e.target.value;a.searchOpen=true;wdDraw()}else if(e.target.id==='recordTabHistorySearch'){recordTabDemo.history.query=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
 document.addEventListener('change',e=>{if(e.target.id==='recordTabHistoryScope'){recordTabDemo.history.scope=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
 document.addEventListener('focusin',e=>{
+  if(state.screen==='growth'&&e.target.id==='growthSearch'&&!state.growthPickerOpen){state.growthPickerOpen=true;wdDraw();return;}
   const a=recordTabDemo.activity,h=recordTabDemo.history;
   const scope=$('.record-activity .ra-scope[open]');
   if(scope&&!scope.contains(e.target))scope.open=false;
@@ -2156,7 +2238,8 @@ if(to.startsWith('stats-period-')){state.statsPeriods[state.screen]=to.slice(13)
 if(to.startsWith('stats-metric-')){state.statMetric=to.slice(13);draw();return}
 if(to.startsWith('stats-view-')){state.statView=to.slice(11);state.v10StatSearchOpen=false;draw();return}
 if(to==='v8-secondary-toggle'){state.secondaryOpen=!state.secondaryOpen;draw();return}
-if(to==='v8-growth-toggle'){state.growthPickerOpen=!state.growthPickerOpen;draw();return}
+if(to==='gw-search-clear'){state.growthExercise='';state.growthPickerOpen=false;draw();return}
+if(to==='v8-growth-toggle'){state.growthPickerOpen=!state.growthPickerOpen;draw();if(state.growthPickerOpen)$('#growthSearch')?.focus({preventScroll:true});return}
 if(to.startsWith('v8-growth-choose-')){const v=growthChoices[Number(to.slice(17))];if(v){state.growthExercise=v.name;state.growthPickerOpen=false;draw()}return}
 if(to.startsWith('stats-muscle-')){state.selectedMuscle=to.slice(13);state.secondaryOpen=false;draw();return}
 if(to.startsWith('growth-period-')){state.growthPeriod=to.slice(14);draw();return}

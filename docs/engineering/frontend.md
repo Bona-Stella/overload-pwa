@@ -856,6 +856,13 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 - `/routine-preview?tab=history&activity-demo=states`의 정상 조회 시연에서 운동 현황을 열면 직전 주의 완료·부분 달성·미달·휴식·대기·근거 미확인을 시연한다. 완료 비율 합계는 2일분, 계획은 5일, 표시 달성률은 40%다. 유산소는 2시간 20분·4일, 러닝머신 `월 · 금` 8km, 자전거 `화` 7.5km, 야외 운동의 요일·거리 누락 예시를 제공한다. [시연 구현](../../src/review/activity-sample.ts)은 운동 현황에만 이 값을 제공한다.
 - 운영 Overview의 `statistics.days[].cardioActiveMs`는 종류가 없는 날짜별 총시간이며, `cardioByKind`의 종류별 합계에는 날짜가 없다. 운영 화면의 요일 생략과 누적 일수 `미확인`을 유지한다. `상세 보기`는 같은 카드에서 펼쳐지고 `운동 이력` 버튼이 이동을 담당한다. [결정 기록](../product/Overload_UI_Decision_Log_v0.9.md#1027--운동-현황-최종-ui-승인과-문서-동기화--2026-11-17)과 [HTML](../product/Overload_UI_Baseline_Wireframe_v0.9.html)을 동기화한다.
 
+#### 성장 추적 최종 UI 승인 — 2026-11-18
+
+- **UI 구현 A / 사용자 승인 B 완료.** 커밋 `f6ad67d`의 [GrowthPanel](../../src/features/statistics/GrowthPanel.tsx), [전용 CSS](../../src/features/statistics/Growth.module.css), [헤더 연결](../../src/features/statistics/StatisticsPanel.tsx)을 기준으로 한다. 검색·성장 분석·이력의 3개 카드와 4분할 기간, 수치 상단에 맞춘 16px 증감 배지, 연·월·일·시가 있는 구분선 이력을 구현했다.
+- 기존 검색·배치 선택·기간 조회·승인 사건·그래프 연결/툴팁·이력 정렬·상세 이동을 유지한다. 최신값은 선택 기간·배치의 조회값이며 다음 페이지가 있는 건수는 `불러온 N건`이다. 연결 세션이 없는 행은 이동하지 않는다. 일반 운동 수행 중량과 디로딩 중량은 공식 승인 성장선에서 제외한다. 꼭짓점별 상시 값 표시는 추가하지 않았다.
+- 앞선 UI 작업에서 린트·TypeScript·빌드와 관련 23건을 확인했다. 병렬 실행에서 휴식 타이머 1건이 실패한 뒤 단독 재실행에서 통과했다. 배지 보정 후 린트·TypeScript·성장 테스트 7건이 통과했고 Chrome 320/375/393/430px에서 배지 상단 정렬·글자 크기·겹침을 확인했다. 이 수치는 당시 검증 기록이며 이번 문서 작업에서 앱 검사를 재실행한 결과가 아니다. iPhone 성장 추적 실기기 확인은 별도다.
+- [UI/UX](../product/ui-ux.md#성장-추적)와 [결정 10.28](../product/Overload_UI_Decision_Log_v0.9.md#1028--성장-추적-최종-ui-승인--2026-11-18), 기존 밝은 무채색 [HTML](../product/Overload_UI_Baseline_Wireframe_v0.9.html)을 동기화한다. 이번 문서 갱신은 실제 앱 코드·API·시연 데이터 생성 코드를 변경하지 않는다.
+
 #### 현황 갱신
 
 Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/docs/engineering/backend.md#현황-갱신)에 따라 이 절의 해당 항목을 갱신한다. 화면 작업은 [UI 단계 A~D](#181-기본-ui-개발-절차), 사용자 승인과 실기기 검증 범위를 함께 기록한다. 서버 쪽 상태는 [Backend 개발 현황](../../../overload-server/docs/engineering/backend.md#11-현재-개발-현황)으로 연결한다.
