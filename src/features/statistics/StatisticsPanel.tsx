@@ -27,6 +27,8 @@ import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import './statistics.css'
 import { GrowthPanel } from './GrowthPanel.tsx'
 import styles from './RecordMain.module.css'
+import activityStyles from './Activity.module.css'
+import { SearchScopePopover } from './SearchScopePopover.tsx'
 
 function RecordMainIcon({ kind }: { kind: 'activity' | 'growth' | 'plan' | 'muscles' | 'clock' | 'weight' | 'footprints' }) {
   const paths = {
@@ -113,37 +115,79 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   </>
   if (screen === 'muscles') return <WeeklyMuscleStatistics data={data} />
   const achievementRange=periodFor(new Date((achievementAnchor??data.fromDate)+'T12:00:00'),'week',0)
+  const sample=preview?.activity
+  const sampleAchievement=sample?.period.fromDate===achievementRange.fromDate?sample:undefined
+  const sampleCardio=sample?.period.fromDate===range.fromDate&&sample.period.toDateExclusive===range.toDateExclusive?sample.cardio:undefined
+  const activeCardioMs=sampleCardio?.activeMs??data.cardioActiveMs
+  const cardioTotals=sampleCardio?.totals??planning.cardioByKind
   const weeklyPlanning=achievementPlanning??planning
-  const weekDays=Array.from({length:7},(_,i)=>{const date=addDays(achievementRange.fromDate,i);return weeklyPlanning.plannedDays.find(d=>d.date===date)??{date,status:'UNKNOWN' as const,scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}})
+  const dayPlans=sampleAchievement?.achievement.plannedDays??weeklyPlanning.plannedDays
+  const weekDays=Array.from({length:7},(_,i)=>{const date=addDays(achievementRange.fromDate,i);return dayPlans.find(d=>d.date===date)??{date,status:'UNKNOWN' as const,scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}})
   const weekStatistics=weeklyPlanning.statistics
+  const plannedDays = sampleAchievement?.achievement.plannedWorkoutDays??(achievementPlanning === null ? null : weekStatistics.plannedWorkoutDays)
+  const achievementRate = sampleAchievement?.achievement.routineAchievementPercent??(plannedDays === null ? null : weekStatistics.routineAchievementPercent)
+  const completedDays = sampleAchievement?.achievement.effectiveWorkoutDays??weeklyPlanning.effectiveWorkoutDays
 
   return <>
-    <Card><h2>운동량 요약 · 전체</h2><div className="statistics-summary"><div><small>완료 세트</small><strong>{format(data.summary.completedSets)}세트</strong></div><div><small>총중량 · 중량×반복</small><strong>{format(data.summary.volumeLoadKg)}kg</strong></div></div><p className="muted small">선택 기간 전체 · 아래 검색 선택과 독립{preview?' · 합성 데이터':''}</p></Card>
-    <Card><div className="section-heading"><h2>운동량 추이</h2><span className="muted small">완료 기록 기준</span></div>
+    <section className={activityStyles.summary} aria-label="운동량 요약">
+      <div className={activityStyles.sectionHeading}><h2>운동량 요약</h2><span>선택 기간 전체</span></div>
+      <div className={activityStyles.summaryGrid}>
+        <Card><span>완료 세트</span><strong>{format(data.summary.completedSets)}<small>세트</small></strong></Card>
+        <Card><span>총중량</span><strong>{format(data.summary.volumeLoadKg)}<small>kg</small></strong></Card>
+      </div>
+    </section>
+    <Card className={activityStyles.trend}><div className={activityStyles.sectionHeading}><h2>운동량 추이</h2><span>완료 기록 기준</span></div>
+      <div className={`record-tabs ${activityStyles.segment}`}><Button aria-pressed={metric==='sets'} onClick={()=>setMetric('sets')}>세트</Button><Button aria-pressed={metric==='volume'} onClick={()=>setMetric('volume')}>총중량</Button></div>
       <SearchList scopes={[{id:'all',name:'전체'},{id:'exercise',name:'운동별'},{id:'group',name:'분류별'},{id:'muscle',name:'근육별'}]} scope={search.scope}
+        renderScope={control=><SearchScopePopover {...control} />}
         onScope={scope=>setSearch({...search,scope,query:'',selected:'',tag:'ALL'},true)} query={search.query} onQuery={query=>setSearch({...search,query},true)}
         tags={search.scope==='exercise'?{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:search.scope==='muscle'?{label:'근육 분류',options:[{id:'ALL',name:'전체'},...[...new Set(muscles.map(m=>m.groupCode))].map(id=>({id,name:muscleGroups[id]??id}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:undefined}
         options={options} onSelect={id=>setSearch({...search,selected:id,query:''},true)} selected={selected?.name}
         onClear={()=>setSearch({...search,tag:'ALL',query:'',selected:''},true)} label="운동·분류·근육 검색" />{preview&&<p className="muted small">준비된 합성 마스터 검색 · 후보 검색과 선택 후 통계 조회는 별개입니다.</p>}
-      <div className="record-tabs"><Button aria-pressed={metric==='sets'} onClick={()=>setMetric('sets')}>세트</Button><Button aria-pressed={metric==='volume'} onClick={()=>setMetric('volume')}>총중량</Button></div>
-      <div className="record-pair"><span>{selected?.name??'전체 운동'} · 선택한 기간</span><b>{format(values.some(v=>v===null)?null:sumDecimals(values as string[]))}{metric==='sets'?'세트':'kg'}</b></div>
+      <div className={`record-pair ${activityStyles.chartHeading}`}><span>{selected?.name??'전체 운동'} · 선택한 기간</span><b>{format(values.some(v=>v===null)?null:sumDecimals(values as string[]))}{metric==='sets'?'세트':'kg'}</b></div>
       {!preview&&selected?<p role="status" className="muted small">선택 항목의 날짜별 집계 API 연결이 필요합니다. 전체 추이는 선택 해제 후 확인할 수 있습니다.</p>:<RecordChart data={values.map((v,i)=>({id:String(i),label:labels[i],value:v}))} unit={metric==='sets'?'세트':'kg'} label={(selected?.name??'전체 운동')+' '+(metric==='sets'?'완료 세트':'총중량')+' 추이'}/>}
       <p className="muted small">{metric==='sets'?'세부 근육만 기여 세트 · 분류/전체는 원본 세트':'실제 중량 × 실제 반복 합계 · 기여 계수 미적용'}</p>
     </Card>
-    <Card><h2>예정일 · 운동 달성</h2><div className="record-days" data-period="week"><div className="record-weekday-head" aria-hidden="true">{weekdays.map(day=><span key={day}>{day}</span>)}</div>{weekDays.map((day,index)=>{
-      const session=(preview?.evidence??evidence).find(s=>s.id===day.selectedSessionId)
-      const result=dayStatus(day,day.date,preview?.today??localToday(),session?partialAchievement(session):'unknown')
-      return <div className="record-day" style={index===0?{gridColumnStart:(dayOfWeek(day.date)+6)%7+1}:undefined} key={day.date} title={day.date+' '+result.label}><time>{Number(day.date.slice(8))}</time><strong aria-label={day.date+' '+result.label} data-state={result.kind}>{result.kind==='unknown'||result.kind==='planned'?'·':result.mark}</strong></div>
-    })}</div><p className="muted small">✓ 전체 완료 · △ 부분 달성 · × 기준 미달 · – 휴식 · · 미래/검사 대기 · ? 확인 불가</p>
-      {achievementPlanning===null||weekStatistics.plannedWorkoutDays===null?<p className="muted small">주간 계획 운동일과 루틴 달성률은 아직 확인할 수 없습니다.</p>:<p className="muted small">계획 대비 운동일 {weeklyPlanning.effectiveWorkoutDays===null?'확인 중':format(weeklyPlanning.effectiveWorkoutDays)} / {weekStatistics.plannedWorkoutDays}일 · {weekStatistics.routineAchievementPercent===null?'유산소 목표 달성 확인 필요':'공식 루틴 달성률 '+format(weekStatistics.routineAchievementPercent,0)+'%'}</p>}
-      <p className="muted small">△는 날짜 표시용 분류입니다. 공식 루틴 달성률·유효 운동일·G4 산식은 변경하지 않습니다.</p>
+    <Card className={activityStyles.achievement}>
+      <div className={activityStyles.sectionHeading}><h2>주간 루틴 달성</h2><strong>{achievementRate===null?'—':format(achievementRate,0)+'%'}</strong></div>
+      <div className={activityStyles.progress} role="progressbar" aria-label="주간 루틴 달성률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={achievementRate===null?undefined:Number(achievementRate)} aria-valuetext={achievementRate===null?'확인 불가':format(achievementRate,0)+'%'}><span style={{width:(achievementRate??'0')+'%'}} /></div>
+      {plannedDays===null?<p className="muted small">주간 계획 운동일과 루틴 달성률은 아직 확인할 수 없습니다.</p>:<div className={activityStyles.achievementSummary}>
+        <span>{completedDays===null?`계획 ${plannedDays}일 · 완료일 확인 중`:`계획한 ${plannedDays}일 중 ${format(completedDays)}일 완료`}</span>
+        <span>{format(completedDays)} / {plannedDays}일</span>
+      </div>}
+      {plannedDays!==null&&achievementRate===null&&<p className="muted small">유산소 목표 달성 확인 필요</p>}
+      <div className="record-days" data-period="week">{weekDays.map((day,index)=>{
+        const session=(sampleAchievement?.evidence??preview?.evidence??evidence).find(s=>s.id===day.selectedSessionId)
+        const result=dayStatus(day,day.date,preview?.today??localToday(),session?partialAchievement(session):'unknown')
+        const mark=result.kind==='unknown'?(sampleAchievement&&day.reviewStatus!=='PENDING'?'?':'·'):result.kind==='planned'?'·':result.mark
+        return <div className="record-day" style={index===0?{gridColumnStart:(dayOfWeek(day.date)+6)%7+1}:undefined} key={day.date} title={day.date+' '+result.label}><span className={activityStyles.weekday}>{weekdays[index]}</span><time>{Number(day.date.slice(8))}</time><strong aria-label={day.date+' '+result.label} data-state={result.kind}>{mark}</strong></div>
+      })}</div>
+      <p className={`muted small ${activityStyles.legend}`}><span>– 휴식</span><span>· 미수행</span><span>? 미확인</span></p>
     </Card>
-    <Card><div className="section-heading"><h2>유산소 현황</h2><Button variant="quiet" onClick={()=>setCardioDetail(!cardioDetail)}>{cardioDetail?'상세 닫기':'상세 보기 ›'}</Button></div>
-      <div className="record-pair"><span>누적 실제 시간</span><b>{cardioTime(data.cardioActiveMs)}</b></div>
-      {planning.cardioByKind.map(c=><p className="muted small" key={c.kind}>{cardioKinds[c.kind]??c.kind} {c.distanceKm!==null?format(c.distanceKm)+'km':'거리 미입력'} · {[c.calculatedDistanceKm!==null?'계산 거리 '+format(c.calculatedDistanceKm)+'km (실제 속도×시간)':null,c.manualDistanceKm!==null?'직접 입력 '+format(c.manualDistanceKm)+'km':null,c.unknownSourceDistanceKm!==null?'출처 미확인 '+format(c.unknownSourceDistanceKm)+'km':null].filter(Boolean).join(' / ')||'거리 미입력'}</p>)}
-      {!planning.cardioByKind.length&&<p className="muted small">선택 기간에 유산소 기록이 없습니다.</p>}
-      <p className="muted small">실제 완료 기준 · 계획 목표와 구분</p>{!preview&&<><p className="muted small">실제 누적 {cardioTime(data.cardioActiveMs)}{plannedMs===null?' · 계획 시간 확인 불가':plannedMs===0n?' · 계획 없음':' / 계획 '+cardioTime(plannedMs.toString())}</p>{planning.cardioByKind.map(c=><section key={c.kind}><p className="muted small">{cardioKinds[c.kind]??c.kind} · {cardioTime(c.activeMs)}{c.distanceKm!==null&&' · '+c.distanceKm+' km'}</p><small>{c.manualDistanceKm!==null&&'직접 입력 '+c.manualDistanceKm+' km · '}{c.calculatedDistanceKm!==null&&'계산 거리 '+c.calculatedDistanceKm+' km · '}{c.unknownSourceDistanceKm!==null&&'출처 미확인 '+c.unknownSourceDistanceKm+' km · '}{c.recordsWithoutDistance!=='0'&&'거리 미입력 기록 포함'}</small></section>)}<p className="muted small">선택 기간 전체의 누적 시간입니다. 실제 시간에는 계획 외 유산소도 포함됩니다. 미전송 기록은 포함되지 않습니다.</p><Button variant="quiet" onClick={onHistory}>유산소 수행 기록 보기 ›</Button></>}
-      {cardioDetail&&<div className="stack"><p className="muted small">{plannedMs===null?'계획 시간 확인 불가':'계획 '+cardioTime(plannedMs.toString())} · 종류별 거리는 합산하지 않습니다.</p>{preview?.sessions.filter(s=>s.workoutDate>=data.fromDate&&s.workoutDate<data.toDateExclusive).flatMap(s=>s.snapshot.state.cardioResults.filter(c=>c.status==='COMPLETED').map(c=><div className="record-pair" key={c.id}><span>{s.workoutDate} · {c.status==='COMPLETED'?cardioTime(String(c.result.activeMs)):''}</span><Button variant="quiet" onClick={()=>onOpen(s.id)}>상세 ›</Button></div>))}<Button variant="quiet" onClick={onHistory}>유산소 수행 기록 보기 ›</Button></div>}
+    <Card className={activityStyles.cardio}><div className={activityStyles.sectionHeading}><h2>유산소 현황</h2><Button variant="quiet" onClick={()=>setCardioDetail(!cardioDetail)} aria-expanded={cardioDetail}>{cardioDetail?'상세 닫기':'상세 보기 ›'}</Button></div>
+      <div className={activityStyles.cardioMetrics}>
+        <div><span><RecordMainIcon kind="clock" />누적 유산소 시간</span><strong>{cardioTime(activeCardioMs)}</strong></div>
+        <div><span><RecordMainIcon kind="plan" />누적 일수</span><strong>{sampleCardio?sampleCardio.days+'일':'미확인'}</strong></div>
+      </div>
+      <section className={activityStyles.cardioKinds}><h3>종류별 누적 거리</h3>
+        {cardioTotals.map(c=><div className={activityStyles.cardioKind} key={c.kind}><span><ExerciseIcon kind={c.kind==='BIKE'?'cycling':c.kind==='TREADMILL'||c.kind==='OUTDOOR'?'running':'other'} />{cardioKinds[c.kind]??c.kind}</span>
+          <strong>{sampleCardio&&<small>{sampleCardio.weekdays.get(c.kind)??'요일 미확인'}</small>}{c.distanceKm!==null?format(c.distanceKm)+' km':'거리 미입력'}</strong></div>)}
+        {!cardioTotals.length&&<p className="muted small">선택 기간에 유산소 기록이 없습니다.</p>}
+      </section>
+      <p className="muted small">{sampleCardio?'UI 검토용 합성 유산소 기록':<>선택 기간 실제 기록 기준 · 계획 외 유산소도 포함{!preview&&'. 미전송 기록은 포함되지 않습니다.'}</>}</p>
+      <div className={`stack ${activityStyles.cardioDetails}`} hidden={!cardioDetail}>
+        <div className="record-pair"><p className="muted small">{sampleCardio?'시연':'실제'} 누적 {cardioTime(activeCardioMs)}{sampleCardio?' · 계획 없음':plannedMs===null?' · 계획 시간 확인 불가':plannedMs===0n?' · 계획 없음':' / 계획 '+cardioTime(plannedMs.toString())}</p><Button variant="quiet" onClick={onHistory}>운동 이력 ›</Button></div>
+        {cardioTotals.map(c=><section key={c.kind}>
+          <p className="muted small">{cardioKinds[c.kind]??c.kind} · {cardioTime(c.activeMs)}{c.distanceKm!==null&&' · '+c.distanceKm+' km'}</p>
+          <small className="muted">{[
+            c.manualDistanceKm!==null?'직접 입력 '+c.manualDistanceKm+' km':null,
+            c.calculatedDistanceKm!==null?'계산 거리 '+c.calculatedDistanceKm+' km':null,
+            c.unknownSourceDistanceKm!==null?'출처 미확인 '+c.unknownSourceDistanceKm+' km':null,
+            c.recordsWithoutDistance!=='0'?'거리 미입력 기록 포함':null,
+          ].filter(Boolean).join(' · ')||'거리 미입력'}</small>
+        </section>)}
+        {cardioDetail&&!sampleCardio&&preview?.sessions.filter(s=>s.workoutDate>=data.fromDate&&s.workoutDate<data.toDateExclusive).flatMap(s=>s.snapshot.state.cardioResults.filter(c=>c.status==='COMPLETED').map(c=><div className="record-pair" key={c.id}><span>{s.workoutDate} · {c.status==='COMPLETED'?cardioTime(String(c.result.activeMs)):''}</span><Button variant="quiet" onClick={()=>onOpen(s.id)}>상세 ›</Button></div>))}
+      </div>
     </Card>
   </>
 }
@@ -159,7 +203,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
   const identity = scope.userId + ':' + scope.dataGeneration
   const [screen, setScreen] = useScreenHistory<RecordScreen>('records:' + identity + (initialPreset ? ':preset:' + initialPreset : ''), initialPreset ? 'plan' : 'summary')
   useEffect(() => { window.scrollTo?.(0,0) }, [screen])
-  const [activityPeriod, setActivityPeriod] = useScreenHistory<PeriodSelection>('activity-period:' + identity, { mode:'week', anchor:preview?.today??localToday() })
+  const [activityPeriod, setActivityPeriod] = useScreenHistory<PeriodSelection>('activity-period:' + identity + (preview?.activity ? ':sample' : ''), { mode:'week', anchor:preview?.activity?.period.fromDate??preview?.today??localToday() })
   const [state, setState] = useState<{ data: Overview | null; issue: boolean }>({ data:null, issue:false })
   const [reload, setReload] = useState(0), invalid = useRef(onInvalid)
   useEffect(() => { invalid.current = onInvalid }, [onInvalid])
@@ -202,15 +246,18 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
     return()=>abort.abort()
   },[workoutApi,preview,screen,weekly,evidenceKey,scope])
   const back = () => { if (window.history.state?.overloadNavigation?.index > 0) window.history.back(); else setScreen('summary', true) }
-  return <section className={`stack statistics record-screen ${screen==='summary'?styles.main:''}`} aria-label="운동 기록·분석">
-    {screen !== 'summary' && <div className="record-back"><Button variant="quiet" onClick={back}>{initialPreset?'‹ 루틴으로':'‹ 기록으로'}</Button><span className="muted small">기록 · 분석</span></div>}
-    {screen === 'activity' && <><h1>운동 현황</h1><PeriodControls days={current?.plannedDays} value={activityPeriod} onChange={value => setActivityPeriod(value, true)} /></>}
+  return <section className={`stack statistics record-screen ${screen==='summary'?styles.main:''} ${screen==='activity'?activityStyles.page:''}`} aria-label="운동 기록·분석">
+    {screen === 'activity' ? <header className={activityStyles.header}><Button variant="quiet" className={activityStyles.back} aria-label={initialPreset?'루틴으로':'기록으로'} onClick={back}>{initialPreset?'‹ 루틴으로':'‹ 기록으로'}</Button><h1>운동 현황</h1></header> : screen !== 'summary' && <div className="record-back"><Button variant="quiet" onClick={back}>{initialPreset?'‹ 루틴으로':'‹ 기록으로'}</Button><span className="muted small">기록 · 분석</span></div>}
+    {screen === 'activity' && <PeriodControls variant="activity" days={current?.plannedDays} value={activityPeriod} onChange={value => setActivityPeriod(value, true)} />}
     {screen === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} />
       : screen === 'plan' ? workoutApi ? <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} /> : <p role="status">주간 계획 데이터 연결을 기다리고 있습니다.</p>
       : screen === 'history' ? workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
       : <>{state.issue&&<Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>}
         {!current&&!display&&<p role="status" className="muted small">통계 불러오는 중…</p>}
-        {display&&<div className="stack record-statistics-body" aria-busy={!current}>{screen==='activity'&&<p className="muted small record-data-range">표시 데이터 · {display.statistics.fromDate} ~ {addDays(display.statistics.toDateExclusive,-1)}</p>}<StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={display.statistics} planning={display} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions}/></div>}
+        {display&&<div className="stack record-statistics-body" aria-busy={!current}>
+          {screen==='activity'&&!current&&<p className="muted small record-data-range">표시 데이터 · {display.statistics.fromDate} ~ {addDays(display.statistics.toDateExclusive,-1)}</p>}
+          <StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={display.statistics} planning={display} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions}/>
+        </div>}
         {screen === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>setScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
     {preview&&screen!=='plan'&&screen!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
   </section>

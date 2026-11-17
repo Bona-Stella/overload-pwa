@@ -15,7 +15,7 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
  for(const w of [320,375,390,430]){
   await width(w,'react')
   const g=await evaluate('(()=>{const g=document.querySelector(".record-search [role=group]"),r=g.getBoundingClientRect(),s=g.querySelector("span");return{w:g.clientWidth,scroll:g.scrollWidth,x:r.x+r.width/2,y:r.y+r.height/2,height:s.getBoundingClientRect().height,radius:getComputedStyle(s).borderRadius,wrap:getComputedStyle(g).flexWrap,overflow:getComputedStyle(g).overflowX}})()')
-  assert(g.scroll>g.w);assert.equal(g.height,27);assert.equal(g.radius,'999px');assert.equal(g.wrap,'nowrap');assert.equal(g.overflow,'auto')
+  assert(g.scroll>g.w);assert.equal(g.height,32);assert.equal(g.radius,'999px');assert.equal(g.wrap,'nowrap');assert.equal(g.overflow,'auto')
   await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:g.x,y:g.y,deltaX:500,deltaY:0});await wait(()=>evaluate('document.querySelector(".record-search [role=group]").scrollLeft>0'),'horizontal tag scroll')
   await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:g.x,y:g.y,deltaX:-1000,deltaY:0})
   await capture('seventh-tags','react',w)

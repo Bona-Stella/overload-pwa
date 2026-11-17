@@ -12,7 +12,7 @@ export async function verifyNinthUi({go,title,click,set,evaluate,send,wait,width
   await title(screen)
   if(screen==='운동 종목 보기')assert.equal(await evaluate('document.querySelectorAll(".record-search [role=group]").length'),1)
   else assert.equal(await evaluate('document.querySelectorAll(".record-search [role=group]").length'),0)
-  if(await evaluate('!!document.querySelector(".record-search select")'))await set('.record-search select','exercise')
+  if(await evaluate('!!document.querySelector(".record-search :is(select,button[aria-haspopup=listbox])")'))await set('.record-search select','exercise')
   await pointer('.record-search input');await set('.record-search input','벤치');await settle()
   await pointer('.search-disclosure')
   assert.equal(await evaluate('document.querySelector(".record-search input").value'),'')

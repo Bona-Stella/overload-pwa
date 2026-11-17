@@ -8,7 +8,7 @@ export async function verifySixthUi({go,title,click,set,evaluate,send,wait,width
  for(const name of ['운동 현황','성장 추적','전체 운동 이력']){
   await go('/routine-preview?tab=history');await tab('기록');await title('이번 주 요약')
   await click(name==='전체 운동 이력'?'전체 보기 ›':name+' ›');await title(name)
-  if(await evaluate('!!document.querySelector(".record-search select")'))await set('.record-search select','exercise');await settle()
+  if(await evaluate('!!document.querySelector(".record-search :is(select,button[aria-haspopup=listbox])")'))await set('.record-search select','exercise');await settle()
   await open();await set('.record-search input','벤치')
   await wait(()=>evaluate('document.querySelectorAll(".record-search li > button:first-child").length>0'),'sixth search results')
   assert.equal(await state(),'EDITING')

@@ -86,7 +86,8 @@ test('summary distinguishes confirmed server records from unsent local facts and
   const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:partial().statistics,planning:partial(),screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
   assert.match(html,/완료 세트/);assert.match(html,/30분/);assert.match(html,/미전송 기록은 포함되지 않습니다/)
   assert.match(html,/아직 확인할 수 없습니다/);assert.doesNotMatch(html.replace(/<[^>]*>/g,''),/75%|100%/)
-  assert.match(html,/유산소 수행 기록 보기/);assert.match(html,/운동량 추이/)
+  assert.doesNotMatch(html,/유산소 수행 기록 보기/);assert.match(html,/상세 보기/);assert.match(html,/운동량 추이/)
+  assert.match(html,/주간 루틴 달성/);assert.match(html,/누적 일수/);assert.match(html,/미확인/)
 })
 test('weekly muscle statistics preserves exact contributions and does not pretend missing independent classifications are zero',()=>{
   const data=partial(), analysis=actualAnalysis(data.statistics)

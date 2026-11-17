@@ -22,7 +22,18 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert.ok(!r.exceptionDetails,r.exceptionDetails?.exception?.description);return r.result.value}
  const wait=async(fn,label)=>{const end=Date.now()+15000;while(Date.now()<end){const r=await fn();if(r)return r;await delay(40)}assert.fail('Timed out: '+label)}
  const click=async(text,selector='button')=>wait(()=>evaluate('(()=>{const e=[...document.querySelectorAll('+JSON.stringify(selector)+')].find(e=>e.getClientRects().length&&!e.disabled&&(e.textContent.trim()==='+JSON.stringify(text)+'||e.getAttribute("aria-label")==='+JSON.stringify(text.replace(/ ›$/,''))+'));if(!e)return false;e.click();return true})()'),text)
- const set=(selector,value)=>evaluate('(()=>{const e=document.querySelector('+JSON.stringify(selector)+');if(!e)throw Error("missing field");Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e),"value").set.call(e,'+JSON.stringify(value)+');e.dispatchEvent(new Event(e.tagName==="SELECT"?"change":"input",{bubbles:true}))})()')
+ const set=async(selector,value)=>{
+  if(selector==='.record-search select'&&!await evaluate('!!document.querySelector(".record-search select")')){
+   const trigger='.record-search button[aria-haspopup="listbox"]'
+   if(!await evaluate(`!!document.querySelector(${JSON.stringify(trigger)})`))await evaluate('document.querySelector(".record-search input").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))')
+   await evaluate(`document.querySelector(${JSON.stringify(trigger)}).click()`)
+   const option=`.record-search [role="option"][data-value="${value}"]`
+   await wait(()=>evaluate(`!!document.querySelector(${JSON.stringify(option)})`),'scope option '+value)
+   await evaluate(`document.querySelector(${JSON.stringify(option)}).click()`)
+   return
+  }
+  await evaluate('(()=>{const e=document.querySelector('+JSON.stringify(selector)+');if(!e)throw Error("missing field");Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e),"value").set.call(e,'+JSON.stringify(value)+');e.dispatchEvent(new Event(e.tagName==="SELECT"?"change":"input",{bubbles:true}))})()')
+ }
  const body=()=>evaluate('document.body.innerText')
  const tab=name=>click(name,'nav button')
  const title=async name=>wait(()=>evaluate('[...document.querySelectorAll("h1,h2")].some(e=>e.getClientRects().length&&e.textContent==='+JSON.stringify(name)+')'),name)
