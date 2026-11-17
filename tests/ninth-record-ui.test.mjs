@@ -32,19 +32,18 @@ export function mixedRecord(){
  s.snapshot.state.cardioResults=[{id:'cardio',sessionActivityId:OTHER,status:'COMPLETED',startedAt:'2026-10-31T12:50:00Z',occurredAt:s.endedAt,result:{timerMs:1200000,activeMs:1200000,corrected:false,distanceKm:'2.5',averageBpm:null}}]
  return s
 }
-test('recent cards show three compact rows while history retains detailed totals',()=>{
+test('shared record cards show compact actual/planned counts without changing record facts',()=>{
  const s=mixedRecord(),f=recordSummary(s),before=structuredClone(s)
  assert.deepEqual([f.totalMs,f.weightMs,f.cardioMs,f.inactiveMs],[4200000,2400000,1200000,600000])
  assert.deepEqual([f.completedSets,f.plannedSets,f.volumeKg,f.distanceKm],[3,3,'750','2.5'])
  assert.equal(f.status.kind,'complete');assert.deepEqual(achievementReasons(s),{})
  const row={...s,routineName:s.initialPlan.routineName},props={row,session:s,onOpen:()=>{}}
- const recent=render(SessionRecordCard,{...props,recent:true}),history=render(SessionRecordCard,props)
+ const recent=render(SessionRecordCard,props)
  assert.match(recent,/10.31 · 토 · 21:00/);assert.match(recent,/총 1시간 10분/)
- assert.match(history,/2026-10-31 · 토요일 · 21:00/)
- assert.match(recent,/웨이트 1종목 · 유산소 1종목/);assert.match(recent,/전체 완료/)
+ assert.match(recent,/웨이트 1\/1종목 · 유산소 1\/1종목/);assert.match(recent,/전체 완료/)
  assert.doesNotMatch(recent,/00:40|00:20|총 3세트|2.5km|750kg|총중량/)
- assert.match(history,/1:10:00/);assert.match(history,/40:00/);assert.match(history,/20:00/)
- assert.doesNotMatch(history,/전체 완료|부분 완료/);assert.deepEqual(s,before)
+ const unavailable=render(SessionRecordCard,{row,onOpen(){}})
+ assert.match(unavailable,/종목 완료 수 · 상세 조회 필요/);assert.doesNotMatch(unavailable,/0\/0종목/);assert.deepEqual(s,before)
 })
 test('unknown coverage and inconsistent durations cannot manufacture nonperformance time',()=>{
  const s=mixedRecord();delete s.snapshot.state.weightTiming
@@ -66,7 +65,7 @@ test('reasons explain the existing judgment and only highlight contributors to t
 test('recent cards retain existing completion counts and unknown judgments without detail metrics',()=>{
  const s=mixedRecord();s.initialPlan.weightExercises=[];s.snapshot.state.performedSets=[];s.snapshot.state.sessionExercises=s.snapshot.state.sessionExercises.filter(e=>e.kind==='CARDIO')
  let html=render(SessionRecordCard,{row:{...s,routineName:'러닝'},session:s,recent:true,onOpen:()=>{}})
- assert.match(html,/유산소 1종목/);assert.match(html,/전체 완료/);assert.doesNotMatch(html,/웨이트|총중량|세트|2.5km/)
+ assert.match(html,/유산소 1\/1종목/);assert.match(html,/전체 완료/);assert.doesNotMatch(html,/웨이트|총중량|세트|2.5km/)
  s.snapshot.state.cardioResults[0].result.distanceKm=null
  html=render(SessionRecordCard,{row:{...s,routineName:'러닝'},session:s,recent:true,onOpen:()=>{}})
  assert.match(html,/달성 확인 불가/);assert.match(html,/일부 확인 불가/);assert.doesNotMatch(html,/2.5km|기준 미달/)
@@ -104,4 +103,27 @@ test('only the catalog opts into initially open results and tags',()=>{
  const props={query:'',onQuery:()=>{},options:[],onSelect:()=>{},onClear:()=>{},tags:{label:'운동 부위',selected:'ALL',options:[{id:'ALL',name:'전체'}],onSelect:()=>{}}}
  assert.doesNotMatch(render(SearchList,props),/운동 부위 필터/)
  assert.match(render(SearchList,{...props,defaultOpen:true}),/운동 부위 필터/)
+})
+
+test('detail keeps one common title, distinguishes unknown timing from zero, and retains historical review states',()=>{
+ const s=mixedRecord(),data=summaryData(s,null),facts={...data.recordFacts,weightMs:null,inactiveMs:null,cardioMs:0}
+ const historicalWeights=[{id:E,name:'미승인 검토',results:[],review:{direction:'decrease',referenceKg:'25',recommendedKg:'20',planned:3,completed:3,incomplete:false,sets:[{id:'set',reps:4,contributes:true}]}}]
+ const html=render(WorkoutSummary,{...data,recordFacts:facts,historicalWeights,detail:true,manufacturers:[],onBack(){}})
+ assert.equal((html.match(/<h1\b/g)||[]).length,1);assert.match(html,/<h1[^>]*>운동 기록 상세<\/h1>/)
+ assert.match(html,/aria-label="기록으로"/);assert.match(html,/전체 완료|부분 완료|기준 미달|달성 확인 불가/)
+ assert.match(html,/>–<\/strong><small>수행 시간/);assert.match(html,/>0:00<\/strong><small>수행 시간/)
+ assert.match(html,/<details open=""><summary>/);assert.match(html,/미승인/);assert.match(html,/감량 검토/)
+ assert.match(html,/중량 변경 승인 이력/);assert.match(html,/기록 보존 안내/);assert.match(html,/기록으로 돌아가기/)
+})
+
+test('detail marks only explicitly corrected cardio time and preserves measured values and the source record',()=>{
+ for(const corrected of [false,true]){
+  const s=mixedRecord(),result=s.snapshot.state.cardioResults[0].result
+  result.corrected=corrected;result.measurement={actualSpeedKmh:'7.5',distanceSource:'MANUAL'};result.averageBpm=125
+  const before=structuredClone(s),data=summaryData(s,null),html=render(WorkoutSummary,{...data,detail:true,manufacturers:[],onBack(){}})
+  assert.equal((html.match(/class="corrected"/g)||[]).length,corrected?1:0)
+  assert.match(html,/직접 입력 거리 2.5 km · 평균 심박 125 BPM/);assert.match(html,/실제 속도 7.5 km\/h/)
+  assert.doesNotMatch(html,/\(수정\)/);if(corrected)assert.match(html,/자동 기록/)
+  assert.deepEqual(s,before)
+ }
 })

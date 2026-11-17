@@ -51,7 +51,7 @@ try{
   await api('PUT','/api/v1/routines/'+routine.id,{dataGeneration:owner.dataGeneration,expectedVersion:latest.version,name:latest.name,weightPlacements:latest.weightPlacements.map(p=>({mode:'EXISTING',id:p.id,manufacturerId:p.manufacturerId,loadType:p.loadType,setCount:p.setCount,minReps:p.minReps,maxReps:p.maxReps})),cardioPlacements:[],weightApprovals:[{placementId:latest.weightPlacements[1].id,nextApprovedWeightKg:'35',occurredAt:new Date().toISOString()}]})
   const after=await api('GET',path+'/weight-review');assert.deepEqual(after.approvals,saved.approvals);assert.deepEqual(after.frozen,unapproved.frozen)
   report.flows.push({sessionId:session.id,reps,approvedCount:after.approvals.length,frozenSurvivesReload:true,routineEditorDoesNotRelabel:true,actualEventId:after.approvals[0].eventId})
-  await d.click('‹ 기록으로');await waitFor(()=>visible('nav[aria-label="기본 탐색"]'),'navigation after detail back');await d.click('홈','nav')
+  await d.click('기록으로');await waitFor(()=>visible('nav[aria-label="기본 탐색"]'),'navigation after detail back');await d.click('홈','nav')
  }
 
  await d.click('기록','nav');await waitFor(()=>visible('.recent-records .session-record-card'),'real record cache populated')

@@ -64,7 +64,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await go('/routine-preview?tab=history');await title('이번 주 요약')
   await click('운동 현황 ›');await title('운동 현황');await tab('홈');await tab('기록');await title('이번 주 요약');report.navigation.push('records/activity/home/records/root')
   await click('주간 근육 계획 ›');await title('주간 근육 계획');await tab('루틴');await tab('기록');await title('이번 주 요약');report.navigation.push('records/plan/routines/records/root')
-  await click('전체 보기 ›');await title('전체 운동 이력');await click((await evaluate('document.querySelector(".session-record-card").textContent.trim()')),'.session-record-card');await title('운동 기록 상세');assert.doesNotMatch(await body(),/중량 검토/);await click('‹ 기록으로');await title('전체 운동 이력');report.navigation.push('history/detail/back/history')
+  await click('전체 보기 ›');await title('전체 운동 이력');await click((await evaluate('document.querySelector(".session-record-card").textContent.trim()')),'.session-record-card');await title('운동 기록 상세');assert.doesNotMatch(await body(),/중량 검토/);await click('기록으로');await title('전체 운동 이력');report.navigation.push('history/detail/back/history')
   await tab('기록');await click('운동 현황 ›');await title('운동 현황');await click('기록으로');await title('이번 주 요약');report.navigation.push('activity/back/root')
   await send('Runtime.evaluate',{expression:'history.forward()'});await title('운동 현황');await tab('기록');await title('이번 주 요약');report.navigation.push('browser forward and same tab root')
   const captures=[]
@@ -112,9 +112,9 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   assert.deepEqual(await evaluate('[...document.querySelectorAll("strong[data-status]")].map(e=>/^[월화수목금토일]$/.test(e.textContent)?"·":e.textContent)'),activityMarks)
   report.interactions.push('home and activity share identical date status glyphs')
   await tab('기록');await click('전체 보기 ›');await title('전체 운동 이력');await reactCapture('history')
-  await evaluate('document.querySelector('+JSON.stringify('button[aria-label="이전 기간"]')+').click()');await wait(()=>evaluate('document.querySelector(".record-period-row b").textContent.includes("10월")'),'October')
+  await evaluate('document.querySelector('+JSON.stringify('button[aria-label="이전 기간"]')+').click()');await wait(()=>evaluate('document.querySelector(".record-period-row b").textContent.includes("2026/10")'),'October')
   await set('.record-search select','exercise');await set('.record-search input','벤치');await wait(()=>evaluate('document.querySelectorAll(".session-record-card").length>0'),'past exercise results')
-  await evaluate('document.querySelector(".record-search input").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));document.querySelector(".search-disclosure").click()');assert.match(await evaluate('document.querySelector(".record-period-row b").textContent'),/10월/);assert.ok(await evaluate('[...document.querySelectorAll(".session-record-card")].every(e=>e.textContent.includes("2026-10"))'));report.interactions.push('history routine/exercise all-past search; clear restores month; occupied week headers')
+  await evaluate('document.querySelector(".record-search input").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));document.querySelector(".search-disclosure").click()');assert.match(await evaluate('document.querySelector(".record-period-row b").textContent'),/2026\/10/);assert.ok(await evaluate('[...document.querySelectorAll(".session-record-card")].every(e=>e.querySelector("time").textContent.startsWith("10."))'));report.interactions.push('history routine/exercise all-past search; clear restores month; occupied week headers')
   await tab('홈');await reactCapture('home-week')
   await tab('루틴');await click('+ 새 루틴');await set('form[aria-label="새 루틴"] input[placeholder="나의 루틴"]','초안 이탈 보호')
   const promptsBefore=dialogCount

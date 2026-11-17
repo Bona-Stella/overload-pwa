@@ -22,7 +22,7 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
  }
  await tab('기록');await title('이번 주 요약')
  await wait(()=>evaluate('document.querySelectorAll(".recent-records .session-record-card").length>0'),'record cards')
- assert.match(await evaluate('document.querySelector(".recent-records .session-record-card").textContent'),/웨이트 3종목 · 유산소 1종목/)
+ assert.match(await evaluate('document.querySelector(".recent-records .session-record-card").textContent'),/웨이트 3\/3종목 · 유산소 1\/1종목/)
  for(const w of [320,375,390,430]){
   await width(w,'react')
   assert(await evaluate('(()=>{const c=document.querySelector(".session-record-card"),t=c.querySelector("time").getBoundingClientRect(),s=c.querySelector(".record-card-status").getBoundingClientRect();return t.right<=s.left&&Math.abs(t.y+t.height/2-s.y-s.height/2)<1})()'))
@@ -31,8 +31,8 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
  const first=await evaluate('document.querySelector(".session-record-card").textContent.trim()');await click(first,'.session-record-card');await title('운동 기록 상세')
  for(const w of [320,375,390,430]){
   await width(w,'react')
-  assert(await evaluate('(()=>{const h=document.querySelector("article h1"),d=h.parentElement.querySelector("p"),a=h.getBoundingClientRect(),b=d.getBoundingClientRect();return (innerWidth<=360?b.top>=a.bottom:b.left>=a.right&&Math.abs(a.y+a.height/2-b.y-b.height/2)<1)&&b.right<=innerWidth})()'))
-  assert.match(await evaluate('document.querySelector("article h1").parentElement.querySelector("p").textContent'),/\d{2}\/\d{2} · [월화수목금토일] · \d{2}:\d{2}/)
+  assert(await evaluate('(()=>{const h=document.querySelector("article header"),d=document.querySelector("article [class*=recordDate]"),a=h.getBoundingClientRect(),b=d.getBoundingClientRect(),s=d.parentElement.querySelector("[data-state]")?.getBoundingClientRect();return a.height===44&&b.top>=a.bottom&&b.right<=innerWidth&&(!s||b.right<=s.left)})()'))
+  assert.match(await evaluate('document.querySelector("article [class*=recordDate]").textContent'),/\d{2}\.\d{2} · [월화수목금토일] · \d{2}:\d{2}/)
   await capture('seventh-detail-header','react',w)
  }
  await tab('설정');await click('운동 종목 보기','strong');await title('운동 종목 보기')

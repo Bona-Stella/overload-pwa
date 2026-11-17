@@ -1,4 +1,4 @@
-import {recordSummary,recordDuration,recordKg} from '../workout-online/record-summary.ts'
+import {recordSummary,recordDuration} from '../workout-online/record-summary.ts'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
 import {recordTime} from '../../components/record-time.ts'
@@ -18,6 +18,8 @@ import { completionDate, recentRecordRows, recordRows, recordWeek } from './reco
 import { useRecordPreview } from '../statistics/RecordDisplayContext.ts'
 import type { Session } from '../workout-online/types.ts'
 import styles from '../statistics/RecordMain.module.css'
+import activityStyles from '../statistics/Activity.module.css'
+import { SearchScopePopover } from '../statistics/SearchScopePopover.tsx'
 
 function recentDuration(milliseconds: number | null) {
  const value=recordDuration(milliseconds,'minute')
@@ -26,27 +28,18 @@ function recentDuration(milliseconds: number | null) {
  return [hours?hours+'시간':'',minutes||!hours?minutes+'분':''].filter(Boolean).join(' ')
 }
 
-export function SessionRecordCard({row,session,onOpen,timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone,recent=false}:{row:RecordRow;session?:Session;timeZone?:string;recent?:boolean;onOpen:(id:string)=>void}) {
+export function SessionRecordCard({row,session,onOpen,timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone}:{row:RecordRow;session?:Session;timeZone?:string;onOpen:(id:string)=>void}) {
  const summary=session?recordSummary(session):null,status=summary?.status
  const elapsed=summary?.totalMs??(row.endedAt?Date.parse(row.endedAt)-Date.parse(row.startedAt):null)
  const stamp=recordTime(summary?.startedAt??row.startedAt,session?.startedTimeZone??timeZone,row.workoutDate)
- const date=recent?stamp.replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · /,'$1.$2 · $3 · '):stamp
+ const date=stamp.replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · /,'$1.$2 · $3 · ')
  const counts=summary?[summary.hasWeight?'웨이트 '+summary.achievement.weight.completed+'/'+summary.achievement.weight.planned+'종목':null,summary.hasCardio?'유산소 '+summary.achievement.cardio.completed+'/'+summary.achievement.cardio.planned+'종목'+(summary.achievement.cardio.unknown?' · 일부 확인 불가':''):null].filter(Boolean).join(' · '):'종목 완료 수 · 상세 조회 필요'
- const volume=summary?.hasWeight?<span>총중량 {recordKg(summary.volumeKg)}{summary.volumeKg!==null&&summary.unknownVolume?' + 미확인':''}</span>:null
- if(recent){
-  const label=status?.kind==='complete'?'전체 완료':status?.kind==='partial'?'부분 완료':status?.label??'달성 확인 중'
-  const facts=summary?[summary.hasWeight?'웨이트 '+summary.achievement.weight.completed+'종목':null,summary.hasCardio?'유산소 '+summary.achievement.cardio.completed+'종목'+(summary.achievement.cardio.unknown?' · 일부 확인 불가':''):null].filter(Boolean).join(' · '):counts
+ const label=status?.kind==='complete'?'전체 완료':status?.kind==='partial'?'부분 완료':status?.label??'달성 확인 중'
   return <button type="button" className={`session-record-card ${styles.recentCard}`} data-session-id={row.id} data-session-version={summary?.version} onClick={()=>onOpen(row.id)}>
    <div className={styles.recentCardHeading}><time>{date}</time><span className={`record-card-status ${styles.recentStatus}`} data-state={status?.kind??'unknown'}><b aria-hidden="true">{status?.mark??'?'}</b>{label}</span><span aria-hidden="true">›</span></div>
    <h4>{summary?.routineName??row.routineName}</h4>
-   <div className={styles.recentFacts}>{facts}{facts&&' · '}<span className="record-durations">총 {recentDuration(elapsed)}</span></div>
+   <div className={styles.recentFacts}>{counts}{counts&&' · '}<span className="record-durations">총 {recentDuration(elapsed)}</span></div>
   </button>
- }
- return <button type="button" className="session-record-card" data-session-id={row.id} data-session-version={summary?.version} onClick={()=>onOpen(row.id)}>
-  <div className="record-card-heading"><time>{date}</time><span className="record-card-status" aria-label={status?.label??'달성 확인 중'} title={status?.label} data-state={status?.kind??'unknown'}>{status?<b aria-hidden="true">{status.mark}</b>:'?'}</span><span aria-hidden="true">›</span></div><h4>{summary?.routineName??row.routineName}</h4>
-  <div className="record-exercise-line muted small"><span>{counts}</span></div>
-  <div className="record-pair record-total"><strong>총 운동 {recordDuration(elapsed)}</strong>{volume&&<strong>{volume}</strong>}</div><div className="record-pair muted small record-type-times">{summary?.hasWeight&&<span>웨이트 {recordDuration(summary.weightMs)}</span>}{summary?.hasCardio&&<span>유산소 {recordDuration(summary.cardioMs)}</span>}</div>
- </button>
 }
 
 export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true, onViewAll }: { enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage)=>void}; onViewAll?:()=>void }) {
@@ -99,10 +92,11 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const matchingNames=new Set(browseExercises(preview?.definitions??definitions,'',tag as CatalogGroup|'ALL').map(e=>e.name))
   if(tag==='CARDIO')for(const session of preview?.sessions??[])for(const c of session.initialPlan.cardioActivities)matchingNames.add(c.plan.name)
   const candidates = options.filter(o => (search.scope!=='exercise'||tag==='ALL'||matchingNames.has(o.name))&&o.name.toLocaleLowerCase().includes(search.query.trim().toLocaleLowerCase()))
-  return <section className="stack record-feed" aria-label={recent ? '최근 7일 운동 기록' : '전체 운동 이력'}>
+  return <section className={`stack record-feed ${recent?'':activityStyles.page}`} aria-label={recent ? '최근 7일 운동 기록' : '전체 운동 이력'}>
     {recent && <div className={styles.recentHeading}><h2>최근 운동</h2><span className={styles.recentRange}>{range.fromDate.slice(2)} ~ {today.slice(2)}</span>{onViewAll&&<Button variant="quiet" onClick={onViewAll}>전체 보기 ›</Button>}</div>}
-    {!recent && <><h1 id="workout-history-title">전체 운동 이력</h1><Card><PeriodControls value={period} onChange={value => setPeriod(value, true)} monthOnly compact />
+    {!recent && <><Card className={activityStyles.trend}><PeriodControls variant="activity" value={period} onChange={value => setPeriod(value, true)} monthOnly compact />
       <SearchList scopes={[{ id: 'routine', name: '루틴별' }, { id: 'exercise', name: '운동별' }]} scope={search.scope}
+        renderScope={control=><SearchScopePopover {...control} />}
         onScope={value => setSearch({ ...search, scope: value, selected: '',query:'',tag:'ALL' }, true)}
         tags={search.scope==='exercise'?{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:undefined} query={search.query} onQuery={query => setSearch({ ...search, query }, true)} onCloseSearch={()=>{if(search.query!==search.selected)setSearch({...search,query:search.selected},true)}} options={candidates}
         onSelect={id => { const chosen = candidates.find(o => o.id === id); if (chosen) setSearch({ ...search, query: chosen.name, selected: chosen.name },true) }} selected={search.selected}
@@ -115,7 +109,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
     {!busy && !issue && (!exerciseSearch || !!preview) && page && !rows.length && <p>{page.next ? '불러온 기록에서 조건에 맞는 운동을 찾지 못했습니다.' : recent ? '최근 7일 운동 기록이 없습니다.' : '조건에 맞는 운동 기록이 없습니다.'}</p>}
     <div className="stack">{rows.map((row, index) => {
       const week = recordWeek(row.workoutDate), header = !recent && (index === 0 || week.key !== recordWeek(rows[index - 1].workoutDate).key)
-      return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={preview?.sessions.find(s=>s.id===row.id)??(details?.key===detailKey?details.rows.get(row.id):undefined)} onOpen={onOpen} timeZone={zone} recent={recent}/></Fragment>
+      return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={preview?.sessions.find(s=>s.id===row.id)??(details?.key===detailKey?details.rows.get(row.id):undefined)} onOpen={onOpen} timeZone={zone}/></Fragment>
     })}</div>
     {page?.next && <Button disabled={busy} onClick={() => void load(page.next)}>이전 기록 더 불러오기</Button>}
     {issue && <Button disabled={busy} onClick={() => void load()}>다시 조회</Button>}

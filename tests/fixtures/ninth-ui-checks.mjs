@@ -43,7 +43,7 @@ export async function verifyNinthUi({go,title,click,set,evaluate,send,wait,width
  for(const w of [320,375,390,430])await capture('ninth-recent','react',w)
  await click('전체 보기 ›');await title('전체 운동 이력')
  const cards=await evaluate('[...document.querySelectorAll(".session-record-card")].map(e=>({id:e.dataset.sessionId,name:e.querySelector("h4").textContent,total:!!e.querySelector(".record-total"),types:!!e.querySelector(".record-type-times")}))')
- for(const row of rows){const card=cards.find(c=>c.id===row.id);assert(card);assert.equal(card.name,row.name);assert(card.total&&card.types)}
+ for(const row of rows){const card=cards.find(c=>c.id===row.id);assert(card);assert.equal(card.name,row.name);assert(!card.total&&!card.types)}
  for(const w of [320,375,390,430])await capture('ninth-full-history','react',w)
  const partial=await evaluate('document.querySelector(".session-record-card:has([data-state=partial])")?.dataset.sessionId')
  assert(partial);await pointer('.session-record-card[data-session-id="'+partial+'"]');await title('운동 기록 상세')

@@ -39,7 +39,7 @@ export async function verifyFourthUi({go,title,click,set,evaluate,send,wait,widt
  const captured=cards.find(c=>!c.id.startsWith('20000000-'));assert(captured);await evaluate('document.querySelector('+JSON.stringify('[data-session-id="'+captured.id+'"].session-record-card')+').click()');await title('운동 기록 상세')
  const oldReview=await evaluate('(()=>{const c=document.querySelector("[aria-label=\\"당시 중량 검토\\"]");return c?{text:c.textContent,buttons:c.querySelectorAll("button").length,inputs:c.querySelectorAll("input").length}:null})()')
  assert(oldReview);assert.match(oldReview.text,/25kg/);assert.equal(oldReview.buttons,0);assert.equal(oldReview.inputs,0);assert.match(await body(),/WEIGHT.*CARDIO/s)
- await click('‹ 기록으로');await tab('홈')
+ await click('기록으로');await tab('홈')
  assert.equal(await evaluate('document.querySelector(\'section[aria-label="홈"] [data-session-id]\').dataset.sessionId'),captured.id)
  assert.equal(await evaluate('document.querySelectorAll(\'section[aria-label="홈"] [data-session-id] [class*=recordState] small\').length'),0)
  await evaluate('document.querySelector("section[aria-label=최근\\ 운동] button").click()').catch(()=>click('전체 보기 ›'))
