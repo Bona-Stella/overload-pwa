@@ -9,9 +9,12 @@ import { actualAnalysis, muscleGroups, plannedAnalysis, muscleSubtotal } from '.
 import type { AnalysisData, AnalysisRow } from './muscle-analysis.ts'
 import type { Statistics } from './api.ts'
 import { boundaryError } from '../home/load.ts'
+import { addDays } from '../home/model.ts'
 import { useScreenHistory } from '../../app/navigation.ts'
 import { useRecordPreview } from './RecordDisplayContext.ts'
 import './statistics.css'
+import planStyles from './WeeklyMusclePlan.module.css'
+import statisticsStyles from './WeeklyMuscleStatistics.module.css'
 
 function AnalysisRows({ rows, plan, metric, showAll }: { rows: AnalysisRow[]; plan: boolean; metric: string; showAll: boolean }) {
   const visible = rows.filter(row => plan ? showAll || row.planned !== '0' : row.actual !== '0' || row.planned !== '0')
@@ -26,19 +29,67 @@ function AnalysisRows({ rows, plan, metric, showAll }: { rows: AnalysisRow[]; pl
   })}{!visible.length && <p className="muted">표시할 항목이 없습니다.</p>}</>
 }
 
-export function MuscleAnalysisView({ data, plan, presets = [], selected, onSelect, stateKey = 'isolated' }: { data: AnalysisData; plan: boolean; presets?: { id: string; name: string }[]; selected?: string; onSelect?: (id: string) => void; stateKey?: string }) {
+export function MuscleAnalysisView({ data, plan, presets = [], selected, onSelect, stateKey = 'isolated', period }: { data: AnalysisData; plan: boolean; presets?: { id: string; name: string }[]; selected?: string; onSelect?: (id: string) => void; stateKey?: string; period?: { fromDate: string; toDateExclusive: string } }) {
   const [view, setView] = useScreenHistory('muscle-view:' + stateKey, { tab:'groups', showAll:false, metric:'sets' })
   const { tab, showAll, metric } = view
-  return <section className="stack muscle-analysis" aria-label={plan ? '주간 근육 계획' : '주간 근육 통계'}>
-    <div className="section-heading"><h1>{plan ? '주간 근육 계획' : '주간 근육 통계'}</h1>{plan && <label className="analysis-toggle">전체 보기<button type="button" role="switch" aria-label="전체 보기" aria-checked={showAll} onClick={() => setView({ ...view, showAll:!showAll }, true)}><i /></button></label>}</div>
-    <Card className="analysis-controls">{plan && <label>분석 대상 프리셋<select value={selected} onChange={e => onSelect?.(e.target.value)}>{presets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>}
-      <div className="record-tabs"><Button aria-pressed={tab === 'groups'} onClick={() => setView({ ...view, tab:'groups' }, true)}>분류별</Button><Button aria-pressed={tab === 'muscles'} onClick={() => setView({ ...view, tab:'muscles' }, true)}>근육별</Button></div>
-      {!plan && <div className="record-tabs"><Button aria-pressed={metric === 'sets'} onClick={() => setView({ ...view, metric:'sets' }, true)}>세트</Button><Button aria-pressed={metric === 'volume'} onClick={() => setView({ ...view, metric:'volume' }, true)}>총중량</Button></div>}
+  if (plan) return <section className={`stack muscle-analysis ${planStyles.page}`} aria-label="주간 근육 계획">
+    <Card className={planStyles.controls}>
+      <label>분석 대상 프리셋<select value={selected} onChange={e => onSelect?.(e.target.value)}>{presets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <div className={planStyles.segment} aria-label="계획 보기">
+        <Button aria-pressed={tab==='groups'} onClick={()=>setView({...view,tab:'groups'},true)}>분류별</Button>
+        <Button aria-pressed={tab==='muscles'} onClick={()=>setView({...view,tab:'muscles'},true)}>근육별</Button>
+      </div>
     </Card>
-    <p className="muted small">{plan ? '현재 월~일 반복 계획 · 권장 범위는 참고 정보입니다.' : '이번 주 월~일 · 실제 수행 / 당시 계획'}</p>
-    {tab === 'groups' ? <>{[[data.frontBack, '전면 / 후면'], [data.ppl, 'PPL'], [data.groups, '부위']] .map(([rows, title]) => <Card key={String(title)}><h2>{String(title)}</h2><AnalysisRows rows={rows as AnalysisRow[]} plan={plan} metric={metric} showAll={showAll} /></Card>)}</>
-      : <Card>{Object.entries(muscleGroups).filter(([code]) => data.muscles.some(m=>m.group===code && (plan ? showAll || m.planned!=='0' : m.actual!=='0' || m.planned!=='0'))).map(([code, label]) => <section key={code}><div className="analysis-group"><h2>{label}</h2><hr />{(plan||metric==='sets')&&<span className="analysis-subtotal">{!plan?'합계 '+muscleSubtotal(data.muscles.filter(m=>m.group===code)):data.muscles.filter(m=>m.group===code).some(m=>m.planned===null)?'합계 확인 불가':'합계 '+displayDecimal(sumDecimals(data.muscles.filter(m=>m.group===code).map(m=>m.planned??'0')))+'세트'}</span>}</div><AnalysisRows rows={data.muscles.filter(m => m.group === code)} plan={plan} metric={metric} showAll={showAll} /></section>)}</Card>}
-    {data.issues.map(issue => <p className="record-note muted small" role="status" key={issue}>{issue}</p>)}
+    <Card className={planStyles.summary} aria-label="주간 계획 요약">
+      <div><span>계획 세트</span><strong>{data.total==='—'?'미확인':<>{displayDecimal(data.total)}<small>세트</small></>}</strong></div>
+      <div><span>운동 예정일</span><strong>미확인</strong></div>
+    </Card>
+    <div className={planStyles.distributionHeading}>
+      <h2>계획 세트 분포</h2>
+      <label className={`analysis-toggle ${planStyles.toggle}`}>0세트 포함<button type="button" role="switch" aria-label="0세트 포함" aria-checked={showAll} onClick={()=>setView({...view,showAll:!showAll},true)}><i /></button></label>
+    </div>
+    <Card className={planStyles.distribution} aria-label="계획 세트 분포">
+      {tab==='groups'?([[data.frontBack,'전면 / 후면'],[data.ppl,'PPL'],[data.groups,'신체 부위']] as const).map(([rows,title])=><section className={planStyles.group} key={title}>
+        <div className={`analysis-group ${planStyles.groupHeading}`}><h2>{title}</h2><hr /><span className="analysis-subtotal">{data.total==='—'||!rows.length||rows.some(row=>row.planned===null)?'합계 확인 불가':'합계 '+displayDecimal(data.total)+'세트'}</span></div>
+        <AnalysisRows rows={rows} plan metric={metric} showAll={showAll} />
+      </section>):Object.entries(muscleGroups).filter(([code])=>data.muscles.some(m=>m.group===code&&(showAll||m.planned!=='0'))).map(([code,label])=><section className={planStyles.group} key={code}>
+        <div className={`analysis-group ${planStyles.groupHeading}`}><h2>{label}</h2><hr /><span className="analysis-subtotal">{data.muscles.filter(m=>m.group===code).some(m=>m.planned===null)?'합계 확인 불가':'합계 '+displayDecimal(sumDecimals(data.muscles.filter(m=>m.group===code).map(m=>m.planned??'0')))+'세트'}</span></div>
+        <AnalysisRows rows={data.muscles.filter(m=>m.group===code)} plan metric={metric} showAll={showAll} />
+      </section>)}
+    </Card>
+    <div className={planStyles.notes}>
+      <p>{tab==='groups'?'전면/후면, PPL, 신체 부위는 같은 계획의 서로 다른 분류입니다. 그룹 간 세트를 합산하지 않습니다.':'세부 근육의 기여 세트와 기존 기준을 표시합니다. 권장 범위는 참고 정보입니다.'}</p>
+      {data.issues.length>0&&<p role="status">{data.issues.join(' ')}</p>}
+    </div>
+  </section>
+  return <section className={`stack muscle-analysis ${planStyles.page} ${statisticsStyles.page}`} aria-label="주간 근육 통계">
+    <div className={statisticsStyles.period} aria-label="이번 주 조회 기간">
+      <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>{period ? <><time dateTime={period.fromDate}>{period.fromDate.slice(5).replace('-','.')}</time><span aria-hidden="true">–</span><time dateTime={addDays(period.toDateExclusive,-1)}>{addDays(period.toDateExclusive,-1).slice(5).replace('-','.')}</time></> : '기간 미확인'}</span>
+      <small>이번 주</small>
+    </div>
+    <Card className={statisticsStyles.controls}>
+      <div><span className={statisticsStyles.controlLabel}>분석 기준</span><div className={planStyles.segment} aria-label="분석 기준"><Button aria-pressed={tab === 'groups'} onClick={() => setView({ ...view, tab:'groups' }, true)}>분류별</Button><Button aria-pressed={tab === 'muscles'} onClick={() => setView({ ...view, tab:'muscles' }, true)}>근육별</Button></div></div>
+      <div><span className={statisticsStyles.controlLabel}>측정 지표</span><div className={planStyles.segment} aria-label="측정 지표"><Button aria-pressed={metric === 'sets'} onClick={() => setView({ ...view, metric:'sets' }, true)}>세트</Button><Button aria-pressed={metric === 'volume'} onClick={() => setView({ ...view, metric:'volume' }, true)}>총중량</Button></div></div>
+    </Card>
+    <Card className={statisticsStyles.achievement} aria-label="주간 세트 달성">
+      <div><h2>주간 세트 달성</h2><strong>미확인</strong></div>
+      {/* The existing analysis has no weekly set target or achievement rate. */}
+      <div><span className={statisticsStyles.track} role="progressbar" aria-label="주간 세트 달성률" aria-valuetext="당시 계획과 달성률 미확인"/><span>{data.total==='—'?'미확인':displayDecimal(data.total)} / 미확인 세트</span></div>
+    </Card>
+    <div className={planStyles.distributionHeading}><h2>{tab==='groups'?'분류별':'근육별'} 달성 현황</h2></div>
+    <Card className={planStyles.distribution} aria-label={tab==='groups'?'분류별 달성 현황':'근육별 달성 현황'}>
+      {tab==='groups'?([[data.frontBack,'전면 / 후면'],[data.ppl,'PPL'],[data.groups,'신체 부위']] as const).map(([rows,title])=><section className={planStyles.group} key={title}>
+        <div className={`analysis-group ${planStyles.groupHeading}`}><h2>{title}</h2><hr />{metric==='sets'&&<span>합계 확인 불가</span>}</div>
+        <AnalysisRows rows={rows} plan={false} metric={metric} showAll={showAll} />
+      </section>):Object.entries(muscleGroups).filter(([code])=>data.muscles.some(m=>m.group===code&&(m.actual!=='0'||m.planned!=='0'))).map(([code,label])=><section className={planStyles.group} key={code}>
+        <div className={`analysis-group ${planStyles.groupHeading}`}><h2>{label}</h2><hr />{metric==='sets'&&<span className="analysis-subtotal">합계 {muscleSubtotal(data.muscles.filter(m=>m.group===code))}</span>}</div>
+        <AnalysisRows rows={data.muscles.filter(m=>m.group===code)} plan={false} metric={metric} showAll={showAll} />
+      </section>)}
+    </Card>
+    <div className={planStyles.notes}>
+      <p role="status">주간 전체 당시 계획 세트와 세트 달성률은 확인할 수 없습니다.</p>
+      {data.issues.map(issue=><p role="status" key={issue}>{issue}</p>)}
+    </div>
   </section>
 }
 
@@ -73,4 +124,4 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
   return <>{!data && <p role="status">현재 계획과 검수 분류를 확인 중입니다.</p>}<MuscleAnalysisView stateKey={stateKey} data={data ?? { muscles: [], frontBack: [], ppl: [], groups: [], total: '—', issues: [] }} plan presets={schedule!.presets} selected={preset.id} onSelect={id => setSelected(id,true)} /></>
 }
 
-export function WeeklyMuscleStatistics({ data }: { data: Statistics }) { const preview=useRecordPreview(); return <MuscleAnalysisView stateKey={data.userId + ':' + data.dataGeneration + ':actual'} data={preview?.actual??actualAnalysis(data)} plan={false} /> }
+export function WeeklyMuscleStatistics({ data }: { data: Statistics }) { const preview=useRecordPreview(); return <MuscleAnalysisView stateKey={data.userId + ':' + data.dataGeneration + ':actual'} data={preview?.actual??actualAnalysis(data)} plan={false} period={data} /> }

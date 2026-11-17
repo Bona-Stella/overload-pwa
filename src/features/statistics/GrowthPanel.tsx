@@ -8,6 +8,7 @@ import type { RecordPreviewData } from './RecordDisplayContext.ts'
 import { SearchList } from '../../components/SearchList.tsx'
 import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import { Card, Button } from '../../components/ui.tsx'
+import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { useEffect, useRef, useState } from 'react'
 import type { Scope } from '../workout-online/types.ts'
 import type { GrowthApi, GrowthExercise, GrowthOptions, GrowthPeriod, GrowthPlacement, GrowthPoint } from './growth.ts'
@@ -16,13 +17,6 @@ import styles from './Growth.module.css'
 type Context = { controls?:ReactNode; api: GrowthApi; scope: Scope; period: GrowthPeriod; zone: string; onInvalid: (error: unknown) => void; onOpen: (id: string) => void }
 const amount = (text: string) => { const [whole, part = ''] = text.split('.'); return BigInt(whole) * 1000000n + BigInt(part.padEnd(6, '0')) }
 const periods = ['1', '3', '6', 'all'] as const
-
-function GrowthHeader({ onBack, backLabel = '기록으로' }: { onBack?: () => void; backLabel?: string }) {
-  return <header className={styles.header}>
-    {onBack&&<Button variant="quiet" className={styles.back} aria-label={backLabel} onClick={onBack}><span aria-hidden="true">‹</span></Button>}
-    <h1>성장 추적</h1>
-  </header>
-}
 
 function GrowthPeriods({ period, onChange }: { period: GrowthPeriod; onChange: (value: GrowthPeriod) => void }) {
   return <div className={styles.periods} data-period={period} role="group" aria-label="성장 추적 기간">
@@ -167,7 +161,7 @@ export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack,
   const context = { api, scope, period, zone, onInvalid, onOpen, controls }
   const key = [scope.userId, scope.dataGeneration, period, refreshKey].join(':')
   return <div className={`stack growth-screen ${styles.screen}`}>
-    <GrowthHeader onBack={onBack} backLabel={backLabel} />
+    <RecordSubpageHeader title="성장 추적" onBack={onBack} backLabel={backLabel} />
     {preview?<PreviewGrowth data={preview} onOpen={onOpen} />:<>
       <Card className={styles.searchCard}><h2>분석할 운동</h2><SearchResults key={key} {...context} query={query} onQuery={setQuery} selected={selected?.name} onClear={()=>{setSelected(null);setQuery('')}} onSelect={value=>{setSelected(value);setQuery('')}} /></Card>
       {selected?<Selected key={key+selected.standardExerciseId} {...context} exercise={selected} />:<GrowthAnalysis controls={controls} zone={zone}><p className="muted small">미전송 기록은 포함되지 않습니다.</p></GrowthAnalysis>}

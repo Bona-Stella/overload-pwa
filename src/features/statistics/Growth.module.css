@@ -1,7 +1,4 @@
 .screen:global(.stack) { gap: 16px; min-width: 0; }
-.screen .header { display: flex; align-items: center; gap: 2px; min-height: 44px; }
-.screen .header h1 { margin: 0; font-size: 22px; line-height: 1.4; }
-.screen .back { flex: none; display: grid; place-items: center; width: 44px; min-height: 44px; margin-left: -12px; padding: 0; background: transparent; font-size: 26px; line-height: 1; }
 .screen :global(.app-card) { min-width: 0; padding: 14px 12px; border-radius: 5px; gap: 12px; }
 .screen h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.4; }
 .screen .searchCard h2 { font-size: 15px; }

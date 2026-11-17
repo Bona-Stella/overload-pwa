@@ -1,0 +1,14 @@
+.period { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; font-size: 13px; }
+.period > span { display: flex; align-items: center; gap: 7px; min-width: 0; font-variant-numeric: tabular-nums; }
+.period svg { flex: none; color: var(--text-muted); }
+.period small { flex: none; padding: 3px 12px; border-radius: 99px; background: var(--surface-input); color: var(--text-muted); font-size: 11px; }
+.controls > div { display: grid; gap: 6px; min-width: 0; }
+.controlLabel { color: var(--text-muted); font-size: 12px; }
+.page .achievement { gap: 14px; }
+.achievement > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.page .achievement h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.achievement strong { color: var(--text-muted); font-size: 16px; }
+.achievement > div > span:last-child { flex: none; color: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.track { flex: 1; min-width: 24px; height: 7px; border-radius: 4px; background: var(--border-subtle); }
+.page :global(.analysis-subtotal) { max-width: 65%; white-space: normal; overflow-wrap: anywhere; text-align: right; }
+.page :global(.analysis-row > div:first-child > span) { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: right; }

@@ -28,6 +28,7 @@ import './statistics.css'
 import { GrowthPanel } from './GrowthPanel.tsx'
 import styles from './RecordMain.module.css'
 import activityStyles from './Activity.module.css'
+import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { SearchScopePopover } from './SearchScopePopover.tsx'
 
 function RecordMainIcon({ kind }: { kind: 'activity' | 'growth' | 'plan' | 'muscles' | 'clock' | 'weight' | 'footprints' }) {
@@ -247,7 +248,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
   },[workoutApi,preview,screen,weekly,evidenceKey,scope])
   const back = () => { if (window.history.state?.overloadNavigation?.index > 0) window.history.back(); else setScreen('summary', true) }
   return <section className={`stack statistics record-screen ${screen==='summary'?styles.main:''} ${screen==='activity'?activityStyles.page:''}`} aria-label="운동 기록·분석">
-    {screen === 'activity' ? <header className={activityStyles.header}><Button variant="quiet" className={activityStyles.back} aria-label={initialPreset?'루틴으로':'기록으로'} onClick={back}>{initialPreset?'‹ 루틴으로':'‹ 기록으로'}</Button><h1>운동 현황</h1></header> : screen !== 'summary' && screen !== 'growth' && <div className="record-back"><Button variant="quiet" onClick={back}>{initialPreset?'‹ 루틴으로':'‹ 기록으로'}</Button><span className="muted small">기록 · 분석</span></div>}
+    {screen === 'activity' || screen === 'plan' || screen === 'muscles' ? <RecordSubpageHeader title={screen==='activity'?'운동 현황':screen==='plan'?'주간 근육 계획':'주간 근육 통계'} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} /> : screen !== 'summary' && screen !== 'growth' && <div className="record-back"><Button variant="quiet" onClick={back}>{initialPreset?'‹ 루틴으로':'‹ 기록으로'}</Button><span className="muted small">기록 · 분석</span></div>}
     {screen === 'activity' && <PeriodControls variant="activity" days={current?.plannedDays} value={activityPeriod} onChange={value => setActivityPeriod(value, true)} />}
     {screen === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} />
       : screen === 'plan' ? workoutApi ? <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} /> : <p role="status">주간 계획 데이터 연결을 기다리고 있습니다.</p>

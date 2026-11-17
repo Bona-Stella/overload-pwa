@@ -65,7 +65,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await click('운동 현황 ›');await title('운동 현황');await tab('홈');await tab('기록');await title('이번 주 요약');report.navigation.push('records/activity/home/records/root')
   await click('주간 근육 계획 ›');await title('주간 근육 계획');await tab('루틴');await tab('기록');await title('이번 주 요약');report.navigation.push('records/plan/routines/records/root')
   await click('전체 보기 ›');await title('전체 운동 이력');await click((await evaluate('document.querySelector(".session-record-card").textContent.trim()')),'.session-record-card');await title('운동 기록 상세');assert.doesNotMatch(await body(),/중량 검토/);await click('‹ 기록으로');await title('전체 운동 이력');report.navigation.push('history/detail/back/history')
-  await tab('기록');await click('운동 현황 ›');await title('운동 현황');await click('‹ 기록으로');await title('이번 주 요약');report.navigation.push('activity/back/root')
+  await tab('기록');await click('운동 현황 ›');await title('운동 현황');await click('기록으로');await title('이번 주 요약');report.navigation.push('activity/back/root')
   await send('Runtime.evaluate',{expression:'history.forward()'});await title('운동 현황');await tab('기록');await title('이번 주 요약');report.navigation.push('browser forward and same tab root')
   const captures=[]
   async function reactCapture(name){for(const w of [320,375,390,430])await capture(name,'react',w);captures.push(name)}
@@ -94,7 +94,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await click('근육별');await reactCapture('plan-muscles')
   const subtotals=await evaluate('[...document.querySelectorAll(".analysis-group")].map(h=>({label:h.querySelector(".analysis-subtotal").textContent,sum:[...h.parentElement.querySelectorAll(".analysis-row > div:first-child > span")].reduce((n,e)=>n+Number(e.textContent.split(" / ")[0].replace("세트","")),0)}))')
   assert.ok(subtotals.length>0);for(const row of subtotals)assert.equal(row.label,'합계 '+row.sum+'세트')
-  await click('분류별');assert.equal(await evaluate('document.querySelectorAll(".analysis-subtotal").length'),0);await click('근육별')
+  await click('분류별');assert.equal(await evaluate('document.querySelectorAll(".analysis-subtotal").length'),3);await click('근육별')
   assert.equal(await evaluate('document.querySelector("[role=switch]").getAttribute("aria-checked")'),'false')
   await evaluate('document.querySelector("[role=switch]").click()');await wait(()=>evaluate('document.querySelector("[role=switch]").getAttribute("aria-checked")==="true"'),'show zero on')
   await click('분류별');await set('.muscle-analysis select',await evaluate('document.querySelector(".muscle-analysis select").options[1].value'))
