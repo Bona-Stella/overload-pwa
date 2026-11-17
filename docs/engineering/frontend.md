@@ -849,6 +849,13 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 - `/routine-preview?tab=history&activity-demo=states`의 정상 조회 시연에서 운동 현황을 열면 직전 주의 전체·부분 달성, 미달, 휴식, 대기, 근거 미확인과 유산소 다일·단일·요일/거리 누락 예시를 확인할 수 있다. 명시적 조회 옵션을 선택한 시연 컨텍스트에서만 주간 달성과 유산소 표시값을 사용한다. **UI 구현 A / 사용자 검토·승인 B 대기.**
 - 린트·TypeScript·빌드와 전체 테스트 641건을 통과했다. Chrome 320/375/393/430px에서 기간·달력, 팝오버 포커스·키보드·터치, 모션 줄이기, 합성 시연 분리 및 빈 상태·오류·기간 전환 중 로딩을 확인했다. LAN 검토는 4173을 사용한다. 실기기 Safari 검토는 남아 있다.
 
+#### 운동 현황 최종 UI 승인 및 구현 완료 — 2026-11-17
+
+- **UI 구현 A / 사용자 승인 B 완료.** `37512e9`의 [운동 현황 화면](../../src/features/statistics/StatisticsPanel.tsx), [기간 컨트롤](../../src/features/statistics/PeriodControls.tsx), [화면 전용 스타일](../../src/features/statistics/Activity.module.css), [검색 팝오버](../../src/features/statistics/SearchScopePopover.tsx)를 기준으로 한다. 최종 보정은 달력과 이전·다음 버튼의 외형 통일, 월간 `YYYY/MM`, 검색 입력 16px, `– 휴식 / · 미수행 / ? 미확인` 범례다. 기간·검색·차트 전환·상태 판정과 유산소 집계는 기존 경로를 사용한다.
+- 최종 UI 작업에서 린트·TypeScript·빌드와 관련 테스트 31건을 통과했다. Chrome 320/375/393/430px에서 버튼·날짜 정렬·기간 이동·달력·검색/필터·세트/총중량을 확인했고, 사용자가 iPhone에서 검색 아이콘을 누른 뒤 키보드가 열리고 화면 배율이 유지됨을 확인했다. 위 641건은 2차 보정의 전체 검사 결과다. 실제 API 통합이나 DB 작업은 이번 UI 승인 범위에 포함되지 않는다.
+- `/routine-preview?tab=history&activity-demo=states`의 정상 조회 시연에서 운동 현황을 열면 직전 주의 완료·부분 달성·미달·휴식·대기·근거 미확인을 시연한다. 완료 비율 합계는 2일분, 계획은 5일, 표시 달성률은 40%다. 유산소는 2시간 20분·4일, 러닝머신 `월 · 금` 8km, 자전거 `화` 7.5km, 야외 운동의 요일·거리 누락 예시를 제공한다. [시연 구현](../../src/review/activity-sample.ts)은 운동 현황에만 이 값을 제공한다.
+- 운영 Overview의 `statistics.days[].cardioActiveMs`는 종류가 없는 날짜별 총시간이며, `cardioByKind`의 종류별 합계에는 날짜가 없다. 운영 화면의 요일 생략과 누적 일수 `미확인`을 유지한다. `상세 보기`는 같은 카드에서 펼쳐지고 `운동 이력` 버튼이 이동을 담당한다. [결정 기록](../product/Overload_UI_Decision_Log_v0.9.md#1027--운동-현황-최종-ui-승인과-문서-동기화--2026-11-17)과 [HTML](../product/Overload_UI_Baseline_Wireframe_v0.9.html)을 동기화한다.
+
 #### 현황 갱신
 
 Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/docs/engineering/backend.md#현황-갱신)에 따라 이 절의 해당 항목을 갱신한다. 화면 작업은 [UI 단계 A~D](#181-기본-ui-개발-절차), 사용자 승인과 실기기 검증 범위를 함께 기록한다. 서버 쪽 상태는 [Backend 개발 현황](../../../overload-server/docs/engineering/backend.md#11-현재-개발-현황)으로 연결한다.

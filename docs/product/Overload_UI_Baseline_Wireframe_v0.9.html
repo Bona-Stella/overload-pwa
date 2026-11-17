@@ -607,6 +607,81 @@ a{color:inherit;text-decoration:underline}
 .record-main .rm-record-facts{font-size:11px;line-height:1.5;color:#666}
 .record-main .rm-analysis-card:focus-visible,.record-main .rm-record:focus-visible,.record-main .rm-view-all:focus-visible{outline:2px solid #555;outline-offset:3px}
 @media(max-width:350px){.record-main .rm-recent-head{grid-template-columns:minmax(0,1fr) auto;gap:4px 8px}.record-main .rm-view-all{grid-column:2;grid-row:1;margin-block:0}.record-main .rm-range{grid-column:1/-1;grid-row:2;justify-self:end}.record-main .rm-summary{padding-inline:12px}.record-main .rm-metrics>div{padding-inline:6px}.record-main .rm-metrics strong{font-size:14px}.record-main .rm-analysis-card{padding:10px}.record-main .rm-record-head{gap:4px}.record-main .rm-record-head time,.record-main .rm-status{font-size:10px}}
+/* 운동 현황 승인 배치 · 기존 무채색 시안 전용 */
+.record-activity{display:grid;gap:16px;min-width:0}
+.record-activity .wire{margin:0;padding:14px 12px}
+.record-activity .ra-header,.record-activity .ra-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.record-activity .ra-header{justify-content:flex-start;gap:2px;min-height:44px}
+.record-activity h1,.record-activity h2,.record-activity h3,.record-activity p{margin:0}
+.record-activity h2{font-size:18px;line-height:1.4;font-weight:650}
+.record-activity .ra-quiet{padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
+.record-activity .ra-header button{width:36px;height:44px;margin-left:-8px;font-size:25px}
+.record-activity .ra-period{display:grid;grid-template-columns:36px minmax(0,1fr) 36px 36px;gap:4px;align-items:center;margin:8px 0 0;text-align:center}
+.record-activity .ra-period b{white-space:nowrap;font-size:14px;line-height:21px}
+.record-activity .ra-period button{position:relative;display:grid;place-items:center;width:36px;height:44px;padding:0;border:0;background:transparent;color:inherit;cursor:pointer}
+.record-activity .ra-period button::before{content:'';position:absolute;inset:0;margin:auto;width:36px;height:36px;box-sizing:border-box;border:1px solid #aaa;border-radius:5px;pointer-events:none}
+.record-activity .ra-period button[aria-expanded=true]::before{background:#d5d5d5;border-color:#888}
+.record-activity .ra-period button svg,.record-activity .ra-segment button{position:relative}
+.record-activity .ra-segment{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:#e8e8e8}
+.record-activity .ra-segment::before{content:'';position:absolute;inset:4px auto 4px 4px;width:calc((100% - 12px)/2);box-sizing:border-box;border-radius:7px;background:#fff;border:1px solid #bbb;pointer-events:none;animation:ra-slide 200ms ease both}
+.record-activity .ra-segment[data-side=right]::before{--ra-target:calc(100% + 4px);transform:translateX(var(--ra-target))}
+.record-activity .ra-segment[data-motion=left]::before{--ra-origin:0px}
+.record-activity .ra-segment[data-motion=right]::before{--ra-origin:calc(100% + 4px)}
+.record-activity .ra-segment:not([data-motion])::before{animation:none}
+.record-activity .ra-segment button{min-height:40px;padding:6px;border:0;border-radius:7px;color:#222;background:transparent;font-size:14px;cursor:pointer}
+.record-activity .ra-segment button[aria-pressed=true]{font-weight:700}
+@keyframes ra-slide{from{transform:translateX(var(--ra-origin))}to{transform:translateX(var(--ra-target,0px))}}
+@media(prefers-reduced-motion:reduce){.record-activity .ra-segment::before{animation:none}}
+.record-activity .ra-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.record-activity .ra-grid .wire{min-width:0;min-height:86px;display:flex;flex-direction:column;justify-content:space-between}
+.record-activity .ra-grid strong{font-size:25px;overflow-wrap:anywhere}
+.record-activity .ra-grid strong small,.record-activity .ra-summary strong small{font-size:12px;margin-left:3px;font-weight:400}
+.record-activity .ra-stack{display:grid;gap:12px}
+.record-activity .ra-search-fields{display:grid;grid-template-columns:84px minmax(0,1fr) 42px;gap:6px;align-items:center}
+.record-activity .ra-scope{position:relative;min-width:0}
+.record-activity .ra-scope summary,.record-activity .ra-search-fields input,.record-activity .ra-search-button{height:42px;border:1px solid #bbb;border-radius:999px;background:#f4f4f4;color:inherit}
+.record-activity .ra-scope summary{display:flex;align-items:center;justify-content:space-between;padding-inline:12px;white-space:nowrap;cursor:pointer;font-size:12px;list-style:none}
+.record-activity .ra-scope summary::-webkit-details-marker{display:none}
+.record-activity .ra-scope-menu{position:absolute;z-index:4;inset:calc(100% + 6px) auto auto 0;min-width:132px;padding:5px;border:1px solid #aaa;border-radius:12px;background:#f4f4f4}
+.record-activity .ra-scope[data-above] .ra-scope-menu{top:auto;bottom:calc(100% + 6px)}
+.record-activity .ra-scope-menu button{display:block;width:100%;min-height:44px;text-align:left;padding-inline:10px;border:0;border-radius:8px;color:inherit;background:transparent;cursor:pointer}
+.record-activity .ra-scope-menu button[aria-selected=true],.record-activity .ra-search-button[aria-pressed=true]{background:#ddd}
+.record-activity .ra-search-fields input{min-width:0;width:100%;padding:0 12px;font-size:16px}
+.record-activity .ra-search-fields input::placeholder{font-size:12px}
+.record-activity .ra-search-button{display:grid;place-items:center;width:42px;padding:0;cursor:pointer}
+.record-activity .ra-tags{display:grid;gap:4px;margin-top:8px;min-width:0}
+.record-activity .ra-tags .v10-filter-chip{flex:none;border-radius:999px;white-space:nowrap}
+.record-activity .v10-result-list{margin-top:8px;max-height:216px;overflow:auto;overscroll-behavior:contain}
+.record-activity .ra-chart-line,.record-activity .ra-distances,.record-activity .ra-cardio-detail{border-top:1px solid #bbb;padding-top:12px}
+.record-activity .ra-trend-chart{display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-rows:minmax(0,1fr) 30px;height:220px;padding:20px 8px 4px 0;font-size:10px}
+.record-activity .ra-trend-y,.record-activity .ra-trend-plot{position:relative;min-width:0}
+.record-activity .ra-trend-y{border-right:1px solid #bbb}
+.record-activity .ra-trend-tick{position:absolute;right:8px;bottom:var(--level);transform:translateY(50%);line-height:1;color:#666;white-space:nowrap}
+.record-activity .ra-trend-guide{position:absolute;inset-inline:0;bottom:var(--level);border-top:1px dashed #bbb}
+.record-activity .ra-trend-columns,.record-activity .ra-trend-x{display:grid;grid-template-columns:repeat(var(--columns),minmax(0,1fr))}
+.record-activity .ra-trend-columns{position:relative;height:100%}
+.record-activity .ra-trend-slot{display:flex;align-items:flex-end;justify-content:center;min-width:0}
+.record-activity .ra-trend-bar{position:relative;width:min(22px,100%);height:var(--level);border-radius:4px;background:#aaa}
+.record-activity .ra-trend-value{position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);line-height:1;white-space:nowrap}
+.record-activity .ra-trend-x{grid-column:2;border-top:1px solid #bbb;padding-top:7px;text-align:center;color:#666;overflow-wrap:anywhere}
+.record-activity .ra-rate{font-size:19px}
+.record-activity .ra-progress{height:6px;border-radius:4px;overflow:hidden;background:#ddd}
+.record-activity .ra-progress span{display:block;height:100%;background:#555;border-radius:inherit}
+.record-activity .ra-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.record-activity .ra-days>div{display:grid;justify-items:center;gap:5px;min-width:0;padding:8px 1px;border:1px solid #bbb;border-radius:5px;background:#f4f4f4;font-size:12px}
+.record-activity .ra-days strong{font-size:18px}
+.record-activity .ra-legend{display:flex;gap:10px;flex-wrap:wrap}
+.record-activity .ra-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+.record-activity .ra-summary>div{display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:78px;padding:8px 10px 8px 0}
+.record-activity .ra-summary>div+div{border-left:1px solid #bbb;padding:8px 0 8px 12px}
+.record-activity .ra-summary strong{font-size:19px;overflow-wrap:anywhere}
+.record-activity .ra-summary div>span,.record-activity .ra-kind>span{display:flex;align-items:center;gap:5px}
+.record-activity .ra-summary svg,.record-activity .ra-kind img{width:16px;height:16px;flex:none}
+.record-activity .ra-kind{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:13px}
+.record-activity .ra-kind small{margin-right:7px;font-weight:400}
+.record-activity .ra-details-button{min-height:44px;margin-block:-7px;font-size:12px}
+.record-activity :is(button,summary,input):focus-visible{outline:2px solid #555;outline-offset:2px}
+@media(max-width:350px){.record-activity .wire{padding-inline:9px}.record-activity h2{font-size:16px}.record-activity .ra-grid strong{font-size:22px}}
 </style>
 </head>
 <body>
@@ -1341,20 +1416,34 @@ return {html,bottom,top:'[기록·분석] 신규 UI 설계 시안 · 모든 수�
 }
 
 /* 기록 탭 추가 확정 UI · 모든 목록/검색/날짜 판정은 합성 메모리 시연. API·G4 계산과 독립. */
-const recordTabDemo={activity:{mode:'week',anchor:recordTabToday,calendar:null,scope:'all',query:'',selected:null},history:{anchor:recordTabToday,calendar:null,query:'',scope:'routine',searchOpen:false},seeded:false,notesReady:false};
+const recordActivitySample=new URLSearchParams(location.search).get('activity-demo')==='states';
+const recordActivitySampleWeek=recordTabShift(recordTabRange('week',recordTabToday).from,-7);
+const recordTabDemo={activity:{mode:'week',anchor:recordActivitySample?recordActivitySampleWeek:recordTabToday,calendar:null,scope:'exercise',query:'',selected:null,searchOpen:false,tag:'전체',cardioOpen:false,motion:null},history:{anchor:recordTabToday,calendar:null,query:'',scope:'routine',searchOpen:false},seeded:false,notesReady:false};
 function recordTabShift(date,days){const d=analysisDate(date);d.setUTCDate(d.getUTCDate()+days);return analysisIso(d)}
 function recordTabRange(mode,anchor){const d=analysisDate(anchor);if(mode==='week')d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);else d.setUTCDate(1);const end=new Date(d);if(mode==='week')end.setUTCDate(end.getUTCDate()+6);else end.setUTCMonth(end.getUTCMonth()+1,0);return {from:analysisIso(d),end:analysisIso(end)}}
 function recordTabDates(range){const days=[];for(let d=range.from;d<=range.end;d=recordTabShift(d,1))days.push(d);return days}
 function recordTabMonthLabel(date){const d=analysisDate(date);return d.getUTCFullYear()+'년 '+(d.getUTCMonth()+1)+'월'}
 function recordTabPeriod(owner){const value=recordTabDemo[owner],mode=owner==='history'?'month':value.mode,range=recordTabRange(mode,value.anchor),label=mode==='month'?recordTabMonthLabel(value.anchor):range.from.slice(5).replace('-','/')+' ~ '+range.end.slice(5).replace('-','/');return `${owner==='activity'?statsFilter([['week','주간'],['month','월간']],mode,'recordtab-period-'):''}<div class="recordtab-period"><button type="button" class="smallbtn" data-act="recordtab-prev-${owner}" aria-label="이전 ${mode==='week'?'주':'달'}">‹</button><b>${label}</b><button type="button" class="smallbtn" data-act="recordtab-next-${owner}" aria-label="다음 ${mode==='week'?'주':'달'}">›</button><button type="button" class="smallbtn" data-act="recordtab-calendar-${owner}" aria-label="${owner==='history'?'이력':'운동 현황'} 달력 열기" aria-expanded="${!!value.calendar}">▦</button></div>${analysisCalendar(owner)}`}
-function recordTabCalendar(owner){const value=recordTabDemo[owner];if(!value.calendar)return '';const d=analysisDate(value.calendar),y=d.getUTCFullYear(),m=d.getUTCMonth(),first=analysisIso(new Date(Date.UTC(y,m,1))),pad=(new Date(Date.UTC(y,m,1)).getUTCDay()+6)%7,count=new Date(Date.UTC(y,m+1,0)).getUTCDate();return `<section class="analysis-calendar" aria-label="${owner==='history'?'이력 월 선택':'조회 기간 선택'}"><div class="headerrow"><button type="button" class="smallbtn" data-act="recordtab-calprev-${owner}" aria-label="달력 이전 달">‹</button><b>${recordTabMonthLabel(first)}</b><button type="button" class="smallbtn" data-act="recordtab-calnext-${owner}" aria-label="달력 다음 달">›</button><button type="button" class="smallbtn" data-act="recordtab-calclose-${owner}" aria-label="달력 닫기">닫기</button></div><div class="analysis-calendar-grid">${['월','화','수','목','금','토','일'].map(n=>'<span>'+n+'</span>').join('')}${'<span></span>'.repeat(pad)}${Array.from({length:count},(_,i)=>{const date=recordTabShift(first,i),status=recordTabDayResult(recordTabDay(date));return `<button type="button" data-act="recordtab-date-${owner}-${date}" class="${date===value.anchor?'chosen':''}" aria-label="${date} ${status.label}">${i+1}<small>${status.mark}</small></button>`}).join('')}</div><p class="tiny muted">✓ 전체 완료 · △ 부분 달성 · × 기준 미달 · – 휴식 · · 판정 대기/미래 · ? 확인 불가</p></section>`}
+function recordTabCalendar(owner){const value=recordTabDemo[owner];if(!value.calendar)return '';const d=analysisDate(value.calendar),y=d.getUTCFullYear(),m=d.getUTCMonth(),first=analysisIso(new Date(Date.UTC(y,m,1))),pad=(new Date(Date.UTC(y,m,1)).getUTCDay()+6)%7,count=new Date(Date.UTC(y,m+1,0)).getUTCDate();return `<section class="analysis-calendar" aria-label="${owner==='history'?'이력 월 선택':'조회 기간 선택'}"><div class="headerrow"><button type="button" class="smallbtn" data-act="recordtab-calprev-${owner}" aria-label="달력 이전 달">‹</button><b>${recordTabMonthLabel(first)}</b><button type="button" class="smallbtn" data-act="recordtab-calnext-${owner}" aria-label="달력 다음 달">›</button><button type="button" class="smallbtn" data-act="recordtab-calclose-${owner}" aria-label="달력 닫기">닫기</button></div><div class="analysis-calendar-grid">${['월','화','수','목','금','토','일'].map(n=>'<span>'+n+'</span>').join('')}${'<span></span>'.repeat(pad)}${Array.from({length:count},(_,i)=>{const date=recordTabShift(first,i),status=recordTabDayResult(recordTabDay(date));return `<button type="button" data-act="recordtab-date-${owner}-${date}" class="${date===value.anchor?'chosen':''}" aria-label="${date} ${status.label}">${i+1}<small>${status.mark}</small></button>`}).join('')}</div>${owner==='history'?'<p class="tiny muted">✓ 전체 완료 · △ 부분 달성 · × 기준 미달 · – 휴식 · · 판정 대기/미래 · ? 확인 불가</p>':''}</section>`}
 function recordTabCandidates(){const exercises=[...new Set([...statExerciseChoices.map(e=>e[0]),...Object.keys(analysisExercise)])].map((name,i)=>({id:'exercise-'+i,type:'exercise',name,group:analysisExercise[name]?.group||exerciseMeta(name).group||'분류 확인 필요',aliases:statExerciseChoices.find(e=>e[0]===name)?.[1]||''}));const groups=['가슴','등','어깨','팔','하체','코어'].map((name,i)=>({id:'group-'+i,type:'group',name,group:'부위 분류',aliases:name==='하체'?'다리 legs':''}));const muscles=analysisMuscles.map((m,i)=>({id:'muscle-'+i,type:'muscle',name:m.name,group:m.group,aliases:''}));return [...exercises,...groups,...muscles]}
 function recordTabSearch(){
-  const a=recordTabDemo.activity,q=a.query.normalize('NFKC').trim().toLowerCase(),labels={exercise:'운동별',group:'분류별',muscle:'근육별'};
-  const matches=recordTabCandidates().filter(c=>(a.scope==='all'||a.scope===c.type)&&(c.name+' '+c.aliases+' '+c.group).toLowerCase().includes(q));
-  const items=matches.slice(0,12).map(c=>({...c,aliases:[c.aliases,c.group],category:c.group,group:(c.type==='group'?c.name:c.group).replace('다리','하체')}));
-  return v10SearchUi('recordTabSearch',items,c=>'recordtab-select-'+c.id,{scope:{id:'recordTabScope',label:'운동량 검색 범위',value:a.scope,items:[['all','전체'],['exercise','운동별'],['group','분류별'],['muscle','근육별']]},label:'운동·분류·근육 검색',value:a.query,showResults:!!q||a.scope!=='all',limited:true,metadata:c=>labels[c.type]+' · '+c.category,note:'준비된 합성 마스터 검색 · 후보 검색과 선택 후 통계 조회는 별개입니다.'+(matches.length>12?' 최대 12개 표시.':'')})+(a.selected?`<div class="recordtab-selection"><span>선택: ${escapeHtml(a.selected.name)} · ${labels[a.selected.type]}</span><button type="button" class="smallbtn" data-act="recordtab-clear">선택 해제</button></div>`:'');
- }
+  const a=recordTabDemo.activity,q=a.query.normalize('NFKC').trim().toLowerCase();
+  const labels={all:'전체',exercise:'운동별',group:'분류별',muscle:'근육별'};
+  const matches=recordTabCandidates().filter(c=>(a.scope==='all'||a.scope===c.type)&&(a.tag==='전체'||c.group.replace('다리','하체')===a.tag)&&(c.name+' '+c.aliases+' '+c.group).toLowerCase().includes(q));
+  const items=matches.slice(0,12).map(c=>({...c,category:c.group,group:(c.type==='group'?c.name:c.group).replace('다리','하체')}));
+  const tags=a.scope==='exercise'?v10CatalogGroups:a.scope==='muscle'?['전체',...new Set(analysisMuscles.map(m=>m.group.replace('다리','하체')))]:[];
+  const tagLabel=a.scope==='exercise'?'운동 부위':'근육 분류';
+  const active=a.searchOpen||!!a.selected;
+  const label='운동·분류·근육 검색';
+  return `<div class="ra-search"><div class="ra-search-fields">
+    <details class="ra-scope"><summary id="recordTabScope" aria-haspopup="listbox" aria-controls="recordTabScopeMenu" aria-label="검색 범위: ${labels[a.scope]}">${labels[a.scope]} <span aria-hidden="true">⌄</span></summary>
+      <div id="recordTabScopeMenu" class="ra-scope-menu" role="listbox" aria-label="검색 범위">${Object.entries(labels).map(([value,name])=>`<button type="button" role="option" aria-selected="${a.scope===value}" data-act="recordtab-scope-${value}">${name}</button>`).join('')}</div></details>
+    <input type="search" id="recordTabSearch" aria-label="${label}" placeholder="${label}" autocomplete="off" value="${escapeHtml(a.searchOpen?a.query:a.selected?.name||'')}">
+    <button type="button" id="recordTabSearchToggle" class="ra-search-button" aria-pressed="${active}" aria-label="${a.selected&&!a.searchOpen?'선택 해제':a.searchOpen?a.query?'검색어 지우기':'검색 닫기':'검색 목록 열기'}" data-act="recordtab-search-toggle">${recordActivityIcon(active?'close':'search')}</button>
+  </div>${a.searchOpen&&tags.length?`<div class="ra-tags"><span class="tiny muted">${tagLabel}</span><div class="v10-filter-strip" role="group" aria-label="${tagLabel} 필터">${tags.map(tag=>`<button type="button" class="v10-filter-chip" aria-pressed="${a.tag===tag}" data-act="recordtab-tag-${escapeHtml(tag)}">${escapeHtml(tag)}</button>`).join('')}</div></div>`:''}
+  ${a.searchOpen?`<div class="v10-result-list v10-result-limited" aria-label="검색 결과">${v10SearchRows(items,c=>'recordtab-select-'+c.id,{metadata:c=>labels[c.type]+' · '+c.category})||'<p class="v10-no-results" role="status">검색 후보가 없습니다.</p>'}</div>`:''}
+  <p class="v10-search-hint">준비된 합성 마스터 검색 · 후보 검색과 선택 후 통계 조회는 별개입니다.</p></div>`;
+}
 function recordTabMatch(row,selection){if(!selection)return {match:true,factor:1};const meta=analysisExercise[row.name];if(selection.type==='exercise')return {match:row.name===selection.name,factor:1};if(!meta)return {match:false,factor:1};if(selection.type==='group')return {match:meta.group===(selection.name==='하체'?'다리':selection.name),factor:1};return {match:meta.primary.includes(selection.name)||meta.secondary.includes(selection.name),factor:meta.primary.includes(selection.name)?1:.5}}
 function recordTabTrend(){const a=recordTabDemo.activity,range=recordTabRange(a.mode,a.anchor),dates=recordTabDates(range),rows=analysisFacts.filter(r=>r.date>=range.from&&r.date<=range.end),values=Array(a.mode==='week'?7:Math.ceil(dates.length/7)).fill(0);for(const r of rows){const match=recordTabMatch(r,a.selected);if(!match.match)continue;const at=dates.indexOf(r.date),index=a.mode==='week'?at:Math.floor(at/7);values[index]+=state.statMetric==='sets'?r.actual*match.factor:(r.volume||0)}return {name:a.selected?.name||'전체 운동',values,labels:a.mode==='week'?['월','화','수','목','금','토','일']:values.map((_,i)=>(i*7+1)+'–'+Math.min((i+1)*7,dates.length)+'일'),total:values.reduce((n,v)=>n+v,0)}}
 function recordTabCardios(range){return [{date:recordTabShift(recordTabToday,-1),name:'러닝머신',minutes:30,distance:4,source:'계산 거리 (실제 속도×시간)'},{date:recordTabShift(recordTabToday,-4),name:'실내 자전거',minutes:20,distance:7.5,source:'직접 입력'},{date:recordTabShift(recordTabToday,-10),name:'러닝머신',minutes:25,distance:3,source:'직접 입력'}].filter(r=>r.date>=range.from&&r.date<=range.end)}
@@ -1373,8 +1462,114 @@ function recordTabBoundaryCases(){const weights=(counts,actuals)=>counts.map((pl
  {name:'미래·검사 대기',date:recordTabToday,pending:true,expected:'·'}
 ]}
 function recordTabDay(date){const monday=recordTabRange('week',recordTabToday).from,cases=recordTabBoundaryCases(),offset=Math.round((analysisDate(date)-analysisDate(monday))/86400000);const map={0:cases[6],1:cases[0],2:cases[8],3:cases[1],4:{known:false},5:cases[9],6:cases[8],'-7':cases[2],'-6':cases[3],'-5':cases[4],'-4':cases[5],'-3':cases[7],'-2':{pending:true},'-1':cases[8]};return {...(map[offset]||{known:false}),date,routineName:({0:'PUSH DAY',1:'PULL DAY',2:'휴식',3:'LEG DAY',4:'계획 확인 불가'})[offset]||null}}
-function recordTabScheduled(range){const dates=recordTabDates(range);return `<div class="recordtab-days">${dates.map(date=>{const day=recordTabDay(date),result=recordTabDayResult(day);return `<div class="recordtab-day" title="${date} ${result.label}"><span>${date.slice(5).replace('-','/')}</span><strong aria-label="${date} ${result.label}">${result.mark}</strong></div>`}).join('')}</div><p class="tiny muted">✓ 전체 완료 · △ 부분 달성 · × 기준 미달 · – 휴식 · · 미래/검사 대기 · ? 확인 불가</p><p class="tiny muted">△는 날짜 표시용 UI 분류입니다. 공식 루틴 달성률·유효 운동일·G4 산식은 변경하지 않습니다. 당시 계획·대체 슬롯 완료 근거는 별도로 보존합니다.</p>`}
-function recordTabActivity(){const a=recordTabDemo.activity,range=recordTabRange(a.mode,a.anchor),current=recordTabTrend(),allRows=analysisFacts.filter(r=>r.date>=range.from&&r.date<=range.end),sets=allRows.reduce((n,r)=>n+r.actual,0),volume=allRows.reduce((n,r)=>n+(r.volume||0),0),cardios=recordTabCardios(range);return `${statHeader('운동 현황')}${box(`<div class="stat-card-title">조회 기간</div>${recordTabPeriod('activity')}`)}${box(`<div class="stat-card-title">운동량 요약 · 전체</div><div class="stat-grid"><div class="stat-tile"><small>완료 세트</small><b>${sets}세트</b></div><div class="stat-tile"><small>총중량 · 중량×반복</small><b>${volume.toLocaleString()}kg</b></div></div><p class="tiny muted">선택 기간 전체 · 아래 검색 선택과 독립 · 합성 데이터</p>`)}${box(`<div class="headerrow"><b>운동량 추이</b><span class="tiny muted">완료 기록 기준</span></div>${recordTabSearch()}${statsFilter([['sets','세트'],['volume','총중량']],state.statMetric,'stats-metric-')}<div class="stat-detail"><span>${escapeHtml(current.name)} · 선택한 기간</span><b>${current.total.toLocaleString()}${state.statMetric==='sets'?'세트':'kg'}</b></div>${current.total?statBars(current.values,current.labels):'<div class="stat-empty-graph">선택한 항목·기간에 합성 수행 기록이 없습니다.</div>'}<p class="tiny muted">${state.statMetric==='volume'?'실제 중량 × 실제 반복 합계 · 기여 계수 미적용':'세부 근육만 기여 세트 · 분류/전체는 원본 세트'}</p>`)}${box(`<div class="stat-card-title">예정일 · 운동 달성</div>${recordTabScheduled(range)}`)}${box(`<div class="headerrow"><b>유산소 현황</b>${bsm('상세 보기 ›','cardiostats')}</div><div class="stat-pair"><span>누적 실제 시간</span><b>${cardios.reduce((n,c)=>n+c.minutes,0)}분</b></div>${[...new Set(cardios.map(c=>c.name))].map(name=>{const rows=cardios.filter(c=>c.name===name);return `<p class="tiny muted">${name} ${rows.reduce((n,c)=>n+c.distance,0).toLocaleString()}km · ${[...new Set(rows.map(c=>c.source))].join(' / ')}</p>`}).join('')||'<p class="tiny muted">선택 기간에 합성 유산소 기록이 없습니다.</p>'}<p class="tiny muted">실제 완료 기준 · 계획 목표와 구분</p>`)}<p class="stat-floating-note">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>`}
+function recordActivityIcon(name){
+  const paths={prev:'m15 6-6 6 6 6',next:'m9 6 6 6-6 6',calendar:'M5 5h14v16H5zM8 3v4m8-4v4M5 10h14m-9 4h.1m4 0h.1m-4 3h.1m4 0h.1',search:'M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0m-1.5 4.5L20 20',close:'m6 6 12 12M18 6 6 18'};
+  return `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${paths[name]}"/></svg>`;
+}
+function recordActivitySegment(items,value,kind){
+  const side=items[1][0]===value?'right':'left',motion=recordTabDemo.activity.motion;
+  return `<div class="ra-segment" data-side="${side}"${motion?.kind===kind?` data-motion="${motion.from}"`:''}>${items.map(([id,label])=>`<button type="button" id="ra-${kind}-${id}" aria-pressed="${id===value}" data-act="recordtab-${kind}-${id}">${label}</button>`).join('')}</div>`;
+}
+function recordActivityPeriod(a,range){
+  const label=a.mode==='month'?a.anchor.slice(0,7).replace('-','/'):range.from.slice(5).replace('-','/')+' ~ '+range.end.slice(5).replace('-','/');
+  return box(`${recordActivitySegment([['week','주간'],['month','월간']],a.mode,'period')}<div class="ra-period">
+    <button type="button" data-act="recordtab-prev-activity" aria-label="이전 기간">${recordActivityIcon('prev')}</button><b>${label}</b>
+    <button type="button" data-act="recordtab-next-activity" aria-label="다음 기간">${recordActivityIcon('next')}</button>
+    <button type="button" data-act="recordtab-calendar-activity" aria-label="운동 현황 달력 열기" aria-expanded="${!!a.calendar}">${recordActivityIcon('calendar')}</button>
+  </div>${recordTabCalendar('activity')}`);
+}
+function recordTabScheduled(anchor){
+  const range=recordTabRange('week',anchor),sample=recordActivitySample&&range.from===recordActivitySampleWeek,days=recordTabDates(range);
+  const weekdays=['월','화','수','목','금','토','일'];
+  const sampleDays=[['✓','완료'],['△','부분 달성'],['×','미수행'],['–','휴식'],['·','검사 대기'],['?','부분 달성 근거 확인 필요'],['–','휴식']];
+  return box(`<div class="ra-heading"><h2>주간 루틴 달성</h2><strong class="ra-rate">${sample?'40%':'—'}</strong></div>
+    <div class="ra-progress" role="progressbar" aria-label="주간 루틴 달성률 · 합성 예시" aria-valuemin="0" aria-valuemax="100" ${sample?'aria-valuenow="40"':'aria-valuetext="미확인"'}><span style="width:${sample?40:0}%"></span></div>
+    ${sample?'<p class="ra-heading tiny muted"><span>계획한 5일 중 2일 완료</span><span>2 / 5일</span></p>':'<p class="tiny muted">주간 계획 운동일과 루틴 달성률은 아직 확인할 수 없습니다.</p>'}
+    <div class="ra-days">${days.map((date,i)=>{const result=recordTabDayResult(recordTabDay(date)),[mark,label]=sample?sampleDays[i]:[result.mark==='?'?'·':result.mark,result.label];return `<div title="${date} ${label}"><span class="tiny muted">${weekdays[i]}</span><time datetime="${date}">${Number(date.slice(8))}</time><strong aria-label="${date} ${label}">${mark}</strong></div>`}).join('')}</div>
+    <p class="tiny muted ra-legend"><span>– 휴식</span><span>· 미수행</span><span>? 미확인</span></p>`,'ra-stack');
+}
+function recordActivityCardio(a,range){
+  const sample=recordActivitySample&&a.mode==='week'&&range.from===recordActivitySampleWeek,records=recordTabCardios(range);
+  const totals=sample?[{name:'러닝머신',minutes:60,distance:8,weekdays:'월 · 금',source:'직접 입력'},{name:'자전거',minutes:45,distance:7.5,weekdays:'화',source:'직접 입력'},{name:'야외 운동',minutes:35,distance:null,weekdays:'요일 미확인',source:'거리 미입력'}]:[...new Set(records.map(r=>r.name))].map(name=>{
+    const rows=records.filter(r=>r.name===name);
+    return {name,minutes:rows.reduce((n,r)=>n+r.minutes,0),distance:rows.reduce((n,r)=>n+r.distance,0),source:[...new Set(rows.map(r=>r.source))].join(' / ')};
+  });
+  const minutes=totals.reduce((n,r)=>n+r.minutes,0);
+  const duration=minutes>=60?`${Math.floor(minutes/60)}시간${minutes%60?' '+minutes%60+'분':''}`:`${minutes}분`;
+  const distance=r=>r.distance===null?'거리 미입력':r.distance.toLocaleString()+' km';
+  return box(`<div class="ra-heading"><h2>유산소 현황</h2><button type="button" id="ra-cardio-toggle" class="ra-quiet ra-details-button" aria-expanded="${a.cardioOpen}" aria-controls="ra-cardio-details" data-act="recordtab-cardio-toggle">${a.cardioOpen?'상세 닫기':'상세 보기 ›'}</button></div>
+    <div class="ra-summary"><div><span class="tiny muted">${recordMainIcon('clock')}누적 유산소 시간</span><strong>${duration}</strong></div><div><span class="tiny muted">${recordMainIcon('plan')}누적 일수</span><strong>${sample?'4일':'미확인'}</strong></div></div>
+    <section class="ra-distances ra-stack"><h3 class="tiny muted">종류별 누적 거리</h3>${totals.map(r=>`<div class="ra-kind"><span>${v10CategoryIcon(r.name.includes('자전거')?'사이클':r.name==='러닝머신'?'러닝':'걷기')}${r.name}</span><strong>${sample?`<small class="muted">${r.weekdays}</small>`:''}${distance(r)}</strong></div>`).join('')||'<p class="tiny muted">선택 기간에 유산소 기록이 없습니다.</p>'}</section>
+    <p class="tiny muted">${sample?'UI 검토용 합성 유산소 기록':'선택 기간 실제 기록 기준 · 계획 외 유산소도 포함'}</p>
+    <div id="ra-cardio-details" class="ra-cardio-detail"${a.cardioOpen?'':' hidden'}><div class="ra-heading"><p class="tiny muted">${sample?'시연':'실제'} 누적 ${duration} · ${sample?'계획 없음':'계획 시간 확인 불가'}</p>${bsm('운동 이력 ›','history')}</div>
+      ${totals.map(r=>`<p class="tiny muted">${r.name} · ${r.minutes}분 · ${r.source}${r.distance===null?'':' · '+distance(r)}</p>`).join('')}
+    </div>`,'ra-stack');
+}
+function recordActivityTrendChart({name,values,labels},unit){
+  // RecordChart uses five adaptive ticks from zero to a rounded upper bound.
+  const rough=Math.max(...values)/4;
+  const order=rough?Math.floor(Math.log10(rough)):0;
+  const quantum=order===0?1:10**order/2;
+  const step=rough?Math.ceil(Number((rough/quantum).toPrecision(12)))*quantum:1;
+  const ticks=Array.from({length:5},(_,i)=>i*step);
+  const maximum=ticks.at(-1);
+  const tickLabel=value=>value.toLocaleString('ko-KR',{notation:value>=10000?'compact':'standard',maximumFractionDigits:1});
+  const summary=labels.map((label,i)=>`${label}: ${values[i]}${unit}`).join(', ');
+  return `<div class="ra-trend-chart" role="img" aria-label="${escapeHtml(name)} 추이 · ${escapeHtml(summary)}" style="--columns:${labels.length}">
+    <div class="ra-trend-y" aria-hidden="true">${ticks.map((tick,i)=>`<span class="ra-trend-tick" style="--level:${i*25}%">${tickLabel(tick)}</span>`).join('')}</div>
+    <div class="ra-trend-plot" aria-hidden="true">${ticks.slice(1).map((_,i)=>`<span class="ra-trend-guide" style="--level:${(i+1)*25}%"></span>`).join('')}
+      <div class="ra-trend-columns">${values.map(value=>`<div class="ra-trend-slot">${value>0?`<div class="ra-trend-bar" style="--level:${value/maximum*100}%"><span class="ra-trend-value">${value}</span></div>`:''}</div>`).join('')}</div>
+    </div>
+    <div class="ra-trend-x" aria-hidden="true">${labels.map(label=>`<span>${escapeHtml(label)}</span>`).join('')}</div>
+  </div>`;
+}
+function recordTabActivity(){
+  const a=recordTabDemo.activity,range=recordTabRange(a.mode,a.anchor),current=recordTabTrend(),rows=analysisFacts.filter(r=>r.date>=range.from&&r.date<=range.end);
+  const sets=rows.reduce((n,r)=>n+r.actual,0),volume=rows.reduce((n,r)=>n+(r.volume||0),0),showSets=state.statMetric==='sets';
+  return `<div class="record-activity"><header class="ra-header"><button type="button" class="ra-quiet" data-act="recorddash" aria-label="기록으로">‹</button><h1>운동 현황</h1></header>
+  ${recordActivityPeriod(a,range)}
+  <section aria-label="운동량 요약"><div class="ra-heading"><h2>운동량 요약</h2><span class="tiny muted">선택 기간 전체</span></div><div class="ra-grid">
+    ${box(`<span class="tiny muted">완료 세트</span><strong>${sets}<small>세트</small></strong>`)}${box(`<span class="tiny muted">총중량</span><strong>${volume.toLocaleString()}<small>kg</small></strong>`)}</div></section>
+  ${box(`<div class="ra-heading"><h2>운동량 추이</h2><span class="tiny muted">완료 기록 기준</span></div>
+    ${recordActivitySegment([['sets','세트'],['volume','총중량']],state.statMetric,'metric')}${recordTabSearch()}
+    <div class="ra-heading ra-chart-line"><span>${escapeHtml(current.name)} · 선택한 기간</span><b>${current.total.toLocaleString()}${showSets?'세트':'kg'}</b></div>
+    ${recordActivityTrendChart(current,showSets?'세트':'kg')}
+    <p class="tiny muted">${showSets?'세부 근육만 기여 세트 · 분류/전체는 원본 세트':'실제 중량 × 실제 반복 합계 · 기여 계수 미적용'}</p>`,'ra-stack')}
+  ${recordTabScheduled(a.anchor)}${recordActivityCardio(a,range)}
+  <p class="stat-floating-note">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p></div>`;
+}
+function recordActivityAction(to){
+  if(state.screen!=='activity')return false;
+  const a=recordTabDemo.activity;
+  const segment=to.match(/^recordtab-(period|metric)-(week|month|sets|volume)$/);
+  const scope=to.match(/^recordtab-scope-(all|exercise|group|muscle)$/);
+  let focus;
+  if(segment){
+    const [,kind,value]=segment,previous=kind==='period'?a.mode:state.statMetric;
+    if(previous===value)return true;
+    a.motion={kind,from:['week','sets'].includes(previous)?'left':'right'};
+    if(kind==='metric')state.statMetric=value;
+    else {a.mode=value;a.calendar=null;}
+  }else if(scope){
+    if(a.scope!==scope[1]){a.scope=scope[1];a.query='';a.selected=null;a.tag='전체';}
+    a.searchOpen=true;focus='recordTabScope';
+  }else if(to.startsWith('recordtab-tag-')){
+    a.tag=to.slice('recordtab-tag-'.length);a.query='';a.selected=null;
+  }else if(to.startsWith('recordtab-select-')){
+    const candidate=recordTabCandidates().find(c=>c.id===to.slice(17));
+    if(candidate){a.selected=candidate;a.query='';a.searchOpen=false;focus='recordTabSearchToggle';}
+  }else if(to==='recordtab-search-toggle'){
+    if(a.searchOpen&&a.query){a.query='';focus='recordTabSearch';}
+    else if(a.searchOpen||a.selected){a.query='';a.searchOpen=false;a.selected=null;a.tag='전체';}
+    else {a.searchOpen=true;focus='recordTabSearch';}
+  }else if(to==='recordtab-cardio-toggle')a.cardioOpen=!a.cardioOpen;
+  else return false;
+  const strip=document.querySelector('.record-activity .v10-filter-strip'),scroll=strip?.scrollLeft??0;
+  wdDraw();a.motion=null;
+  if(to.startsWith('recordtab-tag-'))document.querySelector('.record-activity .v10-filter-strip').scrollLeft=scroll;
+  if(focus)document.getElementById(focus)?.focus({preventScroll:true});
+  return true;
+}
 function recordTabSessions(){if(!recordTabDemo.seeded){recordTabDemo.seeded=true;wd.records=wd.records||[];wd.recordCopies=wd.recordCopies||{};const samples=[[0,20,'PUSH DAY'],[0,7,'아침 유산소'],[-1,19,'PULL DAY'],[-3,18,'LEG DAY'],[-6,19,'PUSH DAY'],[-7,18,'LEG DAY'],[-12,19,'PULL DAY'],[-34,19,'PUSH DAY'],[-65,19,'PULL DAY']];samples.forEach(([offset,hour,name],i)=>{const r=wdSeed(true),date=recordTabShift(recordTabToday,offset);r.id='record-tab-'+i;r.date=date;r.routine=name;r.startedAt=new Date(Date.parse(date+'T00:00:00.000Z')+(hour-9)*3600000).toISOString();r.endedAt=new Date(Date.parse(r.startedAt)+2540000).toISOString();const names=name==='PULL DAY'?['랫 풀다운','시티드 케이블 로우','덤벨 컬']:name==='LEG DAY'?['바벨 스쿼트','레그 컬','덤벨 컬']:null;if(names)r.weights.forEach((w,j)=>w.name=names[j]);if(name==='아침 유산소'){r.weights=[];r.startedAt=date+'T00:00:00.000Z';r.endedAt=date+'T00:30:00.000Z'}r.initialWeights=r.weights.map(w=>({id:w.id,name:w.name,count:w.initialCount,min:w.min,max:w.max,reference:w.initialApproved}));r.weights.forEach(w=>w.rows.forEach(row=>{if(row.result){row.result.id=r.id+'-'+w.id+'-'+row.ordinal;row.result.at=new Date(Date.parse(r.startedAt)+120000+row.ordinal*60000).toISOString()}}));r.cardios.forEach(c=>{if(c.result){c.result.id=r.id+'-'+c.id;c.result.at=r.endedAt}});r.completionEvaluation=wdOfficial(r);wd.records.push(r);wd.recordCopies[r.id]=wdClone(r)})}return (wd.records||[]).filter(r=>!r.deleted&&!r.unsynced&&r.endedAt&&r.date<=recordTabToday).slice().sort((a,b)=>Date.parse(b.endedAt)-Date.parse(a.endedAt)||a.id.localeCompare(b.id))}
 function recordTabCard(r){const facts=r.weights.flatMap(wdFacts),cardios=r.cardios.filter(c=>c.result).length;return statHistoryCard(r.date,r.routine,facts.length,cardios,'운동 '+wdDuration(Date.parse(r.endedAt)-Date.parse(r.startedAt)),wdKg(wdSum(facts)),r.id)}
 
@@ -1399,13 +1594,47 @@ function recordTabHistory(){
   const h=recordTabDemo.history,range=recordTabRange('month',h.anchor),q=h.query.normalize('NFKC').trim().toLowerCase(),rows=recordTabSessions().filter(r=>q?(h.scope==='exercise'?[...r.weights,...r.cardios].map(e=>e.name):[r.routine]).some(name=>name.normalize('NFKC').toLowerCase().includes(q)):r.date>=range.from&&r.date<=range.end);
   return `${statHeader('운동 이력')}${box(recordTabPeriod('history')+recordTabHistorySearch()+(q?'<div class="headerrow"><p class="tiny muted" role="status">전체 기간 검색 결과 · 월 필터 미적용</p>'+bsm('검색 해제','recordtab-history-clear')+'</div>':'<p class="tiny muted">선택 월의 합성 완료 세션 · 최신순</p>'))}<div class="recordtab-feed" aria-label="${q?'전체 기간 검색 결과':'월간 운동 기록'}">${recordTabFeed(rows)||'<p class="stat-floating-note">'+(q?'검색 결과가 없습니다.':'선택한 월에 운동 기록이 없습니다.')+'</p>'}</div><p class="stat-floating-note">합성 메모리 피드입니다. 실제 서버 검색·페이지네이션·색인·저장에는 연결하지 않습니다.</p>`;
  }
-function recordTabAction(to){if(dl.status!=='idle'||!to.startsWith('recordtab-'))return false;const a=recordTabDemo.activity,h=recordTabDemo.history;let m;if(to.startsWith('recordtab-open-')){wdRememberRecord();const r=recordTabSessions().find(r=>r.id===to.slice(15));if(r){wd.record=r;wd.copy=wd.recordCopies[r.id]||null;wd.recordMode=null;state.screen='recorddetail'}}else if(to.startsWith('recordtab-select-')){const c=recordTabCandidates().find(c=>c.id===to.slice(17));if(c){a.selected=c;a.query=''}}else if(to==='recordtab-clear'){a.selected=null;a.scope='all';a.query=''}else if(to.startsWith('recordtab-history-select-')){const candidate=recordTabHistoryCandidates().find(c=>c.id===to.slice('recordtab-history-select-'.length));if(candidate){h.query=candidate.name;h.searchOpen=false}}else if(to==='recordtab-history-clear'){h.query='';h.searchOpen=false}else if(to.startsWith('recordtab-period-')){a.mode=to.slice(17);a.calendar=null}else if((m=to.match(/^recordtab-(prev|next)-(activity|history)$/))){const v=recordTabDemo[m[2]],mode=m[2]==='history'?'month':v.mode,d=analysisDate(v.anchor),n=m[1]==='prev'?-1:1;if(mode==='week')d.setUTCDate(d.getUTCDate()+7*n);else d.setUTCMonth(d.getUTCMonth()+n,1);v.anchor=analysisIso(d);v.calendar=null}else if((m=to.match(/^recordtab-(calendar|calclose|calprev|calnext)-(activity|history)$/))){const v=recordTabDemo[m[2]];if(m[1]==='calendar')v.calendar=v.calendar?null:v.anchor;else if(m[1]==='calclose')v.calendar=null;else{const d=analysisDate(v.calendar);d.setUTCMonth(d.getUTCMonth()+(m[1]==='calprev'?-1:1),1);v.calendar=analysisIso(d)}}else if((m=to.match(/^recordtab-date-(activity|history)-(\d{4}-\d{2}-\d{2})$/))){recordTabDemo[m[1]].anchor=m[2];recordTabDemo[m[1]].calendar=null}else return false;wdDraw();return true}
-function recordTabSyncNotes(){if(recordTabDemo.notesReady)return;recordTabDemo.notesReady=true;notes.activity={title:'STATS-02 · 운동 현황',items:[['공유 기간','상단 주간/월간·달력이 운동량 요약·추이·예정일·유산소에 공통 적용됩니다.'],['통합 검색','전체/운동별/분류별/근육별 합성 마스터 후보를 검색하고 선택 후 그래프를 갱신합니다.'],['판정 경계','△는 날짜 표시용 분류이며 공식 달성률·유효 운동일·G4·증감 평가를 바꾸지 않습니다.']]};notes.history={title:'RECORD-02 · 월간 운동 이력',items:[['목록','완료 세션을 최신순 월간 피드로 표시하고 기록이 있는 주의 첫 카드 위에만 얇은 주차 구분선을 둡니다.'],['검색','루틴별/운동별 이름 검색은 공통 검색 목록을 사용합니다. 검색 시 전체 과거 합성 이력으로 전환하고 해제하면 선택 월로 돌아갑니다.']]};notes.muscles={title:'STATS-04 · 주간 근육 통계',items:[['기간','이번 주 월~일 실제 기록 고정. 기간 이동은 운동 현황에서 제공합니다.'],['집계','기존 독립 분류·세부 기여·실제/당시 계획·세트/총중량을 유지합니다.']]};v8ReviewHints.activity='상단 공유 기간·통합 후보 검색·UI 부분 달성 표시. 모든 데이터는 합성 시연입니다.';v8ReviewHints.muscles='이번 주 고정 · 분류별/근육별 · 세트/총중량';}
+function recordTabAction(to){if(dl.status!=='idle'||!to.startsWith('recordtab-'))return false;if(recordActivityAction(to))return true;const a=recordTabDemo.activity,h=recordTabDemo.history;let m;if(to.startsWith('recordtab-open-')){wdRememberRecord();const r=recordTabSessions().find(r=>r.id===to.slice(15));if(r){wd.record=r;wd.copy=wd.recordCopies[r.id]||null;wd.recordMode=null;state.screen='recorddetail'}}else if(to.startsWith('recordtab-select-')){const c=recordTabCandidates().find(c=>c.id===to.slice(17));if(c){a.selected=c;a.query=''}}else if(to==='recordtab-clear'){a.selected=null;a.scope='all';a.query=''}else if(to.startsWith('recordtab-history-select-')){const candidate=recordTabHistoryCandidates().find(c=>c.id===to.slice('recordtab-history-select-'.length));if(candidate){h.query=candidate.name;h.searchOpen=false}}else if(to==='recordtab-history-clear'){h.query='';h.searchOpen=false}else if(to.startsWith('recordtab-period-')){a.mode=to.slice(17);a.calendar=null}else if((m=to.match(/^recordtab-(prev|next)-(activity|history)$/))){const v=recordTabDemo[m[2]],mode=m[2]==='history'?'month':v.mode,d=analysisDate(v.anchor),n=m[1]==='prev'?-1:1;if(mode==='week')d.setUTCDate(d.getUTCDate()+7*n);else d.setUTCMonth(d.getUTCMonth()+n,1);v.anchor=analysisIso(d);v.calendar=null}else if((m=to.match(/^recordtab-(calendar|calclose|calprev|calnext)-(activity|history)$/))){const v=recordTabDemo[m[2]];if(m[1]==='calendar')v.calendar=v.calendar?null:v.anchor;else if(m[1]==='calclose')v.calendar=null;else{const d=analysisDate(v.calendar);d.setUTCMonth(d.getUTCMonth()+(m[1]==='calprev'?-1:1),1);v.calendar=analysisIso(d)}}else if((m=to.match(/^recordtab-date-(activity|history)-(\d{4}-\d{2}-\d{2})$/))){recordTabDemo[m[1]].anchor=m[2];recordTabDemo[m[1]].calendar=null}else return false;wdDraw();return true}
+function recordTabSyncNotes(){if(recordTabDemo.notesReady)return;recordTabDemo.notesReady=true;notes.activity={title:'STATS-02 · 운동 현황',items:[['기간과 달성','주간 MM/DD ~ MM/DD, 월간 YYYY/MM 형식을 사용합니다. 주간 달성은 선택 날짜가 속한 주를 표시합니다.'],['통합 검색','전체/운동별/분류별/근육별 팝오버와 내부 스크롤 목록을 사용합니다. 후보와 추이는 합성 예시입니다.'],['유산소','상세를 같은 카드에서 펼치고 운동 이력으로 이동합니다. 운영 응답의 누적 일수는 미확인이며 수행 요일은 생략합니다.'],['상태 시연','파일 주소에 ?activity-demo=states를 추가하면 40% 달성률과 유산소 요일·일수 등의 합성 표본이 표시됩니다.']]};notes.history={title:'RECORD-02 · 월간 운동 이력',items:[['목록','완료 세션을 최신순 월간 피드로 표시하고 기록이 있는 주의 첫 카드 위에만 얇은 주차 구분선을 둡니다.'],['검색','루틴별/운동별 이름 검색은 공통 검색 목록을 사용합니다. 검색 시 전체 과거 합성 이력으로 전환하고 해제하면 선택 월로 돌아갑니다.']]};notes.muscles={title:'STATS-04 · 주간 근육 통계',items:[['기간','이번 주 월~일 실제 기록 고정. 기간 이동은 운동 현황에서 제공합니다.'],['집계','기존 독립 분류·세부 기여·실제/당시 계획·세트/총중량을 유지합니다.']]};v8ReviewHints.activity='통합 기간 · 운동량 요약/추이 · 주간 달성 · 유산소 상세 펼침. 모든 수치는 합성 시연입니다.';v8ReviewHints.muscles='이번 주 고정 · 분류별/근육별 · 세트/총중량';}
 function recordTabAfterDraw(){if(state.screen==='activity'&&dl.status==='idle'){const cases=recordTabBoundaryCases();$('#notes').insertAdjacentHTML('beforeend',`<div class="flow"><b>부분 달성 경계 검수 · 합성 표본</b><p>개별 종목 인정과 날짜 △를 구분합니다. 공식 달성률·G4와 별도입니다.</p>${cases.map((c,i)=>{const p=recordTabPartial(c),r=recordTabDayResult(c);return `<p data-boundary-case="${i+1}">${i+1}. ${c.name}<br><b>${r.mark}</b> · 종목 인정 ${p.recognized}/${p.total}${p.planned?' · 세트 '+p.performed+'/'+p.planned:''}</p>`}).join('')}</div>`)}}
-document.addEventListener('input',e=>{if(e.target.id==='recordTabSearch'){recordTabDemo.activity.query=e.target.value;wdDraw()}else if(e.target.id==='recordTabHistorySearch'){recordTabDemo.history.query=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
-document.addEventListener('change',e=>{if(e.target.id==='recordTabScope'){recordTabDemo.activity.scope=e.target.value;wdDraw()}else if(e.target.id==='recordTabHistoryScope'){recordTabDemo.history.scope=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
-document.addEventListener('focusin',e=>{const h=recordTabDemo.history;if(e.target.id==='recordTabHistorySearch'&&h.query&&h.searchOpen===false){h.searchOpen=true;wdDraw()}});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&['activity','history'].includes(state.screen)){const v=recordTabDemo[state.screen];if(v.calendar){v.calendar=null;wdDraw()}}});
+document.addEventListener('input',e=>{if(e.target.id==='recordTabSearch'){const a=recordTabDemo.activity;a.query=e.target.value;a.searchOpen=true;wdDraw()}else if(e.target.id==='recordTabHistorySearch'){recordTabDemo.history.query=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
+document.addEventListener('change',e=>{if(e.target.id==='recordTabHistoryScope'){recordTabDemo.history.scope=e.target.value;recordTabDemo.history.searchOpen=true;wdDraw()}});
+document.addEventListener('focusin',e=>{
+  const a=recordTabDemo.activity,h=recordTabDemo.history;
+  const scope=$('.record-activity .ra-scope[open]');
+  if(scope&&!scope.contains(e.target))scope.open=false;
+  if(e.target.id==='recordTabSearch'&&!a.searchOpen){a.query=a.selected?.name??a.query;a.searchOpen=true;wdDraw();}
+  else if(e.target.id==='recordTabHistorySearch'&&h.query&&h.searchOpen===false){h.searchOpen=true;wdDraw();}
+});
+document.addEventListener('pointerdown',e=>{
+  const scope=$('.record-activity .ra-scope[open]');
+  if(scope&&!scope.contains(e.target))scope.open=false;
+});
+document.addEventListener('toggle',e=>{
+  if(!e.target.matches('.record-activity .ra-scope')||!e.target.open)return;
+  const scope=e.target,menu=scope.querySelector('.ra-scope-menu');
+  scope.removeAttribute('data-above');
+  const viewer=$('#viewer').getBoundingClientRect(),bounds=menu.getBoundingClientRect();
+  if(bounds.bottom>viewer.bottom&&scope.getBoundingClientRect().top-bounds.height-6>=viewer.top)scope.setAttribute('data-above','');
+},true);
+document.addEventListener('keydown',e=>{
+  if(e.isComposing)return;
+  const scope=e.target.closest('.ra-scope');
+  if(scope&&['ArrowDown','ArrowUp','Home','End'].includes(e.key)){
+    const options=[...scope.querySelectorAll('[role=option]')],at=options.indexOf(e.target);
+    const selected=options.findIndex(button=>button.getAttribute('aria-selected')==='true');
+    const next=e.key==='Home'?0:e.key==='End'?options.length-1:at<0?selected:(at+(e.key==='ArrowDown'?1:-1)+options.length)%options.length;
+    e.preventDefault();scope.open=true;options[next]?.focus();return;
+  }
+  if(e.key!=='Escape')return;
+  const openScope=$('.record-activity .ra-scope[open]');
+  if(openScope){openScope.open=false;openScope.querySelector('summary').focus();return;}
+  if(['activity','history'].includes(state.screen)){
+    const v=recordTabDemo[state.screen];
+    if(v.calendar){v.calendar=null;wdDraw();return;}
+    if(state.screen==='activity'&&v.searchOpen){v.searchOpen=false;wdDraw();$('#recordTabSearchToggle')?.focus();}
+  }
+});
 
 
 /* v0.6 누적 결정 기록/설정 화면. API/DB에 쓰지 않는 시안 전용. */
