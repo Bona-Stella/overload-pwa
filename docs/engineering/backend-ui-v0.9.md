@@ -51,6 +51,20 @@
 - 현재 디로딩 기간과 분석은 읽기 연결을 적용했다. 디로딩 ACTIVE·완료 당일에는 일반 일정·루틴 변경과 새 일반 START를 차단하며, 보호 상태를 확인하지 못하면 쓰기를 열지 않는다. 디로딩 상세·기간 변경·세션·혼재 기록과 동기화는 G6 범위다.
 - 계정 앱은 인증된 서버 응답을 사용한다. 개발용 `/routine-preview`는 합성 데이터만 사용하고, 격리 실제 OTP 검토 경로와 분리한다. [검토·종료 기록](../../../overload-server/docs/engineering/test-environment.md#home-routine-검토-종료-기록)
 
+### 루틴 관리 연동 — 2026-11-18
+
+[루틴 관리 계약](../../../overload-server/docs/api/routine-management.md)과 [PWA API](../../src/features/workout-online/api.ts)를 기준으로 한다. 상세·생성·편집 리디자인은 기존 온라인 요청을 사용한다.
+
+| 화면 동작 | 호출 및 처리 |
+| --- | --- |
+| 목록·상세 | `GET /api/v1/routines`와 `GET /api/v1/routines/{id}`. 상세 날짜는 응답의 `createdAt`을 사용한다. 현재 루틴 응답에 수정 일시는 없다. |
+| 생성 | `POST /api/v1/routines`에 초안 UUID·`dataGeneration`·계획을 전송한다. 응답이 불명확할 때 controller는 같은 UUID로 조회하여 생성 여부를 확인한다. 성공 후 일정으로 바로 배정할지는 사용자가 결정한다. |
+| 편집·복원 | `PUT /api/v1/routines/{id}`에 `expectedVersion`과 `EXISTING`·`NEW`·`RESTORE` 배치를 보낸다. 제거 후보는 `GET /api/v1/routines/{id}/removed-placements`에서 조회한다. 같은 WEIGHT 배치의 중량 변경은 명시 확인한 `weightApprovals`로 제출한다. 기존 조합 변경은 기존 승인을 새 배치로 옮기지 않는다. |
+| 삭제 | 확인 후 `DELETE /api/v1/routines/{id}`에 `dataGeneration`과 `expectedVersion`을 보낸다. 서버는 배정을 해제하고 과거 운동 기록을 보존한다. 성공 후 목록과 일정 조회를 갱신한다. |
+| 온라인 운동 시작·일정 | 상세의 운동 시작은 기존 세션 START를 호출한다. 요일 배정은 [주간 일정 계약](../../../overload-server/docs/api/weekly-schedule.md)의 별도 요청이다. |
+
+웨이트 신규 선택은 `search-data`, CARDIO는 `cardio-choices`를 쓴다. CARDIO 목표는 `cardioPlan`으로 제출하며 수행 실측은 세션 계약을 따른다. 기구 세팅 메모 초안은 이 요청에 실리지 않는다. 실패에서는 초안과 기존 쓰기 제한을 유지한다. [화면 흐름](../product/ui-ux.md#33-루틴-상세편집생성)
+
 ## 디로딩 구현 요구사항
 
 2026-11-07 정책 통합: [v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md)과 [실제 Backend 현황 분석](../tasks/deload-v17-backend-readiness-analysis.md)을 따른다. G0~G5-3 Backend와 G6 PWA 작업, 실제 DB 적용을 구분한다.

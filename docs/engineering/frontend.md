@@ -630,6 +630,8 @@ iPhone의 화면 구조를 고려합니다.
 
 **홈 운동 프로세스 현황 갱신(2026-11-18).** `4607d99`에 운동 진행과 종료 직후 요약 UI가 반영됐고, `44300ab`에서 전체 테스트가 통과했다. 최신 UI·검증 범위와 미완료 정책은 [아래 구현 기록](#홈-운동-프로세스-리디자인-현황--2026-11-18)을 따른다.
 
+**루틴 탭 현황 갱신(2026-11-18).** 상세는 `9cd2684`, 편집·생성은 `3f761b2`에 반영했다. [컴포넌트와 검증 이력](#루틴-탭-리디자인-현황--2026-11-18)을 따른다.
+
 | 현행 영역 | 실제 모듈·연결 | 남은 범위 |
 |---|---|---|
 | 검색 | SearchList의 IDLE/EDITING/SELECTED, ExerciseSearch·SearchExerciseDetails, GrowthPanel·RecordFeed | 호출부별 초기화 다름. 전체 이력의 실제 운동명 검색 미연결 |
@@ -905,6 +907,16 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 **검증 이력.** 유산소 Chrome 320·393·1280 CSS px와 키보드 모사, 시작/정지/재개/정정/취소/확정 및 격리 컨트롤러의 중복 확정 방지, 종료 요약 Chrome 320·375·393·430·1280 CSS px와 합성 증량/감량 편집·복귀를 검증했다. 후속 `44300ab` 기준 전체 **644/644**, TypeScript·린트·프로덕션 빌드가 통과했다. 이 문서 동기화는 기존 검증 이력을 기록한다. iPhone Safari 실기기와 리디자인 후 실제 서버 승인·DB 반영은 위 합성 검증과 별도다.
 
+#### 루틴 탭 리디자인 현황 — 2026-11-18
+
+- [WorkoutWorkspace](../../src/features/workout-online/WorkoutWorkspace.tsx)는 루틴 목록에서 ID를 선택하고 상세를 조회한 뒤 `RoutineDetail` 또는 `RoutineForm`을 연다. 선택 ID·계정/데이터 세대에 따른 화면 이력과 기존 관리 권한·진행 보호를 적용한다. 상세의 START는 기존 controller를 부르고 삭제는 확인과 버전 검증을 거친다. 목록 또는 원래 진입 화면으로 복귀하는 기존 이력 경로를 사용한다.
+- [RecordSubpageHeader](../../src/components/RecordSubpageHeader.tsx)의 선택 액션으로 상세에만 편집 버튼을 배치한다. 생성·편집은 같은 폼과 CSS 모듈을 사용한다. 상세는 별도 컴포넌트와 CSS 모듈이며 세 화면은 공통 `Card` 및 토큰을 공유한다. [시각 규칙](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#11-루틴-상세편집생성--2026-11-18)
+- WEIGHT는 `ExerciseSearch`, `EquipmentFields`, 카탈로그 분류를 사용한다. 인라인 증감은 원판식·스택식 2.5kg, 그 외 1kg이다. `KgWheel`은 기존 [NumberWheel](../../src/components/NumberWheel.tsx)과 직접 입력을 사용한다. 부하·제조사·종목 조합 변경은 기존 승인값을 이관하지 않는다. [CombinationMemo](../../src/features/workout-online/CombinationMemo.tsx)는 현 계정·데이터 세대의 마운트 메모리 초안이며 루틴 요청에 포함되지 않는다.
+- CARDIO는 [CardioPlanFields](../../src/features/workout-online/CardioPlanFields.tsx)와 기존 카탈로그 선택을 사용한다. 신규 배치는 표준 운동 및 기록 설정 두 ID를 저장한다. 상세의 분류는 해당 선택 목록의 실제 매핑을 사용한다. 기존 활동 ID 단독 매핑은 대분류, 확인되지 않은 경우는 미확인을 표시한다. 생성 카드에도 분류 행이 있고 편집 카드 제목에는 없다. 루틴의 목표와 세션의 실제 측정은 각각 기존 타입을 사용한다.
+- 폼의 새 종목 선택만 추가 카드 ID를 기록한다. 카드가 렌더링되고 키보드로 좁아진 `visualViewport`가 회복되면 헤더 아래 약 8px로 스크롤한다. 짧은 마지막 카드에는 도달 여백을 두며 자동 포커스는 하지 않는다. 움직임 줄이기에서는 즉시 이동한다. 본문 스크롤과 고정 헤더·푸터, 안전 영역, 텍스트 키보드 감지는 폼의 두 모드에서 사용한다.
+- 헤더와 푸터 취소는 같은 초안 확인을 사용하고 브라우저 이탈에도 미저장 보호를 적용한다. 저장 요청은 검증 후 고정하며 실패 시 초안을 유지한다. 생성 POST는 초안 UUID를 재사용하고, 편집 PUT은 기존 버전·배치 상태·명시 승인 목록을 보낸다. 복원 후보 조회, 삭제, 일정 배정의 요청은 [연동 계약](backend-ui-v0.9.md#루틴-관리-연동--2026-11-18)을 따른다.
+- **코드 변경 당시 검증.** Chrome 320·375·393·430 CSS px 등에서 상세와 편집·생성을 검토했다. `3f761b2` 마감 기록에는 전체 테스트 644/644, 타입 검사·린트·빌드 통과가 있다. 앱 테스트 결과는 해당 코드 변경의 이력이며 이 문서 갱신에서 재실행한 결과와 구분한다. 실제 계정의 생성·수정·삭제 및 iPhone Safari·설치형 PWA는 해당 검토에서 확인하지 못했다.
+
 #### 현황 갱신
 
 Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/docs/engineering/backend.md#현황-갱신)에 따라 이 절의 해당 항목을 갱신한다. 화면 작업은 [UI 단계 A~D](#181-기본-ui-개발-절차), 사용자 승인과 실기기 검증 범위를 함께 기록한다. 서버 쪽 상태는 [Backend 개발 현황](../../../overload-server/docs/engineering/backend.md#11-현재-개발-현황)으로 연결한다.
@@ -915,7 +927,7 @@ Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/doc
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
-[T01 공통 기반](../tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 홈/루틴/기록/설정 4탭과 Onyx 토큰·CSS Modules, 공통 표현을 적용했습니다. 인증·운동 controller와 저장·동기화 계약은 재사용합니다. 운동 집중 화면과 루틴 편집에서는 탭을 숨기며, 운동 홈 복귀와 탭 이동은 초안 저장 결과 및 계정 경계를 확인합니다. 운동 편집기는 탭 숨김으로 재마운트하지 않습니다. 운영 셸은 일반 테마이며, 개발 전용 `/ui-foundation`에서만 두 테마·입력·타이머·아이콘을 검증합니다. 이 화면은 프로덕션 번들에서 제외됩니다.
+[T01 공통 기반](../tasks/ui-v09-t01-foundation-report.md)에서 실제 계정의 홈/루틴/기록/설정 4탭과 Onyx 토큰·CSS Modules, 공통 표현을 적용했습니다. 인증·운동 controller와 저장·동기화 계약은 재사용합니다. 운동 집중 화면과 루틴 상세·편집·생성에서는 탭을 숨기며, 운동 홈 복귀와 탭 이동은 초안 저장 결과 및 계정 경계를 확인합니다. 운동 편집기는 탭 숨김으로 재마운트하지 않습니다. 운영 셸은 일반 테마이며, 개발 전용 `/ui-foundation`에서만 두 테마·입력·타이머·아이콘을 검증합니다. 이 화면은 프로덕션 번들에서 제외됩니다.
 
 당시 [T02-A 홈 설계 일치 수정](../tasks/ui-v09-t02a-design-review-report.md)에 이은 [홈 세부 개선](../tasks/ui-v09-t02a-home-details-report.md)은 Decision Log 10.12절의 공식 달 헤더·날짜·글자 크기·선택 자동 닫힘·종목 달성 표시를 반영한다. 최근 운동은 종료 목록을 최대3페이지(60건), 상세 동시4개로 읽고 무수행을 홈에서만 제외한다. 분모는 InitialPlan, 분자는 기존 주간 달성 계약의 현재 유효 수행이며 승인 eligible과 구분한다. 당시 태그는 선택형 표현만 준비했고 저장은 T02-B 계약 대상이었다. 당시 실제 루틴·일정·기록은 기존 API를 읽었으며 디로딩 게이지의 대표 표시값은 개발 검토 앱에만 주입했다. 현행 계정 홈은 서버 분석·기간 상태를 읽는다. `DEV && VITE_HOME_REVIEW` 진입점은 production build에서 제거되며 시안 값을 운동/자격/권한/통계·IndexedDB에 사용하지 않는다. 검토 서버만 전용 계정의 실제 OTP 메일 전달을 자동화한다. HTTP LAN의 로그인·기기 식별은 기존 CSPRNG UUID 함수를 공통화해 지원하지만, Web Locks가 없는 홈에서는 새 운동 START를 비활성화한다. 기존 편집 잠금·고정 요청·ACK·오프라인 경계는 유지한다. 설치형 PWA는 별도 production/HTTPS 검증 대상이다.
 
@@ -931,7 +943,8 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보�
 |---|---|
 | [WorkoutWorkspace.tsx](../../src/features/workout-online/WorkoutWorkspace.tsx) / `WorkspaceView` | `editor{routine,readOnly}`와 `scheduleEditing` 관리. 목록/공통 폼 연결. `scheduleRefresh`·`onScheduleSaved`로 홈/루틴 재조회. ACTIVE·고정 시도는 관리 쓰기 차단 |
 | [RoutineCards.tsx](../../src/features/workout-online/RoutineCards.tsx) | 로컬 `day/vertical/filter`; 생성순 정렬·단일 목록 필터·요일 잠금. 서버 assignments로 배정 카드/주간 보기 파생, `Home.module.css` 재사용. 상세/수정/삭제 콜백 분리 |
-| [RoutineForm.tsx](../../src/features/workout-online/RoutineForm.tsx) | 생성·편집·readOnly 공통 폼. 이름·태그·WEIGHT·CARDIO 초안과 고정 제출. 2026-11-09 변경에서 요일 조작과 일정 PUT을 분리했다. 다른 종목은 새 배치, 원승인 전이 금지 |
+| [RoutineDetail.tsx](../../src/features/workout-online/RoutineDetail.tsx) | 저장 루틴의 요약·종목·배정 조회와 편집·기존 START·삭제 진입 |
+| [RoutineForm.tsx](../../src/features/workout-online/RoutineForm.tsx) | 생성·편집 공유 폼. 초안·검증·이탈 확인·고정 제출, 편집에서 제거 배치 복원. 주간 배정은 별도 화면과 API |
 | [TagPicker.tsx](../../src/features/workout-online/TagPicker.tsx) | 미지정+10종·기존 설명 드롭다운, 키보드/ESC/바깥 닫힘. 태그는 실제 nullable 루틴 DTO이며 더미 분류가 아님 |
 | [ExerciseSearch.tsx](../../src/features/workout-online/ExerciseSearch.tsx) | 추가·변경 공통 검색, 실제 카탈로그 이름/별칭·`ExerciseIcon`·PRIMARY 표시. 폼의 `searchRegion`/`showPicker`가 스크롤·포커스, 입력 보존 담당 |
 | [WeeklySchedulePanel.tsx](../../src/features/statistics/WeeklySchedulePanel.tsx) / `ScheduleEditor` | 편집을 별도로 표시. saved assignments 기준 후보 필터,7일 초안 보존. 배정 유무/태그/전체3개 고정, 필터 밖 선택 option도 원래 이름 유지. 열려 있는 초안은 외부 refresh로 덮지 않음 |

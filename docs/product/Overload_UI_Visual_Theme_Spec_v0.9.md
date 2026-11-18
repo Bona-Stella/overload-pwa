@@ -172,3 +172,17 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 | 종료 직후 요약 / 기록 상세 | `RecordSubpageHeader`의 44px 버튼·22px 제목과 기록 상세의 카드 모서리 5px, 기본 카드 내부 14px/12px, 3열 요약 및 수행 행을 함께 사용한다. 실행 중 고정 액션을 제거한 기록 화면으로 전환하고, 기존 하단 탭 여백과 각 화면의 복귀 동작을 적용한다. |
 
 CARDIO 수치는 [전용 CSS](../../src/features/workout-flow/CardioFocus.module.css), 공통 고정 영역은 [WorkoutFlow CSS](../../src/features/workout-flow/WorkoutFlow.module.css), 요약과 상세는 [기록 배치 CSS](../../src/features/workout-flow/WorkoutRecordDetail.module.css)가 기준이다. 전역 Onyx 토큰은 1절을 적용한다. HTML에는 기존 밝은 무채색과 화면 프레임을 적용한다.
+
+## 11. 루틴 상세·편집·생성 — 2026-11-18
+
+Onyx 전역 배경과 Dusty Blue `--accent`를 사용한다. 루틴에 한정된 수치는 [상세 CSS](../../src/features/workout-online/RoutineDetail.module.css)와 [편집·생성 CSS](../../src/features/workout-online/RoutineEdit.module.css)가 적용한다.
+
+| 요소 | 실제 적용 |
+| --- | --- |
+| 상단 헤더 | 기록 하위의 `RecordSubpageHeader`를 공유한다. 44px 뒤로가기 영역의 24px 아이콘과 22px 제목을 쓰고 상세에만 우측 `편집`을 배치한다. 생성·편집의 헤더는 스크롤 중 고정된다. |
+| 카드 | 상세 요약·WEIGHT·CARDIO·WEEKLY SCHEDULE과 생성·편집의 기본 정보·종목 카드는 5px다. 상세 요약은 공통 hero 표면, 본문과 푸터는 카드 표면·기존 경계 토큰을 사용한다. 전역 카드 모서리 토큰과 별개의 화면 규칙이다. |
+| 글자와 지표 | WEIGHT·CARDIO 운동명 17px, 순번과 섹션 강조는 `--accent`, 분류·날짜는 `--text-muted`다. 상세의 분류는 두 유형 모두 12px로 같은 위치에 놓인다. 요약 3열 및 상세 종목 지표 4열은 세로 구분선을 쓴다. |
+| 액션 | 생성·편집 카드의 `변경`과 `삭제`는 78×32px, 모서리 5px다. 삭제는 기존 경고 토큰으로 표현하며 이동 제한은 비활성 상태를 표시한다. 고정 푸터의 두 버튼은 1:1·48px이며 취소는 보조, 저장·생성은 강조 버튼이다. |
+| 빈 상태·모바일 | 생성의 두 점선 영역은 높이 최소 78px와 중립 보조 텍스트를 사용한다. 긴 이름은 유연한 열에서 줄바꿈하고 상세 날짜는 한 줄을 유지한다. 생성·편집 푸터는 모바일 안전 영역을 포함하고 텍스트 키보드가 열릴 때 잠시 숨는다. |
+
+[화면과 조작](ui-ux.md#33-루틴-상세편집생성)과 [밝은 무채색 와이어프레임](Overload_UI_Baseline_Wireframe_v0.9.html)은 각각 앱 동작과 저충실도 구조를 설명한다.
