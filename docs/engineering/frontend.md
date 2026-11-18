@@ -628,6 +628,8 @@ iPhone의 화면 구조를 고려합니다.
 
 **상세·이력 UI 현황 갱신(2026-11-18):** `3bd64a4`의 운동 기록 상세·전체 운동 이력·최근 카드 수행/계획 표기는 **UI 구현 A / 사용자 승인 B / 코드 커밋 완료**다. 공통 헤더는 상세와 전체 이력까지 6개 기록 하위 화면에 적용했다. [아래 최종 기록](#운동-기록-상세전체-이력최근-카드-최종-ui-승인--2026-11-18)을 따른다. 실제 계정의 전체 과거 운동명 검색은 기존 서버 연결 대기다.
 
+**홈 운동 프로세스 현황 갱신(2026-11-18).** `4607d99`에 운동 진행과 종료 직후 요약 UI가 반영됐고, `44300ab`에서 전체 테스트가 통과했다. 최신 UI·검증 범위와 미완료 정책은 [아래 구현 기록](#홈-운동-프로세스-리디자인-현황--2026-11-18)을 따른다.
+
 | 현행 영역 | 실제 모듈·연결 | 남은 범위 |
 |---|---|---|
 | 검색 | SearchList의 IDLE/EDITING/SELECTED, ExerciseSearch·SearchExerciseDetails, GrowthPanel·RecordFeed | 호출부별 초기화 다름. 전체 이력의 실제 운동명 검색 미연결 |
@@ -878,7 +880,7 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 #### 운동 기록 상세·전체 이력·최근 카드 최종 UI 승인 — 2026-11-18
 
-- 사용자가 최종 승인과 코드 커밋 완료를 확인했다. 기준은 `3bd64a4`(`style(record): refine workout detail and unify history UI`)다. [WorkoutSummary](../../src/features/workout-flow/WorkoutSummary.tsx)의 상세 모드와 [상세 CSS](../../src/features/workout-flow/WorkoutRecordDetail.module.css), [RecordFeed/SessionRecordCard](../../src/features/history/RecordFeed.tsx), [StatisticsPanel](../../src/features/statistics/StatisticsPanel.tsx), [공통 카드 CSS](../../src/features/statistics/RecordMain.module.css)를 사용한다. 운동 종료 직후 요약은 공유 컴포넌트의 기존 표시를 유지한다.
+- 사용자가 최종 승인과 코드 커밋 완료를 확인했다. 기준은 `3bd64a4`(`style(record): refine workout detail and unify history UI`)다. [WorkoutSummary](../../src/features/workout-flow/WorkoutSummary.tsx)의 상세 모드와 [상세 CSS](../../src/features/workout-flow/WorkoutRecordDetail.module.css), [RecordFeed/SessionRecordCard](../../src/features/history/RecordFeed.tsx), [StatisticsPanel](../../src/features/statistics/StatisticsPanel.tsx), [공통 카드 CSS](../../src/features/statistics/RecordMain.module.css)를 사용한다. 종료 직후 요약의 후속 시각 배치는 [홈 운동 프로세스 현황](#홈-운동-프로세스-리디자인-현황--2026-11-18)을 따른다.
 - 상세는 공통 헤더·요약·조건부 `중량 변경 승인 이력`·WEIGHT/CARDIO 통합 목록·기존 dataNote의 기록 보존 안내·복귀 버튼이다. 날짜/시작–종료·기록 메인과 같은 상태 아이콘/명칭·기존 ⋮ 메뉴와 최대 2줄 루틴명, 전체/웨이트/유산소 3열×2단을 표시한다. 미확인 시간 `–`와 확인된 0, 시간 관계 경고와 미수행 원인·미입력/출처 표시를 구분한다.
 - 승인 이력은 제목만 확정 명칭으로 바꾸고 승인·미승인·감량·유지/근거 부족·오류 등 기존 데이터와 노출 정책을 보존했다. 기본 펼침·접기 UI, 카드 앞뒤 10px·세로 패딩 8px을 적용했다. 종목 번호와 `수행 / 장비 / 세트 볼륨` 3열, 종목 간 구분선과 간격을 정리했다. CARDIO의 12px 추가 마진은 WEIGHT 다음 형제 섹션일 때만 적용해 유산소 단독의 중복 여백을 없앴다. 수정 배지는 `result.corrected`로 확인되는 시간에만 붙이며 timerMs 원본을 보존한다. 거리·심박·속도는 항목별 수정 근거가 없어 추정하지 않는다.
 - `SessionRecordCard`는 최근/전체 이력의 동일한 3행 카드다. 기존 achievement.completed/planned와 시간 값을 표시하며 조회된 요약이 없으면 기존 상세 조회 필요 안내를 남긴다. 분모·완료 판정·운동 시간·세트/볼륨을 새로 계산하지 않는다. 전체 이력은 기존 주차 제목/범위·월 필터/정렬·같은 날 복수 기록·추가 로딩/중복 제거·오류 재조회·상세 이동을 유지한다.
@@ -887,17 +889,21 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 - Chrome 320/375/393/430px에서 긴 루틴/제조사명·상태/메뉴·세트별 수치 3열의 겹침과 넘침을 확인했다. WEIGHT 단독·CARDIO 단독·혼합의 첫 섹션 오프셋은 같은 15px이었고 승인 카드의 열림/닫힘 앞뒤 간격은 각 10px이었다. 최근/전체 카드의 스타일이 같았으며 월/달력·루틴/운동 검색·선택 해제·주차/기록 ID 보존·상세 복귀를 확인했다. 추가 로딩·중복 방지·기존 행을 보존하는 오류·재조회는 격리된 읽기 전용 응답으로 검증했다. 실제 API/DB 통합과 iPhone 실기기 검증을 이 UI 결과로 완료 처리하지 않는다.
 - 위 수치는 이전 UI 코드 작업 기록이다. 이번에는 [UI/UX](../product/ui-ux.md#운동-기록-상세)·[결정 10.30](../product/Overload_UI_Decision_Log_v0.9.md#1030--운동-기록-상세전체-이력최근-운동-최종-ui-승인--2026-11-18)·기존 밝은 무채색 HTML을 동기화한다. 앱 코드·테스트·API·합성 데이터 생성 코드는 변경하지 않고 전체 앱 빌드/테스트도 재실행하지 않는다. 합성 이력의 운동명 검색은 운영 서버 연결 완료 근거가 아니다.
 
-#### 진행 중 유산소 UI 검토 — 2026-11-18
+#### 홈 운동 프로세스 리디자인 현황 — 2026-11-18
 
-- **A. UI 구현 완료.** `LocalWorkoutFlow`와 합성 데이터 `WorkoutReview`에서 같은 `CardioFocus`를 사용한다. 유산소의 준비·측정·일시정지·완료 확인·기록 확정을 시연한다. 기존 세션 프레임의 종목 이동·진행 값·고정 CTA를 사용한다.
-- 완료 확인은 연필 버튼으로 기존 시간 휠을 열고, 적용한 초 값이 자동 기록의 표시값과 다를 때만 `수정됨`을 표시한다. 검토 중 측정 타이머에는 자동 기록을 표시한다. 실제 경사도는 모든 종목에서 저장 미지원으로 표시하고 입력을 비활성화한다. 거리·평균 속도는 현행 지원 종목에 입력할 수 있다. 평균 속도와 활동 시간으로 미입력 거리를 계산하는 현행 계약을 적용한다. [유산소 실제 측정 계약](../../../overload-server/docs/api/cardio-actual-measurements.md)
-- 합성 데이터 Chrome 검토에서 320·393·1280 CSS px, 키보드 높이 모사, 유산소 시작·일시정지·재개·완료 취소·시간 정정·기록 확정·웨이트 복귀를 확인했다. 로컬 컨트롤러를 사용하는 격리 검증에서 연속 확정 클릭에도 기록 한 건만 생성됐다. **B. 구현 화면 최종 승인과 iPhone Safari 실기기 검토 대기.** 현행 API와 저장 경로를 재사용하는 UI 작업이며, 실제 계정·서버·DB에서 추가 통합 검증은 수행하지 않았다.
+**UI 구현·코드 커밋 완료(`4607d99`).** 화면은 [UI/UX와 상태 전환](../product/ui-ux.md#35-스트레칭워밍업--warmup), 스타일은 [시각 규칙](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#10-홈-운동-진행과-종료-직후-요약--2026-11-18)을 따른다.
 
-#### 운동 종료 직후 요약 UI — 2026-11-18
+| 구간 | 실제 경로 |
+|---|---|
+| 진입 | `HomePanel`의 오늘 루틴·`운동 이어가기` → `WorkoutWorkspace`의 START 또는 기존 ACTIVE 진입. 계정·세대와 최신 루틴 버전을 확인한다. 진행 화면은 ACTIVE 세션의 편집권에 묶인다. |
+| 진행 | `LocalWorkoutScreen`에서 `LocalWorkoutController`와 IndexedDB3/schema2 운동 문서를 연결한다. `LocalWorkoutFlow`가 현재 종목·준비 상태·휴식·모달과 CTA를 구성하고 `WorkoutFrame`의 시간 바·고정 footer를 사용한다. 웨이트는 `WeightFocus`와 `WeightChange`, CARDIO는 `CardioFocus`와 `DurationWheel`을 사용한다. |
+| 시간과 쓰기 | 전체 경과시간·휴식 종료 시각·유산소 누적/실행 구간에서 표시를 파생한다. 250ms 표시 갱신과 저장을 구분한다. CARDIO 적용 시간은 기존 초안에 반영하고, 확정 시 원본 `timerMs`와 유효 `activeMs`를 함께 저장한다. 진행 수행·취소·동기화는 기존 스냅샷 경로로 처리한다. [로컬 보호](#12-진행-운동의-로컬-보호-및-복원) |
+| FINISH와 복귀 | 종료 의도에서 최종 상태·실제 종료 시각을 고정한다. 서버 FINISHED 확인을 기기에 보존하면 `WorkoutWorkspace`가 해당 세션의 요약 모드를 선택하고 기록 탭에 연다. `ClosedWorkout` → `WorkoutSummary`의 즉시 요약에서 헤더·하단 버튼은 홈으로 돌아간다. 과거 상세는 별도 기록 선택으로 연다. |
+| 중량 검토와 공유 UI | 같은 `WorkoutSummary`·`RecordSubpageHeader`·상세 CSS를 시각 표현에 재사용한다. 즉시 요약의 `SavedWeightReview`는 기존 V36 조회·조건 검사·수정·명시 승인·재조회를 사용한다. 상세는 당시 이력을 읽고 정정/복구/삭제 등 기존 상세 기능을 제공한다. `summary-data.ts`의 요약 판정과 `recordSummary`의 상세 판정은 현재 구현에서 다르다. |
 
-**A. UI 구현 완료.** `WorkoutSummary`의 즉시 요약에 상세의 헤더·카드·세트 행 스타일을 적용했다. 즉시 요약의 완료 판정, 적용 계획 세트 수와 `SavedWeightReview`의 수정·선택/전체 승인, 홈 복귀를 유지한다. 데이터가 있는 수행 시간과 실제 유산소 측정값을 표시하며, 기존 저장 안내를 하단 카드에 둔다. [운동 완료 요약](../product/ui-ux.md#39-운동-완료-요약--workoutsummary)
+합성 `WorkoutReview`·`WorkoutRecordReview`는 표시 컴포넌트를 재사용하고 시연 상태를 메모리에서 처리한다. 정책 3-1의 달성 통일, 조합 메모의 기기·서버 영속 저장, 실제 경사도 및 전역 컴포넌트 정리는 별도 범위다.
 
-Chrome에서 320·375·393·430·1280 CSS px 레이아웃과 합성 데이터 종료·복귀 흐름을 확인했다. 격리된 승인 API 응답으로 증량·감량 수정, 취소, 명시 승인 요청과 기록 상세의 읽기 전용 상태를 검증했다. **B. 구현 화면 최종 승인과 iPhone Safari 실기기 검토 대기.** 실제 서버 승인·DB 반영은 이번 UI 검증에 포함하지 않았다.
+**검증 이력.** 유산소 Chrome 320·393·1280 CSS px와 키보드 모사, 시작/정지/재개/정정/취소/확정 및 격리 컨트롤러의 중복 확정 방지, 종료 요약 Chrome 320·375·393·430·1280 CSS px와 합성 증량/감량 편집·복귀를 검증했다. 후속 `44300ab` 기준 전체 **644/644**, TypeScript·린트·프로덕션 빌드가 통과했다. 이 문서 동기화는 기존 검증 이력을 기록한다. iPhone Safari 실기기와 리디자인 후 실제 서버 승인·DB 반영은 위 합성 검증과 별도다.
 
 #### 현황 갱신
 
