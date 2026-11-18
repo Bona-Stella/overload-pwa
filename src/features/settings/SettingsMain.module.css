@@ -1,21 +1,60 @@
-.page { display: grid; gap: 20px; min-width: 0; }
-.page > header { margin: 0; }
-.group { display: grid; min-width: 0; gap: 8px; }
-.group > h2 { font-size: 14px; color: var(--text-muted); }
-.group > :global(details.card) { margin: 0; }
-.group > :global(details.card summary) { cursor: pointer; font-weight: 650; }
-.group .rows { gap: 0; padding-block: 0; }
-.rows .row {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  width: 100%; min-height: 56px; padding: 10px 2px;
-  background: transparent; border: 0; text-align: left;
+.page { display: grid; gap: 16px; min-width: 0; margin-inline: calc(12px - var(--space-page)); }
+.page .account, .page .rows, .page .install, .page .logout {
+  min-width: 0; margin: 0; border: 1px solid var(--border-subtle);
+  border-radius: 5px; background: var(--surface-card);
 }
-.rows .row + .row { border-top: 1px solid var(--border-subtle); border-radius: 0; }
-.rows .row:disabled { opacity: 1; color: var(--text-muted); }
-.text { display: grid; gap: 2px; min-width: 0; line-height: 1.4; overflow-wrap: anywhere; }
-.text small, .arrow { color: var(--text-muted); }
-.status { flex: 0 0 auto; color: var(--text-muted); font-size: 11px; }
-.arrow { font-size: 21px; line-height: 1; }
-.logout { justify-self: stretch; }
+.page .account { padding: 16px; gap: 12px; background: var(--hero-gradient); border-color: var(--hero-border); }
+.page .accountLink, .rows .row, .install > summary {
+  display: grid; align-items: center; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px;
+  width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 0;
+  background: transparent; color: var(--text-primary); text-align: start;
+}
+.page .accountLink { min-height: 46px; }
+.avatar {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%;
+  background: #304360; color: #bcd5f7; font-size: 21px; font-weight: 750;
+}
+.accountLink strong { font-size: 16px; }
+.accountStats {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0;
+  padding-top: 12px; border-top: 1px solid var(--hero-border); text-align: center;
+}
+.accountStats > div { display: grid; gap: 8px; align-content: center; min-height: 48px; min-width: 0; }
+.accountStats > div + div { border-inline-start: 1px solid var(--hero-border); }
+.accountStats dt { color: var(--text-muted); font-size: 12px; }
+.accountStats dd {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  margin: 0; font-size: 14px; font-weight: 700;
+}
+.accountStats svg { width: 14px; height: 14px; color: #9fbce3; }
+.page .rows, .page .install { gap: 0; padding: 0 12px; }
+.rows .row, .install > summary { min-height: 64px; }
+.rows .row + .row { border-top: 1px solid var(--border-subtle); }
+.rows .row[data-unavailable] { color: #b0b5bf; opacity: 1; }
+.text { display: grid; gap: 3px; min-width: 0; line-height: 1.4; }
+.text strong, .text small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text strong { font-weight: 650; }
+.row .text strong, .install .text strong { font-size: 14px; }
+.text small { color: var(--text-muted); font-size: 12px; font-weight: 400; }
+.iconBox {
+  display: grid; place-items: center; width: 36px; height: 36px;
+  background: var(--surface-input); border-radius: 10px; color: #9fbce3;
+}
+.iconBox svg { width: 18px; height: 18px; }
+.row[data-unavailable] .iconBox { color: #798391; }
+.row[data-danger] .iconBox { color: #aa858f; }
+.row[data-danger] .text strong { color: #c6b0b7; }
+.accountLink > svg, .row > svg, .install summary > svg { width: 15px; height: 15px; color: #8e9caf; }
+.status { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.page .install { margin-top: -8px; }
+.install > summary { cursor: pointer; list-style: none; }
+.install > summary::-webkit-details-marker { display: none; }
+.install[open] > summary > svg { transform: rotate(180deg); }
+.install > div { border-top: 1px solid var(--border-subtle); padding-block: 12px; }
+.page .logout {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 12px; color: #d4a0ab;
+}
+.logout svg { width: 16px; height: 16px; }
 .detailHeader { display: grid; justify-items: start; gap: 4px; }
 .detailHeader h1 { margin: 0; font-size: 24px; }

@@ -367,11 +367,10 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     const settingsPage = 'section[aria-label="설정"]'
     const settingsItem = 'button[aria-labelledby][aria-describedby]'
     await wait(() => evaluate(`!!document.querySelector('${settingsPage}')`), 'full settings')
-    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} h2')].map(e => e.textContent)`),
-      ['계정 정보', '운동 설정', '데이터 및 앱', '계정 및 데이터 삭제'])
-    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button strong, ${settingsPage} summary')].map(e => e.textContent)`),
-      ['로그인된 계정', '세트 사이 휴식', '휴식 타이머 알림', '운동 종목 보기', '디로딩 설정', '운동 데이터 상태',
-        '운동 데이터 내보내기', '앱 설치·오프라인 준비', '전체 운동 데이터 초기화', '회원 탈퇴'])
+    assert.equal(await evaluate(`document.querySelectorAll('${settingsPage} h1, ${settingsPage} h2').length`), 0)
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button strong, ${settingsPage} summary strong')].map(e => e.textContent)`),
+      ['내 계정', '세트 사이 휴식', '휴식 타이머 알림', '운동 종목 보기', '디로딩 설정', '운동 데이터 상태',
+        '운동 데이터 내보내기', '앱 설치 · 오프라인 준비', '전체 운동 데이터 초기화', '회원 탈퇴'])
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button:disabled strong')].map(e => e.textContent)`),
       ['디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴'])
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('nav[aria-label="기본 탐색"] button')].map(e => e.textContent)`),
@@ -388,13 +387,13 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('로그아웃')
     assert.equal(await evaluate('document.querySelector("dialog[open] button.danger").disabled'), true)
     await click('취소')
-    await click('앱 설치·오프라인 준비', 'textContent', 'summary')
+    await click('앱 설치 · 오프라인 준비', 'textContent', 'summary strong')
     assert.match(await body(), /검토용 설치 안내/)
-    await click('앱 설치·오프라인 준비', 'textContent', 'summary')
-    await click('로그인된 계정', 'textContent', settingsItem + ' strong')
+    await click('앱 설치 · 오프라인 준비', 'textContent', 'summary strong')
+    await click('내 계정', 'ariaLabel', settingsPage + ' button')
     assert.match(await body(), /대표 재인증 이메일/)
     await click('‹ 설정으로')
-    assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '로그인된 계정')
+    assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '내 계정')
     await click('세트 사이 휴식', 'textContent', settingsItem + ' strong')
     assert.match(await body(), /검토용 예시 휴식 시간입니다/)
     assert.match(await body(), /1~10회 · 180초/)

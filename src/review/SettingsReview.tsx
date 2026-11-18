@@ -41,10 +41,11 @@ export function SettingsReview({ alerts, onAlerts }: { alerts?: RestAlerts; onAl
   }
 
   return <>
-    <SettingsMain hidden={view !== null} review
+    <SettingsMain hidden={view !== null} review account={{ email: 'review@example.test', loginMethod: 'email', deviceCount: 2 }}
       onAccount={event => open('account', event.currentTarget)} onRest={event => open('rest', event.currentTarget)}
       onRestAlerts={alerts && onAlerts ? event => open('alerts', event.currentTarget) : undefined}
       onCatalog={event => open('catalog', event.currentTarget)} onLogout={() => setLogoutOpen(true)} />
+    {!view && <p className="muted small">{reviewNote}</p>}
     {view === 'catalog' && <CatalogView items={catalogSamples} reviewNote={reviewNote} instructionNotes={catalogInstructionNotes} mediaSources={mediaSources} onBack={back} />}
     {view === 'account' && <div className={styles.account}>
       <AccountSettingsPage headingRef={heading} onBack={back}>

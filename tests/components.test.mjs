@@ -43,17 +43,27 @@ const NOW = new Date(2026, 9, 26, 12).getTime()
 const noop = () => {}
 const html = (Component, props) => renderToStaticMarkup(React.createElement(Component, props))
 
-test('approved settings groups are shared with the actual account and destructive placeholders remain disabled', () => {
+test('settings main starts with the account summary and keeps unsupported actions disabled', () => {
   const markup = html(SettingsMain, { onAccount: noop, onRest: noop, onCatalog: noop, onLogout: noop })
-  assert.match(markup, /계정 정보.*운동 설정.*데이터 및 앱.*계정 및 데이터 삭제/s)
+  assert.match(markup, /내 계정.*이메일 확인 불가.*로그인 방식.*확인 불가.*로그인된 기기.*확인 불가.*운동 설정.*데이터 및 앱.*계정 및 데이터 삭제/s)
+  assert.doesNotMatch(markup, /<h[1-6]>/)
   const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)
   for (const title of ['휴식 타이머 알림', '디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴']) {
     const button = buttons.find(b => b.includes(title))
     assert.match(button, /disabled/); assert.match(button, /미구현/)
   }
-  for (const title of ['로그인된 계정', '세트 사이 휴식', '운동 종목 보기', '로그아웃']) assert.doesNotMatch(buttons.find(b => b.includes(title)), /disabled/)
-  assert.match(markup, /앱 설치·오프라인 준비/)
+  for (const title of ['내 계정', '세트 사이 휴식', '운동 종목 보기', '로그아웃']) assert.doesNotMatch(buttons.find(b => b.includes(title)), /disabled/)
+  assert.match(markup, /<details[^>]*><summary>.*앱 설치 · 오프라인 준비.*<\/summary>/s)
   assert.doesNotMatch(markup, /합성 데이터|검토용 예시|r\*\*\*@example/)
+})
+test('settings account summary renders provided identity data and an uppercase email initial', () => {
+  const markup = html(SettingsMain, {
+    account: { email: 'alex@example.test', loginMethod: 'google', deviceCount: 2 },
+    onAccount: noop, onRest: noop, onRestAlerts: noop, onCatalog: noop, onLogout: noop,
+  })
+  assert.match(markup, /aria-hidden="true">A<\/span>.*alex@example\.test.*Google SSO.*2대/s)
+  const alerts = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g).find(b => b.includes('휴식 타이머 알림'))
+  assert.doesNotMatch(alerts, /disabled|미구현/)
 })
 const props = state => ({ state, now: NOW + 60000, onUpdate: noop, onExit: noop, onFinish: noop, onCreate: () => '' })
 
