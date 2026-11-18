@@ -22,6 +22,12 @@ export type ScheduleCommand =
   | { type: 'assign'; id: string; version: string; assignments: Assignment[] }
   | { type: 'rotate'; enabled: boolean; entries: Pick<SchedulePreset, 'id' | 'included'>[] }
 export const presetNumber = (index: number) => String(index + 1).padStart(2, '0')
+export function routinePresetEntries(presets: SchedulePreset[], routineId: string) {
+  return presets.flatMap((preset, index) => {
+    const days = preset.assignments.filter(a => a.routineId === routineId).map(a => a.dayOfWeek)
+    return days.length ? [{ preset, number: presetNumber(index), days }] : []
+  })
+}
 export const presetNameLimit = 100
 export const normalizePresetName = (value: string) => value.replace(/^[\p{White_Space}\uFEFF]+|[\p{White_Space}\uFEFF]+$/gu, '')
 export const validPresetName = (name: string) =>

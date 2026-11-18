@@ -3,6 +3,7 @@ import { ExerciseIcon } from '../../components/ExerciseIcon.tsx';
 import type { CardioActivity, CardioPlan } from './types.ts';
 import type { CardioDraft } from './cardio-draft.ts';
 import { searchExercises } from './catalog.ts';
+import { cardioCategoryLabels } from './catalog-label.ts';
 import styles from './Routine.module.css';
 /** Controlled draft shared by routine and session callers. No persistence or timer ownership. */
 export function CardioPlanFields({ value, onChange, activities, disabled = false, readOnly = false, existing = false }: {
@@ -18,7 +19,7 @@ export function CardioPlanFields({ value, onChange, activities, disabled = false
     const choices = searchExercises(activities.filter(a => category === null || a.category === category), query);
     const patch = (v: Partial<CardioDraft>) => onChange({ ...value, ...v });
     const motion = ['TREADMILL', 'BIKE', 'OUTDOOR'].includes(value.kind);
-    return <fieldset disabled={disabled || readOnly} className="stack online-fieldset">{!readOnly && !existing && <div className={styles.categories}>{([['RUNNING', '달리기', 'running'], ['WALKING', '걷기', 'walking'], ['CYCLING', '사이클', 'cycling']] as const).map(([key, label, icon]) => <button type="button" key={key} aria-pressed={category === key} onClick={() => setCategory(current => current === key ? null : key)}><ExerciseIcon kind={icon}/>{label}</button>)}</div>}
+    return <fieldset disabled={disabled || readOnly} className="stack online-fieldset">{!readOnly && !existing && <div className={styles.categories}>{([['RUNNING', 'running'], ['WALKING', 'walking'], ['CYCLING', 'cycling']] as const).map(([key, icon]) => <button type="button" key={key} aria-pressed={category === key} onClick={() => setCategory(current => current === key ? null : key)}><ExerciseIcon kind={icon}/>{cardioCategoryLabels[key]}</button>)}</div>}
     {!readOnly && !existing && <>
       <label>유산소 이름 또는 별칭 검색<input value={query} onChange={e => setQuery(e.target.value)} /></label>
       <label>세부 유산소 종목<select value={choices.some(a => a.id === value.standardExerciseId) ? value.standardExerciseId : ''} onChange={e => {

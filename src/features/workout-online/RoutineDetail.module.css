@@ -1,0 +1,81 @@
+.workspace:global(.workout-online) { margin-block: 0; }
+.detail {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+  margin-inline: calc(8px - var(--space-page));
+}
+.detail > header { margin-inline-start: calc(var(--space-page) - 8px); }
+.detail .edit { padding: 7px 12px; background: var(--surface-input); border-color: var(--hero-border); font-size: 13px; }
+.detail .summary { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 12px; }
+.identity { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; }
+.detail .date, .detail .date time { margin: 0; color: var(--text-muted); font-size: var(--font-metadata); }
+.date { padding-top: 4px; text-align: end; white-space: nowrap; }
+.routineTitle { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.routineTitle h2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 20px;
+  line-height: 1.25;
+}
+.tag, .weekdays > span {
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-card) 80%, var(--accent));
+  color: var(--text-primary);
+}
+.tag { flex: none; margin-block: 2px; padding: 2px 8px; font-size: 10px; }
+.group { display: grid; gap: 10px; min-width: 0; }
+.groupHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-inline: 4px; }
+.groupHeading h2 { margin: 0; color: var(--accent); font-size: 13px; font-weight: 700; }
+.groupHeading > span { color: var(--text-muted); font-size: 12px; }
+.group .exercise, .group .schedule { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+.detail .summary, .group .exercise, .group .schedule { border-radius: 5px; }
+.group .exercise { gap: 12px; }
+.exerciseHeading { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 17px; line-height: 1.4; }
+.number { flex: none; color: var(--accent); font-size: 13px; font-variant-numeric: tabular-nums; }
+.truncate { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.metadata { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; color: var(--text-muted); font-size: 12px; }
+.metadata > span { min-width: 0; overflow-wrap: anywhere; }
+.metadata > span + span { max-width: 52%; font-size: 10px; text-align: end; }
+.metrics {
+  display: grid;
+  margin: 6px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+}
+.summary .metrics { margin: 0; padding-top: 20px; border-color: var(--hero-border); }
+.metrics > div { display: grid; align-content: start; gap: 4px; min-width: 0; padding-inline: 4px; }
+.metrics > div + div { border-inline-start: 1px solid var(--hero-border); }
+.metrics dt { color: var(--text-muted); font-size: 10px; font-weight: 400; }
+.summary dt { font-size: 12px; }
+.metrics dd { margin: 0; overflow-wrap: anywhere; font-size: 18px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.metrics dd small { color: var(--text-muted); font-size: 10px; font-weight: 400; white-space: nowrap; }
+.metrics dd[data-missing] { color: var(--text-muted); }
+.summary dd { padding-block: 5px; }
+.memo { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 8px; border-radius: 8px; background: var(--surface-input); font-size: 12px; }
+.memo svg { align-self: flex-start; flex: none; margin-top: 2px; color: var(--text-muted); }
+.memo span { flex: 1; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.memo small { flex: none; color: var(--text-muted); font-size: 10px; }
+.schedule ol { list-style: none; margin: 0; padding: 0; }
+.schedule li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 32px; font-size: 14px; }
+.schedule li + li { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+.weekdays { display: flex; gap: 4px; }
+.weekdays > span { display: grid; place-items: center; width: clamp(19px, 6vw, 24px); height: 24px; font-size: 11px; }
+.empty { margin: 0; padding: 8px 4px; color: var(--text-muted); font-size: 12px; }
+.actions { display: grid; gap: 12px; margin-top: 12px; }
+.actions .delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border-color: color-mix(in srgb, var(--status-missed) 72%, var(--border-subtle));
+  border-radius: 12px;
+  font-size: 14px;
+}

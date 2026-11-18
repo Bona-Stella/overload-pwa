@@ -16,6 +16,7 @@ import { PresetAssignmentEditor } from '../features/statistics/WeeklySchedulePan
 import { PresetHeader, PresetMembership, PresetNavigation, RoutineCreatedNotice } from '../features/workout-online/PresetControls.tsx'
 import { PresetOrderEditor } from '../features/workout-online/PresetOrderEditor.tsx'
 import { RoutineCards } from '../features/workout-online/RoutineCards.tsx'
+import { RoutineDetail } from '../features/workout-online/RoutineDetail.tsx'
 import { RoutineForm } from '../features/workout-online/RoutineForm.tsx'
 import type { Routine } from '../features/workout-online/types.ts'
 import type { RestAlerts } from '../features/workout-flow/types.ts'
@@ -263,11 +264,15 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
         busy={busy} readOnly={protectedView} routineName={routineName} onClose={closeEditor}
         onReload={() => { setIssue(null); setEditor({ type: 'order', base: schedule }) }}
         onSave={async entries => { if (await scheduleWrite({ type: 'rotate', enabled: schedule.autoEnabled, entries }, editor.base)) closeEditor() }} />}
-      {editor && (editor.type === 'new' || editor.type === 'edit' || editor.type === 'detail') && <RoutineForm
-        key={editor.type} routine={editor.type === 'new' ? null : editor.routine} readOnly={editor.type === 'detail'}
+      {editor?.type === 'detail' && <RoutineDetail routine={editor.routine} exercises={exercises} activities={activities} manufacturers={manufacturers}
+        presets={schedule.presets} managementBlocked={busy || protectedView} onBack={closeEditor}
+        onEdit={() => setEditor({ ...editor, type: 'edit' })}
+        onDelete={() => setModal({ type: 'deleteRoutine', id: editor.routine.id })} />}
+      {editor && (editor.type === 'new' || editor.type === 'edit') && <RoutineForm
+        key={editor.type} routine={editor.type === 'new' ? null : editor.routine}
         saveDescription="검토용 루틴을 저장합니다. 기존 배치의 승인 중량은 명시적으로 선택한 경우에만 변경됩니다."
         generation={scope.dataGeneration} exercises={exercises} manufacturers={manufacturers} activities={activities} busy={busy}
-        managementBlocked={protectedView} assignments={editor.type !== 'new' && membership(editor.routine.id)}
+        managementBlocked={protectedView}
         controller={{
           saveRoutine: (body, id) => write(() => {
             const saved = mockSaveRoutine(body, routines.find(r => r.id === id))
@@ -280,9 +285,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
           },
           invalidateScope: () => {},
         }}
-        onClose={closeEditor} onSaved={editor.type === 'new' ? (id, name) => setCreated({ id, name }) : undefined}
-        onEdit={editor.type === 'detail' ? () => setEditor({ ...editor, type: 'edit' }) : undefined}
-        onDelete={editor.type === 'detail' ? () => setModal({ type: 'deleteRoutine', id: editor.routine.id }) : undefined} />}
+        onClose={closeEditor} onSaved={editor.type === 'new' ? (id, name) => setCreated({ id, name }) : undefined} />}
     </>}
     {tab === 'history' && <RecordPreview days={home.overview.plannedDays} initialPreset={planPreset??undefined} routines={routines} schedule={schedule} sessions={data.sessions} records={records} onReviewRecord={id=>{setImmediateSummary(false);setRecordId(id);window.scrollTo(0,0)}} />}
     {tab === 'settings' && <SettingsReview alerts={alerts} onAlerts={setAlerts} />}

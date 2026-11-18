@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { dayNames } from './routine-schedule.ts'
-import { canDeletePreset, presetLimit, presetNumber } from './preset-schedule.ts'
+import { canDeletePreset, presetLimit, presetNumber, routinePresetEntries } from './preset-schedule.ts'
 import type { PresetSchedule, SchedulePreset } from './preset-schedule.ts'
 import styles from './Presets.module.css'
 
@@ -67,11 +67,8 @@ export function PresetNavigation({ schedule, viewed, busy, readOnly, onView, onA
 }
 
 export function PresetMembership({ presets, routineId }: { presets: SchedulePreset[]; routineId: string }) {
-  const entries = presets.flatMap((preset, index) => {
-    const days = preset.assignments.filter(a => a.routineId === routineId).map(a => dayNames[a.dayOfWeek - 1])
-    return days.length ? [{ preset, number: presetNumber(index), days }] : []
-  })
+  const entries = routinePresetEntries(presets, routineId)
   return <div className={styles.membership} aria-label="주간 일정 배정">
-    {entries.length ? entries.map(({ preset, number, days }) => <p key={preset.id}><b>{number}</b> {preset.name} · {days.join('·')}</p>) : <p>주간 일정 미배정</p>}
+    {entries.length ? entries.map(({ preset, number, days }) => <p key={preset.id}><b>{number}</b> {preset.name} · {days.map(day => dayNames[day - 1]).join('·')}</p>) : <p>주간 일정 미배정</p>}
   </div>
 }

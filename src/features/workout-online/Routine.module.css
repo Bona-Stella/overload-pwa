@@ -96,9 +96,6 @@ button.chip[aria-pressed='true'] { border-color:var(--accent); background:var(--
 .editor[data-picking='true'] > button:last-child { position:static; }
 .exerciseActions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
 .exerciseActions button { min-width:0; min-height:44px; padding:8px 3px; }
-.editor[data-readonly='true'] :disabled { opacity:1; color:var(--text-primary); -webkit-text-fill-color:var(--text-primary); cursor:default; }
-.editor[data-readonly='true'] input,.editor[data-readonly='true'] select { background:var(--surface-input); }
-.editor[data-readonly='true'] .days [aria-pressed='true'] { color:var(--accent); -webkit-text-fill-color:var(--accent); }
 .scheduleEditor select { display:block; width:100%; min-width:0; min-height:44px; font-size:14px; }
 .scheduleDays { display:grid; gap:9px; width:100%; grid-template-columns:minmax(0,1fr); }
 .scheduleDays label { display:grid; grid-template-columns:44px minmax(0,1fr); align-items:center; gap:8px; font-size:14px; }

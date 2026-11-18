@@ -11,14 +11,23 @@ import { addDays, dayOfWeek } from '../../src/features/home/model.ts'
 
 const scope = { userId: routine.userId, dataGeneration: routine.dataGeneration }
 const ids = [routine.id, '30000000-1111-4222-8333-000000000002', '30000000-1111-4222-8333-000000000003']
-const cardio = name => ({ id: crypto.randomUUID(), deletedAt: null, plan: { kind: 'TREADMILL', name, targetSeconds: 600, targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null } })
+const treadmill = { id: 'ca000000-0000-4000-8000-000000000011', activityId: 'ca000000-0000-4000-8000-000000000001', category: 'RUNNING', name: '러닝머신', kind: 'TREADMILL', aliases: [] }
+const cardio = (name, choice) => ({ id: crypto.randomUUID(), deletedAt: null, plan: { kind: 'TREADMILL', name, targetSeconds: 600, targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null,
+  ...(choice && { standardExerciseId: choice.id, activityId: choice.activityId }) } })
+const longManufacturer = { id: crypto.randomUUID(), name: 'VeryLongUnbrokenManufacturerName'.repeat(3) }
 const plans = [
-  { ...structuredClone(routine), tag: 'PUSH', createdAt: '2026-11-01T00:00:00Z', name: '상체 PUSH · 매우 긴 루틴 이름의 말줄임 검토', weightPlacements: [routine.weightPlacements[0], { ...routine.weightPlacements[0], id: crypto.randomUUID(), exerciseName: '스쿼트' }, { ...routine.weightPlacements[0], id: crypto.randomUUID(), exerciseName: '데드리프트' }], cardioPlacements: [cardio('러닝머신'), cardio('트랙 러닝')] },
+  { ...structuredClone(routine), tag: 'PUSH', createdAt: '2026-11-01T00:00:00Z', name: '상체 PUSH · 매우 긴 루틴 이름의 말줄임 검토',
+    weightPlacements: [
+      routine.weightPlacements[0],
+      { ...routine.weightPlacements[0], id: crypto.randomUUID(), exerciseName: '스쿼트' },
+      { ...routine.weightPlacements[0], id: crypto.randomUUID(), exerciseName: '데드리프트 · 장문의 운동 이름으로 모바일 카드 배치 검토'.repeat(3),
+        loadType: 'PLATE', manufacturerId: longManufacturer.id },
+    ], cardioPlacements: [cardio('러닝머신', treadmill), cardio('트랙 러닝')] },
   { ...structuredClone(routine), id: ids[1], tag: 'CARDIO', createdAt: '2026-11-03T00:00:00Z', name: '달리기', weightPlacements: [], cardioPlacements: [cardio('야외 러닝')] },
   { ...structuredClone(routine), id: ids[2], tag: null, createdAt: '2026-11-02T00:00:00Z', name: '태그 없는 매우 긴 하체 루틴 이름', cardioPlacements: [] },
 ]
 let calendar = { ...scope, version: '1', timeZone: 'Asia/Seoul', appliedAt: '2026-11-06T00:00:00Z', assignments: [{ dayOfWeek: 1, routineId: ids[0] }, { dayOfWeek: 3, routineId: ids[1] }, { dayOfWeek: 5, routineId: ids[0] }] }
-const ui = window.listUi = { ids, requests: [], selected: [], edited: [], deleted: [], routineWrites:[], invalid: [], activeError: false, versionConflict: false, loseAck: false }
+const ui = window.listUi = { ids, requests: [], selected: [], edited: [], deleted: [], started: [], routineWrites:[], invalid: [], activeError: false, versionConflict: false, loseAck: false }
 ui.confirmDelete=true;ui.confirms=[]
 window.confirm=message=>{ui.confirms.push(message);return ui.confirmDelete}
 const presetId = '90000000-0000-4000-8000-000000000011'
@@ -51,7 +60,7 @@ const statistics = { overview: async (_scope, period) => ({ plannedDays: Array.f
   return result
 }) }) }
 function ReviewWorkspace() {
-  const initial = { userId: scope.userId, scope, data: { ...bootstrap, scope, routines: summaries }, selected: null, active: null, detail: null, deviceId: null, attempt: null, status: 'ready', busy: false, localReady: true, copySaved: false, issue: null, notice: '' }
+  const initial = { userId: scope.userId, scope, data: { ...bootstrap, manufacturers: [longManufacturer], scope, routines: summaries }, selected: null, active: null, detail: null, deviceId: null, attempt: null, status: 'ready', busy: false, localReady: true, copySaved: false, issue: null, notice: '' }
   const [state, setState] = useState(initial), [refresh, setRefresh] = useState(0), [focused, setFocused] = useState(false), [tab, setTab] = useState('routines')
   const [controller] = useState(() => {
     let current = initial
@@ -59,7 +68,7 @@ function ReviewWorkspace() {
     ui.setActive = active => update({ active: active ? session() : null })
     ui.setAttempt = active => update({ attempt: active ? { ...scope, request: start, requestJson: JSON.stringify(start) } : null })
     ui.staleSelection = () => update({ selected: { ...plans[0], version: '0', weightPlacements: [{ ...plans[0].weightPlacements[0], exerciseName: 'STALE EXERCISE' }] } })
-    return { getSnapshot: () => current, refresh: async () => setRefresh(n => n + 1), invalidateScope: error => ui.invalid.push(error?.code), select: async id => { ui.selected.push(id); update({ selected: plans.find(p => p.id === id) }) }, deleteRoutine: async () => { ui.deleted.push(current.selected?.id);update({selected:null}) }, removedRoutine: async () => null, saveRoutine:async body=>{ui.routineWrites.push(structuredClone(body));return true},start:async()=>{} }
+    return { getSnapshot: () => current, refresh: async () => setRefresh(n => n + 1), invalidateScope: error => ui.invalid.push(error?.code), select: async id => { ui.selected.push(id); update({ selected: plans.find(p => p.id === id) }) }, deleteRoutine: async () => { ui.deleted.push(current.selected?.id);update({selected:null}) }, removedRoutine: async () => null, saveRoutine:async body=>{ui.routineWrites.push(structuredClone(body));return true},start:async()=>{ui.started.push(current.selected?.id)} }
   })
   const training = useTrainingSchedule(transport, scope, String(refresh), controller.invalidateScope)
   ui.showHome = () => setTab('home')
@@ -72,7 +81,7 @@ function ReviewWorkspace() {
   ui.hide = () => setVisible(false)
   ui.reveal = () => setVisible(true)
   return <AppShell authenticated tab={tab} focused={focused} onNavigate={setTab}>
-    <div hidden={tab !== 'routines'}>{visible && <WorkspaceView state={state} controller={controller} api={api} training={training} enabled onEditingChange={setFocused}/>}</div>
+    <div hidden={tab !== 'routines'}>{visible && <WorkspaceView state={state} controller={controller} api={api} activities={[treadmill]} training={training} enabled onEditingChange={setFocused}/>}</div>
     {tab === 'home' && <HomePanel scope={scope} routines={summaries} api={api} training={training} statistics={statistics} visit={refresh} refreshKey={String(refresh)} active={null} attempt={false} busy={false} localReady issue={null} onStart={async () => {}} onResume={() => {}} onRetry={() => {}} onNavigate={setTab} onOpen={() => {}} onInvalid={() => {}}/>}
   </AppShell>
 }

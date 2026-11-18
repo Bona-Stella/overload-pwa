@@ -17,9 +17,13 @@ function useCombinationMemo(exerciseId: string, equipment: Equipment, initialTex
   const context = useContext(Context), [local, setLocal] = useState<Record<string,string>>(() => ({ [key]:initialText }))
   return { text: context?.values[key] ?? local[key] ?? '', change: (text: string) => context ? context.change(key,text) : setLocal(old => ({ ...old, [key]:text })), key }
 }
-export function CombinationMemo({ exerciseId, equipment, readOnly = false, initialText = '' }: { exerciseId: string; equipment: Equipment; readOnly?: boolean; initialText?: string }) {
+export function CombinationMemo({ exerciseId, equipment, readOnly = false, initialText = '', className }: { exerciseId: string; equipment: Equipment; readOnly?: boolean; initialText?: string; className?: string }) {
   const memo = useCombinationMemo(exerciseId, equipment, initialText)
-  return <div className="stack"><label>기구 세팅 메모<textarea data-workout-memo rows={2} value={memo.text} readOnly={readOnly} placeholder="예: 의자 높이 3" onChange={e => memo.change(e.target.value)} /></label>
+  if (readOnly) return memo.text.trim() ? <p className={className} aria-label="기구 세팅 메모">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 20H5V4h14v7M8 8h8m-8 4h4m2 7 5-5 2 2-5 5h-2z" /></svg>
+    <span>{memo.text}</span><small>미저장</small>
+  </p> : null
+  return <div className="stack"><label>기구 세팅 메모<textarea data-workout-memo rows={2} value={memo.text} placeholder="예: 의자 높이 3" onChange={e => memo.change(e.target.value)} /></label>
     <small className="muted" role="status">같은 운동·장비 조합에서 공유할 메모입니다. 서버 저장 연결 전이며 입력은 아직 저장되지 않았습니다.</small>
-    {!readOnly && !!memo.text && <button type="button" className="quiet" onClick={() => memo.change('')}>메모 지우기</button>}</div>
+    {!!memo.text && <button type="button" className="quiet" onClick={() => memo.change('')}>메모 지우기</button>}</div>
 }

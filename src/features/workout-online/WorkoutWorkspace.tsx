@@ -18,6 +18,8 @@ import type { OnlineState } from './controller.ts'
 import type { CardioActivity, Manufacturer, Routine, Session, StandardExercise } from './types.ts'
 import { equipmentLabel } from './equipment.ts'
 import { RoutineCards } from './RoutineCards.tsx'
+import { RoutineDetail } from './RoutineDetail.tsx'
+import detailStyles from './RoutineDetail.module.css'
 import { RoutineForm } from './RoutineForm.tsx'
 import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
@@ -143,9 +145,11 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
   const renameStale = renaming && (renaming.base.version !== schedule?.version || renaming.version !== latestName?.version)
-  return <section className="stack workout-online" aria-labelledby="online-title">
-    <div className="section-heading"><span id="online-title" className="muted small">ROUTINES</span>
-      <button type="button" className="quiet" disabled={busy} onClick={() => { training.refresh(); if (!focused) void controller.refresh() }}>다시 조회</button></div>
+  const showToolbar = !editor?.readOnly || !!training.issue
+  return <section className={`stack workout-online ${editor?.readOnly ? detailStyles.workspace : ''}`}
+    aria-labelledby={showToolbar ? 'online-title' : undefined} aria-label={showToolbar ? undefined : '루틴'}>
+    {showToolbar && <div className="section-heading"><span id="online-title" className="muted small">ROUTINES</span>
+      <button type="button" className="quiet" disabled={busy} onClick={() => { training.refresh(); if (!focused) void controller.refresh() }}>다시 조회</button></div>}
     {state.status === 'loading' && <p role="status">현재 계정의 운동 정보를 확인하고 있습니다.</p>}
     {training.loading && <p role="status">주간 일정과 디로딩 상태를 확인하고 있습니다.</p>}
     {protection && <p className="notice" role="status">{protection === 'ACTIVE' ? '디로딩 진행 중' : '디로딩 완료 당일'} · 일반 루틴과 주간 일정은 조회 전용입니다.</p>}
@@ -197,14 +201,15 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         onSave={async entries => {
           if (await training.write({ type: 'rotate', enabled: scheduleEditor.base.autoEnabled, entries }, scheduleEditor.base)) setScheduleEditor(null)
         }} />}
-      {editor && <><RoutineForm key={(editor.routine?.id ?? 'new') + ':' + editor.readOnly} routine={editor.routine} readOnly={editor.readOnly}
-        assignments={editor.routine && membership(editor.routine.id)} activities={activities}
+      {editor?.readOnly && editor.routine && <RoutineDetail routine={editor.routine} exercises={state.data.exercises} activities={activities} manufacturers={state.data.manufacturers}
+        presets={schedule?.presets} scheduleLoading={training.loading} timeZone={schedule?.timeZone ?? undefined} managementBlocked={managementBlocked}
+        onBack={() => setEditor(null)} onEdit={() => { if (!managementBlocked) setEditor({ ...editor, readOnly: false }) }}
+        onDelete={() => { if (editor.routine) void deleteRoutine(editor.routine.id) }}
+        start={<button type="button" className="primary" disabled={managementBlocked || !state.localReady} onClick={() => void controller.start()}>온라인으로 운동 시작</button>} />}
+      {editor && !editor.readOnly && <RoutineForm key={editor.routine?.id ?? 'new'} routine={editor.routine} activities={activities}
         onSaved={(id, name) => { if (!editor.routine) setCreated({ id, name }); training.refresh() }}
         generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers}
-        busy={busy} controller={controller} onClose={() => setEditor(null)} managementBlocked={managementBlocked}
-        onEdit={() => { if (!managementBlocked) setEditor({ ...editor, readOnly: false }) }}
-        onDelete={() => { if (editor.routine) void deleteRoutine(editor.routine.id) }} />
-        {editor.readOnly && <button type="button" className="primary" disabled={managementBlocked || !state.localReady} onClick={() => void controller.start()}>온라인으로 운동 시작</button>}</>}
+        busy={busy} controller={controller} onClose={() => setEditor(null)} managementBlocked={managementBlocked} />}
     </>}
     {enabled && renaming && <Dialog title="주간 일정 이름 변경" initialFocus={renameInput} onClose={() => { if (!busy) setRenaming(null) }}>
       <form className="stack" onSubmit={async event => {

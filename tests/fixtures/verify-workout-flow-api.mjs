@@ -44,7 +44,7 @@ try{
       {id:crypto.randomUUID(),standardExerciseId:d.evidence.catalog.bodyweightExerciseId,manufacturerId:null,loadType:'BODYWEIGHT',setCount:1,minReps:6,maxReps:10,initialWeightKg:'0'}],
     cardioPlacements:[{id:crypto.randomUUID(),plan:{kind:choice.kind,name:choice.name,standardExerciseId:choice.id,activityId:choice.activityId,targetSeconds:60,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null}}]})
   assert.equal(routine.status,201,JSON.stringify(routine.body))
-  await d.click('루틴','nav');if(await visible('루틴 상세'))await d.click('닫기','.workout-online');await d.click('다시 조회','.workout-online')
+  await d.click('루틴','nav');if(await visible('루틴 상세'))await clickAria('루틴 목록으로','.workout-online');await d.click('다시 조회','.workout-online')
   await clickAria(routine.body.name+' 상세','.workout-online')
   await d.click('온라인으로 운동 시작','.workout-online')
   await waitFor(()=>has(root),'approved workout frame')
@@ -187,7 +187,7 @@ try{
   const reviewRoutine=await d.api('POST','/api/v1/routines',{id:crypto.randomUUID(),name:'중량 검토 통합 검증',dataGeneration:routines.dataGeneration,
     weightPlacements:[3,3,4].map(setCount=>({id:crypto.randomUUID(),standardExerciseId:d.evidence.catalog.weightExerciseId,manufacturerId:null,loadType:null,setCount,minReps:8,maxReps:12,initialWeightKg:'45'})),cardioPlacements:[]})
   assert.equal(reviewRoutine.status,201)
-  await d.click('루틴','nav');if(await visible('루틴 상세'))await d.click('닫기','.workout-online');await d.click('다시 조회','.workout-online')
+  await d.click('루틴','nav');if(await visible('루틴 상세'))await clickAria('루틴 목록으로','.workout-online');await d.click('다시 조회','.workout-online')
   await clickAria(reviewRoutine.body.name+' 상세','.workout-online');await d.click('온라인으로 운동 시작','.workout-online')
   await waitFor(()=>has(root),'review workout START');await d.click('준비운동 완료',root)
   const reviewSession=(await d.api('GET','/api/v1/workout-sessions/active')).body.session,rid=reviewSession.id
@@ -233,7 +233,7 @@ try{
   // Produce a genuine locally completed record missing from a separately confirmed server finish.
   const recoveryRoutine=await d.api('POST','/api/v1/routines',{id:crypto.randomUUID(),name:'누락 수행 복구 통합 검증',dataGeneration:routines.dataGeneration,
     weightPlacements:[{id:crypto.randomUUID(),standardExerciseId:d.evidence.catalog.weightExerciseId,manufacturerId:null,loadType:null,setCount:1,minReps:6,maxReps:10,initialWeightKg:'20'}],cardioPlacements:[]})
-  await d.click('루틴','nav');if(await visible('루틴 상세'))await d.click('닫기','.workout-online');await d.click('다시 조회','.workout-online');await clickAria(recoveryRoutine.body.name+' 상세','.workout-online');await d.click('온라인으로 운동 시작','.workout-online')
+  await d.click('루틴','nav');if(await visible('루틴 상세'))await clickAria('루틴 목록으로','.workout-online');await d.click('다시 조회','.workout-online');await clickAria(recoveryRoutine.body.name+' 상세','.workout-online');await d.click('온라인으로 운동 시작','.workout-online')
   await waitFor(()=>has(root),'recovery workout START');await d.click('준비운동 완료',root)
   const recoverySession=(await d.api('GET','/api/v1/workout-sessions/active')).body.session,cid=recoverySession.id
   d.proxy.fault.beforeSnapshot=true

@@ -23,6 +23,7 @@ registerHooks({
 })
 const {WorkspaceView,SessionView}=await import('../src/features/workout-online/WorkoutWorkspace.tsx')
 const {RoutineForm}=await import('../src/features/workout-online/RoutineForm.tsx')
+const {RoutineDetail}=await import('../src/features/workout-online/RoutineDetail.tsx')
 const {RoutineCards}=await import('../src/features/workout-online/RoutineCards.tsx')
 const {LocalWorkoutView}=await import('../src/features/workout-local/LocalWorkoutScreen.tsx')
 const {ClosedWorkoutView}=await import('../src/features/workout-online/ClosedWorkout.tsx')
@@ -117,10 +118,35 @@ test('routine weekly tiles distinguish unregistered, explicit rest and an unavai
   assert.match(unavailable,/월요일 · 루틴 확인 필요/)
 })
 
-test('routine detail reuses the read-only form with exact values and no editing or save actions',()=>{
-  const html=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,busy:false,readOnly:true,controller:{},onClose(){}})
-  assert.match(html,/99999999999999.999999/);assert.match(html,/루틴 상세/);assert.match(html,/<fieldset disabled=""/)
-  assert.doesNotMatch(html,/루틴 저장|배치 제거|제거한 배치|웨이트 종목 추가|유산소 추가|새 중량 승인|↑ 위로|↓ 아래로|>변경</)
+test('routine detail displays exact stored plans and schedule membership without form controls',()=>{
+  const selected = { ...routine, tag: 'PUSH', createdAt: '2026-11-14T16:00:00Z', cardioPlacements: [
+    { id: 'bike', deletedAt: null, plan: { kind: 'BIKE', name: '실내 사이클', targetSeconds: 601, targetDistanceKm: null, activityId: 'legacy-bike',
+      intensity: { mode: 'PACE', value: '3.125' }, resistance: '7.5', inclinePercent: null } },
+    { id: 'run', deletedAt: null, plan: { kind: 'TREADMILL', name: '당시 러닝머신 이름', targetSeconds: 1200, targetDistanceKm: '2.5', standardExerciseId: 'treadmill', activityId: 'run-activity',
+      intensity: { mode: 'SPEED', value: '8' }, resistance: null, inclinePercent: '0' } },
+    { id: 'unlinked', deletedAt: null, plan: { kind: 'TREADMILL', name: '러닝머신', targetSeconds: 1200,
+      targetDistanceKm: null, intensity: null, resistance: null, inclinePercent: null } },
+  ] }
+  const activities = [
+    { id: 'walking-pad', activityId: 'walk-activity', category: 'WALKING', name: '실내 걷기', kind: 'TREADMILL', aliases: [] },
+    { id: 'treadmill', activityId: 'run-activity', category: 'RUNNING', name: '러닝머신', kind: 'TREADMILL', aliases: [] },
+    { id: 'indoor-bike', activityId: 'legacy-bike', category: 'CYCLING', name: '실내 자전거', kind: 'BIKE', aliases: [] },
+  ]
+  const presets = [
+    { id: '1', name: '배정되지 않은 프리셋', assignments: [] },
+    { id: '2', name: '연결된 일정', assignments: [{dayOfWeek: 7, routineId: routine.id}, {dayOfWeek: 1, routineId: routine.id}] },
+  ]
+  const html=render(RoutineDetail,{routine:selected,exercises:bootstrap.exercises,activities,manufacturers:bootstrap.manufacturers,presets,timeZone:'Asia/Seoul',managementBlocked:false,onBack(){},onEdit(){},onDelete(){}})
+  assert.match(html,/승인 중량.*99999999999999\.999999.*kg/)
+  assert.match(html,/<h2[^>]*>실제 계정 루틴 Ω<\/h2>.*생성 · <time[^>]*>2026\.11\.15/)
+  assert.match(html,/당시 러닝머신 이름<\/span><\/h3>.*달리기 · 러닝머신/)
+  assert.match(html,/실내 사이클<\/span><\/h3><div[^>]*><span title="사이클">사이클<\/span>/)
+  assert.match(html,/aria-label="유산소 3".*유산소 분류 미확인/)
+  assert.doesNotMatch(html,/걷기 · 실내 걷기|사이클 · 실내 자전거/)
+  assert.match(html,/목표 시간.*601.*초.*목표 페이스.*3\.125.*분\/km.*저항.*7\.5/)
+  assert.match(html,/경사도<\/dt><dd>0 <small>%/)
+  assert.match(html,/총 1개 일정.*>02<.*연결된 일정.*>월<.*>일</)
+  assert.doesNotMatch(html,/<(?:form|fieldset|input|select|textarea)|배정되지 않은 프리셋|루틴 저장|제거한 배치|종목 추가|증량 가능|감량 가능|메모 없음/)
 })
 test('other editor is read only; AUTO_CLOSED does not claim a user finish or offer recovery yet',()=>{
   const html=render(SessionView,{session:session({editorDeviceId:OTHER}),deviceId:DEVICE,saved:true,busy:false,onRefresh(){}})
