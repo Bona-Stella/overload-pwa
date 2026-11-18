@@ -453,10 +453,87 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await verifyWidth(393)
     await click('설정으로', 'ariaLabel')
     assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '내 계정')
+    await click('루틴'); await set(fault, 'network'); await click('설정')
     await click('세트 사이 휴식', 'textContent', settingsItem + ' strong')
     assert.match(await body(), /검토용 예시 휴식 시간입니다/)
-    assert.match(await body(), /1~10회 · 180초/)
-    await click('‹ 설정으로')
+    const restPage = 'section[aria-label="세트 사이 휴식"]'
+    const restSeconds = restPage + ' [name="restLowSeconds"]'
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('${restPage} dt, ${restPage} dd strong')].map(e => e.textContent)`),
+      ['1~10회', '180초', '11~12회', '120초', '13회 이상', '90초'])
+    const headerAction = restPage + ' header button:last-child'
+    const actionStyle = () => evaluate(`(() => { const b = document.querySelector('${headerAction}'), r = b.getBoundingClientRect(), s = getComputedStyle(b);
+      return [r.width,r.height,s.backgroundColor,s.borderColor,s.borderRadius,s.padding] })()`)
+    const editStyle = await actionStyle()
+    await click('편집', 'textContent', headerAction)
+    assert.deepEqual(await actionStyle(), editStyle)
+    assert.equal(await evaluate(`document.querySelector('${headerAction}').matches(':focus-visible')`), false)
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
+    assert.equal(await evaluate(`document.activeElement === document.querySelector('${headerAction}') && getComputedStyle(document.activeElement).outlineStyle === 'solid'`), true)
+    for (const width of [320, 375, 393, 430, 1280]) {
+      await verifyWidth(width)
+      const layout = await evaluate(`(() => {
+        const page = document.querySelector('${restPage}'), inputs = [...page.querySelectorAll('input[inputmode="numeric"]')];
+        const firstRow = inputs[0].parentElement, headings = [...firstRow.previousElementSibling.children];
+        const centers = headings.map(e => (e.getBoundingClientRect().left + e.getBoundingClientRect().right) / 2);
+        const centered = inputs.every(input => [...input.parentElement.children].slice(0, 3).every((cell, column) => {
+          const {left,right} = cell.getBoundingClientRect();
+          return Math.abs((left+right)/2-centers[column]) < .5 && getComputedStyle(cell).textAlign === 'center';
+        }));
+        const geometry = cell => { const s = getComputedStyle(cell); return [s.height,s.border,s.borderRadius,s.fontSize,s.padding]; };
+        const lastBound = inputs[2].previousElementSibling, lastBoundStyle = getComputedStyle(lastBound);
+        const numericStyle = getComputedStyle(inputs[2]);
+        const remove = [...page.querySelectorAll('button[aria-label$="구간 삭제"]')];
+        const save = page.querySelector('[type=submit]'), saveStyle = getComputedStyle(save);
+        return {centered, labels:headings.map(e=>e.textContent), inputGeometry:[geometry(lastBound),geometry(inputs[2])],
+          lastBound:[lastBound.textContent,lastBound.tagName,lastBound.tabIndex,lastBound.isContentEditable,lastBoundStyle.cursor],
+          mutedBound:lastBoundStyle.backgroundColor !== numericStyle.backgroundColor && lastBoundStyle.color !== numericStyle.color,
+          readOnly:page.querySelectorAll('input[readonly]').length,
+          deleteColumn:remove.every((e,i)=>e.disabled && e.getBoundingClientRect().left >= inputs[i].getBoundingClientRect().right
+            && Math.abs(e.getBoundingClientRect().left-remove[0].getBoundingClientRect().left)<.5),
+          addDisabled:[...page.querySelectorAll('button')].find(e=>e.textContent==='+ 구간 추가').disabled,
+          saveHeight:save.getBoundingClientRect().height, saveColors:[saveStyle.backgroundColor,saveStyle.color],
+          labelGap:firstRow.firstElementChild.getBoundingClientRect().top-firstRow.previousElementSibling.getBoundingClientRect().bottom};
+      })()`)
+      assert.ok(layout.centered && layout.deleteColumn && layout.addDisabled, `column alignment at ${width}`)
+      assert.deepEqual(layout.labels, ['시작 세트', '끝 세트', '휴식 (초)'])
+      assert.deepEqual(layout.inputGeometry[0], layout.inputGeometry[1], `cell dimensions at ${width}`)
+      assert.deepEqual(layout.lastBound, ['이상', 'SPAN', -1, false, 'default'])
+      assert.ok(layout.mutedBound, `inactive surface at ${width}`)
+      assert.equal(layout.readOnly, 5)
+      assert.equal(layout.saveHeight, 48)
+      assert.deepEqual(layout.saveColors, ['rgb(240, 241, 244)', 'rgb(17, 18, 22)'])
+      assert.ok(layout.labelGap <= 12)
+    }
+    await verifyWidth(393)
+    const boundSelector = `${restPage} [aria-label="13회 이상 시작 세트"] + span`
+    const boundCenter = await evaluate(`(() => { const r = document.querySelector(${JSON.stringify(boundSelector)}).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2} })()`)
+    await send('Input.dispatchMouseEvent', { type: 'mousePressed', ...boundCenter, button: 'left', clickCount: 1 })
+    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...boundCenter, button: 'left', clickCount: 1 })
+    assert.equal(await evaluate(`document.activeElement.matches('input, [contenteditable="true"]') || document.activeElement === document.querySelector(${JSON.stringify(boundSelector)})`), false)
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(boundSelector)}).textContent`), '이상')
+    for (const invalid of ['', '0', '2.5', '2147483648']) {
+      await set(restSeconds, invalid); await click('변경 사항 저장', 'textContent', restPage + ' button')
+      assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).getAttribute('aria-invalid')`), 'true')
+      assert.match(await body(), /1~10회 휴식 시간은/)
+    }
+    await set(restSeconds, '185')
+    await evaluate('window.restConfirms = 0; window.confirm = () => { window.restConfirms++; return false }')
+    await click('취소', 'textContent', headerAction)
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
+    await click('홈', 'textContent', 'nav button')
+    assert.equal(await evaluate('window.restConfirms'), 2)
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
+    await evaluate('window.confirm = () => true')
+    await click('취소', 'textContent', headerAction)
+    assert.match(await body(), /180초/)
+    await click('편집', 'textContent', headerAction); await set(restSeconds, '185')
+    await click('변경 사항 저장', 'textContent', restPage + ' button')
+    assert.match(await body(), /연결을 확인하지 못했습니다. 입력을 유지/)
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
+    await click('변경 사항 저장', 'textContent', restPage + ' button')
+    assert.match(await body(), /185초\s*\(3분 5초\)/)
+    await click('설정으로', 'ariaLabel', restPage + ' button')
     await click('운동 종목 보기', 'textContent', settingsItem + ' strong')
     assert.equal(await evaluate('document.activeElement.textContent'), '운동 종목 보기')
     const group = '.exercise-search [aria-label="운동 부위 필터"]'

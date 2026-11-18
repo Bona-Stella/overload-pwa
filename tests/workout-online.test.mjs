@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { AuthApi } from '../src/features/auth/api.ts'
 import { AuthController } from '../src/features/auth/controller.ts'
-import { WorkoutApi } from '../src/features/workout-online/api.ts'
+import { WorkoutApi, WorkoutApiError } from '../src/features/workout-online/api.ts'
 import { WorkoutOnlineController, startBody } from '../src/features/workout-online/controller.ts'
 import { LocalStoreError } from '../src/features/workout-online/storage.ts'
 import { searchExercises } from '../src/features/workout-online/catalog.ts'
@@ -81,6 +81,49 @@ test('API rejects wrong outer/nested owner, generation, IDs, nullable omissions 
     data=session(patch);await assert.rejects(()=>api.detail(scope,start.id,signal))
   }
   data={...scope,session:session({userId:OTHER})};await assert.rejects(()=>api.active(scope,signal),{code:'OWNER_MISMATCH'})
+})
+test('rest settings PATCH confirms an account-scoped response and GET reloads the same contract', async () => {
+  const values = { restLowSeconds: 181, restMediumSeconds: 121, restHighSeconds: 91 }
+  const requests = []
+  let response = { ...scope, ...values }
+  const api = new WorkoutApi({ workoutRequest: async (user, path, method, body) => {
+    requests.push([user, path, method, body]); return { status: 200, data: response }
+  } })
+  const signal = new AbortController().signal
+  const body = { dataGeneration: scope.dataGeneration, ...values }
+  assert.deepEqual(await api.settings(scope, body, signal), response)
+  assert.deepEqual(await api.restSettings(scope, signal), response)
+  assert.deepEqual(requests, [[USER, '/api/v1/workout-settings', 'PATCH', body], [USER, '/api/v1/workout-settings', 'GET', undefined]])
+  response = { ...response, restHighSeconds: 0 }
+  await assert.rejects(api.settings(scope, body, signal), { code: 'RESPONSE_INVALID' })
+  response = { ...response, userId: OTHER }
+  await assert.rejects(api.restSettings(scope, signal), { code: 'OWNER_MISMATCH' })
+})
+test('rest settings change only on confirmation, retain previous values on failure and can reload before retry', async t => {
+  const values = { restLowSeconds: 185, restMediumSeconds: 120, restHighSeconds: 90 }
+  const delayed = gate()
+  const serverValues = { ...scope, ...values, restLowSeconds: 190 }
+  const calls = []
+  const state = setup({
+    settings: async (account, body) => { calls.push([account, body]); return delayed.promise },
+    restSettings: async account => { assert.deepEqual(account, scope); return serverValues },
+  })
+  t.after(state.disconnect)
+  await settle()
+  const save = state.controller.requestRestSettings(values)
+  assert.equal(state.controller.getSnapshot().data.settings.restLowSeconds, 180)
+  assert.ok(await state.controller.requestRestSettings(values))
+  delayed.resolve({ ...scope, ...values })
+  assert.equal(await save, null)
+  assert.deepEqual(calls, [[scope, { dataGeneration: scope.dataGeneration, ...values }]])
+  assert.equal(state.controller.getSnapshot().data.settings.restLowSeconds, 185)
+  state.api.settings = async () => { throw new WorkoutApiError('WORKOUT_DATA_UNAVAILABLE', 503) }
+  assert.ok((await state.controller.requestRestSettings(values)).message)
+  assert.equal(state.controller.getSnapshot().data.settings.restLowSeconds, 185)
+  state.api.settings = async () => { throw new WorkoutApiError('WRITE_CONFLICT', 409) }
+  assert.equal((await state.controller.requestRestSettings(values)).conflict, true)
+  assert.equal(await state.controller.requestRestSettings(null), null)
+  assert.equal(state.controller.getSnapshot().data.settings.restLowSeconds, 190)
 })
 test('START is dispatched only after durable attempt, and duplicate clicks do not start twice',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE)

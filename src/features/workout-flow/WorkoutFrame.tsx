@@ -10,9 +10,9 @@ import styles from './WorkoutFlow.module.css'
 type Step = { id: string; name: string }
 type Navigation = { previous?: Step; next?: Step; onGo: (id: string) => void }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, children, actions, onHome, onEnd, clockRef, navigation, reviewNote, hidden, cardioFocus }: {
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, onHome, onEnd, clockRef, navigation, reviewNote, hidden, cardioFocus }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
-  timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; children: ReactNode; actions?: ReactNode
+  timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; dim?: number; children: ReactNode; actions?: ReactNode
   onHome: () => void; onEnd: () => void
   clockRef?: RefObject<HTMLDivElement | null>
   navigation?: Navigation; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
@@ -204,7 +204,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
   return <div className={styles.flow} ref={root} hidden={hidden} data-workout-frame data-fixed-actions={hasActions || undefined}
     data-weight-focus={!!navigation || undefined} data-cardio-focus={cardioFocus || undefined} data-memo-active={memoActive || undefined}>
     <div className={styles.clockDock} ref={timeBar}>
-      <div className={styles.clock} data-flash={flash || undefined} aria-label="운동 시간">
+      <div className={`${styles.clock} ${styles.restFlash}`} data-flash={flash || undefined} aria-label="운동 시간">
         <div><small>전체 운동 시간</small><strong>{formatDuration(elapsed)}</strong></div>
         <div><small>운동 진행</small><strong>{position ? `현재 ${position} / ${count}종목` : '준비운동'}</strong>
           <div className={styles.segments} aria-hidden="true">{Array.from({ length: count }, (_, i) =>
@@ -224,6 +224,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     </header>
     {reviewNote}
     {children}
+    {dim !== undefined && !memoActive && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
     {hasActions && <footer className={styles.footer} ref={footer} hidden={memoActive}>{actions}</footer>}
   </div>
 }
@@ -266,9 +267,15 @@ export function WeightRecommendation({ direction, kg, provisional = false, loadT
   </div>
 }
 
-export function RestActions({ remaining, onEnd, onExtend }: { remaining: number; onEnd: () => void; onExtend: () => void }) {
+export function RestCountdown({ seconds }: { seconds: number }) {
+  return <div className={styles.restCountdown} data-rest-countdown data-warning={seconds <= 10 || undefined}>
+    <span>남은 휴식 시간</span><strong>{seconds}<small>초</small></strong>
+  </div>
+}
+
+export function RestActions({ remaining, flash, onEnd, onExtend }: { remaining: number; flash?: boolean; onEnd: () => void; onExtend: () => void }) {
   return <>
-    {remaining <= 10 && <div className={styles.prepare} data-urgent={remaining <= 5 || undefined}>
+    {remaining <= 10 && <div className={`${styles.prepare} ${styles.restFlashBar}`} data-flash={flash || undefined}>
       <b>다음 세트 준비</b><strong>{remaining}초</strong>
     </div>}
     <div className={`${styles.actions} ${styles.restActions}`}><Button variant="primary" onClick={onEnd}>휴식 종료</Button><Button onClick={onExtend}>+30초</Button></div>

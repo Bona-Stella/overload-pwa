@@ -32,7 +32,7 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
       </dl>
     </Card>
     <Card className={styles.rows} aria-label="운동 설정">
-      <SettingsRow icon="timer" title="세트 사이 휴식" description="반복 상한별 3개 구간 · 조회 전용" onClick={onRest} busy={busy} />
+      <SettingsRow icon="timer" title="세트 사이 휴식" description="반복 상한별 3개 구간 · 휴식 시간 설정" onClick={onRest} busy={busy} />
       <SettingsRow icon="bell" title="휴식 타이머 알림" description="화면 깜빡임 · 효과음" onClick={onRestAlerts} busy={busy} />
       <SettingsRow icon="weight" title="운동 종목 보기" description="관리자 표준 운동 DB · 조회 전용" onClick={onCatalog} busy={busy} />
       <SettingsRow icon="sliders" title="디로딩 설정" description="추천 분석 설정 · 적용률 안내" />

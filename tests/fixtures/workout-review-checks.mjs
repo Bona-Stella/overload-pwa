@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { setTimeout as delay } from 'node:timers/promises'
+import { verifyRestAlerts } from './rest-alert-review-checks.mjs'
 
 export async function verifyWorkoutReview({ origin, send, evaluate, wait, click, set, body, verifyWidth, drag }) {
   const scenario = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(1) select'
@@ -302,20 +303,41 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
       const original = IDBFactory.prototype[key];
       IDBFactory.prototype[key] = function(...args) { window.reviewStorage.push(key); return original.apply(this, args); };
     }
+    const originalNow = Date.now.bind(Date);
+    window.restAlertTimeOffset = 0;
+    Date.now = () => originalNow() + window.restAlertTimeOffset;
     window.reviewTones = 0;
-    const tone = OscillatorNode.prototype.start;
-    OscillatorNode.prototype.start = function(...args) { window.reviewTones++; return tone.apply(this, args); };
+    window.reviewToneGain = [];
+    window.reviewToneStarts = [];
+    const activeTones = new Set();
+    window.reviewToneCancels = 0;
+    window.reviewLiveTones = () => activeTones.size;
+    window.reviewEndedWhilePlaying = [];
+    const gain = AudioParam.prototype.setValueAtTime;
+    AudioParam.prototype.setValueAtTime = function(value,...args) { window.reviewToneGain.push(value); return gain.call(this,value,...args); };
+    const tone = OscillatorNode.prototype.start, stopTone = OscillatorNode.prototype.stop;
+    OscillatorNode.prototype.start = function(...args) {
+      window.reviewTones++; window.reviewToneStarts.push(args[0]); activeTones.add(this);
+      this.addEventListener('ended', () => {
+        if (activeTones.delete(this)) {
+          window.reviewEndedWhilePlaying.push([...document.querySelectorAll('button[aria-label$="미리듣기 중지"]')].map(b=>b.ariaLabel));
+        }
+      }, {once:true});
+      return tone.apply(this, args);
+    };
+    OscillatorNode.prototype.stop = function(...args) {
+      if (!args.length && activeTones.delete(this)) window.reviewToneCancels++;
+      return stopTone.apply(this, args);
+    };
   ` })
   await send('Page.navigate', { url: origin + '/routine-preview?tab=home&review=workout' })
   await has('웨이트 + 러닝')
   await verifyWidth(393)
   await click('설정', 'textContent', 'nav button')
   await click('휴식 타이머 알림', 'textContent', 'button strong')
-  await labelInput('시작 시점', '10')
-  await evaluate('document.querySelector("main input[type=checkbox]").click()')
-  assert.equal(await evaluate('document.querySelector("main select").disabled'), true)
-  await click('홈', 'textContent', 'nav button')
-  await click('검토 초기화')
+  await verifyRestAlerts({ send, evaluate, wait, click, set, body, verifyWidth, screenshot })
+  await send('Page.navigate', { url: origin + '/routine-preview?tab=home&review=workout' })
+  await has('웨이트 + 러닝')
   await click('운동 시작')
   await has('세트 기록 없음')
   assert.match(await body(), /25kg · 8–12회 × 3세트.*제조사 미지정 · 원판식/s)

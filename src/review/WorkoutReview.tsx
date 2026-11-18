@@ -12,7 +12,9 @@ import { WeightFocus, EquipmentEditor } from '../features/workout-flow/WeightFoc
 import { AddCardio, ConfirmWorkoutAction, ExerciseList, SessionExerciseSearch, WeightChange } from '../features/workout-flow/WorkoutDialogs.tsx'
 import { CardioFocus } from '../features/workout-flow/CardioFocus.tsx'
 import { cardioPhaseLabel } from '../features/workout-flow/types.ts'
-import type { RestAlerts } from '../features/workout-flow/types.ts'
+import { restAlertVisual } from '../features/workout-flow/rest-alerts.ts'
+import type { RestAlerts } from '../features/workout-flow/rest-alerts.ts'
+import { useRestTimerAudio } from '../features/workout-flow/useRestAudio.ts'
 import flow from '../features/workout-flow/WorkoutFlow.module.css'
 import { activities, manufacturers, recoveryOriginal } from './routine-samples.ts'
 import { exerciseEquipment, sessionActivities, sessionExercises } from './workout-samples.ts'
@@ -63,9 +65,11 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   const weightsDone = weights.every(weightDone)
   const currentDone = !!weight && weightDone(weight)
   const nextSet = weight?.sets.find(s => !s.result)
-  const restEnds = weight?.rest?.ends
-  const { play } = audio
-  useEffect(() => { if (restEnds !== undefined) play(restEnds, remaining) }, [play, remaining, restEnds])
+  const rest = weight?.rest
+  const restStarted = weight?.sets.find(set => set.id === rest?.slot)?.result?.at
+  useRestTimerAudio(audio, rest && weight ? `${weight.id}:${rest.slot}:${restStarted}` : null, rest?.ends, restStarted,
+    remaining, now, alerts.sound && alerts.middle ? alerts.middleAt : null)
+  const visual = restAlertVisual(alerts, remaining)
 
   const updateWeight = (updated: ReviewWeight) => onChange({
     ...session, weights: weights.map(w => w.id === updated.id ? updated : w),
@@ -156,7 +160,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   } else if (weight && editing) {
     actions = <Button variant="primary" onClick={() => setEditing(false)}>편집 닫기</Button>
   } else if (weight && remaining > 0) {
-    actions = <RestActions remaining={remaining}
+    actions = <RestActions remaining={remaining} flash={visual.bottom}
       onEnd={() => {
         const at = reviewClock()
         if (weight.rest) audio.silence(weight.rest.ends)
@@ -202,7 +206,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
       reviewNote={<aside className="muted small" aria-label="검토용 세션">UI 검토 · 합성 데이터{shortRest ? ' · 휴식 12초 시연' : ''}</aside>}
       elapsed={Math.max(0, now - session.startedAt)} position={warmup ? 0 : index + 1} count={items.length}
       timerHeading={timerHeading} timerLabel={timerLabel} timer={timer}
-      flash={alerts.flash && remaining > 0 && remaining <= alerts.threshold} actions={actions} onHome={onHome} onEnd={requestEnd}>
+      flash={visual.top} dim={visual.dim && !editing && !modal ? remaining : undefined} actions={actions} onHome={onHome} onEnd={requestEnd}>
       {warmup ? <Warmup next={weight ? { name: weight.name,
         target: `${weight.working || '중량 미지정'}${weight.working ? 'kg' : ''} · ${weight.min}–${weight.max}회 × ${weight.sets.length}세트`,
         equipment: equipmentLabel(weight, manufacturers) }

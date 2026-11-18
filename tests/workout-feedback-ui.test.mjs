@@ -63,6 +63,52 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     const ended=await evaluate('window.feedbackAudio.starts')
     await new Promise(r=>setTimeout(r,350));assert.equal(await evaluate('window.feedbackAudio.starts'),ended,'automatic expiry does not repeat tones')
 
+    const dimSwitch = '[role="switch"][aria-label="화면 어둡게"]'
+    const dimmed = () => evaluate('!!document.querySelector("[data-workout-frame] [data-rest-countdown]")')
+    const preference = value => evaluate(`document.querySelector(${JSON.stringify(dimSwitch)})?.getAttribute('aria-checked') === '${value}'`)
+    const preferenceIcon = () => evaluate(`(() => {
+      const svg = document.querySelector('section[aria-label="화면 어둡게 설정"] h2 svg');
+      return [svg.querySelector('path').getAttribute('d'), getComputedStyle(svg).color];
+    })()`)
+    await evaluate("window.feedback.record('alerts')")
+    await wait(() => preference('false'))
+    const defaultIcon = await preferenceIcon()
+    await evaluate(`document.querySelector(${JSON.stringify(dimSwitch)}).click()`)
+    await wait(() => preference('true'))
+    const savedIcon = await preferenceIcon()
+    await evaluate("window.feedback.record('alerts-other')")
+    await wait(() => preference('false'))
+    assert.deepEqual(await preferenceIcon(), defaultIcon)
+    await evaluate("window.feedback.record('alerts')")
+    await wait(() => preference('true'))
+    assert.deepEqual(await preferenceIcon(), savedIcon)
+    await evaluate("window.feedback.record(null)")
+    await wait(() => evaluate('!!document.querySelector("[data-workout-frame]")'))
+    await evaluate('window.feedback.rest(12)')
+    await wait(dimmed)
+    await evaluate('window.feedback.rest(8)')
+    await wait(() => evaluate('!!document.querySelector("[data-rest-countdown][data-warning]")'))
+    await wait(() => evaluate(`(() => {
+      const frame=document.querySelector('[data-workout-frame]'), footer=frame.querySelector('footer'), overlay=frame.querySelector('[data-rest-countdown]').parentElement;
+      return !overlay.querySelector('button') && Math.abs(overlay.getBoundingClientRect().bottom-footer.getBoundingClientRect().top)<1;
+    })()`))
+    await click('+30초')
+    await wait(async () => !await dimmed())
+    assert.ok(await evaluate('Date.parse(window.feedback.c.getSnapshot().workout.rest.endsAt) - Date.now() > 36000'))
+    await evaluate('window.feedback.rest(8)'); await wait(dimmed)
+    await click('휴식 종료'); await wait(async () => !await dimmed())
+
+    await evaluate("window.feedback.record('alerts')")
+    await wait(() => preference('true'))
+    await evaluate('document.querySelector(\'[role="switch"][aria-label="화면 깜빡임"]\').click()')
+    await evaluate('document.querySelector(\'[role="switch"][aria-label="상단 상태 영역"]\').click()')
+    await evaluate("window.feedback.record(null)")
+    await wait(() => evaluate('!!document.querySelector("[data-workout-frame]")'))
+    await evaluate('window.feedback.rest(4)')
+    await wait(() => evaluate('!!document.querySelector("footer [data-flash=true]")'))
+    assert.equal(await evaluate(`document.querySelector('[aria-label="운동 시간"]').hasAttribute('data-flash')`), false)
+    await click('휴식 종료')
+
     const fonts=[]
     for(const width of [320,393,1280]){
       await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})

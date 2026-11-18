@@ -20,7 +20,9 @@ import { slotKey } from './types.ts'
 import * as model from './model.ts'
 import { flowCardio, flowWeights, inputDraft, isWeightDone } from './flow-data.ts'
 import { SYNC_LABEL } from './sync.ts'
-import { useRestAudio } from '../workout-flow/useRestAudio.ts'
+import { useRestAudio, useRestTimerAudio } from '../workout-flow/useRestAudio.ts'
+import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
+import { restAlertVisual } from '../workout-flow/rest-alerts.ts'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 
 type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'remove' | 'undo-cardio' | { undo: number }
@@ -36,13 +38,14 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const [endingRest, setEndingRest] = useState<string | null>(null)
   const manualRest = useRef<string | null>(null)
   const action = useRef(false), clock = useRef<HTMLDivElement>(null), working = useRef<HTMLElement>(null)
-  const { play, silence, unlock } = useRestAudio(true)
-  const currentRest = restKey(state.workout?.rest)
-  const restEnd = state.workout?.rest?.endsAt
+  const [alerts] = useRestAlertPreferences(state.workout?.userId ?? null)
+  const audio = useRestAudio(alerts.sound, alerts.volume)
+  const { silence, unlock } = audio
+  const rest = state.workout?.rest
+  const currentRest = restKey(rest)
   const restRemaining = state.workout && currentRest !== endingRest ? model.restRemaining(state.workout, now) : 0
-  useEffect(() => {
-    if (visible && restEnd && currentRest !== manualRest.current) play(Date.parse(restEnd), restRemaining)
-  }, [visible, currentRest, restEnd, restRemaining, play])
+  useRestTimerAudio(audio, visible && state.writable ? currentRest : null, rest ? Date.parse(rest.endsAt) : undefined,
+    rest ? Date.parse(rest.startedAt) : undefined, restRemaining, now, alerts.sound && alerts.middle ? alerts.middleAt : null)
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer) }, [])
   useLayoutEffect(() => {
     if (!completedScroll || !visible) return
@@ -62,6 +65,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const warmup = workout.warmupCompleted === false && weights.length > 0
   const remaining = restRemaining
   const blocked = !state.writable || !!workout.finish
+  const visual = restAlertVisual(alerts, weight && !warmup ? remaining : 0)
   const completeWeight = !!weight && isWeightDone(weight)
   const allWeights = weights.every(isWeightDone)
   const allDone = allWeights && cardio.every(c => c.phase === 'completed' || c.phase === 'skipped')
@@ -126,9 +130,9 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   if (blocked) actions = <Button onClick={() => void controller.retrySync()}>서버 저장 상태 다시 확인</Button>
   else if (warmup) actions = <Button variant="primary" onClick={() => void act(w => { w.warmupCompleted = true }).then(saved => { if (saved) window.scrollTo(0, 0) })}>준비운동 완료</Button>
   else if (weight && editing) actions = <Button variant="primary" onClick={() => setEditing(false)}>편집 닫기</Button>
-  else if (weight && remaining > 0) actions = <RestActions remaining={remaining}
+  else if (weight && remaining > 0) actions = <RestActions remaining={remaining} flash={visual.bottom}
     onEnd={endRest}
-    onExtend={() => void act(w => { if (w.rest) w.rest.endsAt = new Date(Date.parse(w.rest.endsAt) + 30000).toISOString() })} />
+    onExtend={() => { void unlock(); void act(w => { if (w.rest) w.rest.endsAt = new Date(Date.parse(w.rest.endsAt) + 30000).toISOString() }) }} />
   else if (weight && nextSet) actions = <Button variant="primary" onClick={() => complete(nextSet.id)}>{nextSet.id}세트 완료</Button>
   else if (weight) actions = finalActions
   else if (activity?.phase === 'ready') actions = <Button variant="primary" onClick={() => void act(w => model.timerAction(w, id, 'start', Date.now()))}>유산소 시작</Button>
@@ -152,7 +156,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   return <>
     <WorkoutFrame hidden={!visible} routine={workout.initialPlan.routineName} deload={false}
       elapsed={Math.max(0, now - Date.parse(workout.startedAt))} position={warmup ? 0 : index + 1} count={items.length}
-      flash={remaining > 0 && remaining <= 5}
+      flash={visual.top} dim={visual.dim && !editing && !blocked && !modal ? remaining : undefined}
       timerHeading={timerHeading} timerLabel={timerLabel} timer={timer} clockRef={clock}
       navigation={weight && !warmup ? { previous: items[index - 1], next: items[index + 1], onGo: go } : undefined}
       cardioFocus={!!activity && !warmup}

@@ -5,6 +5,7 @@ import { WorkoutStore, LocalStoreError } from './storage.ts'
 import type { StartAttempt, SessionCopy } from './storage.ts'
 import type { Scope, Session, Routine, RoutineList, CreateRoutine, UpdateRoutine } from './types.ts'
 import { acquireEditor } from '../workout-local/lock.ts'
+import type { RestPolicy } from '../workout-local/types.ts'
 
 type Bootstrap = Awaited<ReturnType<WorkoutApi['bootstrap']>>
 type AuthSource = Pick<AuthController, 'getSnapshot' | 'subscribe'>
@@ -136,6 +137,27 @@ export class WorkoutOnlineController {
     try { const value = await this.api.routine(scope, id, context.signal); if (context.current()) this.set({ selected: value }) }
     catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
+  }
+  requestRestSettings = async (values: RestPolicy | null) => {
+    const { scope, data } = this.state
+    const context = scope && data && this.context()
+    if (!scope || !data || !context) return { message: '현재 휴식 설정을 확인할 수 없습니다. 연결을 확인한 뒤 다시 시도해 주세요.' }
+    this.set({ busy: true })
+    try {
+      const settings = values
+        ? await this.api.settings(scope, { ...values, dataGeneration: scope.dataGeneration }, context.signal)
+        : await this.api.restSettings(scope, context.signal)
+      if (!context.current()) return { message: '요청이 중단되었습니다. 연결을 확인한 뒤 다시 시도해 주세요.' }
+      this.set({ data: { ...data, settings } })
+      return null
+    } catch (error) {
+      const code = (error as { code?: string })?.code
+      if (context.current() && ['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED'].includes(code ?? '')) this.failure(error)
+      if (code === 'WRITE_CONFLICT') return { conflict: true, message: '다른 곳에서 휴식 설정이 변경되었어요. 최신 설정을 확인한 뒤 다시 저장해 주세요.' }
+      return { message: code === 'RESPONSE_INVALID' ? '서버의 휴식 설정 응답을 확인하지 못했습니다.' : onlineIssue(error) }
+    } finally {
+      if (context.current()) this.set({ busy: false })
+    }
   }
   showDetail = async (id: string) => {
     const scope = this.state.scope, context = this.context(); if (!scope || !context) return

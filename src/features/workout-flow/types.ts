@@ -1,7 +1,6 @@
 
 import type { CardioPlan, CardioResult, Equipment } from '../workout-online/types.ts'
 
-export type RestAlerts = { flash: boolean; threshold: 5 | 10; sound: boolean }
 export type WeightMode = 'approved' | 'today' | 'progression'
 export type SetDraft = { kg: string; reps: string; additional: string }
 export type SetResult = Equipment & { kg: string; reps: number; additionalKg: string | null; mode: WeightMode; at: number }

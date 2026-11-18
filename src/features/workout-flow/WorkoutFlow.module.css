@@ -17,7 +17,8 @@
 .clock > div:nth-child(2) strong { font-size: 11px; }
 .clock > div:last-child strong { white-space: normal; font-size: 12px; }
 .clock > div:last-child strong[data-time] { white-space: nowrap; font-size: clamp(13px, 4.6vw, 22px); }
-.clock[data-flash] { animation: rest-alert 1s step-end infinite; }
+.restFlash[data-flash] { animation: rest-alert 1s step-end infinite; }
+.restFlashBar[data-flash] { animation: prepare 1.2s ease-in-out infinite alternate; }
 .clock[data-flash] small { animation: rest-alert-text 1s step-end infinite; }
 .segments { display: flex; flex-wrap: nowrap; width: min(100%, 98px); gap: 2px; padding-top: 4px; }
 .segments span { flex: 1; min-width: 0; height: 4px; border-radius: 4px; background: var(--line); }
@@ -26,7 +27,20 @@
 @keyframes rest-alert { 0% { background: var(--text-primary); color: var(--surface-page); } 18%, 100% { background: var(--surface-card); color: var(--text-primary); } }
 @keyframes rest-alert-text { 0% { color: var(--surface-page); } 18%, 100% { color: var(--text-muted); } }
 @keyframes rest-alert-segment { 0% { background: var(--accent); box-shadow: inset 0 0 0 1px var(--surface-page); } 18%, 100% { box-shadow: none; } }
-@media (prefers-reduced-motion: reduce) { .clock[data-flash] { outline: 2px solid var(--status-warning); outline-offset: 2px; } }
+@media (prefers-reduced-motion: reduce) {
+  .restFlash[data-flash], .restFlashBar[data-flash] { animation: none; outline: 2px solid var(--status-warning); outline-offset: 2px; }
+  .clock[data-flash] small, .clock[data-flash] .segments span[data-filled] { animation: none; }
+}
+.restDimmer {
+  position: fixed; z-index: 16; inset: 0 0 calc(var(--workout-footer-height, 0px) + var(--keyboard-inset, 0px));
+  width: min(100%, 520px); margin-inline: auto; display: grid; place-items: center;
+  background: rgb(8 9 12 / 91%); pointer-events: none;
+}
+.restCountdown { display: grid; justify-items: center; gap: 4px; color: var(--text-primary); text-align: center; }
+.restCountdown > span { font-size: 15px; }
+.restCountdown > strong { font-size: clamp(56px, 17vw, 84px); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.restCountdown small { margin-inline-start: .25em; font-size: .27em; }
+.restCountdown[data-warning] > strong { color: var(--status-warning); }
 .topNav { display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px; align-items: center; text-align: center; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
 .topNav button, .topNav strong { font-size: 13px; font-weight: 650; line-height: 1.35; }
 .topNav button { padding-inline: 0; width: 100%; }
@@ -91,7 +105,6 @@
 .prepare, .restActions > button { height: var(--rest-action-height, 50px); min-height: var(--rest-action-height, 50px); padding: 0 12px; border-radius: var(--radius-control); display: flex; align-items: center; }
 .restActions > button { justify-content: center; }
 .prepare strong { font-size: 18px; padding-inline: 5px; border-radius: 5px; }
-.prepare[data-urgent] strong { animation: prepare 1.2s ease-in-out infinite alternate; }
 .recommendation { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 2px; width: 100%; min-height: 64px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface-card); color: var(--text-muted); }
 .recommendation[data-direction='increase'] { border-color: var(--status-done); color: var(--status-done); }
 .recommendation[data-direction='decrease'] { border-color: var(--status-warning); color: var(--status-warning); }

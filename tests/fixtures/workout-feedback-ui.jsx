@@ -10,9 +10,11 @@ import {WorkoutFrame,WeightRecommendation} from '../../src/features/workout-flow
 import {Button} from '../../src/components/ui.tsx'
 import {ClosedWorkoutView} from '../../src/features/workout-online/ClosedWorkout.tsx'
 import {LocalWorkoutView} from '../../src/features/workout-local/LocalWorkoutFlow.tsx'
+import {RestAlertSettings} from '../../src/features/settings/RestAlertSettings.tsx'
+import {useRestAlertPreferences} from '../../src/features/workout-flow/useRestAlertPreferences.ts'
 import {useProgressAssessment} from '../../src/features/workout-local/useProgressAssessment.ts'
 import {AppShell} from '../../src/app/AppShell.tsx'
-import {session,bootstrap} from './workout-online-data.mjs'
+import {session,bootstrap,USER,OTHER} from './workout-online-data.mjs'
 import '../../src/index.css'
 import '../../src/App.css'
 import '../../src/features/workout-online/online.css'
@@ -72,7 +74,11 @@ const growthApi={
  options:async()=>({placements:[{placementId:'placement',routineId:'routine',routineName:'검토 루틴',deleted:false}]}),
  history:async()=>({points:[{id:'second',previousWeightKg:'55.000001',approvedWeightKg:'52.500001',occurredAt:'2026-11-11T10:00:00Z',recordedAt:'2026-11-11T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:true,previousPointId:'first'},{id:'first',previousWeightKg:'50.000001',approvedWeightKg:'55.000001',occurredAt:'2026-11-01T10:00:00Z',recordedAt:'2026-11-01T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:false,previousPointId:null}],nextOffset:null})
 }
-function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={e=>{throw e}} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
+function Preferences({ owner, onBack }) {
+ const [alerts, save] = useRestAlertPreferences(owner)
+ return <RestAlertSettings alerts={alerts} onChange={save} onBack={onBack}/>
+}
+function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={e=>{throw e}} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
 createRoot(document.getElementById('root')).render(<Fixture/>)
 window.feedback.ready=true
 

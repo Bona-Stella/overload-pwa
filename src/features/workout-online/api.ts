@@ -23,6 +23,7 @@ const ack = (x: unknown) => v.object(x) && v.uuid(x.sessionId) && v.counter(x.wr
   && v.instant(x.snapshotSavedAt) && v.instant(x.lastWorkoutSyncedAt) && typeof x.duplicate === 'boolean' && v.approvalResults(x.approvalResults)
 const recordAck = (x: unknown) => v.object(x) && v.uuid(x.sessionId) && v.status(x.status) && v.counter(x.version) && typeof x.changed === 'boolean'
   && v.array(x.changeEventIds, v.uuid) && v.array(x.recoveredIds, v.uuid) && v.array(x.alreadyPresentIds, v.uuid) && v.nullable(x.deletedAt, v.instant)
+const validRestSettings = (x: unknown) => v.object(x) && v.count(x.restLowSeconds) && v.count(x.restMediumSeconds) && v.count(x.restHighSeconds)
 
 /** Explicit endpoint calls only. No request replay, queue, merge, or evaluation logic. */
 export class WorkoutApi {
@@ -47,7 +48,7 @@ export class WorkoutApi {
     const [catalog, manufacturers, settings] = await Promise.all([
       this.catalog(userId, signal),
       this.manufacturers(userId, signal),
-      this.call<WorkoutSettingsResponse>(scope, '/api/v1/workout-settings', 'GET', undefined, signal, x => v.object(x) && v.count(x.restLowSeconds) && v.count(x.restMediumSeconds) && v.count(x.restHighSeconds)),
+      this.restSettings(scope, signal),
     ])
     return { scope, exercises: catalog, manufacturers, settings, routines: result.data.routines }
   }
@@ -107,7 +108,10 @@ export class WorkoutApi {
     if (result.status !== 204) throw new WorkoutApiError('RESPONSE_INVALID', result.status)
   }
   settings(scope: Scope, body: { dataGeneration: string; restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }, signal: AbortSignal) {
-    return this.call<WorkoutSettingsResponse>(scope, '/api/v1/workout-settings', 'PATCH', body, signal, x => v.object(x) && v.count(x.restLowSeconds) && v.count(x.restMediumSeconds) && v.count(x.restHighSeconds))
+    return this.call<WorkoutSettingsResponse>(scope, '/api/v1/workout-settings', 'PATCH', body, signal, validRestSettings)
+  }
+  restSettings(scope: Scope, signal: AbortSignal) {
+    return this.call<WorkoutSettingsResponse>(scope, '/api/v1/workout-settings', 'GET', undefined, signal, validRestSettings)
   }
   start(scope: Scope, request: Start, signal: AbortSignal) { return this.call<Session>(scope, root, 'POST', request, signal, v.session, request.id, [200, 201]) }
   active(scope: Scope, signal: AbortSignal) { return this.call<Scope & { session: Session | null }>(scope, root + '/active', 'GET', undefined, signal,

@@ -7,11 +7,10 @@ import { measuredCardio } from '../features/workout-online/cardio-measurement.ts
 import type { CardioPlan, Equipment, InitialPlan, Routine, Session, StandardExercise } from '../features/workout-online/types.ts'
 import { countDraft, decimalDraft } from '../features/workout-online/validation.ts'
 import { restSeconds } from '../features/workout-local/model.ts'
-import type { ActualCardio, CardioFocusData, RestAlerts, SetDraft, SetResult, SetRow, WeightAdvice, WeightFocusData } from '../features/workout-flow/types.ts'
+import type { ActualCardio, CardioFocusData, SetDraft, SetResult, SetRow, WeightAdvice, WeightFocusData } from '../features/workout-flow/types.ts'
 import { newId } from '../id.ts'
 
 export const reviewRest = { restLowSeconds: 180, restMediumSeconds: 120, restHighSeconds: 90 }
-export const defaultRestAlerts: RestAlerts = { flash: true, threshold: 5, sound: true }
 export const reviewClock = () => Date.now()
 
 export type ReviewWeight = WeightFocusData & {

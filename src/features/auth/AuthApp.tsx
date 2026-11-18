@@ -8,6 +8,8 @@ import { WorkoutWorkspace } from '../workout-online/WorkoutWorkspace'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import { OfflineResume } from '../workout-local/OfflineResume.tsx'
 import { SettingsMain } from '../settings/SettingsMain.tsx'
+import { RestAlertSettings } from '../settings/RestAlertSettings.tsx'
+import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
 import { AppShell } from '../../app/AppShell.tsx'
 import type { AppTab } from '../../app/types.ts'
 import '../../App.css'
@@ -18,17 +20,20 @@ export function AuthApp() {
   const [now, setNow] = useState(() => Date.now())
   const [dialog, setDialog] = useState<string | null>(null)
   const [localExitIssue, setLocalExitIssue] = useState(false)
-  const [selection, setSelection] = useScreenHistory<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' } | null>('app:' + state.userId, null)
+  const [selection, setSelection] = useScreenHistory<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' | 'alerts' } | null>('app:' + state.userId, null)
+  const [restAlerts, saveRestAlerts] = useRestAlertPreferences(state.status === 'authenticated' ? state.userId : null)
   const [focused, setFocused] = useState(false)
   const [navigating, setNavigating] = useState(false)
   const navigationPending = useRef(false)
   const localExitGuard = useRef<(() => Promise<boolean>) | null>(null)
+  const restExitGuard = useRef<(() => boolean) | null>(null)
   const settingsTrigger = useRef<HTMLButtonElement | null>(null)
   const settingsScroll = useRef(0)
   const registerExitGuard = useCallback<ExitGuardRegistration>(guard => { localExitGuard.current = guard }, [])
+  const registerRestExit = useCallback((guard: (() => boolean) | null) => { restExitGuard.current = guard }, [])
   const navigate = useCallback(async (next: AppTab) => {
     const before = controller.getSnapshot(), guard = localExitGuard.current
-    if (navigationPending.current || before.status !== 'authenticated' || before.pending !== null || !before.userId) return false
+    if (navigationPending.current || before.status !== 'authenticated' || before.pending !== null || !before.userId || restExitGuard.current?.() === false) return false
     navigationPending.current = true; setNavigating(true)
     try {
       const saved = await (guard?.() ?? Promise.resolve(true))
@@ -43,7 +48,7 @@ export function AuthApp() {
   }, [controller])
   useNavigationGuard(useCallback(async () => {
     const before = controller.getSnapshot(), guard = localExitGuard.current
-    if (before.pending !== null || navigationPending.current) return false
+    if (before.pending !== null || navigationPending.current || restExitGuard.current?.() === false) return false
     const saved = await (guard?.() ?? Promise.resolve(true))
     setLocalExitIssue(!saved)
     return saved && controller.getSnapshot().userId === before.userId && localExitGuard.current === guard
@@ -72,8 +77,9 @@ export function AuthApp() {
   const tab = state.accountOpen ? 'settings' : selection?.userId === state.userId ? selection!.tab : 'home'
   const settingsVisible = authenticated && tab === 'settings' && !state.accountOpen
   const catalogOpen = settingsVisible && selection?.settingsView === 'catalog' && !focused
-  const restOpen = settingsVisible && selection?.settingsView === 'rest' && !focused
-  const settingsMain = settingsVisible && !catalogOpen && !restOpen && !focused
+  const restAlertsOpen = settingsVisible && selection?.settingsView === 'alerts' && !focused
+  const restOpen = tab === 'settings' && !state.accountOpen && (authenticated || state.offlineNetworkFailure) && selection?.settingsView === 'rest' && !focused
+  const settingsMain = settingsVisible && !catalogOpen && !restOpen && !restAlertsOpen && !focused
   useLayoutEffect(() => {
     if (settingsMain && settingsTrigger.current?.isConnected) {
       settingsTrigger.current.focus({ preventScroll: true }); window.scrollTo(0, settingsScroll.current)
@@ -93,10 +99,12 @@ export function AuthApp() {
     {authenticated && tab === 'settings' && <SettingsMain hidden={!settingsMain} busy={busy}
       onAccount={async event => { rememberSettings(event.currentTarget); if (await flushLocal()) void controller.openAccount() }}
       onRest={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'rest' }) }}
+      onRestAlerts={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'alerts' }) }}
       onCatalog={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'catalog' }) }}
       onLogout={() => setDialog('logout')} />}
+    {restAlertsOpen && <RestAlertSettings alerts={restAlerts} onChange={saveRestAlerts} onBack={settingsBack} />}
     <WorkoutWorkspace onExitGuard={registerExitGuard} tab={tab} onNavigate={navigate} onFocusChange={setFocused}
-      catalogOpen={catalogOpen} restOpen={restOpen} onSettingsBack={settingsBack} />
+      catalogOpen={catalogOpen} restOpen={restOpen} onSettingsBack={settingsBack} onRestExitGuard={registerRestExit} />
     {state.status === 'unavailable' && state.offlineNetworkFailure && !state.localWorkoutUserId && <OfflineResume onExitGuard={registerExitGuard} />}
     {localExitIssue && <p className="notice error" role="alert">입력 초안을 이 기기에 저장하지 못해 화면을 유지했습니다. 로컬 저장 오류를 해결한 뒤 다시 시도해 주세요.</p>}
     {dialog && <Dialog title={dialog === 'logout' ? '로그아웃할까요?' : dialog} onClose={() => { if (!busy) setDialog(null) }}>

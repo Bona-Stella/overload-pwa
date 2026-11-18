@@ -35,7 +35,7 @@ import type { AppTab } from '../../app/types.ts'
 import { Metadata, StatusNotice } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { HomePanel } from '../home/HomePanel.tsx'
-import { RestSettings } from '../settings/RestTimeCard.tsx'
+import { RestSettings } from '../settings/RestSettings.tsx'
 
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
   const otherEditor = session.editorDeviceId !== deviceId
@@ -253,9 +253,10 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     </Dialog>}
   </section>
 }
-export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocusChange, catalogOpen = false, restOpen = false, onSettingsBack }: {
+export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocusChange, catalogOpen = false, restOpen = false, onSettingsBack, onRestExitGuard }: {
   onExitGuard?: ExitGuardRegistration; tab?: AppTab; onNavigate?: (tab: AppTab) => Promise<boolean>; onFocusChange?: (focused: boolean) => void
   catalogOpen?: boolean; restOpen?: boolean; onSettingsBack?: () => void
+  onRestExitGuard?: (guard: (() => boolean) | null) => void
 } = {}) {
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
@@ -384,10 +385,11 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     onFocusChange?.(visible && (focused || tab === 'history' && recordFocused || tab === 'routines' && editingRoutine))
     return () => onFocusChange?.(false)
   }, [visible, focused, tab, editingRoutine, recordFocused, onFocusChange])
-  const settingsDetail = !localOnly && !focused && tab === 'settings' && onSettingsBack
-    ? catalogOpen ? <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null} onInvalid={controller.invalidateScope} onBack={onSettingsBack} />
-      : restOpen ? <RestSettings settings={accountReady ? state.data?.settings : undefined} onBack={onSettingsBack} /> : null
-    : null
+  const settingsDetail = onSettingsBack && (restOpen ? <RestSettings key={state.userId + ':' + state.scope?.dataGeneration}
+    settings={state.userId === auth.userId ? state.data?.settings : undefined} hidden={auth.status !== 'authenticated'} busy={!accountReady || state.busy} loadIssue={state.issue}
+    onBack={onSettingsBack} onRequest={controller.requestRestSettings} onExitGuard={onRestExitGuard} />
+    : !localOnly && !focused && tab === 'settings' && catalogOpen
+      ? <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null} onInvalid={controller.invalidateScope} onBack={onSettingsBack} /> : null)
   if (!visible && !preserveDrafts) return settingsDetail
   const editable = session && session.status === 'ACTIVE' && !session.deletedAt && session.editorDeviceId === state.deviceId && state.copySaved && state.data
   const flush = async () => {

@@ -4,8 +4,8 @@ import { CombinationMemoProvider } from '../features/workout-online/CombinationM
 import { reviewRecordSession } from './record-data.ts'
 import { hasActualPerformance } from '../features/home/achievement.ts'
 import { RecordPreview } from './RecordPreview.tsx'
-import { useScreenHistory, navigateTabRoot } from '../app/navigation.ts'
-import { useEffect, useRef, useState } from 'react'
+import { useScreenHistory, useNavigationGuard, navigateTabRoot } from '../app/navigation.ts'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppShell } from '../app/AppShell.tsx'
 import type { AppTab } from '../app/types.ts'
 import { Dialog } from '../components/Dialog.tsx'
@@ -19,7 +19,7 @@ import { RoutineCards } from '../features/workout-online/RoutineCards.tsx'
 import { RoutineDetail } from '../features/workout-online/RoutineDetail.tsx'
 import { RoutineForm } from '../features/workout-online/RoutineForm.tsx'
 import type { Routine } from '../features/workout-online/types.ts'
-import type { RestAlerts } from '../features/workout-flow/types.ts'
+import { defaultRestAlerts } from '../features/workout-flow/rest-alerts.ts'
 import { newId } from '../id.ts'
 import { changedSchedule, mockScheduleWrite, unassignRoutine } from './preset-mock.ts'
 import type { ScheduleCommand } from './preset-mock.ts'
@@ -32,7 +32,7 @@ import { WorkoutReview } from './WorkoutReview.tsx'
 import { WorkoutRecordReview } from './WorkoutRecordReview.tsx'
 import { WorkoutResumeDetails } from './WorkoutResumeDetails.tsx'
 import { useRestAudio } from './useRestAudio.ts'
-import { captureReview, defaultRestAlerts, startReview } from './workout-model.ts'
+import { captureReview, startReview } from './workout-model.ts'
 import type { ReviewRecord, ReviewSession } from './workout-model.ts'
 import { completedReview, editedSession, workoutSample, workoutScenarios } from './workout-samples.ts'
 import type { WorkoutScenario } from './workout-samples.ts'
@@ -98,10 +98,13 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   const [records, setRecords] = useState<ReviewRecord[]>(()=>scenario==='workout-complete'?[completedReview(data)]:[])
   const [recordId, setRecordId] = useState<string | null>(()=>records[0]?.session.id??null)
   const [immediateSummary,setImmediateSummary]=useState(scenario==='workout-complete')
-  const [alerts, setAlerts] = useState<RestAlerts>(defaultRestAlerts)
-  const audio = useRestAudio(alerts.sound)
+  const [alerts, setAlerts] = useState(defaultRestAlerts)
+  const audio = useRestAudio(alerts.sound, alerts.volume)
   const [shortRest, setShortRest] = useState(() => isWorkoutScenario(scenario) || scenario === 'active')
   const inFlight = useRef(false)
+  const restExit = useRef<(() => boolean) | null>(null)
+  const registerRestExit = useCallback((guard: (() => boolean) | null) => { restExit.current = guard }, [])
+  useNavigationGuard(useCallback(() => restExit.current?.() ?? true, []))
   const protectedView = scenario === 'active' || scenario === 'completed'
   const deloadView = scenario === 'active' && !normalView
   const viewed = schedule.presets.find(preset => preset.id === viewedId) ?? schedule.presets.find(preset => preset.id === schedule.activeId)!
@@ -160,6 +163,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
 
   const closeEditor = () => { setEditor(null); setIssue(null) }
   const navigate = (next: AppTab, target?:'history') => {
+    if (restExit.current?.() === false) return
     if (next === 'home' && tab !== 'home') setHomeVisit(visit => visit + 1)
     setIssue(null); setRecordId(null); setImmediateSummary(false); setEditor(null); navigateTabRoot('review-tab', next,target?{['records:'+scope.userId+':'+scope.dataGeneration]:target}:{})
     window.scrollTo(0, 0)
@@ -287,7 +291,11 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
         onClose={closeEditor} onSaved={editor.type === 'new' ? (id, name) => setCreated({ id, name }) : undefined} />}
     </>}
     {tab === 'history' && <RecordPreview days={home.overview.plannedDays} initialPreset={planPreset??undefined} routines={routines} schedule={schedule} sessions={data.sessions} records={records} onReviewRecord={id=>{setImmediateSummary(false);setRecordId(id);window.scrollTo(0,0)}} />}
-    {tab === 'settings' && <SettingsReview alerts={alerts} onAlerts={setAlerts} />}
+    {tab === 'settings' && <SettingsReview alerts={alerts} onAlerts={setAlerts} onRestExitGuard={registerRestExit} takeRestSaveFailure={() => {
+      if (fault !== 'network') return false
+      setFault('none')
+      return true
+    }} />}
     {modal?.type === 'rename' && modalPreset && <Dialog title="주간 일정 이름 변경" onClose={() => !busy && setModal(null)}>
       <form className="stack" onSubmit={async event => {
         event.preventDefault()
