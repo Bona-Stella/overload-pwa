@@ -392,7 +392,24 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('앱 설치 · 오프라인 준비', 'textContent', 'summary strong')
     await click('내 계정', 'ariaLabel', settingsPage + ' button')
     assert.match(await body(), /대표 재인증 이메일/)
-    await click('‹ 설정으로')
+    const accountPage = 'section[aria-label="계정 설정"]'
+    for (const width of [320, 375, 393, 430, 1280]) {
+      await verifyWidth(width)
+      assert.ok(await evaluate(`(() => {
+        const account = document.querySelector('${accountPage}')
+        const bounds = account.getBoundingClientRect()
+        return bounds.left >= 0 && bounds.right <= innerWidth &&
+          [...account.querySelectorAll('.app-card')].every(card => card.scrollWidth <= card.clientWidth && getComputedStyle(card).borderRadius === '5px')
+      })()`), 'account detail fits ' + width)
+    }
+    assert.match(await body(), /이메일 로그인.*연결됨.*Google 로그인.*미연결/s)
+    await set('main label select', 'both')
+    assert.match(await body(), /이메일 로그인.*연결됨.*Google 로그인.*연결됨/s)
+    await set('main label select', 'google')
+    assert.match(await body(), /이메일 로그인.*미연결.*Google 로그인.*연결됨/s)
+    await set('main label select', 'email')
+    await verifyWidth(393)
+    await click('설정으로', 'ariaLabel')
     assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '내 계정')
     await click('세트 사이 휴식', 'textContent', settingsItem + ' strong')
     assert.match(await body(), /검토용 예시 휴식 시간입니다/)

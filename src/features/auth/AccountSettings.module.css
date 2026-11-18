@@ -1,0 +1,31 @@
+.page { display: grid; gap: 16px; min-width: 0; margin-inline: calc(12px - var(--space-page)); }
+.page .card { display: grid; gap: 12px; min-width: 0; border-radius: 5px; padding: 12px; }
+.page h2 { font-size: 15px; margin: 0; }
+.heading, .item { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.heading > .status, .item > .status { margin-inline-start: auto; }
+.itemText { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.itemText strong { font-size: 14px; font-weight: 650; }
+.itemText small, .note, .status { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
+.icon { width: 15px; height: 15px; flex: none; }
+.iconBox {
+  display: grid; place-items: center; width: 36px; height: 36px; flex: none;
+  border-radius: 10px; background: var(--surface-input); color: #9fbce3; font-weight: 750;
+}
+.iconBox .icon { width: 18px; height: 18px; }
+.status { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.status[data-positive] { color: var(--status-done); }
+.status .icon, .note .icon { width: 12px; height: 12px; }
+.note { display: flex; align-items: baseline; gap: 7px; margin: 0; }
+.note .icon { align-self: start; margin-top: 3px; }
+.provider { display: grid; gap: 10px; min-width: 0; }
+.provider + .provider, .divider { padding-top: 12px; border-top: 1px solid var(--border-subtle); }
+.actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.page .action, .page .refresh {
+  display: inline-flex; justify-content: center; align-items: center; gap: 7px; width: 100%; min-width: 0;
+  min-height: 44px; padding: 6px 8px; border: 1px solid var(--hero-border); border-radius: 5px;
+  font-size: 13px; overflow-wrap: anywhere;
+}
+.page .action[data-connect] { background: #2b3a51; border-color: #466388; }
+.page .action:disabled { background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-muted); }
+.page .refresh { background: var(--surface-card); border-color: var(--border-subtle); }
+.page .devices { align-content: center; min-height: 64px; }

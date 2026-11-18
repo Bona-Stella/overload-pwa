@@ -123,7 +123,7 @@ test('account loading and retryable lookup failure are distinct and contain no p
 
 test('identity management keeps VERIFIED contact separate and offers explicit actions without raw identifiers',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}})
-  for(const label of ['이메일 로그인 연결','Google 로그인 추가 연결','Google 로그인 해제','대표 재인증 이메일과 로그인 수단은 별도','서버가 최종 검사'])assert.ok(html.includes(label),label)
+  for(const label of ['이메일 로그인 연결','Google 로그인 추가 연결','Google 계정 연결 해제','대표 재인증 이메일과 로그인 수단은 별도','서버가 최종 검사'])assert.ok(html.includes(label),label)
   assert.doesNotMatch(html,new RegExp(ID));assert.doesNotMatch(html,/type="email"/)
 })
 test('Google LINK renders fixed form POST containing only CSRF and never identityId or returnUrl',()=>{
@@ -138,7 +138,20 @@ for(const provider of ['email','google'])test(`${provider} unlink confirmation e
 })
 test('multiple same-provider identities expose neither guessed addresses nor an arbitrary unlink button',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'},{id:'50000000-1111-4222-8333-000000000005',provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}})
-  assert.match(html,/2개 연결됨|개별 계정을 구별할 수 없어/);assert.doesNotMatch(html,/Google 로그인 해제|sub=|example\.test/)
+  assert.match(html,/2개 연결됨|개별 계정을 구별할 수 없어/);assert.doesNotMatch(html,/Google 계정 연결 해제|sub=|example\.test/)
+})
+test('account settings disables the last identity and exposes both unlink actions when two are listed', () => {
+  const email = { id: ID, provider: 'email' }
+  const google = { id: '50000000-1111-4222-8333-000000000005', provider: 'google' }
+  for (const identities of [[email], [google], [email, google]]) {
+    const markup = accountHtml({ identities, contact: { status: 'VERIFIED', maskedEmail: 'a***@***' } })
+    const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)
+    const unlink = buttons.filter(button => />(?:Google 계정 )?연결 해제<\/button>/.test(button))
+    assert.equal(unlink.length, identities.length)
+    assert.ok(unlink.every(button => /\bdisabled\b/.test(button) === (identities.length === 1)))
+    assert.match(markup, /서버 이력 확인 불가.*로그인된 기기 관리.*미구현.*계정 정보 새로 확인/s)
+    assert.doesNotMatch(markup, /\d대/)
+  }
 })
 test('server proof refusal links to the existing email reauthentication section without adding a second OTP form',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}},{issue:{code:'EMAIL_OWNERSHIP_PROOF_REQUIRED',message:'재인증 필요'}})
