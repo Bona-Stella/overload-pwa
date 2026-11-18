@@ -155,6 +155,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
       flash={remaining > 0 && remaining <= 5}
       timerHeading={timerHeading} timerLabel={timerLabel} timer={timer} clockRef={clock}
       navigation={weight && !warmup ? { previous: items[index - 1], next: items[index + 1], onGo: go } : undefined}
+      cardioFocus={!!activity && !warmup}
       onHome={onHome} onEnd={requestEnd} actions={actions}
       reviewNote={statusNote}>
       <fieldset disabled={blocked} className={styles.controls}>
@@ -190,8 +191,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
                 <Button variant="danger" disabled={weight.sets.some(s => !!s.result) || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
               </Card></>} />}
           {activity && <CardioFocus cardio={activity} activeMs={activity.activeMs} navigation={navigation} issue={issue} editing={editing}
-            weightProgress={`웨이트 ${weights.reduce((n, w) => n + w.sets.filter(s => s.result).length, 0)}/${weights.reduce((n, w) => n + (w.plannedCount ?? w.sets.length), 0)}세트`}
-            cardioProgress={`유산소 완료 ${cardio.filter(c => c.phase === 'completed' || c.phase === 'skipped').length}/${cardio.length}종목`}
             onEdit={() => setEditing(v => !v)} onUndo={() => setModal('undo-cardio')}
             onDraft={patch => controller.cardioDraft(id, patch)}
             onCancelReview={() => void act(w => { if (w.timers[id]) w.timers[id].reviewing = false })}

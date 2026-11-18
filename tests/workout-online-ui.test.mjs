@@ -190,7 +190,8 @@ const closedState=pair=>({...pair,changes:{events:[]},copies:[],pending:null,bus
 const endView=pair=>render(ClosedWorkoutView,{state:closedState(pair),controller:{},summary:true,onBack(){}})
 test('summary restores WEIGHT and CARDIO below the weight review, removes only the redundant heading and keeps actual values',()=>{
   const pair=reviewedSession(),before=structuredClone(pair.server),html=endView(pair)
-  assert.match(html,/운동 기록 요약/);assert.match(html,/10\/31 · 토 · 21:00/);assert.match(html,/전체 루틴 완료/)
+  assert.match(html,/<h1[^>]*>운동 기록 요약<\/h1>/);assert.match(html,/10\.31 · 토 · 21:00–21:30/);assert.match(html,/전체 루틴 완료/)
+  assert.match(html,/aria-label="홈으로"/);assert.match(html,/<h2>기록 보존 안내<\/h2>/)
   assert.match(html,/3\/3세트/);assert.match(html,/45kg →/);assert.match(html,/기준 40kg · 6–10회 × 3세트/)
   assert.match(html,/45kg × 12회/);assert.match(html,/1,665kg/)
   assert.doesNotMatch(html,/운동 수행<|이번 수행|유지 검토|기록 정정·복구 및 서버 평가 상세|운동 기록 메뉴/)

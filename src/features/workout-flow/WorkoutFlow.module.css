@@ -104,11 +104,19 @@
 .exerciseOrderRow .listSelect { min-width: 0; width: 100%; text-align: left; padding: 5px 8px; }
 .exerciseOrderRow .listSelect[aria-current] { border-color: var(--accent); background: var(--accent-soft); }
 .listSelect small { display: block; color: var(--text-muted); }
-.phase { justify-self: start; padding: 2px 8px; color: var(--accent); background: var(--accent-soft); border-radius: 6px; font-size: 12px; }
-.cardioClock { text-align: center; gap: 4px; }
-.cardioClock strong { font-size: 34px; line-height: 1.3; }
-.checkbox { display: flex; align-items: center; gap: 8px; min-height: 44px; }
-.checkbox input { width: 24px; height: 24px; min-height: 0; margin: 0; }
+.flow[data-cardio-focus] { gap: 12px; }
+.flow[data-cardio-focus] .clock { grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: var(--radius-card); padding-block: 12px; }
+.flow[data-cardio-focus] .clock > div { padding-block: 0; }
+.flow[data-cardio-focus] .clock > div > strong { font-size: clamp(12px, 4vw, 16px); }
+.flow[data-cardio-focus] .clock > div:nth-child(2) strong { white-space: normal; }
+.flow[data-cardio-focus] .segments { width: min(75%, 76px); }
+.flow[data-cardio-focus] .segments span { height: 3px; }
+.flow[data-cardio-focus] .topNav { padding-bottom: 12px; }
+.flow[data-cardio-focus] .topNav > button:last-child { color: var(--status-danger-text); }
+.flow[data-cardio-focus] .exerciseNav { align-items: center; }
+.flow[data-cardio-focus] .footer { background: var(--surface-card); padding-block: 12px calc(12px + env(safe-area-inset-bottom)); }
+.flow[data-cardio-focus] .footer button { min-height: 48px; border-radius: 12px; font-size: 14px; }
+.flow[data-cardio-focus] .footer .actions > :global(.outline) { background: var(--surface-input); }
 .summary > button:first-child { justify-self: start; }
 .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
 .metrics dt { font-size: 11px; color: var(--text-muted); }
@@ -196,9 +204,6 @@
 :global([data-approval-direction='decrease']) {color:var(--status-warning);}
 
 .summary .reviewButton {width:72px;height:36px;min-height:36px;padding:4px 6px;font-size:12px;font-weight:650;line-height:1.2;white-space:nowrap;border:1px solid var(--border-subtle);border-radius:var(--radius-control);}
-.cardioDetails {font-family:var(--font-family-app);font-size:14px;line-height:1.6;font-variant-numeric:tabular-nums;}
-.cardioDetails p {font-size:14px;}
-.cardioDetails :global(.muted),.cardioDetails small {font-size:12px;}
 .cardioActual {font-family:var(--font-family-app);font-size:14px;line-height:1.6;font-variant-numeric:tabular-nums;}
 
 .summary .summaryHeader {gap:8px;}

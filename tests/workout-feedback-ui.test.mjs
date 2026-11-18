@@ -109,13 +109,26 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     for(const width of [320,393,1280]){
       await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})
       await new Promise(r=>setTimeout(r,80))
-      const values=await evaluate(`(()=>{const heads=[...document.querySelectorAll('[class*="recordHead"]')];return{overflow:document.documentElement.scrollWidth>innerWidth,headings:heads.map(h=>{const a=getComputedStyle(h.firstElementChild),b=getComputedStyle(h.lastElementChild),r=h.firstElementChild.getBoundingClientRect(),g=h.nextElementSibling.getBoundingClientRect();return{font:a.fontSize===b.fontSize,weight:a.fontWeight===b.fontWeight,nowrap:b.whiteSpace,gap:g.top-r.bottom,margin:a.marginTop,total:h.lastElementChild.textContent}}),counts:[...document.querySelectorAll('[data-weight-review]')].map(r=>r.querySelectorAll('[data-direction]').length)}})()`)
+      const values=await evaluate(`(()=>{
+        const headings=[...document.querySelectorAll('[aria-label="웨이트 수행"] [class*="recordHead"]')]
+        return {overflow:document.documentElement.scrollWidth>innerWidth,
+          headings:headings.map(h=>{
+            const name=h.firstElementChild.getBoundingClientRect(),total=h.lastElementChild.getBoundingClientRect()
+            const row=h.getBoundingClientRect(),goal=h.nextElementSibling.getBoundingClientRect()
+            return {fits:total.right<=row.right+.5 && (name.right<=total.left+.5 || name.bottom<=total.top+.5),
+              goalBelow:goal.top>=Math.max(name.bottom,total.bottom),
+              number:h.querySelector('[class*="number"]').textContent, totals:h.lastElementChild.textContent}
+          }),
+          counts:[...document.querySelectorAll('[data-weight-review]')].map(r=>r.querySelectorAll('[data-direction]').length)}
+      })()`)
       assert.equal(values.overflow,false);assert.deepEqual(values.counts,[4,2,1])
-      assert(values.headings.every(h=>h.font&&h.weight&&h.nowrap==='nowrap'&&h.margin==='0px'&&h.gap<=4&&h.gap>=0))
+      assert.deepEqual(values.headings.map(h=>h.number),['01','02','03'])
+      assert(values.headings.every(h=>h.fits&&h.goalBelow&&/세트 · 총 .*kg/.test(h.totals)))
       await writeFile(resolve(directory,'integrated-record-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
     }
     assert.deepEqual(await evaluate('(()=>{const root=document.querySelector(".app-shell"),font=getComputedStyle(root).fontFamily;return [...root.querySelectorAll("*")].filter(e=>e.getClientRects().length&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&getComputedStyle(e).fontFamily!==font).map(e=>e.textContent.slice(0,60))})()'),[],'WEIGHT/CARDIO summary fonts')
-    assert.match(await evaluate('document.querySelector("[aria-label=\\\"유산소 수행\\\"]").textContent'),/정정한 활동 시간 00:20:30/,'summary displays rounded seconds')
+    assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"] [class*="cardioTime"]\').textContent'),/수정00:20:30$/,'summary displays the correction badge and rounded seconds')
+    assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"]\').textContent'),/자동 기록 00:20:00/)
     await evaluate("window.feedback.record('detail')")
     await wait(()=>evaluate('!!document.querySelector("summary[aria-label=\\\"운동 기록 메뉴\\\"]")'))
     await evaluate('document.querySelector("summary").click()');await click('기록 정정')

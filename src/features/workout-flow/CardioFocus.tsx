@@ -1,13 +1,15 @@
 
+import { useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { DurationWheel } from '../../components/DurationWheel.tsx'
 import { Button, Card } from '../../components/ui.tsx'
-import { cardioPlanLabel } from '../home/model.ts'
+import { roundedDurationMs } from '../../components/duration.ts'
 import { formatDuration } from '../workout/model.ts'
 import { distanceLabel } from '../workout-online/cardio-measurement.ts'
 import { cardioPhaseLabel } from './types.ts'
 import type { ActualCardio, CardioDraft, CardioFocusData } from './types.ts'
 import styles from './WorkoutFlow.module.css'
+import cardioStyles from './CardioFocus.module.css'
 
 export function CardioActual({ result }: { result: ActualCardio }) {
   return <div className={styles.cardioActual}>
@@ -18,46 +20,120 @@ export function CardioActual({ result }: { result: ActualCardio }) {
   </div>
 }
 
-export function CardioFocus({ cardio, activeMs, weightProgress, cardioProgress, navigation, issue, editing, editTools, onEdit, onDraft, onCancelReview, onUndo }: {
-  cardio: CardioFocusData; activeMs: number; weightProgress: string; cardioProgress: string; navigation: ReactNode; issue: ReactNode
+function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel }: {
+  draft: CardioDraft; activeMs: number; motion: boolean; issue: ReactNode
+  onDraft: (value: Partial<CardioDraft>) => void; onCancel: () => void
+}) {
+  const [seconds, setSeconds] = useState<string | null>(null)
+  const editButton = useRef<HTMLButtonElement>(null)
+  const editorId = useId()
+  const measurementNoteId = useId()
+  const measuredSeconds = String(roundedDurationMs(activeMs))
+  const recordMs = draft.correctedSeconds === null ? activeMs : Number(draft.correctedSeconds) * 1000
+  const modified = draft.correctedSeconds !== null && Number(draft.correctedSeconds) !== Number(measuredSeconds)
+  const closeEditor = () => { setSeconds(null); editButton.current?.focus() }
+
+  return <Card className={cardioStyles.card}>
+    <div className={cardioStyles.reviewHeading}>
+      <h2>완료 기록 확인</h2>
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M7 4H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-2M8 11l1.5 1.5L13 9" />
+        <rect x="7" y="2.5" width="6" height="4" rx="1" />
+      </svg>
+    </div>
+    <div className={cardioStyles.recordedTime}>
+      <span>실제 활동 시간</span>
+      <strong data-modified={modified || undefined}>
+        {formatDuration(recordMs)}{modified && <small>수정됨</small>}
+      </strong>
+      <button ref={editButton} type="button" className={`quiet ${cardioStyles.editTime}`} aria-label="실제 활동 시간 수정"
+        aria-expanded={seconds !== null} aria-controls={seconds !== null ? editorId : undefined}
+        onClick={() => setSeconds(seconds === null ? draft.correctedSeconds ?? measuredSeconds : null)}>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m5 11.5-1 4.5 4.5-1L16 7.5 12.5 4zM11 5.5 14.5 9" />
+        </svg>
+      </button>
+    </div>
+    {seconds !== null && <div id={editorId} className={cardioStyles.timeEditor}>
+      <DurationWheel seconds={seconds} onChange={setSeconds} />
+      <div className={styles.actions}>
+        <Button onClick={closeEditor}>시간 수정 취소</Button>
+        <Button variant="primary" onClick={() => {
+          onDraft({ correctedSeconds: seconds === measuredSeconds ? null : seconds })
+          closeEditor()
+        }}>시간 적용</Button>
+      </div>
+    </div>}
+    <div className={cardioStyles.measurements}>
+      <label>실제 거리 (km)<input inputMode="decimal" placeholder={motion ? '선택 입력' : '지원하지 않음'} disabled={!motion} aria-describedby={measurementNoteId}
+        value={draft.distance} onChange={event => onDraft({ distance: event.target.value })} /></label>
+      <label>실제 평균 속도 (km/h)<input inputMode="decimal" placeholder={motion ? '선택 입력' : '지원하지 않음'} disabled={!motion} aria-describedby={measurementNoteId}
+        value={draft.speed} onChange={event => onDraft({ speed: event.target.value })} /></label>
+      <label>평균 심박수 (BPM)<input inputMode="numeric" placeholder="선택 입력"
+        value={draft.bpm} onChange={event => onDraft({ bpm: event.target.value })} /></label>
+      <label>실제 경사도 (%)<input inputMode="decimal" placeholder="저장 미지원" disabled /></label>
+    </div>
+    <small className={cardioStyles.measurementNote} id={measurementNoteId}>{motion
+      ? '평균 속도를 입력하고 거리를 비우면 활동 시간을 기준으로 거리를 계산합니다.'
+      : '이 종목은 거리와 평균 속도 기록을 지원하지 않습니다.'}</small>
+    {issue}
+    <div className={cardioStyles.reviewActions}>
+      <Button onClick={onCancel}>완료 취소 · 일시정지로 돌아가기</Button>
+    </div>
+  </Card>
+}
+
+export function CardioFocus({ cardio, activeMs, navigation, issue, editing, editTools, onEdit, onDraft, onCancelReview, onUndo }: {
+  cardio: CardioFocusData; activeMs: number; navigation: ReactNode; issue: ReactNode
   editing: boolean; editTools: ReactNode; onEdit: () => void; onDraft: (value: Partial<CardioDraft>) => void
   onCancelReview: () => void; onUndo: () => void
 }) {
   const { plan, phase, draft, result } = cardio
   const motion = ['TREADMILL', 'BIKE', 'OUTDOOR'].includes(plan.kind)
+  const pace = plan.intensity?.mode === 'PACE'
+  const wholeMinutes = plan.targetSeconds % 60 === 0
+  const goals = [
+    { label: '목표 시간', value: wholeMinutes ? plan.targetSeconds / 60 : plan.targetSeconds, unit: wholeMinutes ? '분' : '초' },
+    { label: '목표 거리', value: plan.targetDistanceKm, unit: 'km' },
+    { label: pace ? '목표 페이스' : '목표 속도', value: plan.intensity?.value ?? null, unit: pace ? '분/km' : 'km/h' },
+  ]
+  const measurementStatus = {
+    ready: '시작하면 측정이 진행돼요', running: '측정 중', paused: '측정 일시정지',
+    review: '측정 종료', completed: '측정 종료', skipped: '미수행 · 명시적으로 건너뜀',
+  }[phase]
   return <>
-    <section className={styles.focus}>
-      <p className="muted small">{weightProgress} · {cardioProgress}</p>
-      <p className={styles.eyebrow}>CARDIO</p>
-      <h1>{plan.name}</h1><span className={styles.phase}>{cardioPhaseLabel[phase]}</span>
-    </section>
+    <header className={cardioStyles.heading}>
+      <p>CARDIO</p>
+      <span className={cardioStyles.phase} data-phase={phase} role="status">
+        {phase === 'paused' ? '일시정지' : phase === 'review' ? '완료 확인' : cardioPhaseLabel[phase]}
+      </span>
+      <h1>{plan.name}</h1>
+    </header>
     {navigation}
-    <Card className={styles.cardioDetails}><h2>당시 계획</h2><p>목표 {cardioPlanLabel(plan)}</p>
-      {(plan.inclinePercent !== null || plan.resistance !== null) && <p className="muted small">{plan.inclinePercent !== null ? `경사 ${plan.inclinePercent}%` : `저항 ${plan.resistance}`}</p>}
+    <Card className={cardioStyles.card}>
+      <h2>당시 계획</h2>
+      <dl className={cardioStyles.goals}>{goals.map(({ label, value, unit }) => <div key={label}>
+        <dt>{label}</dt><dd>{value ?? '—'}{value !== null && <small>{unit}</small>}</dd>
+      </div>)}</dl>
+      {(plan.inclinePercent !== null || plan.resistance !== null) && <small className="muted">{plan.inclinePercent !== null ? `경사 ${plan.inclinePercent}%` : `저항 ${plan.resistance}`}</small>}
     </Card>
-    <Card hero className={styles.cardioClock+' '+styles.cardioDetails}>
-      <p>{phase === 'skipped' ? '미수행 · 명시적으로 건너뜀' : phase === 'ready' ? '시작을 눌러야 측정합니다' : '실제 활동 시간 · 일시정지 제외'}</p>
+    <Card className={`${cardioStyles.card} ${cardioStyles.timer}`}>
+      <p>
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+          <circle cx="10" cy="11.5" r="5.5" /><path d="M8 3h4m-2 5v4m4-5 1-1" />
+        </svg>
+        {phase === 'ready' || phase === 'skipped' ? '실제 활동 시간' : '실제 활동 시간 · 일시정지 제외'}
+      </p>
       <strong>{phase === 'skipped' ? '—' : formatDuration(result?.activeMs ?? activeMs)}</strong>
-      {phase === 'paused' && <small>재개 전까지 활동 시간이 멈춥니다.</small>}
-      {!result && activeMs >= plan.targetSeconds * 1000 && <small>목표 시간 도달 · 완료 확인으로 이동할 수 있습니다.</small>}
+      <small className={cardioStyles.timerStatus} data-phase={phase}>{measurementStatus}</small>
     </Card>
-    {phase === 'review' && <Card className={styles.cardioDetails}>
-      <h2>완료 기록 확인</h2><p>타이머 자동 기록 · {formatDuration(activeMs)}</p>
-      {motion && <>
-        <label>실제 거리 (km, 선택)<input inputMode="decimal" value={draft.distance} onChange={event => onDraft({ distance: event.target.value })} /></label>
-        <label>실제 속도 (km/h, 선택)<input inputMode="decimal" value={draft.speed} onChange={event => onDraft({ speed: event.target.value })} /></label>
-        <small className="muted">거리를 비우고 속도를 입력하면 활동 시간으로 거리를 계산합니다.</small>
-      </>}
-      <label>평균 심박수 (BPM, 선택)<input inputMode="numeric" value={draft.bpm} onChange={event => onDraft({ bpm: event.target.value })} /></label>
-      <label className={styles.checkbox}><input type="checkbox" checked={draft.correctedSeconds !== null}
-        onChange={event => onDraft({ correctedSeconds: event.target.checked ? String(Math.max(1, Math.round(activeMs / 1000))) : null })} />실제 시간 정정</label>
-      {draft.correctedSeconds !== null && <DurationWheel seconds={draft.correctedSeconds} onChange={correctedSeconds=>onDraft({correctedSeconds})}/>}
-      {issue}
-      <Button onClick={onCancelReview}>완료 취소 · 일시정지로 돌아가기</Button>
-    </Card>}
-    {result && <Card className={styles.cardioDetails}><h2>실제 완료 기록</h2><CardioActual result={result} />
+    {phase === 'review' && <CardioReview key={cardio.id} draft={draft} activeMs={activeMs} motion={motion}
+      issue={issue} onDraft={onDraft} onCancel={onCancelReview} />}
+    {result && <Card className={cardioStyles.card}><h2>실제 완료 기록</h2><CardioActual result={result} />
       <Button onClick={onUndo}>유산소 완료 취소</Button></Card>}
-    <Button aria-expanded={editing} onClick={onEdit}>{editing ? '임시 편집 닫기' : '현재 세션에서 종목 변경 · 유산소 추가'}</Button>
+    <Button className={cardioStyles.editSession} aria-expanded={editing} onClick={onEdit}>
+      {editing ? '임시 편집 닫기' : '현재 세션에서 종목 변경 · 유산소 추가'}
+    </Button>
     {editing && editTools}
   </>
 }

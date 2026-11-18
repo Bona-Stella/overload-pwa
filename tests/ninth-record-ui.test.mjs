@@ -99,6 +99,35 @@ test('detail uses three columns, actual six values and frozen approvals without 
  const pending=render(WeightReview,{weights:[{id:E,name:'운동',results:[],review:{...review,approval:undefined}}],readOnly:true})
  assert.match(pending,/30kg/);assert.match(pending,/미승인/)
 })
+test('immediate summary uses the applied set count and shows only saved cardio measurements',()=>{
+ const s=mixedRecord(),state=s.snapshot.state
+ state.appliedPlan.weightExercises[0].setCount=4
+ state.cardioResults[0].result.measurement={actualSpeedKmh:'7.5',distanceSource:'MANUAL'}
+ const renderSummary=()=>render(WorkoutSummary,{...summaryData(s,null),manufacturers:[],onBack(){}})
+ const mixed=renderSummary()
+ assert.match(mixed,/<h1[^>]*>운동 기록 요약<\/h1>/)
+ assert.match(mixed,/10\.31 · 토 · 21:00–22:10/)
+ assert.match(mixed,/총 3\/4세트 · 총 750kg/)
+ assert.match(mixed,/총 1\/1종목/)
+ assert.match(mixed,/직접 입력 거리 2.5 km/)
+ assert.match(mixed,/실제 평균 속도 7.5/)
+ assert.doesNotMatch(mixed,/평균 심박|경사도|운동 기록 메뉴/)
+
+ s.initialPlan.weightExercises=[]
+ state.appliedPlan.weightExercises=[]
+ state.sessionExercises=state.sessionExercises.filter(e=>e.kind==='CARDIO')
+ state.performedSets=[]
+ assert.doesNotMatch(renderSummary(),/aria-label="웨이트 수행"/)
+ assert.match(renderSummary(),/aria-label="유산소 수행"/)
+
+ const weightOnly=mixedRecord()
+ weightOnly.initialPlan.cardioActivities=[]
+ weightOnly.snapshot.state.appliedPlan.cardioActivities=[]
+ weightOnly.snapshot.state.cardioResults=[]
+ const weightHtml=render(WorkoutSummary,{...summaryData(weightOnly,null),manufacturers:[],onBack(){}})
+ assert.match(weightHtml,/aria-label="웨이트 수행"/)
+ assert.doesNotMatch(weightHtml,/aria-label="유산소 수행"/)
+})
 test('only the catalog opts into initially open results and tags',()=>{
  const props={query:'',onQuery:()=>{},options:[],onSelect:()=>{},onClear:()=>{},tags:{label:'운동 부위',selected:'ALL',options:[{id:'ALL',name:'전체'}],onSelect:()=>{}}}
  assert.doesNotMatch(render(SearchList,props),/운동 부위 필터/)

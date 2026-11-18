@@ -198,6 +198,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     <WorkoutFrame routine={session.initialPlan.routineName} deload={session.deload}
       clockRef={clockRef}
       navigation={weight && !warmup ? { previous: items[index - 1], next: items[index + 1], onGo: go } : undefined}
+      cardioFocus={!!activity && !warmup}
       reviewNote={<aside className="muted small" aria-label="검토용 세션">UI 검토 · 합성 데이터{shortRest ? ' · 휴식 12초 시연' : ''}</aside>}
       elapsed={Math.max(0, now - session.startedAt)} position={warmup ? 0 : index + 1} count={items.length}
       timerHeading={timerHeading} timerLabel={timerLabel} timer={timer}
@@ -228,8 +229,6 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
             </Card>
           </>} />}
         {activity && <CardioFocus cardio={activity} activeMs={cardioElapsed(activity, now)}
-          weightProgress={`웨이트 ${weights.reduce((sum, w) => sum + doneCount(w), 0)}/${weights.reduce((sum, w) => sum + w.sets.length, 0)}세트`}
-          cardioProgress={`유산소 완료 ${cardio.filter(c => c.phase === 'completed').length}/${cardio.length}종목`}
           navigation={navigation} issue={issueView} editing={editing} onEdit={() => setEditing(value => !value)}
           onDraft={draft => { updateCardio({ ...activity, draft: { ...activity.draft, ...draft } }); setIssue('') }}
           editTools={<Card>
