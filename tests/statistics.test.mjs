@@ -96,7 +96,11 @@ test('weekly muscle statistics preserves exact contributions and does not preten
   assert.equal(analysis.muscles.find(m=>m.name==='대퇴사두근').planned,null)
   assert(analysis.groups.every(g=>g.actual===null))
   const html=renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'muscles',onScreen(){},onOpen(){},onHistory(){}}))
-  assert.match(html,/주간 근육 통계/);assert.match(html,/이번 주 월~일/)
+  assert.match(html,/주간 근육 통계/)
+  const periodRow = html.match(/<div[^>]*aria-label="이번 주 조회 기간"[^>]*>(.*?)<\/div>/s)?.[1]
+  assert.ok(periodRow, 'weekly date range')
+  assert.match(periodRow, /<time dateTime="2026-10-26">10\.26<\/time>.*<time dateTime="2026-11-01">11\.01<\/time>.*<small>이번 주<\/small>/s)
+  assert.doesNotMatch(periodRow, /<(?:button|input|select|a)\b|role="button"|tabindex=/)
   assert.match(html,/당시 계획 확인 필요/);assert.doesNotMatch(html,/>주간<|>월간<|type="date"/)
 })
 
