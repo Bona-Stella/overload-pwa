@@ -10,20 +10,22 @@ type Props = {
   label: string; value: string; onChange: (value: string) => void; disabled?: boolean; unit: string
   adjust: (value: string, direction: -1 | 1) => string | null
   validate: (value: string) => string; start: string; stepLabel?: string; plainSteps?: boolean; hideSteps?: boolean
+  compactStepper?: boolean; stepAdjust?: Props['adjust']
 }
 
-export function NumberWheel({ label, value, onChange, disabled, unit, adjust, validate, start, stepLabel = '', plainSteps, hideSteps }: Props) {
+export function NumberWheel({ label, value, onChange, disabled, unit, adjust, validate, start, stepLabel = '', plainSteps, hideSteps, compactStepper, stepAdjust = adjust }: Props) {
   const [seed, setSeed] = useState<string | null>(null)
   const change = (direction: -1 | 1) => {
-    const next = adjust(value, direction)
+    const next = stepAdjust(value, direction)
     if (next !== null) onChange(next)
   }
-  return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''} ${hideSteps ? styles.hideSteps : ''}`} role="group" aria-label={label}>
-    {!hideSteps&&<Button aria-label={label + ' 감소'} disabled={disabled || adjust(value, -1) === null} onClick={() => change(-1)}>−{stepLabel}</Button>}
-    <Button aria-label={label} disabled={disabled} onClick={() => setSeed(value || start)}>
-      {value || '입력'}{value && <small> {unit}</small>}
+  const display = <>{value || '입력'}{value && <small> {unit}</small>}</>
+  return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''} ${hideSteps ? styles.hideSteps : ''} ${compactStepper ? styles.compactStepper : ''}`} role="group" aria-label={label}>
+    {!hideSteps&&<Button aria-label={label + ' 감소'} disabled={disabled || stepAdjust(value, -1) === null} onClick={() => change(-1)}>−{stepLabel}</Button>}
+    <Button className={compactStepper ? styles.valueButton : undefined} aria-label={label} disabled={disabled} onClick={() => setSeed(value || start)}>
+      {compactStepper ? <><span>{display}</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="m3 4.5 3 3 3-3" /></svg></> : display}
     </Button>
-    {!hideSteps&&<Button aria-label={label + ' 증가'} disabled={disabled || adjust(value, 1) === null} onClick={() => change(1)}>+{stepLabel}</Button>}
+    {!hideSteps&&<Button aria-label={label + ' 증가'} disabled={disabled || stepAdjust(value, 1) === null} onClick={() => change(1)}>+{stepLabel}</Button>}
     {seed !== null && <WheelDialog label={label} seed={seed} value={value} unit={unit} adjust={adjust}
       validate={validate} onChange={onChange} onClose={() => setSeed(null)} />}
   </div>

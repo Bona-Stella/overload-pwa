@@ -145,8 +145,8 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
   const renameStale = renaming && (renaming.base.version !== schedule?.version || renaming.version !== latestName?.version)
-  const showToolbar = !editor?.readOnly || !!training.issue
-  return <section className={`stack workout-online ${editor?.readOnly ? detailStyles.workspace : ''}`}
+  const showToolbar = !editor || !!training.issue
+  return <section className={`stack workout-online ${editor ? detailStyles.workspace : ''}`}
     aria-labelledby={showToolbar ? 'online-title' : undefined} aria-label={showToolbar ? undefined : '루틴'}>
     {showToolbar && <div className="section-heading"><span id="online-title" className="muted small">ROUTINES</span>
       <button type="button" className="quiet" disabled={busy} onClick={() => { training.refresh(); if (!focused) void controller.refresh() }}>다시 조회</button></div>}

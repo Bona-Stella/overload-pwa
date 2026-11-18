@@ -154,10 +154,11 @@ test('other editor is read only; AUTO_CLOSED does not claim a user finish or off
   const auto=render(SessionView,{session:session({status:'AUTO_CLOSED',closedAt:'2026-11-01T12:00:00Z'}),deviceId:DEVICE,saved:true,busy:false,onRefresh(){}})
   assert.match(auto,/서버 자동 종료/);assert.doesNotMatch(auto,/<input|복구 확인<|완료한 운동입니다/)
 })
-test('routine form keeps original weight separate and requires explicit approval; schedule and evaluation algorithms are absent',()=>{
+test('routine editor shows a single weight stepper and leaves approval to explicit save confirmation',()=>{
   const html=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,busy:false,controller:{},onClose(){}})
-  assert.match(html,/최초 0 kg/);assert.match(html,/현재 승인 99999999999999.999999 kg/);assert.match(html,/루틴 저장으로 새 중량 승인/)
-  assert.doesNotMatch(html,/structureModified|자동 증량|새 승인 중량 \(kg\)/)
+  assert.match(html,/aria-label="설정 중량".*99999999999999\.999999/)
+  assert.match(html,/<footer[^>]*><button type="button"[^>]*>취소<\/button><button[^>]*>변경 사항 저장<\/button>/)
+  assert.doesNotMatch(html,/structureModified|자동 증량|최초 0 kg|현재 승인|type="checkbox"|새 승인 중량 \(kg\)/)
 })
 test('server strings are escaped, and the local-save warning never claims workout recording is ready',()=>{
   const value=session();value.initialPlan.routineName='<img src=x onerror=alert(1)>'
@@ -170,7 +171,7 @@ test('standard routine UI shows catalog search and optional equipment without pe
   assert.match(html,/aria-expanded="false"/);assert.match(html,/웨이트 종목 추가/);assert.doesNotMatch(html,/role="combobox"/)
   assert.doesNotMatch(html,/내 종목 생성|목록에 없는 내 종목|내 운동 종목/)
   const edit=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,manufacturers:[],busy:false,controller:{},onClose(){}})
-  assert.match(edit,/제조사 · 선택/);assert.match(edit,/부하 방식 · 선택/);assert.match(edit,/제거한 배치 조회/)
+  assert.match(edit,/제조사 · 선택/);assert.match(edit,/부하 방식 · 선택/);assert.match(edit,/<details[^>]*><summary>제거한 종목 복원<\/summary>/)
 })
 
 test('closed completed sets display the recorded manufacturer rather than the current plan equipment',()=>{

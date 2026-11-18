@@ -6,6 +6,15 @@
 .plainSteps > button:is(:nth-child(1), :nth-child(3)) { border: 0; }
 .plainSteps > button:is(:nth-child(1), :nth-child(3)):active:not(:disabled) { background: var(--accent-soft); }
 .weightControl { grid-template-columns: 56px minmax(76px, 104px) 56px; max-width: 220px; margin-inline: auto; gap: 2px; }
+.compactStepper { grid-template-columns: 44px minmax(0, 140px) 44px; gap: 8px; justify-content: center; align-items: center; }
+.compactStepper > button[aria-label]:not(.valueButton) { width: 44px; height: 44px; background: var(--surface-input); border-color: transparent; }
+.compactStepper > button.valueButton[aria-label] {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr) 14px; align-items: center;
+  min-height: 48px; padding: 4px; border-color: transparent; font-size: 20px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+}
+.valueButton > span { grid-column: 2; }
+.valueButton small { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+.valueButton svg { grid-column: 3; color: var(--accent); justify-self: center; }
 .body { display: grid; gap: 12px; min-width: 0; }
 .viewport { --wheel-height: clamp(156px, 38dvh, 260px); position: relative; height: var(--wheel-height); container-type: inline-size; }
 .selection { position: absolute; z-index: 1; inset: 50% 0 auto; transform: translateY(-50%); height: 52px; background: var(--accent-soft); border-block: 1px solid var(--accent); pointer-events: none; }

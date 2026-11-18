@@ -270,7 +270,6 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
         onDelete={() => setModal({ type: 'deleteRoutine', id: editor.routine.id })} />}
       {editor && (editor.type === 'new' || editor.type === 'edit') && <RoutineForm
         key={editor.type} routine={editor.type === 'new' ? null : editor.routine}
-        saveDescription="검토용 루틴을 저장합니다. 기존 배치의 승인 중량은 명시적으로 선택한 경우에만 변경됩니다."
         generation={scope.dataGeneration} exercises={exercises} manufacturers={manufacturers} activities={activities} busy={busy}
         managementBlocked={protectedView}
         controller={{

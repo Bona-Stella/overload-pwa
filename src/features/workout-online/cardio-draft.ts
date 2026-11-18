@@ -31,5 +31,5 @@ export function cardioPlan(d: CardioDraft): CardioPlan {
         throw new Error('유산소 이름·시간 및 선택값의 허용 범위를 확인해 주세요.');
     return { ...(d.activityId ? { activityId: d.activityId } : {}), ...(d.standardExerciseId ? { standardExerciseId: d.standardExerciseId } : {}), kind: d.kind, name: d.name, targetSeconds, targetDistanceKm, intensity: intensity === null ? null : { mode: d.intensityMode, value: intensity }, inclinePercent, resistance };
 }
-export function adjust(value: string, direction: -1 | 1) { const [w, f = ''] = decimalDraft(value || '0').split('.'); const units = BigInt(w) * 1000000n + BigInt(f.padEnd(6, '0')) + BigInt(direction) * 2500000n; if (units < 0n)
+export function adjust(value: string, direction: -1 | 1, step: 1 | 2.5 = 2.5) { const [w, f = ''] = decimalDraft(value || '0').split('.'); const units = BigInt(w) * 1000000n + BigInt(f.padEnd(6, '0')) + BigInt(direction) * (step === 1 ? 1000000n : 2500000n); if (units < 0n)
     return '0'; return decimalDraft(String(units / 1000000n) + '.' + String(units % 1000000n).padStart(6, '0')); }

@@ -13,9 +13,9 @@ import type { SetDraft, WeightFocusData } from './types.ts'
 import styles from './WorkoutFlow.module.css'
 import { useFitWorkoutTitle } from './useFitWorkoutTitle.ts'
 
-function adjustKg(value: string, direction: -1 | 1) {
+function adjustKg(value: string, direction: -1 | 1, step?: 1 | 2.5) {
   try {
-    const next = adjust(value, direction)
+    const next = adjust(value, direction, step)
     return next === value || !value && direction < 0 ? null : next
   } catch { return null }
 }
@@ -24,9 +24,11 @@ function adjustReps(value: string, direction: -1 | 1) {
   const next = adjustRepsDraft(value, direction)
   return next !== null && Number(next) <= 2147483647 ? next : null
 }
-export function KgWheel({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+export function KgWheel({ label, value, onChange, editorStep }: { label: string; value: string; onChange: (value: string) => void; editorStep?: 1 | 2.5 }) {
   return <NumberWheel label={label} value={value} onChange={onChange} unit="kg" start="0"
-    adjust={adjustKg} validate={value => value.trim() ? decimalDraft(value) : ''} stepLabel="2.5" />
+    adjust={adjustKg} validate={value => value.trim() ? decimalDraft(value) : ''}
+    stepLabel={editorStep === undefined ? '2.5' : ''} compactStepper={editorStep !== undefined}
+    stepAdjust={editorStep === undefined ? undefined : (value, direction) => adjustKg(value, direction, editorStep)} />
 }
 
 export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, resting, editing, editTools,

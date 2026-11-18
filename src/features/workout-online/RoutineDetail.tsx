@@ -2,13 +2,13 @@ import type { ReactNode } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { activeCardio, activeWeights, dateInZone } from '../home/model.ts'
-import { cardioCategoryLabels, exerciseDescription } from './catalog-label.ts'
+import { cardioDescription, exerciseDescription } from './catalog-label.ts'
 import { CombinationMemo } from './CombinationMemo.tsx'
 import { LOAD_LABELS } from './equipment.ts'
 import { routinePresetEntries } from './preset-schedule.ts'
 import type { SchedulePreset } from './preset-schedule.ts'
 import { dayNames } from './routine-schedule.ts'
-import type { CardioActivity, CardioPlan, Manufacturer, Routine, StandardExercise } from './types.ts'
+import type { CardioActivity, Manufacturer, Routine, StandardExercise } from './types.ts'
 import styles from './RoutineDetail.module.css'
 
 type Metric = { label: string; value: string | number | null; unit?: string }
@@ -27,16 +27,6 @@ function ExerciseHeading({ index, name }: { index: number; name: string }) {
     <span className={styles.number}>{String(index + 1).padStart(2, '0')}</span>
     <span className={styles.truncate} title={name}>{name}</span>
   </h3>
-}
-
-function cardioDescription(plan: CardioPlan, activities: CardioActivity[]) {
-  if (plan.standardExerciseId) {
-    const choice = activities.find(a => a.id === plan.standardExerciseId && (!plan.activityId || a.activityId === plan.activityId))
-    return choice ? `${cardioCategoryLabels[choice.category]} · ${choice.name}` : '유산소 분류 미확인'
-  }
-  // A legacy activity ID can be shared by several standard exercises.
-  const activity = plan.activityId && activities.find(a => a.activityId === plan.activityId)
-  return activity ? cardioCategoryLabels[activity.category] : '유산소 분류 미확인'
 }
 
 export function RoutineDetail({ routine, exercises, activities, manufacturers, presets, scheduleLoading, timeZone, managementBlocked, onBack, onEdit, onDelete, start }: {
