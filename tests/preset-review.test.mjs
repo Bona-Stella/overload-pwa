@@ -37,6 +37,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   }
   const click = (text, by = 'textContent', selector = 'button') => wait(() => evaluate(
     '(() => { const e = [...document.querySelectorAll(' + JSON.stringify(selector) + ')].find(e => e.getClientRects().length && !e.disabled && (e[' + JSON.stringify(by) + '] ?? "").trim() === ' + JSON.stringify(text) + '); if (!e) return false; e.click(); return true })()'), text)
+  const navTo = label => click(label, 'ariaLabel', 'nav[aria-label="기본 탐색"] button')
   const set = (selector, value) => evaluate(
     '(() => { const e = document.querySelector(' + JSON.stringify(selector) + '); Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), "value").set.call(e, ' + JSON.stringify(value) + '); e.dispatchEvent(new Event(e.tagName === "SELECT" ? "change" : "input", {bubbles:true})); })()')
   const body = () => evaluate('document.body.innerText')
@@ -117,13 +118,79 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /11\.11 · 상체 푸시 \+ 러닝 · 오늘 예정/)
     assert.equal(await evaluate('document.querySelectorAll("[aria-label=홈] [data-session-id]").length'), 3)
     assert.deepEqual(await evaluate('[...document.querySelectorAll("[aria-label=홈] [data-session-id] [data-state]")].map(e=>e.dataset.state)'), ['complete','missed','unknown'])
-    await verifyWidth(393); await verifyWidth(320)
+    const nav = 'nav[aria-label="기본 탐색"]'
+    const activeTab = label => wait(() => evaluate(`document.querySelector('${nav} [aria-current=page]')?.ariaLabel === ${JSON.stringify(label)}`), 'active tab ' + label)
+    const tabIcons = () => evaluate(`[...document.querySelectorAll('${nav} svg')].map(icon => {
+      const style = getComputedStyle(icon);
+      return [icon.querySelector('path').getAttribute('d'), style.fill, style.stroke, style.strokeWidth];
+    })`)
+    const outlinePaths = (await tabIcons()).map(([path]) => path)
+    const assertTabIcons = async activeIndex => {
+      const icons = await tabIcons()
+      const inactiveStroke = 'rgb(209, 213, 221)'
+      assert.deepEqual(icons.map(([path]) => path), outlinePaths)
+      assert.deepEqual(icons.map(([, ...style]) => style), [
+        activeIndex === 0 ? ['rgb(0, 0, 0)', 'none', '1.6px'] : ['none', 'rgb(255, 255, 255)', '1.6px'],
+        ['none', activeIndex === 1 ? 'rgb(0, 0, 0)' : inactiveStroke, activeIndex === 1 ? '2.4px' : '1.6px'],
+        ['none', activeIndex === 2 ? 'rgb(0, 0, 0)' : inactiveStroke, activeIndex === 2 ? '2.4px' : '1.6px'],
+        activeIndex === 3 ? ['rgb(0, 0, 0)', 'none', '1.6px'] : ['none', inactiveStroke, '1.6px'],
+      ])
+    }
+    const capsuleAligned = () => evaluate(`(() => {
+      const bar = document.querySelector('${nav}'), selected = bar.querySelector('[aria-current=page]');
+      const capsule = getComputedStyle(bar, '::before'), x = new DOMMatrixReadOnly(capsule.transform).m41;
+      return Math.abs(x - (selected.offsetLeft - bar.firstElementChild.offsetLeft)) < 1;
+    })()`)
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
+    for (const width of [320, 375, 393, 430, 1280]) {
+      await verifyWidth(width)
+      assert.ok(await evaluate(`(() => {
+        const bar = document.querySelector('${nav}'), bounds = bar.getBoundingClientRect(), buttons = [...bar.querySelectorAll('button')];
+        const rectangles = buttons.map(b => b.getBoundingClientRect());
+        return bounds.width === Math.min(innerWidth-24,336) && bounds.height === 56 && bounds.bottom === innerHeight && Math.abs(bounds.left - (innerWidth - bounds.right)) < 1
+          && buttons.map(b => b.ariaLabel).join() === '홈,루틴,기록,설정'
+          && buttons.every(b => !b.textContent.trim() && b.querySelector('svg[aria-hidden=true]')?.getBoundingClientRect().width === 24)
+          && rectangles.every(r => r.height === 46 && Math.abs(rectangles[0].width-r.width) < 1)
+          && buttons.filter(b => b.getAttribute('aria-current') === 'page').length === 1
+          && getComputedStyle(bar,'::before').backgroundColor === 'rgb(108, 147, 198)'
+          && getComputedStyle(bar,'::before').transitionDuration === '0.2s'
+          && getComputedStyle(buttons[1]).backgroundColor === 'rgba(0, 0, 0, 0)';
+      })()`), `capsule layout at ${width}px`)
+    }
+    await assertTabIcons(0)
+    await verifyWidth(393)
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('main')).paddingBottom"), '72px')
+    await send('Emulation.setSafeAreaInsetsOverride',{insets:{bottom:34}})
+    await wait(() => evaluate(`innerHeight-document.querySelector('${nav}').getBoundingClientRect().bottom === 34 && getComputedStyle(document.querySelector('main')).paddingBottom === '106px'`), 'single safe-area offset')
+    await send('Emulation.setSafeAreaInsetsOverride',{insets:{bottom:0}})
+    await evaluate(`document.querySelector('${nav} button').focus()`)
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
+    assert.equal(await evaluate(`document.activeElement.ariaLabel === '루틴' && document.activeElement.matches(':focus-visible') && getComputedStyle(document.activeElement).outlineStyle === 'solid'`), true)
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code: 'Space', windowsVirtualKeyCode: 32, text: ' ' })
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code: 'Space', windowsVirtualKeyCode: 32 })
+    await activeTab('루틴')
+    await assertTabIcons(1)
+    await navTo('기록'); await activeTab('기록')
+    await assertTabIcons(2)
+    await navTo('설정'); await activeTab('설정')
+    await assertTabIcons(3)
+    await evaluate('history.back()'); await activeTab('기록')
+    await evaluate('history.forward()'); await activeTab('설정')
+    await wait(capsuleAligned, 'capsule settles after rapid navigation and browser history')
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]})
+    await navTo('기록'); await activeTab('기록')
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('${nav}'),'::before').transitionDuration`),'0s')
+    assert.ok(await capsuleAligned())
+    await send('Emulation.setEmulatedMedia', {features:[]})
+    await navTo('설정'); await activeTab('설정')
+    await navTo('홈'); await activeTab('홈'); await verifyWidth(320)
     const tuesday = () => evaluate('document.querySelector("button[aria-label^=\'2026-11-10\']").click()')
     await tuesday()
     assert.match(await body(), /11\.10 · 휴식/)
     assert.doesNotMatch(await body(), /당일 배정 확인 불가|확인할 수 있는 계획 없음/)
 
-    await click('루틴')
+    await navTo('루틴')
     assert.equal(await evaluate('document.querySelector("[data-mode=active]").textContent'), '✓진행중')
     await preset(2); await verifyWidth(393); await verifyWidth(320)
     assert.ok(await evaluate(`(() => {
@@ -162,7 +229,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /전환/)
     assert.match(await body(), /01 기본 훈련 주간 · 월·수·금/)
     assert.match(await body(), /02 하체 중심.* · 화/)
-    await click('홈')
+    await navTo('홈')
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /상체 푸시/)
     await click('오늘만 다른 루틴 선택', 'textContent', chooser + ' summary')
     const activeFilter = () => evaluate('document.querySelector("[aria-label=\'루틴 일정 필터\'] [aria-pressed=true]").textContent')
@@ -179,15 +246,15 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /상체 푸시/)
     await wait(() => evaluate('document.querySelector("[aria-label=홈] details button strong[title=\'가벼운 러닝\']")?.closest("button").click() || document.querySelector("[aria-label=홈] details button strong[title=\'가벼운 러닝\']") !== null'), 'today only')
     assert.equal(await evaluate('document.querySelector("[aria-label=홈] details").open'), false)
-    await click('루틴'); await click('02번 주간 일정으로 즉시 전환', 'ariaLabel')
+    await navTo('루틴'); await click('02번 주간 일정으로 즉시 전환', 'ariaLabel')
     await wait(async () => (await body()).includes('진행중'), 'manual activation')
-    await click('홈'); await click('오늘만 다른 루틴 선택', 'textContent', chooser + ' summary')
+    await navTo('홈'); await click('오늘만 다른 루틴 선택', 'textContent', chooser + ' summary')
     assert.equal(await activeFilter(), '02')
     await tuesday()
     assert.match(await body(), /11\.10 · 휴식/)
     await click('오늘의 원래 일정으로')
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /하체 집중/)
-    await click('루틴'); await click('자동 순환', 'ariaLabel')
+    await navTo('루틴'); await click('자동 순환', 'ariaLabel')
     await wait(() => evaluate('document.querySelector("button[aria-label=\'자동 순환\']").getAttribute("aria-pressed") === "true"'), 'rotation enabled')
     assert.equal(await evaluate('document.querySelector("[aria-label=\'보기 · 조회 전용\']").textContent'), '보기')
     assert.equal(await evaluate('document.querySelector("[aria-label=\'보기 · 조회 전용\'] svg circle") !== null'), true)
@@ -314,9 +381,9 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('주간 일정 편집')
     assert.equal(await evaluate('[...document.querySelectorAll("[aria-label=\'월요일 루틴\'] option")].some(o=>o.textContent.startsWith("✦"))'), false)
     await click('닫기')
-    await click('홈')
+    await navTo('홈')
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /시연용 새 루틴/)
-    await click('루틴'); await click(createdName + ' 상세', 'ariaLabel')
+    await navTo('루틴'); await click(createdName + ' 상세', 'ariaLabel')
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="주간 일정 배정"] li')].map(row=>[...row.children].map(cell=>cell.textContent))`),[['01','기본 훈련 주간','수']])
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="유산소 1"] dd')].map(cell=>cell.textContent.trim())`),['20 분','2.5 km','8 km/h','0 %'])
     await click('편집'); await set('input[placeholder="나의 루틴"]', '시연용 수정 루틴')
@@ -342,13 +409,13 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(() => evaluate('!document.querySelector("dialog[open]") && !document.querySelector("button[aria-label=\'상체 푸시 + 러닝 상세\']")'), 'routine deleted')
     await preset(2)
     assert.doesNotMatch(await body(), /루틴 확인 필요/)
-    await click('홈')
+    await navTo('홈')
     await evaluate('document.querySelector("button[aria-label^=\'2026-11-09\']").click()')
     assert.match(await body(), /11\.09 · 상체 푸시 \+ 러닝 · 완료/)
     assert.match(await evaluate('document.querySelector("[aria-label=홈] [data-session-id]").innerText'), /상체 푸시/)
     await set(scenario, 'active'); await click('일반 보기')
     assert.equal(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="운동 시작").disabled'), true)
-    await click('루틴')
+    await navTo('루틴')
     assert.match(await body(), /조회 전용/)
     assert.equal(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="+ 새 루틴").disabled'), true)
     await click('상체 푸시 + 러닝 상세', 'ariaLabel')
@@ -358,7 +425,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /디로딩 완료 당일/)
     await set(scenario, 'unassigned')
     assert.match(await body(), /주간 일정 미배정/)
-    await set(scenario, 'read-error'); await click('홈')
+    await set(scenario, 'read-error'); await navTo('홈')
     assert.match(await body(), /홈 정보를 불러오지 못했습니다/)
     await click('홈 다시 불러오기')
     assert.match(await body(), /TODAY'S ROUTINE/)
@@ -373,7 +440,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
         '운동 데이터 내보내기', '앱 설치 · 오프라인 준비', '전체 운동 데이터 초기화', '회원 탈퇴'])
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button:disabled strong')].map(e => e.textContent)`),
       ['디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴'])
-    assert.deepEqual(await evaluate(`[...document.querySelectorAll('nav[aria-label="기본 탐색"] button')].map(e => e.textContent)`),
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('nav[aria-label="기본 탐색"] button')].map(e => e.ariaLabel)`),
       ['홈', '루틴', '기록', '설정'])
     for (const width of [320, 393]) {
       await verifyWidth(width)
@@ -453,7 +520,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await verifyWidth(393)
     await click('설정으로', 'ariaLabel')
     assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '내 계정')
-    await click('루틴'); await set(fault, 'network'); await click('설정')
+    await navTo('루틴'); await set(fault, 'network'); await navTo('설정')
     await click('세트 사이 휴식', 'textContent', settingsItem + ' strong')
     assert.match(await body(), /검토용 예시 휴식 시간입니다/)
     const restPage = 'section[aria-label="세트 사이 휴식"]'
@@ -512,6 +579,15 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...boundCenter, button: 'left', clickCount: 1 })
     assert.equal(await evaluate(`document.activeElement.matches('input, [contenteditable="true"]') || document.activeElement === document.querySelector(${JSON.stringify(boundSelector)})`), false)
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(boundSelector)}).textContent`), '이상')
+    await evaluate(`(() => {
+      document.querySelector(${JSON.stringify(restSeconds)}).focus();
+      const viewport = window.visualViewport;
+      Object.defineProperty(viewport, 'height', {configurable:true, value:innerHeight-280});
+      viewport.dispatchEvent(new Event('resize'));
+    })()`)
+    await wait(() => evaluate(`!document.querySelector('${nav}') && !!document.querySelector(${JSON.stringify(restSeconds)})`), 'keyboard hides capsule without leaving edit')
+    await evaluate(`delete window.visualViewport.height; window.visualViewport.dispatchEvent(new Event('resize'))`)
+    await activeTab('설정')
     for (const invalid of ['', '0', '2.5', '2147483648']) {
       await set(restSeconds, invalid); await click('변경 사항 저장', 'textContent', restPage + ' button')
       assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).getAttribute('aria-invalid')`), 'true')
@@ -521,7 +597,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await evaluate('window.restConfirms = 0; window.confirm = () => { window.restConfirms++; return false }')
     await click('취소', 'textContent', headerAction)
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
-    await click('홈', 'textContent', 'nav button')
+    await navTo('홈')
     assert.equal(await evaluate('window.restConfirms'), 2)
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
     await evaluate('window.confirm = () => true')

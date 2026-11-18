@@ -64,7 +64,7 @@ test('verification Retry-After disables code input and shows a separate verifica
 test('authenticated UI is separated from demo data and identity-management preview actions', () => {
   const html = render({ ...initial, status: 'authenticated', userId: 'a-private-user' })
   assert.match(html, /aria-label="기본 탐색"/)
-  for (const label of ['홈', '루틴', '기록', '설정']) assert.match(html, new RegExp('>' + label + '<'))
+  for (const label of ['홈', '루틴', '기록', '설정']) assert.match(html, new RegExp('aria-label="' + label + '"'))
   assert.doesNotMatch(html, /앱 설치·오프라인 준비|로그아웃|다시 만나 반가워요/)
   assert.doesNotMatch(html, /a-private-user|Google 연결|이메일 인증코드 해제|나의 루틴|최근 운동|운동 시작 ↗/)
 })

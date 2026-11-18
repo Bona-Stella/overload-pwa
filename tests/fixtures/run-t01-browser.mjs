@@ -52,8 +52,8 @@ try {
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true })
   const evaluate = expression => cdp.eval(expression)
   const click = async text => {
-    await wait(() => evaluate(`Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim()===${JSON.stringify(text)} && !b.disabled && b.getClientRects().length)`), 'button ' + text)
-    await evaluate(`(() => { const button=Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim()===${JSON.stringify(text)} && !b.disabled && b.getClientRects().length); button.focus(); button.click(); })()`)
+    await wait(() => evaluate(`Array.from(document.querySelectorAll('button')).some(b => (b.textContent.trim()===${JSON.stringify(text)} || b.closest('nav[aria-label="기본 탐색"]') && b.ariaLabel===${JSON.stringify(text)}) && !b.disabled && b.getClientRects().length)`), 'button ' + text)
+    await evaluate(`(() => { const button=Array.from(document.querySelectorAll('button')).find(b => (b.textContent.trim()===${JSON.stringify(text)} || b.closest('nav[aria-label="기본 탐색"]') && b.ariaLabel===${JSON.stringify(text)}) && !b.disabled && b.getClientRects().length); button.focus(); button.click(); })()`)
     await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))')
   }
   const input = async (label, value) => {

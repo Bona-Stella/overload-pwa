@@ -216,7 +216,7 @@ async function synchronization() {
         button => visible(button) && button.textContent.trim() === '미확인 종료 요청 결과 확인')
       if (confirm) { confirm.click(); return 'confirm' }
       const historyTab = [...document.querySelectorAll('nav button')].find(
-        button => visible(button) && button.textContent.trim() === '기록' && button.getAttribute('aria-current') !== 'page')
+        button => visible(button) && button.ariaLabel === '기록' && button.getAttribute('aria-current') !== 'page')
       if (historyTab) { historyTab.click(); return 'navigate' }
       if (!${historyOpened} && !document.querySelector('.closed-workout')) {
         const record = [...document.querySelectorAll('section[aria-label="종료 운동 이력"] button')].find(

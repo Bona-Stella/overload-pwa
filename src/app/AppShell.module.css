@@ -1,4 +1,8 @@
 .shell {
+  --tab-height: 46px;
+  --tabs-padding: 4px;
+  --tabs-offset: env(safe-area-inset-bottom);
+  --tabs-height: calc(var(--tab-height) + 2 * var(--tabs-padding) + 2px);
   width: min(100%, 520px);
   min-height: 100dvh;
   margin-inline: auto;
@@ -15,32 +19,46 @@
 .content > * { min-width: 0; }
 .shell .homeContent { padding-top: calc(18px + env(safe-area-inset-top)); padding-inline: var(--space-page); }
 .content > :global(#auth-feedback:empty) { position: absolute; width: 1px; height: 1px; overflow: hidden; }
-.shell .withTabs { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+.shell .withTabs { padding-bottom: calc(var(--tabs-height) + var(--tabs-offset) + 16px); }
 /* WorkoutFrame owns the measured fixed-action and Safe Area clearance. */
 .shell .content:has(> [data-workout-frame]:not([hidden])),
 .shell .content:has(> [data-exercise-detail-source]:not([hidden]) > [data-workout-frame]:not([hidden])) { padding-bottom: 0; }
 .tabs {
   position: fixed;
-  inset: auto 0 0;
+  inset: auto 0 var(--tabs-offset);
   z-index: 10;
-  width: min(100%, 520px);
+  width: min(calc(100% - 24px), 336px);
   margin-inline: auto;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-  background: var(--surface-page);
-  border-top: 1px solid var(--border-subtle);
+  padding: var(--tabs-padding);
+  background: #08090c;
+  border: 1px solid #282c34;
+  border-radius: 999px;
 }
+.tabs::before {
+  content: '';
+  position: absolute;
+  inset: var(--tabs-padding) auto var(--tabs-padding) var(--tabs-padding);
+  width: calc((100% - 2 * var(--tabs-padding)) / 4);
+  border-radius: 999px;
+  background: #6c93c6;
+  pointer-events: none;
+  transform: translateX(calc(100% * var(--tab-index)));
+  transition: transform 200ms ease;
+}
+@media (prefers-reduced-motion: reduce) { .tabs::before { transition: none; } }
 .shell .tabs button {
+  position: relative;
   display: grid;
-  justify-items: center;
-  gap: 4px;
-  padding: 6px 2px;
-  min-height: 56px;
-  color: var(--text-muted);
+  place-items: center;
+  padding: 0;
+  min-height: var(--tab-height);
+  color: #d1d5dd;
   background: transparent;
-  border-radius: var(--radius-control);
-  font-size: 11px;
+  border-radius: 999px;
 }
-.tabs svg { width: 22px; height: 22px; }
-.shell .tabs button[aria-current='page'] { color: var(--accent); background: var(--accent-soft); }
+.tabs svg { width: 24px; height: 24px; }
+.shell .tabs button[data-tab='home'] { color: #fff; }
+.shell .tabs button[aria-current='page'] { color: #000; }
+.shell .tabs button:focus-visible { outline-color: #fff; outline-offset: -3px; }

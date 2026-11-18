@@ -184,7 +184,7 @@ export async function verifyRestAlerts({ send, evaluate, wait, click, set, body,
   assert.equal(await heads('화면 어둡게'), 'true')
   assert.equal(await heads('중간 알림음'), 'true')
   await left('35%')
-  await click('홈', 'textContent', 'nav button')
+  await click('홈', 'ariaLabel', 'nav button')
   await click('운동 시작'); await click('준비운동 완료'); await click('1세트 완료')
   await wait(() => evaluate('!!document.querySelector("[data-workout-frame] [data-rest-countdown]")'), 'workout uses the same dim preference')
   await advance(2100)

@@ -31,7 +31,10 @@ test('only authenticated non-focused screens expose exactly four navigation dest
     const html = render(AppShell, { authenticated: true, tab, onNavigate() {}, children: 'content' })
     assert.equal((html.match(/<button/g) ?? []).length, 4)
     assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1)
-    for (const name of ['홈', '루틴', '기록', '설정']) assert.ok(html.includes('>' + name + '<'))
+  for (const name of ['홈', '루틴', '기록', '설정']) {
+    assert.ok(html.includes('aria-label="' + name + '"'))
+    assert.ok(!html.includes('>' + name + '<'))
+  }
   }
   for (const props of [{ authenticated: false }, { authenticated: true, focused: true }]) {
     assert.doesNotMatch(render(AppShell, { ...props, tab: 'home', onNavigate() {}, children: 'preserved content' }), /<nav/)
