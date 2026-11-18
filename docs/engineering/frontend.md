@@ -804,6 +804,22 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 전체 자동 테스트 551건과 타입 검사·빌드를 통과했다. 기존 4173번 LAN 서버의 격리 Chrome 320×568·393×852 터치 검증에서 마지막 설정 메뉴와 카탈로그 마지막 행 접근, 검색·필터·목록 스크롤 보존, 상세·목록·설정 복귀를 확인했다. Mock API 요청은 0건이었다. 사용자의 CATALOG 검토·커밋 승인은 위 마감 기록을 따르며, 별도 iPhone 실기기의 기종·Safari 관찰 결과는 이번 자동화 검증 기록에 포함하지 않는다.
 
+#### 설정 메인과 계정 설정 리디자인 현황 — 2026-11-18
+
+- [SettingsMain](../../src/features/settings/SettingsMain.tsx)은 요약·그룹·독립 로그아웃을 공통 Card/Button과 페이지 CSS로 구성한다. 전달된 이메일의 첫 글자를 대문자로 만드는 표현 컴포넌트다. `AuthApp`은 운영에서 요약용 이메일·현재 로그인 방식·기기 수를 주입하지 않는다. `SettingsReview`의 합성 요약과 운영 대체 상태를 구분한다.
+- `AuthApp`이 계정·휴식 조회·카탈로그 이동과 현재 브라우저 로그아웃을 연결하고 설정 복귀 시 초점과 스크롤을 유지한다. 알림 조작은 개발 검토에만 연결한다. 디로딩 설정·데이터 상태·내보내기·초기화·탈퇴는 기존 비활성 행이다. [PwaStatus](../../src/pwa/PwaStatus.tsx)는 네이티브 접이식 영역에서 설치 가능 여부·준비·실패·업데이트와 오프라인 안내를 표시한다. 기존 로컬 운동 저장·이어가기와 서버 ACK는 [12절](#12-진행-운동의-로컬-보호-및-복원)을 따른다.
+- [AccountSettings](../../src/features/auth/AccountSettings.tsx)는 공통 `RecordSubpageHeader`, `AccountDetailUi`와 페이지 CSS를 사용한다. `IdentityManagement`는 서버의 연결 목록, 이메일 연결·Google 폼·해제 확인을 표현한다. `AuthController`가 사용자·세대와 CSRF, OTP·조회·쓰기 경계를 관리한다. 최근 OTP 성공 표시는 마운트 상태의 `confirmedAt`으로 표시하는 피드백이며 권한 판정과 서버 이력 조회와 구분한다. [계정 API 범위](backend-ui-v0.9.md#설정-메인과-계정-설정-연동)
+- `/routine-preview?tab=settings`의 [SettingsReview](../../src/review/SettingsReview.tsx)는 합성 계정과 세 로그인 수단 조합을 같은 상세 레이아웃에 주입한다. 운영의 컨트롤러와 쓰기 권한은 주입하지 않는다. 기기 관리로의 분기와 복귀는 다음 절을 따른다.
+- **구현 당시 검증.** 설정 메인 `7f9f85b`에서 전체 645/645, 계정 설정 `8040054`에서 646/646을 기록했다. 두 작업에서 TypeScript·린트·프로덕션 빌드와 Chrome 320·375·393·430·1280px 검토를 수행했다. [컴포넌트](../../tests/components.test.mjs)·[인증 UI](../../tests/auth-ui.test.mjs)·[브라우저 회귀](../../tests/preset-review.test.mjs)를 구분한다. 이 결과는 문서 갱신 검증과 별개다.
+
+#### 로그인된 기기 관리 구현 현황 — 2026-11-18
+
+- [AccountSettings](../../src/features/auth/AccountSettings.tsx)의 기기 관리 행이 [LoggedInDevices](../../src/features/auth/LoggedInDevices.tsx)를 연다. `useScreenHistory`의 계정별 `account-devices:` 값으로 브라우저 뒤로가기를 지원한다. 새 화면에서는 제목에 초점을 두고 복귀 시 저장한 스크롤과 진입 버튼에 초점을 돌려준다. [탭 루트 전환](../../src/app/navigation.ts)에서 기기 관리 하위 상태를 정리한다.
+- `LoggedInDevices`의 `DevicesState`는 미지원 기본값, 로딩, 실패, 준비된 스냅샷을 구분하는 화면 입력이다. API 응답 계약은 아직 없다. 운영은 별도 기기 요청을 보내지 않고 원격 버튼을 비활성화한다. 스냅샷 시연은 확인된 현재 ID와 최근 접속순으로 카드를 배치하고, 누락된 접속 상태를 온라인·오프라인 수치로 추정하지 않는다.
+- 개발 검토 경로 `/routine-preview?tab=settings`에서 [SettingsReview](../../src/review/SettingsReview.tsx)가 [DevicesReview](../../src/review/DevicesReview.tsx)를 주입한다. 합성 기기·시각·편집 기기 예시와 세 종류의 검토 확인창은 운영과 분리된다. 공통 헤더·카드·버튼·Dialog를 재사용한다. 확인은 모달만 닫으며 세션 종료나 운동 상태 변경을 실행하지 않는다.
+- 실제 운동 편집 여부는 기존 `WorkoutWorkspace`의 ACTIVE 세션, 편집 기기 ID·writer epoch 및 로컬 쓰기 보호를 따른다. 온라인 표시와 권한은 별개다. 인증 세션과 운동 편집 기기의 연결은 [서버 연동 과제](backend-ui-v0.9.md#로그인된-기기-관리-연동-경계)다.
+- **구현 당시 검증(`f71427e`).** 전체 647/647, [인증 UI](../../tests/auth-ui.test.mjs)를 포함한 관련 94/94, TypeScript·린트·빌드·diff 검사 통과. [브라우저 회귀](../../tests/preset-review.test.mjs)에서 Chrome 320·375·393·430·1280px, 상태 전환, 확인창, 계정 설정 복귀를 확인했다. 실제 서버 원격 종료와 iPhone Safari·설치형 PWA는 당시 확인하지 않았다. 이번 문서 갱신의 검사와는 별도다.
+
 <a id="catalog-0102--setting-01-실제-계정-마감"></a>
 
 #### CATALOG-01·02 / SETTING-01 실제 계정 마감

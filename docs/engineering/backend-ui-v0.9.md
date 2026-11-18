@@ -65,6 +65,35 @@
 
 웨이트 신규 선택은 `search-data`, CARDIO는 `cardio-choices`를 쓴다. CARDIO 목표는 `cardioPlan`으로 제출하며 수행 실측은 세션 계약을 따른다. 기구 세팅 메모 초안은 이 요청에 실리지 않는다. 실패에서는 초안과 기존 쓰기 제한을 유지한다. [화면 흐름](../product/ui-ux.md#33-루틴-상세편집생성)
 
+## 설정 메인과 계정 설정 연동
+
+설정 요약은 세션의 `userId`만으로 로그인 이메일·현재 방식·기기 수를 표시할 수 없다. 연결된 제공자, 대표 재인증 이메일, 현재 로그인 방식은 각기 다른 정보다. 계정 상세의 조회·쓰기 계약은 [인증 연동](authentication.md#task-007-1d-2b-로그인-수단-관리)과 [서버 세션 규칙](../../../overload-server/docs/engineering/security-session.md)을 따른다.
+
+| 동작 | 운영에서 사용하는 범위 |
+| --- | --- |
+| 계정 상세·새로 확인 | 컨트롤러가 `GET /api/v1/auth/session`의 소유권을 확인하며 `GET /api/v1/auth/identities`(연결된 ID·제공자) 및 `GET /api/v1/auth/reauth/email/contact`(`VERIFIED/REQUIRED`, 마스킹 주소 또는 후보)를 다시 읽는다. |
+| Email OTP와 Google | 이메일 로그인은 6자리 OTP 요청·확인이다. 대표 이메일의 로그인 연결은 `POST /api/v1/auth/identities/email/link`, Google 추가 연결은 CSRF를 포함한 `POST /oauth2/link/google` 폼과 복귀 후 재조회다. |
+| 연결 해제 | 대상 확인과 최근 이메일 소유 증명 뒤 `POST /api/v1/auth/identities/{email,google}/unlink`로 대상 ID를 보낸다. 서버는 실제로 사용 가능한 마지막 수단의 해제를 차단하며, 성공 뒤 연결 목록을 읽어 확인한다. |
+| 이메일 재인증 | `/api/v1/auth/reauth/email`의 요청·검증을 사용하며 후보 등록 흐름은 별도다. 화면에서 확인된 OTP 피드백에 해당하는 서버 이력 조회 API는 없다. |
+| 설정의 로그아웃 | 운동 초안 보호와 사용자 확인을 거쳐 `POST /api/v1/auth/logout`으로 현재 브라우저 세션을 종료한다. 기기 조회와 원격 종료는 다음 절을 따른다. |
+
+세트 사이 휴식의 운영 화면은 현재 값을 조회한다. 앱 설치·오프라인 상태는 브라우저와 Service Worker의 기존 상태를 표시한다. [UI 구성](../product/ui-ux.md#설정-메인)
+
+## 로그인된 기기 관리 연동 경계
+
+[서버 세션 계약](../../../overload-server/docs/engineering/security-session.md)과 [운동 세션 계약](../../../overload-server/docs/api/workout-sessions.md)을 기준으로 한다. 기기 관리 페이지는 진입 및 화면 표시를 제공하며, 운영의 기기 조회와 원격 작업은 미연동이다.
+
+| 정보 또는 동작 | 현행 서버 지원 |
+| --- | --- |
+| 현재 인증 계정 | `GET /api/v1/auth/session`은 `userId`를 반환한다. 로그인 기기 ID는 제공하지 않는다. |
+| 기기 목록·고유 기기 수 | 조회 API 미지원. 인증 세션 수를 고유 기기 수로 환산할 수 없다. |
+| 온라인·오프라인, 로그인·마지막 접속 시각 | 기기별 조회 API 미지원. 세션 존재와 시각만으로 접속 상태를 판정하지 않는다. |
+| 운동 편집 기기 매칭 | 운동 세션의 `editorDeviceId`와 `writerEpoch`는 운동 쓰기 소유권에 사용한다. 로그인 기기 목록과 연결할 식별 정보는 제공하지 않는다. |
+| 개별 원격·다른 기기 모두·모든 기기 로그아웃 | 원격 세션 종료 API 미지원. 운영 UI에서 비활성이다. |
+| 현재 브라우저 로그아웃 | `POST /api/v1/auth/logout`은 인증된 현재 세션과 CSRF 검사를 사용한다. 설정 메인의 기존 종료 및 로컬 운동 보호 흐름을 유지한다. |
+
+후속 계약은 인증 계정 범위의 고유 기기 식별·현재 세션 구분, 접속 상태와 시각의 의미, 운동 편집 기기와의 연결, 각 종료 범위의 권한·결과 확인·재조회가 필요하다. 운동 중 종료의 기록 보존·중단·권한 해제·재개는 정책 결정 후 연동한다. 화면 입력 모델과 합성 예시는 서버 계약의 근거와 구분한다. [프런트엔드 구현](frontend.md#로그인된-기기-관리-구현-현황--2026-11-18)
+
 ## 디로딩 구현 요구사항
 
 2026-11-07 정책 통합: [v1.7](../product/Overload_Deloading_Design_Specification_v1.7.md)과 [실제 Backend 현황 분석](../tasks/deload-v17-backend-readiness-analysis.md)을 따른다. G0~G5-3 Backend와 G6 PWA 작업, 실제 DB 적용을 구분한다.
