@@ -13,6 +13,7 @@ import { useReviewMedia } from './useReviewMedia.ts'
 import type { RestAlerts } from '../features/workout-flow/types.ts'
 import flowStyles from '../features/workout-flow/WorkoutFlow.module.css'
 import { reviewRest } from './workout-model.ts'
+import { DevicesReview } from './DevicesReview.tsx'
 
 type View = 'account' | 'rest' | 'catalog' | 'alerts'
 const reviewNote = 'UI 검토용 예시 데이터입니다.'
@@ -63,15 +64,14 @@ export function SettingsReview({ alerts, onAlerts }: { alerts?: RestAlerts; onAl
       onCatalog={event => open('catalog', event.currentTarget)} onLogout={() => setLogoutOpen(true)} />
     {!view && <p className="muted small">{reviewNote}</p>}
     {view === 'catalog' && <CatalogView items={catalogSamples} reviewNote={reviewNote} instructionNotes={catalogInstructionNotes} mediaSources={mediaSources} onBack={back} />}
-    {view === 'account' && <>
-      <AccountSettings state={accountExample(accountMode)} now={0} headingRef={heading} onBack={back} />
+    {view === 'account' && <AccountSettings state={accountExample(accountMode)} now={0} headingRef={heading} onBack={back} DevicesPage={DevicesReview}>
       <label>로그인 수단 예시<select value={accountMode} onChange={event => setAccountMode(event.target.value as keyof typeof accountProviders)}>
         <option value="email">이메일만 연결</option>
         <option value="both">이메일과 Google 연결</option>
         <option value="google">Google만 연결</option>
       </select></label>
       <p className="muted small">{reviewNote} 인증과 계정 변경은 실제 앱에서 진행합니다.</p>
-    </>}
+    </AccountSettings>}
     {view === 'rest' && <section className={styles.page}>
       <header className={styles.detailHeader}>
         <Button variant="quiet" onClick={back}>‹ 설정으로</Button>

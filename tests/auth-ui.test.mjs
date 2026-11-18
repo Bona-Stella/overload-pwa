@@ -26,6 +26,7 @@ const { LoginScreens } = await import('../src/features/auth/LoginScreens.tsx')
 const { AuthApp } = await import('../src/features/auth/AuthApp.tsx')
 const { AuthContext } = await import('../src/features/auth/context.ts')
 const { AccountSettings } = await import('../src/features/auth/AccountSettings.tsx')
+const { LoggedInDevices } = await import('../src/features/auth/LoggedInDevices.tsx')
 const { emptyAccount } = await import('../src/features/auth/account.ts')
 const NOW = 1_800_000_000_000
 const controller = new AuthController()
@@ -149,9 +150,16 @@ test('account settings disables the last identity and exposes both unlink action
     const unlink = buttons.filter(button => />(?:Google 계정 )?연결 해제<\/button>/.test(button))
     assert.equal(unlink.length, identities.length)
     assert.ok(unlink.every(button => /\bdisabled\b/.test(button) === (identities.length === 1)))
-    assert.match(markup, /서버 이력 확인 불가.*로그인된 기기 관리.*미구현.*계정 정보 새로 확인/s)
+    assert.match(markup, /서버 이력 확인 불가.*aria-label="로그인된 기기 관리".*계정 정보 새로 확인/s)
     assert.doesNotMatch(markup, /\d대/)
   }
+})
+test('the account device route renders unavailable data and disabled remote actions without a review source', () => {
+  const markup = renderToStaticMarkup(React.createElement(LoggedInDevices, { onBack: () => {} }))
+  assert.match(markup, /접속 현황.*현재 서버에서 로그인된 기기 조회를 지원하지 않습니다/s)
+  assert.doesNotMatch(markup, /iPhone|MacBook|\d대|검토용|<dialog/)
+  const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)
+  assert.equal(buttons.filter(button => /로그아웃.*<\/button>/.test(button) && /\bdisabled\b/.test(button)).length, 2)
 })
 test('server proof refusal links to the existing email reauthentication section without adding a second OTP form',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}},{issue:{code:'EMAIL_OWNERSHIP_PROOF_REQUIRED',message:'재인증 필요'}})

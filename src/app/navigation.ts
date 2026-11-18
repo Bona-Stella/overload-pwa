@@ -18,7 +18,7 @@ export function navigateTabRoot(key: string, value: unknown, children: Record<st
   afterDialogClose(()=>{
   const values = { ...current!.values }
   for (const name of Object.keys(values)) {
-    if (/^(exercise-detail:|records:|record-detail:|routine-plan:|routine-editor:|review-record$|review-record-summary$|__dialog$)/.test(name)) delete values[name]
+    if (/^(exercise-detail:|records:|record-detail:|routine-plan:|routine-editor:|account-devices:|review-record$|review-record-summary$|__dialog$)/.test(name)) delete values[name]
   }
   Object.assign(values, children)
   values[key] = value

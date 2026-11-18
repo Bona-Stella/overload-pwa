@@ -9,6 +9,14 @@ const paths = {
   link: 'M10 13a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-2 2m2 6a4 4 0 0 0-6 0l-4 4a4 4 0 0 0 6 6l2-2',
   check: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 12l3 3 5-6',
   info: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM12 11v5m0-8h.01',
+  forward: 'm9 6 6 6-6 6',
+  phone: 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm4 16h.01',
+  tablet: 'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm6 16h.01',
+  computer: 'M4 4h16v12H4zm0 12-3 4h22l-3-4',
+  workout: 'M2 10v4m3-7v10m3-12v14m0-7h8m0-7v14m3-12v10m3-7v4',
+  eye: 'M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
+  logout: 'M10 17v3H4V4h6v3m-2 5h12m-4-4 4 4-4 4',
+  screenOff: 'M3 4h18v13H3zm9 13v4m-4 0h8M10 8l4 5m0-5-4 5',
 }
 
 export function AccountIcon({ name }: { name: keyof typeof paths }) {
@@ -16,13 +24,13 @@ export function AccountIcon({ name }: { name: keyof typeof paths }) {
 }
 
 export function AccountItem({ icon, title, description, status }: {
-  icon: 'email' | 'google' | 'shield' | 'devices'; title: string; description: string; status?: ReactNode
+  icon: 'email' | 'google' | 'shield' | 'devices'; title: ReactNode; description: string; status?: ReactNode
 }) {
-  return <div className={styles.item}>
+  return <span className={styles.item}>
     <span className={styles.iconBox} aria-hidden="true">{icon === 'google' ? 'G' : <AccountIcon name={icon} />}</span>
-    <div className={styles.itemText}><strong>{title}</strong><small>{description}</small></div>
+    <span className={styles.itemText}><strong>{title}</strong><small>{description}</small></span>
     {status}
-  </div>
+  </span>
 }
 
 export function AccountStatus({ children, positive = false }: { children: ReactNode; positive?: boolean }) {

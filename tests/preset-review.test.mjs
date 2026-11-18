@@ -408,6 +408,48 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await set('main label select', 'google')
     assert.match(await body(), /이메일 로그인.*미연결.*Google 로그인.*연결됨/s)
     await set('main label select', 'email')
+    await click('로그인된 기기 관리', 'ariaLabel', accountPage + ' button')
+    const devicesPage = 'section[aria-label="로그인된 기기"]'
+    const devicesMode = devicesPage + ' select'
+    assert.match(await body(), /검토용 예시.*접속 현황.*3대.*2대.*1대.*iPhone 15 Pro.*iPad Pro.*MacBook Air/s)
+    for (const width of [320, 375, 393, 430, 1280]) {
+      await verifyWidth(width)
+      assert.ok(await evaluate(`[...document.querySelectorAll('${devicesPage} .app-card')].every(card => card.scrollWidth <= card.clientWidth && getComputedStyle(card).borderRadius === '5px')`),
+        'devices detail fits ' + width)
+    }
+    await set(devicesMode, 'here')
+    assert.match(await body(), /이 기기에서 운동 진행 중/)
+    await set(devicesMode, 'elsewhere')
+    assert.match(await body(), /현재 운동은 읽기 전용.*iPad Pro.*운동 진행 중/s)
+    await click('iPad Pro · 이 기기 로그아웃', 'ariaLabel', devicesPage + ' button')
+    assert.match(await body(), /로그아웃 확인.*iPad Pro.*운동 진행 중인 기기가 포함되어 있어요/s)
+    await click('취소', 'textContent', 'dialog button')
+    await click('모든 기기에서 로그아웃', 'textContent', devicesPage + ' button')
+    assert.match(await body(), /현재 기기도 로그아웃 대상에 포함됩니다/)
+    await click('시안 확인', 'textContent', 'dialog button')
+    assert.match(await body(), /iPad Pro.*MacBook Air/s)
+    await click('다른 기기 모두 로그아웃', 'textContent', devicesPage + ' button')
+    assert.match(await body(), /이 기기의 로그인 상태는 유지됩니다/)
+    await click('취소', 'textContent', 'dialog button')
+    await set(devicesMode, 'only')
+    assert.match(await body(), /다른 기기에 로그인되어 있지 않습니다/)
+    assert.ok(await evaluate(`[...document.querySelectorAll('${devicesPage} button')].find(b=>b.textContent==='다른 기기 모두 로그아웃').disabled`))
+    for (const [mode, message] of [
+      ['unknown', /현재 접속한 기기를 확인할 수 없습니다/],
+      ['empty', /로그인된 기기가 없습니다/],
+      ['loading', /로그인된 기기를 확인하고 있어요/],
+      ['error', /로그인된 기기 정보를 불러오지 못했습니다/],
+      ['unsupported', /현재 서버에서 로그인된 기기 조회를 지원하지 않습니다/],
+    ]) {
+      await set(devicesMode, mode)
+      assert.match(await body(), message)
+    }
+    await click('계정 설정으로', 'ariaLabel', devicesPage + ' button')
+    await wait(() => evaluate(`Boolean(document.querySelector('${accountPage}'))`), 'account restored after devices')
+    assert.equal(await evaluate('document.activeElement.getAttribute("aria-label")'), '로그인된 기기 관리')
+    await click('로그인된 기기 관리', 'ariaLabel', accountPage + ' button')
+    await evaluate('history.back()')
+    await wait(() => evaluate(`Boolean(document.querySelector('${accountPage}'))`), 'browser back restores account')
     await verifyWidth(393)
     await click('설정으로', 'ariaLabel')
     assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '내 계정')

@@ -1,14 +1,18 @@
-import { useState } from 'react'
-import type { Ref } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import type { ComponentType, ReactNode, Ref } from 'react'
+import { useScreenHistory } from '../../app/navigation.ts'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { AccountIcon, AccountItem, AccountNote, AccountStatus } from './AccountDetailUi.tsx'
 import type { AuthController, AuthState } from './controller.ts'
 import { IdentityManagement } from './IdentityManagement'
+import { LoggedInDevices } from './LoggedInDevices.tsx'
+import type { DevicesNavigation } from './LoggedInDevices.tsx'
 import styles from './AccountSettings.module.css'
 
-export function AccountSettings({ state, controller, now, headingRef, onBack }: {
+export function AccountSettings({ state, controller, now, headingRef, onBack, DevicesPage = LoggedInDevices, children }: {
   state: AuthState; controller?: AuthController; now: number; headingRef?: Ref<HTMLHeadingElement>; onBack?: () => void
+  DevicesPage?: ComponentType<DevicesNavigation>; children?: ReactNode
 }) {
   const [code, setCode] = useState('')
   const account = state.account, busy = state.pending !== null
@@ -21,7 +25,21 @@ export function AccountSettings({ state, controller, now, headingRef, onBack }: 
   const clear = () => setCode('')
   const verified = contact?.status === 'VERIFIED'
   const recent = account.confirmedAt !== null && clock - account.confirmedAt <= 600_000
-  return <section className={styles.page} aria-label="계정 설정" aria-busy={busy}>
+  const [devicesOpen, setDevicesOpen] = useScreenHistory('account-devices:' + (state.userId ?? 'review'), false)
+  const devicesHeading = useRef<HTMLHeadingElement>(null)
+  const devicesLink = useRef<HTMLButtonElement>(null)
+  const devicesScroll = useRef<number | null>(null)
+  useLayoutEffect(() => {
+    if (devicesOpen) {
+      devicesHeading.current?.focus({ preventScroll: true })
+      window.scrollTo(0, 0)
+    } else if (devicesScroll.current !== null) {
+      devicesLink.current?.focus({ preventScroll: true })
+      window.scrollTo(0, devicesScroll.current)
+    }
+  }, [devicesOpen])
+  if (devicesOpen) return <DevicesPage headingRef={devicesHeading} onBack={() => window.history.back()} />
+  return <><section className={styles.page} aria-label="계정 설정" aria-busy={busy}>
     <RecordSubpageHeader title="계정 설정" backLabel="설정으로" backDisabled={busy} headingRef={headingRef}
       onBack={() => { clear(); if (controller) controller.closeAccount(); else onBack?.() }} />
     {!account.loaded ? <Card className={styles.card} role="status"><p>{busy ? '계정 정보를 확인하고 있어요.' : '계정 정보를 불러오지 못했습니다.'}</p></Card> : <>
@@ -69,12 +87,18 @@ export function AccountSettings({ state, controller, now, headingRef, onBack }: 
         <div className={styles.divider}><AccountNote>이메일 등록이나 Google 로그인만으로 재인증이 완료된 것으로 판단하지 않아요.</AccountNote></div>
       </Card>
       <Card className={`${styles.card} ${styles.devices}`}>
-        <AccountItem icon="devices" title="로그인된 기기 관리" description="접속 상태 확인 · 원격 로그아웃"
-          status={<AccountStatus>미구현</AccountStatus>} />
+        <button type="button" className={`quiet ${styles.deviceLink}`} ref={devicesLink} disabled={busy}
+          aria-label="로그인된 기기 관리" onClick={() => {
+            devicesScroll.current = window.scrollY
+            setDevicesOpen(true)
+          }}>
+          <AccountItem icon="devices" title="로그인된 기기 관리" description="접속 상태 확인 · 원격 로그아웃"
+            status={<AccountStatus><AccountIcon name="forward" /></AccountStatus>} />
+        </button>
       </Card>
     </>}
     <Button className={styles.refresh} disabled={locked} onClick={() => { clear(); void controller?.openAccount() }}>
       <AccountIcon name="refresh" />계정 정보 새로 확인
     </Button>
-  </section>
+  </section>{children}</>
 }

@@ -28,4 +28,5 @@
 .page .action[data-connect] { background: #2b3a51; border-color: #466388; }
 .page .action:disabled { background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-muted); }
 .page .refresh { background: var(--surface-card); border-color: var(--border-subtle); }
-.page .devices { align-content: center; min-height: 64px; }
+.page .devices { padding-block: 0; }
+.devices .deviceLink { min-height: 64px; padding: 0; border: 0; text-align: start; }
