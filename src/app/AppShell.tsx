@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { AppTab, DisplayTheme } from './types'
 import styles from './AppShell.module.css'
@@ -10,6 +10,61 @@ const tabs: { id: AppTab; label: string; path: string }[] = [
   { id: 'history', label: '기록', path: 'M3 12a9 9 0 1 0 3-6.7M3 3v5h5M12 7v5l3 2' },
   { id: 'settings', label: '설정', path: 'M9.5 3h5l.7 2.6 1.4.8 2.6-.7 2.5 4.3-1.9 1.9v1.6l1.9 1.9-2.5 4.3-2.6-.7-1.4.8-.7 2.2h-5l-.7-2.2-1.4-.8-2.6.7-2.5-4.3 1.9-1.9v-1.6L2.3 10l2.5-4.3 2.6.7 1.4-.8Z M14.6 12.5a2.6 2.6 0 1 0-5.2 0 2.6 2.6 0 1 0 5.2 0Z' },
 ]
+
+const tabScrollThreshold = 24
+
+function useTabBarCollapse(tab: AppTab, visible: boolean) {
+  const [state, setState] = useState({ tab, visible, collapsed: false })
+  const navigation = useRef<HTMLElement>(null)
+  const collapsed = state.tab === tab && state.visible === visible && state.collapsed
+  if (state.tab !== tab || state.visible !== visible) {
+    setState({ tab, visible, collapsed: false })
+  }
+
+  useLayoutEffect(() => {
+    const root = document.scrollingElement
+    if (!visible || !root) return
+
+    const scrollPosition = () => Math.max(0, Math.min(root.scrollTop, root.scrollHeight - root.clientHeight))
+    let previous = scrollPosition()
+    let distance = 0
+    let frame = 0
+    const measure = () => {
+      frame = 0
+      const current = scrollPosition()
+      const delta = current - previous
+      previous = current
+      if (document.querySelector('dialog[open], [role="dialog"][aria-modal="true"]')) {
+        distance = 0
+        return
+      }
+      if (current === 0) {
+        distance = 0
+        if (collapsed) setState({ tab, visible, collapsed: false })
+        return
+      }
+      if (delta === 0) return
+      distance = Math.sign(distance) === Math.sign(delta) ? distance + delta : delta
+      if (collapsed && distance <= -tabScrollThreshold) {
+        setState({ tab, visible, collapsed: false })
+      } else if (!collapsed && distance >= tabScrollThreshold) {
+        const focusedTab = navigation.current?.querySelector('button:not([aria-current="page"]):focus-visible')
+        if (!focusedTab) setState({ tab, visible, collapsed: true })
+        distance = 0
+      }
+    }
+    const onScroll = () => {
+      if (frame === 0) frame = requestAnimationFrame(measure)
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(frame)
+    }
+  }, [collapsed, tab, visible])
+
+  return { navigation, collapsed, expand: () => setState({ tab, visible, collapsed: false }) }
+}
 
 export function AppShell({ children, tab, onNavigate, authenticated, focused = false, busy = false, displayTheme = 'normal' }: {
   children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; busy?: boolean; displayTheme?: DisplayTheme
@@ -40,18 +95,30 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
     }
   }, [])
   const showTabs = authenticated && !focused && !keyboardOpen
+  const { navigation, collapsed, expand } = useTabBarCollapse(tab, showTabs)
   return <div className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme}>
     <main className={`${styles.content} ${showTabs ? styles.withTabs : ''} ${authenticated && !focused && tab === 'home' ? styles.homeContent : ''} page`}>{children}</main>
-    {showTabs && <nav className={styles.tabs} aria-label="기본 탐색" style={{ '--tab-index': tabs.findIndex(item => item.id === tab) } as CSSProperties}>
-      {tabs.map(item => {
-        const active = tab === item.id
-        const filled = active && (item.id === 'home' || item.id === 'settings')
-        return <button type="button" key={item.id} data-tab={item.id} aria-label={item.label} aria-current={active ? 'page' : undefined} disabled={busy} onClick={() => onNavigate(item.id)}>
-          <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} fillRule="evenodd" stroke={filled ? 'none' : 'currentColor'} strokeWidth={active && !filled ? 2.4 : 1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d={item.path} />
-          </svg>
-        </button>
-      })}
+    {showTabs && <nav ref={navigation} className={styles.tabs} aria-label="기본 탐색" data-collapsed={collapsed}>
+      <span className={styles.tabSurface} data-tab-surface aria-hidden="true" />
+      <div className={styles.tabTrack} style={{ '--tab-index': tabs.findIndex(item => item.id === tab) } as CSSProperties}>
+        <span className={styles.tabIndicator} data-tab-indicator aria-hidden="true" />
+        {tabs.map((item, index) => {
+          const active = tab === item.id
+          const filled = active && (item.id === 'home' || item.id === 'settings')
+          const expandsMenu = collapsed && active
+          const hidden = collapsed && !active
+          return <div className={styles.tabSlot} key={item.id} style={{ '--item-index': index } as CSSProperties}>
+            <button type="button" data-tab={item.id}
+              aria-label={expandsMenu ? '하단 메뉴 펼치기' : item.label} aria-current={active ? 'page' : undefined}
+              aria-expanded={expandsMenu ? false : undefined} inert={hidden} aria-hidden={hidden || undefined} disabled={busy && !expandsMenu}
+              onClick={expandsMenu ? expand : () => onNavigate(item.id)}>
+              <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} fillRule="evenodd" stroke={filled ? 'none' : 'currentColor'} strokeWidth={active && !filled ? 3 : 1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d={item.path} />
+              </svg>
+            </button>
+          </div>
+        })}
+      </div>
     </nav>}
   </div>
 }

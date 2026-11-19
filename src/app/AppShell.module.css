@@ -24,41 +24,107 @@
 .shell .content:has(> [data-workout-frame]:not([hidden])),
 .shell .content:has(> [data-exercise-detail-source]:not([hidden]) > [data-workout-frame]:not([hidden])) { padding-bottom: 0; }
 .tabs {
+  --track-inset: calc(var(--tabs-padding) + 1px);
+  --fold-motion: 340ms cubic-bezier(.32, .08, .26, 1);
   position: fixed;
   inset: auto 0 var(--tabs-offset);
   z-index: 10;
   width: min(calc(100% - 24px), 336px);
+  height: var(--tabs-height);
   margin-inline: auto;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: var(--tabs-padding);
-  background: #08090c;
-  border: 1px solid #282c34;
-  border-radius: 999px;
+  pointer-events: none;
 }
-.tabs::before {
+.tabs[data-collapsed='true'] { --fold-motion: 320ms cubic-bezier(.32, .08, .26, 1); }
+.tabSurface {
+  position: absolute;
+  inset: auto 0 0;
+  width: 100%;
+  height: 100%;
+  margin-inline: auto;
+  background: #08090c;
+  box-shadow: inset 0 0 0 1px #282c34;
+  border-radius: 999px;
+  transition: width var(--fold-motion), height var(--fold-motion),
+    background-color var(--fold-motion), box-shadow var(--fold-motion);
+}
+.tabs[data-collapsed='true'] .tabSurface {
+  width: var(--tab-height);
+  height: var(--tab-height);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+.tabTrack {
+  position: absolute;
+  inset: auto var(--track-inset) 0;
+  height: var(--tab-height);
+  transform: translateY(calc(-1 * var(--track-inset)));
+  transition: transform var(--fold-motion);
+}
+.tabs[data-collapsed='true'] .tabTrack { transform: translateY(0); }
+/* The expanded slot width stays fixed while the surface and hit areas resize. */
+.tabSlot, .tabIndicator {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 25%;
+}
+.tabSlot {
+  transform: translateX(calc(100% * var(--item-index)));
+  transition: transform var(--fold-motion);
+}
+.tabs[data-collapsed='true'] .tabSlot { transform: translateX(150%); }
+.tabSlot:has(button[aria-current='page']) { z-index: 1; }
+.tabIndicator {
+  transform: translateX(calc(100% * var(--tab-index)));
+  translate: 0;
+  transition: transform 200ms ease, translate var(--fold-motion);
+}
+.tabs[data-collapsed='true'] .tabIndicator { translate: calc(100% * (1.5 - var(--tab-index))); }
+.tabIndicator::before {
   content: '';
   position: absolute;
-  inset: var(--tabs-padding) auto var(--tabs-padding) var(--tabs-padding);
-  width: calc((100% - 2 * var(--tabs-padding)) / 4);
+  inset: 0 auto 0 50%;
+  width: 100%;
+  transform: translateX(-50%);
   border-radius: 999px;
   background: #6c93c6;
-  pointer-events: none;
-  transform: translateX(calc(100% * var(--tab-index)));
-  transition: transform 200ms ease;
+  transition: width var(--fold-motion), background-color var(--fold-motion);
 }
-@media (prefers-reduced-motion: reduce) { .tabs::before { transition: none; } }
+.tabs[data-collapsed='true'] .tabIndicator::before {
+  width: var(--tab-height);
+  background: #5e82b1;
+}
 .shell .tabs button {
-  position: relative;
+  position: absolute;
+  inset: 0 auto 0 50%;
+  width: 100%;
+  transform: translateX(-50%);
   display: grid;
   place-items: center;
   padding: 0;
+  height: var(--tab-height);
   min-height: var(--tab-height);
   color: #d1d5dd;
   background: transparent;
   border-radius: 999px;
+  pointer-events: auto;
+  transition: width var(--fold-motion), opacity var(--fold-motion);
 }
-.tabs svg { width: 24px; height: 24px; }
+.tabs[data-collapsed='true'] .tabSlot button { width: var(--tab-height); }
+.shell .tabs button[inert] {
+  opacity: 0;
+  pointer-events: none;
+}
+.tabs svg {
+  width: 24px;
+  height: 24px;
+  transform: scale(1);
+  transition: transform var(--fold-motion);
+}
+.tabs button[inert] svg { transform: scale(.65); }
 .shell .tabs button[data-tab='home'] { color: #fff; }
 .shell .tabs button[aria-current='page'] { color: #000; }
 .shell .tabs button:focus-visible { outline-color: #fff; outline-offset: -3px; }
+@media (prefers-reduced-motion: reduce) {
+  .tabSurface, .tabTrack, .tabSlot, .tabIndicator, .tabIndicator::before,
+  .shell .tabs button, .tabs svg { transition: none; }
+}

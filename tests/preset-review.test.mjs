@@ -37,7 +37,14 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   }
   const click = (text, by = 'textContent', selector = 'button') => wait(() => evaluate(
     '(() => { const e = [...document.querySelectorAll(' + JSON.stringify(selector) + ')].find(e => e.getClientRects().length && !e.disabled && (e[' + JSON.stringify(by) + '] ?? "").trim() === ' + JSON.stringify(text) + '); if (!e) return false; e.click(); return true })()'), text)
-  const navTo = label => click(label, 'ariaLabel', 'nav[aria-label="기본 탐색"] button')
+  const nav = 'nav[aria-label="기본 탐색"]'
+  const navTo = async label => {
+    const buttons = nav + ' button:not([inert])'
+    if (await evaluate(`document.querySelector('${nav}')?.dataset.collapsed === 'true'`)) {
+      await click('하단 메뉴 펼치기', 'ariaLabel', buttons)
+    }
+    await click(label, 'ariaLabel', buttons)
+  }
   const set = (selector, value) => evaluate(
     '(() => { const e = document.querySelector(' + JSON.stringify(selector) + '); Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), "value").set.call(e, ' + JSON.stringify(value) + '); e.dispatchEvent(new Event(e.tagName === "SELECT" ? "change" : "input", {bubbles:true})); })()')
   const body = () => evaluate('document.body.innerText')
@@ -118,7 +125,6 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /11\.11 · 상체 푸시 \+ 러닝 · 오늘 예정/)
     assert.equal(await evaluate('document.querySelectorAll("[aria-label=홈] [data-session-id]").length'), 3)
     assert.deepEqual(await evaluate('[...document.querySelectorAll("[aria-label=홈] [data-session-id] [data-state]")].map(e=>e.dataset.state)'), ['complete','missed','unknown'])
-    const nav = 'nav[aria-label="기본 탐색"]'
     const activeTab = label => wait(() => evaluate(`document.querySelector('${nav} [aria-current=page]')?.ariaLabel === ${JSON.stringify(label)}`), 'active tab ' + label)
     const tabIcons = () => evaluate(`[...document.querySelectorAll('${nav} svg')].map(icon => {
       const style = getComputedStyle(icon);
@@ -131,29 +137,31 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
       assert.deepEqual(icons.map(([path]) => path), outlinePaths)
       assert.deepEqual(icons.map(([, ...style]) => style), [
         activeIndex === 0 ? ['rgb(0, 0, 0)', 'none', '1.6px'] : ['none', 'rgb(255, 255, 255)', '1.6px'],
-        ['none', activeIndex === 1 ? 'rgb(0, 0, 0)' : inactiveStroke, activeIndex === 1 ? '2.4px' : '1.6px'],
-        ['none', activeIndex === 2 ? 'rgb(0, 0, 0)' : inactiveStroke, activeIndex === 2 ? '2.4px' : '1.6px'],
+        ['none', activeIndex === 1 ? 'rgb(0, 0, 0)' : inactiveStroke, activeIndex === 1 ? '3px' : '1.6px'],
+        ['none', activeIndex === 2 ? 'rgb(0, 0, 0)' : inactiveStroke, activeIndex === 2 ? '3px' : '1.6px'],
         activeIndex === 3 ? ['rgb(0, 0, 0)', 'none', '1.6px'] : ['none', inactiveStroke, '1.6px'],
       ])
     }
     const capsuleAligned = () => evaluate(`(() => {
       const bar = document.querySelector('${nav}'), selected = bar.querySelector('[aria-current=page]');
-      const capsule = getComputedStyle(bar, '::before'), x = new DOMMatrixReadOnly(capsule.transform).m41;
-      return Math.abs(x - (selected.offsetLeft - bar.firstElementChild.offsetLeft)) < 1;
+      const indicator = bar.querySelector('[data-tab-indicator]').getBoundingClientRect();
+      const button = selected.getBoundingClientRect();
+      return Math.abs(indicator.x + indicator.width / 2 - button.x - button.width / 2) < 1;
     })()`)
     await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
     for (const width of [320, 375, 393, 430, 1280]) {
       await verifyWidth(width)
       assert.ok(await evaluate(`(() => {
-        const bar = document.querySelector('${nav}'), bounds = bar.getBoundingClientRect(), buttons = [...bar.querySelectorAll('button')];
+        const bar = document.querySelector('${nav}'), bounds = bar.querySelector('[data-tab-surface]').getBoundingClientRect();
+        const indicator = bar.querySelector('[data-tab-indicator]'), buttons = [...bar.querySelectorAll('button')];
         const rectangles = buttons.map(b => b.getBoundingClientRect());
         return bounds.width === Math.min(innerWidth-24,336) && bounds.height === 56 && bounds.bottom === innerHeight && Math.abs(bounds.left - (innerWidth - bounds.right)) < 1
           && buttons.map(b => b.ariaLabel).join() === '홈,루틴,기록,설정'
           && buttons.every(b => !b.textContent.trim() && b.querySelector('svg[aria-hidden=true]')?.getBoundingClientRect().width === 24)
           && rectangles.every(r => r.height === 46 && Math.abs(rectangles[0].width-r.width) < 1)
           && buttons.filter(b => b.getAttribute('aria-current') === 'page').length === 1
-          && getComputedStyle(bar,'::before').backgroundColor === 'rgb(108, 147, 198)'
-          && getComputedStyle(bar,'::before').transitionDuration === '0.2s'
+          && getComputedStyle(indicator,'::before').backgroundColor === 'rgb(108, 147, 198)'
+          && getComputedStyle(indicator).transitionDuration.split(', ')[0] === '0.2s'
           && getComputedStyle(buttons[1]).backgroundColor === 'rgba(0, 0, 0, 0)';
       })()`), `capsule layout at ${width}px`)
     }
@@ -180,10 +188,96 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(capsuleAligned, 'capsule settles after rapid navigation and browser history')
     await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'reduce'}]})
     await navTo('기록'); await activeTab('기록')
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('${nav}'),'::before').transitionDuration`),'0s')
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('${nav} [data-tab-indicator]')).transitionDuration`),'0s')
     assert.ok(await capsuleAligned())
-    await send('Emulation.setEmulatedMedia', {features:[]})
+    await send('Emulation.setEmulatedMedia', {features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
     await navTo('설정'); await activeTab('설정')
+    await navTo('홈'); await activeTab('홈')
+
+    const isCollapsed = () => evaluate(`document.querySelector('${nav}').dataset.collapsed === 'true'`)
+    const scrollTo = top => evaluate(`new Promise(resolve => { window.scrollTo(0, ${top}); requestAnimationFrame(() => requestAnimationFrame(() => resolve(window.scrollY))) })`)
+    const collapsedGeometry = inset => evaluate(`(() => {
+      const bar = document.querySelector('${nav}'), bounds = bar.querySelector('[data-tab-surface]').getBoundingClientRect();
+      const active = bar.querySelector('button:not([inert])');
+      const icon = active.querySelector('svg').getBoundingClientRect();
+      return bounds.width === 46 && bounds.height === 46 && bounds.bottom === innerHeight - ${inset}
+        && Math.abs(icon.x + icon.width / 2 - innerWidth / 2) < 1 && icon.width === 24 && icon.height === 24
+        && Math.abs(icon.y + icon.height / 2 - (bounds.y + 23)) < 1
+        && getComputedStyle(document.querySelector('main')).paddingBottom === '${72 + inset}px'
+        && getComputedStyle(bar.querySelector('[data-tab-indicator]'), '::before').backgroundColor === 'rgb(94, 130, 177)'
+        && active.getBoundingClientRect().width === 46;
+    })()`)
+    const expansionFrames = () => evaluate(`new Promise(resolve => {
+      const bar = document.querySelector('${nav}');
+      const indicator = bar.querySelector('[data-tab-indicator]');
+      const snapshot = () => ({
+        color: getComputedStyle(indicator, '::before').backgroundColor,
+        centers: [...bar.querySelectorAll('svg')].map(icon => {
+          const bounds = icon.getBoundingClientRect();
+          return bounds.x + bounds.width / 2;
+        }),
+      });
+      const observer = new MutationObserver(() => {
+        if (bar.dataset.collapsed !== 'false') return;
+        observer.disconnect();
+        const animations = bar.getAnimations({subtree: true});
+        for (const animation of animations) animation.pause();
+        const frames = [0, 100, 200, 339, 340].map(time => {
+          for (const animation of animations) animation.currentTime = time;
+          return snapshot();
+        });
+        for (const animation of animations) animation.finish();
+        resolve([...frames, snapshot()]);
+      });
+      observer.observe(bar, {attributes: true, attributeFilter: ['data-collapsed']});
+      bar.querySelector('button[aria-expanded=false]').click();
+    })`)
+    await send('Emulation.setDeviceMetricsOverride', { width: 393, height: 540, deviceScaleFactor: 1, mobile: true })
+    for (const [index, label] of ['홈', '루틴', '기록', '설정'].entries()) {
+      if (index !== 0) await navTo(label)
+      await activeTab(label)
+      await evaluate('document.activeElement.blur()')
+      const inset = index % 2 === 0 ? 0 : 34
+      await send('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: inset } })
+      await scrollTo(0)
+      for (const position of [2, 1, 3, 20]) await scrollTo(position)
+      assert.equal(await isCollapsed(), false, 'small or reversing scroll stays expanded')
+      assert.equal(await scrollTo(64), 64)
+      await wait(isCollapsed, label + ' scroll collapse')
+      await wait(() => collapsedGeometry(inset), label + ' centered circle')
+      assert.deepEqual(await evaluate(`[...document.querySelectorAll('${nav} button:not([inert])')].map(b => b.ariaLabel)`), ['하단 메뉴 펼치기'])
+      assert.equal(await evaluate(`document.querySelectorAll('${nav} button[inert][aria-hidden=true]').length`), 3)
+      await assertTabIcons(index)
+
+      const historyIndex = await evaluate('history.state.overloadNavigation.index')
+      const [start, middle, late, nearEnd, lastFrame, end] = await expansionFrames()
+      await activeTab(label)
+      assert.equal(start.color, 'rgb(94, 130, 177)')
+      assert.equal(end.color, 'rgb(108, 147, 198)')
+      assert.notEqual(middle.color, start.color)
+      assert.notEqual(middle.color, end.color)
+      for (const [i, target] of end.centers.entries()) {
+        let previous = start.centers[i]
+        assert.ok(Math.abs(previous - 196.5) < .02, 'expansion starts at the center')
+        for (const frame of [middle, late, nearEnd, lastFrame, end]) {
+          const current = frame.centers[i]
+          assert.ok(Math.abs(current - target) <= Math.abs(previous - target) + .01, 'icon moves toward its slot')
+          assert.ok(target < 196.5 ? current >= target - .01 : current <= target + .01, 'icon stays within its final slot center')
+          previous = current
+        }
+        assert.ok(Math.abs(nearEnd.centers[i] - target) < .02, 'icon is already approaching rest in the penultimate frame')
+        assert.equal(lastFrame.centers[i], target, 'last animated and settled slot centers match')
+      }
+      assert.equal(await evaluate('history.state.overloadNavigation.index'), historyIndex)
+      assert.equal(await evaluate('window.scrollY'), 64)
+      assert.equal(await isCollapsed(), false, 'manual expansion waits for new scrolling')
+      await scrollTo(100)
+      await wait(isCollapsed, label + ' renewed down scroll')
+      await scrollTo(70)
+      await activeTab(label)
+      await scrollTo(0)
+    }
+    await send('Emulation.setSafeAreaInsetsOverride', { insets: { bottom: 0 } })
     await navTo('홈'); await activeTab('홈'); await verifyWidth(320)
     const tuesday = () => evaluate('document.querySelector("button[aria-label^=\'2026-11-10\']").click()')
     await tuesday()
@@ -706,7 +800,10 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)
     assert.equal((await fetch(origin + '/api/v1/weekly-schedule')).status, 404)
   } catch (error) {
-    if (socket?.readyState === 1) console.error((await body()).slice(0, 1200), errors, [...responses.values()].slice(-25))
+    if (socket?.readyState === 1) {
+      const pageText = await evaluate('document.body?.innerText ?? ""').catch(() => '')
+      console.error(pageText.slice(0, 1200), errors, [...responses.values()].slice(-25))
+    }
     throw error
   } finally {
     if (socket?.readyState === 1) { try { await send('Browser.close') } catch { /* browser exited */ } }

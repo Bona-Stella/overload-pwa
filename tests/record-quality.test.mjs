@@ -35,7 +35,13 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await evaluate('(()=>{const e=document.querySelector('+JSON.stringify(selector)+');if(!e)throw Error("missing field");Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e),"value").set.call(e,'+JSON.stringify(value)+');e.dispatchEvent(new Event(e.tagName==="SELECT"?"change":"input",{bubbles:true}))})()')
  }
  const body=()=>evaluate('document.body.innerText')
- const tab=name=>click(name,'nav button')
+ const tab=async name=>{
+  const navigation='nav[aria-label="기본 탐색"]'
+  if(await evaluate(`document.querySelector('${navigation}')?.dataset.collapsed === 'true'`)){
+   await click('하단 메뉴 펼치기',navigation+' button:not([inert])')
+  }
+  await click(name,navigation+' button:not([inert])')
+ }
  const title=async name=>wait(()=>evaluate('[...document.querySelectorAll("h1,h2")].some(e=>e.getClientRects().length&&e.textContent==='+JSON.stringify(name)+')'),name)
  const width=async (w,side)=>{await send('Emulation.setDeviceMetricsOverride',{width:w,height:844,deviceScaleFactor:1,mobile:true});if(side!=='html'){await wait(()=>evaluate('innerWidth==='+w),'viewport width');assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'horizontal overflow')}}
  const capture=async(name,side,w)=>{
