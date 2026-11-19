@@ -20,6 +20,7 @@ import type { LocalWorkout } from './types.ts'
 import { slotKey } from './types.ts'
 import * as model from './model.ts'
 import { flowCardio, flowWeights, inputDraft, isWeightDone } from './flow-data.ts'
+import { observedWeightMs } from './weight-timing.ts'
 import { SYNC_LABEL } from './sync.ts'
 import { useRestAudio, useRestTimerAudio } from '../workout-flow/useRestAudio.ts'
 import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
@@ -27,7 +28,7 @@ import { restAlertVisual } from '../workout-flow/rest-alerts.ts'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 
 type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'remove' | 'undo-cardio' | { undo: number }
-const restKey = (rest: LocalWorkout['rest'] | undefined) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
+const restKey = (rest: LocalWorkout['rest']) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
 export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, referenceRecords = [], referenceRoutine = null, createSetId }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
   activities?: CardioActivity[]; history?: Session[]; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
@@ -38,19 +39,32 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const [hiddenRecommendations,setHiddenRecommendations]=useState<Set<string>>(()=>new Set())
   const [completedScroll, setCompletedScroll] = useState(0)
   const [exerciseScroll, setExerciseScroll] = useState<ExerciseScrollPosition | null>(null)
+  const [memoOpen, setMemoOpen] = useState<Record<string, boolean>>({})
   const [endingRest, setEndingRest] = useState<string | null>(null)
   const manualRest = useRef<string | null>(null)
   const action = useRef(false), clock = useRef<HTMLDivElement>(null), working = useRef<HTMLElement>(null)
   const [alerts] = useRestAlertPreferences(state.workout?.userId ?? null)
   const audio = useRestAudio(alerts.sound, alerts.volume)
   const { silence, unlock } = audio
-  const rest = state.workout?.rest
-  const currentRest = restKey(rest)
-  const restStarted = rest ? Date.parse(rest.startedAt) : undefined
+  const workout = state.workout
+  const timingReady = !!workout && state.writable && !workout.finish
+  useEffect(() => {
+    if (!timingReady) return
+    const observe = () => { void controller.observeWeightVisibility(visible && document.visibilityState === 'visible') }
+    observe()
+    document.addEventListener('visibilitychange', observe)
+    return () => document.removeEventListener('visibilitychange', observe)
+  }, [controller, timingReady, visible])
+  const rests = workout?.rests ? Object.values(workout.rests) : workout?.rest ? [workout.rest] : []
+  const audioRests = rests.filter(rest => restKey(rest) !== endingRest)
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+  const audioRest = audioRests.find(rest => Date.parse(rest.endsAt) > now) ?? audioRests[0]
+  const restStarted = audioRest ? Date.parse(audioRest.startedAt) : undefined
+  const restEnd = audioRest ? Date.parse(audioRest.endsAt) : undefined
   const restNow = Math.max(now, restStarted ?? now)
-  const restRemaining = state.workout && currentRest !== endingRest ? model.restRemaining(state.workout, restNow) : 0
-  useRestTimerAudio(audio, visible && state.writable ? currentRest : null, rest ? Date.parse(rest.endsAt) : undefined,
-    restStarted, restRemaining, restNow, alerts.sound && alerts.middle ? alerts.middleAt : null)
+  useRestTimerAudio(audio, visible && state.writable && !workout?.finish ? restKey(audioRest) : null, restEnd,
+    restStarted, restEnd === undefined ? 0 : Math.max(0, Math.ceil((restEnd - restNow) / 1000)), restNow,
+    alerts.sound && alerts.middle ? alerts.middleAt : null)
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer) }, [])
   useLayoutEffect(() => {
     if (!completedScroll || !visible) return
@@ -61,7 +75,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     })
     return () => cancelAnimationFrame(frame)
   }, [completedScroll, visible])
-  const workout = state.workout
   if (!workout) return null
   const weights = flowWeights(state, history, definitions), cardio = flowCardio(state, now)
   const exercises = [...weights, ...cardio]
@@ -69,10 +82,13 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const id = workout.currentExerciseId, index = items.findIndex(e => e.id === id)
   const weight = weights.find(w => w.id === id), activity = cardio.find(c => c.id === id)
   const warmup = workout.warmupCompleted === false && weights.length > 0
-  const remaining = restRemaining
+  const rest = model.exerciseRest(workout, id)
+  const remaining = rest && restKey(rest) !== endingRest ? model.restRemaining(workout, Math.max(now, Date.parse(rest.startedAt)), id) : 0
   const blocked = !state.writable || !!workout.finish
   const visual = restAlertVisual(alerts, weight && !warmup ? remaining : 0)
   const completeWeight = !!weight && isWeightDone(weight)
+  const preparingWeight = !!weight && !completeWeight && !model.weightStarted(workout, id)
+  const preparing = !warmup && (preparingWeight || activity?.phase === 'ready')
   const allWeights = weights.every(isWeightDone)
   const allDone = allWeights && cardio.every(c => c.phase === 'completed' || c.phase === 'skipped')
   const nextSet = weight?.sets.find(s => !s.result)
@@ -80,7 +96,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     const w = weights.find(e => e.id === item.id), c = cardio.find(e => e.id === item.id)
     return w ? !isWeightDone(w) : c?.phase !== 'completed' && c?.phase !== 'skipped'
   })
-  const act = async (transform: (w: LocalWorkout) => void, close = false) => {
+  const act = async (transform: (w: LocalWorkout, now: number) => void, close = false) => {
     if (action.current || blocked) return false
     action.current = true
     try { const saved = await controller.complete(transform); if (saved && close) setModal(null); return saved }
@@ -88,13 +104,14 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   }
   const endRest = () => {
     if (blocked) return
-    const rest = controller.getSnapshot().workout?.rest, key = restKey(rest)
+    const current = controller.getSnapshot().workout
+    const rest = current ? model.exerciseRest(current, id) : undefined, key = restKey(rest)
     if (!rest || !key || manualRest.current === key) return
     manualRest.current = key
     silence(Date.parse(rest.endsAt))
     setEndingRest(key)
     // Serialize behind an in-flight extension instead of dropping the manual end.
-    void controller.complete(w => { if (restKey(w.rest) === key) w.rest = null }).then(saved => {
+    void controller.complete(w => { if (restKey(model.exerciseRest(w, id)) === key) delete model.migrateRest(w)[id] }).then(saved => {
       if (!saved) { manualRest.current = null; setEndingRest(null) }
     })
   }
@@ -117,14 +134,37 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     try { if (await controller.finish(Date.now())) setModal(null) } finally { action.current = false }
   }
   const requestEnd = () => { if (allDone) void end(); else setModal('end') }
+  const completeExercise = async (transform: (w: LocalWorkout, now: number) => void) => {
+    const saved = await act((w, at) => {
+      if (w.currentExerciseId !== id) throw new Error('현재 종목을 다시 확인해 주세요.')
+      transform(w, at)
+      model.advanceAfterCompletion(w, id)
+    })
+    const next = controller.getSnapshot().workout
+    if (saved && next && next.currentExerciseId !== id) {
+      const destination = next.currentExerciseId
+      if (next.snapshot.appliedPlan.weightExercises.some(e => e.sessionExerciseId === destination) && !model.weightStarted(next, destination)) {
+        setMemoOpen(value => ({ ...value, [destination]: true }))
+      }
+      setEditing(false)
+      window.scrollTo(0, 0)
+    }
+    return saved
+  }
   const complete = (ordinal: number) => {
-    if (!weight || remaining > 0) return
+    if (!weight || preparingWeight || warmup || remaining > 0) return
     void unlock()
-    void act(w => {
-      if (w.snapshot.performedSets.some(s => s.sessionExerciseId === id && s.ordinal === ordinal)) return
+    void completeExercise((w, at) => {
+      if (!model.weightStarted(w, id) || model.restRemaining(w, at, id) > 0) throw new Error('운동을 시작하고 휴식을 마친 뒤 완료해 주세요.')
       model.editDraft(w, id, ordinal, inputDraft(w, id, ordinal, history))
-      model.completeSet(w, id, ordinal, Date.now(), createSetId)
-    }).then(saved => { if (saved) setCompletedScroll(v => v + 1) })
+      model.completeSet(w, id, ordinal, at, createSetId)
+    }).then(saved => { if (saved && controller.getSnapshot().workout?.currentExerciseId === id) setCompletedScroll(v => v + 1) })
+  }
+  const startExercise = () => {
+    void unlock()
+    void act((w, at) => model.startExercise(w, id, at)).then(saved => {
+      if (saved && weight) setMemoOpen(value => ({ ...value, [id]: false }))
+    })
   }
   const addSet = () => void act(w => {
     const plan = w.snapshot.appliedPlan.weightExercises.find(p => p.sessionExerciseId === id)!
@@ -147,27 +187,30 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   if (blocked) actions = <Button onClick={() => void controller.retrySync()}>서버 저장 상태 다시 확인</Button>
   else if (warmup) actions = <Button variant="primary" onClick={() => {
     void unlock()
-    void act(w => { w.warmupCompleted = true }).then(saved => { if (saved) window.scrollTo(0, 0) })
+    void act(model.completeWarmup).then(saved => { if (saved) window.scrollTo(0, 0) })
   }}>준비운동 완료</Button>
-  else if (weight && editing) actions = <Button variant="primary" onClick={() => setEditing(false)}>편집 닫기</Button>
+  else if (weight && editing) actions = <Button className={styles.editClose} onClick={() => setEditing(false)}>편집 닫기</Button>
+  else if (preparing) actions = <Button variant="primary" onClick={startExercise}>운동 시작하기</Button>
   else if (weight && remaining > 0) actions = <RestActions remaining={remaining} flash={visual.bottom}
     onEnd={endRest}
-    onExtend={() => { void act(w => { if (w.rest) w.rest.endsAt = new Date(Date.parse(w.rest.endsAt) + 30000).toISOString() }) }} />
+    onExtend={() => { void act(w => { const current = model.exerciseRest(w, id); if (current) current.endsAt = new Date(Date.parse(current.endsAt) + 30000).toISOString() }) }} />
   else if (weight && nextSet) actions = <Button variant="primary" onClick={() => complete(nextSet.id)}>{nextSet.id}세트 완료</Button>
   else if (weight) actions = finalActions
-  else if (activity?.phase === 'ready') actions = <Button variant="primary" onClick={() => void act(w => model.timerAction(w, id, 'start', Date.now()))}>유산소 시작</Button>
-  else if (activity?.phase === 'review') actions = <Button variant="primary" onClick={() => void act(w => model.completeCardio(w, id, Date.now())).then(saved => { if (saved) window.scrollTo(0, 0) })}>유산소 기록 확정</Button>
+  else if (activity?.phase === 'review') actions = <Button variant="primary" onClick={() => void completeExercise((w, at) => model.completeCardio(w, id, at, createSetId)).then(saved => { if (saved && controller.getSnapshot().workout?.currentExerciseId === id) window.scrollTo(0, 0) })}>유산소 기록 확정</Button>
   else if (activity?.phase === 'completed' || activity?.phase === 'skipped') actions = finalActions
   else actions = <div className={styles.actions}>
     <Button onClick={() => void act(w => model.timerAction(w, id, activity?.phase === 'running' ? 'pause' : 'start', Date.now()))}>{activity?.phase === 'running' ? '일시정지' : '재개'}</Button>
     <Button variant="primary" onClick={() => void act(w => model.reviewCardio(w, id, Date.now()))}>유산소 완료</Button>
   </div>
   if(weight&&!warmup&&!editing&&!blocked&&recommendation)actions=<>{recommendation}{actions}</>
-  const lastCompleted = Math.max(0, ...workout.snapshot.performedSets.map(s => Date.parse(s.completedAt)))
-  const timerHeading = activity ? '유산소 시간' : remaining ? '남은 휴식' : completeWeight && !allDone ? '이전 종목 완료' : '휴식 시간'
-  const timerLabel = activity ? activity.phase === 'ready' ? '준비 중' : activity.phase === 'skipped' ? '건너뜀' : '완료'
-    : warmup ? '준비 중' : allDone ? '모든 종목 완료' : completeWeight ? '완료' : '휴식 없음'
-  const timer = activity ? activity.activeMs : remaining ? remaining * 1000 : completeWeight && !allDone && lastCompleted ? now - lastCompleted : undefined
+  const preparedFrom = preparing ? model.exercisePreparationStartedAt(workout, id) : undefined
+  const performingWeight = !!weight && !warmup && !preparingWeight && !completeWeight
+  const weightTimingLabel = workout.snapshot.weightTiming?.complete === false ? 'WEIGHT 수행 · 일부' : 'WEIGHT 수행'
+  const timerHeading = preparing ? '종목 준비' : remaining > 0 ? '휴식 시간'
+    : performingWeight ? weightTimingLabel : activity ? '유산소 시간' : '운동 상태'
+  const timerLabel = warmup || preparing ? '준비 중' : allDone ? '모든 종목 완료' : activity?.phase === 'skipped' ? '건너뜀' : '완료'
+  const timer = preparedFrom ? Math.max(0, now - Date.parse(preparedFrom)) : remaining > 0 ? remaining * 1000
+    : performingWeight ? observedWeightMs(workout, now) : activity && !preparing && !allDone && activity.phase !== 'skipped' ? activity.activeMs : undefined
   const issue = state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : null
   const syncNotice = state.syncStatus && ['WAITING', 'APPROVAL', 'CHECK', 'OTHER'].includes(state.syncStatus) ? SYNC_LABEL[state.syncStatus] : null
   const statusNote = state.issue || state.unsavedDrafts || state.syncIssue || syncNotice || Children.count(notices) > 0
@@ -180,12 +223,15 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     const activity = 'plan' in exercise ? exercise : undefined
     const navigation = <ExerciseNavigation previous={items[at - 1]} next={items[at + 1]} onList={() => setModal('list')} onGo={go} preview={preview} />
     const id = exercise.id
+    const started = model.weightStarted(workout, id)
+    const open = memoOpen[id] ?? !started
     return <>
       {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
       {weight && <WeightFocus preview={preview} additionalInput weight={weight} position={at + 1} workingRef={preview ? undefined : working} manufacturers={manufacturers}
         description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
-        issue={preview ? null : issue} resting={remaining > 0} editing={!preview && editing}
-        memoContent={<CombinationMemo preview={preview} exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />}
+        issue={preview ? null : issue} resting={!started || model.restRemaining(workout, now, id) > 0} editing={!preview && editing}
+        memoOpen={open} onMemoToggle={() => setMemoOpen(value => ({ ...value, [id]: !open }))}
+        memoContent={<CombinationMemo preview={preview} hiddenLabel exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />}
         progressNote={workout.replacementSlots?.[id] ? '대체 수행 ' + weight.sets.filter(s => s.result).length + '/' + weight.sets.length + '세트 · 원계획 슬롯 완료 인정은 서버 확인이 필요합니다.' : changedCombination ? '오늘만 조합 변경 · 공식 중량 검토 제외' : undefined}
         approvalNote={workout.approvalResults.some(r => r.sessionExerciseId === id && r.status === 'PENDING') ? '승인 확인 필요' : '승인 요청 상태 확인'}
         onDraft={(ordinal, draft) => {
@@ -227,7 +273,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
       navigation={weight && !warmup ? { previous: items[index - 1], next: items[index + 1], onGo: go } : undefined}
       swipe={!warmup && index >= 0 ? { currentId: id, previous: items[index - 1], next: items[index + 1],
         renderPreview: next => renderExercise(exercises.findIndex(exercise => exercise.id === next), true),
-        disabled: !visible || blocked || !!modal || editing || visual.dim, canMove: () => !action.current, onGo: go } : undefined}
+        disabled: !visible || blocked || !!modal || editing, canMove: () => !action.current, onGo: go } : undefined}
       cardioFocus={!!activity && !warmup}
       onHome={onHome} backLabel={backLabel} onEnd={requestEnd} actions={actions} onRestInteraction={visible && !blocked && remaining > 0 ? unlock : undefined}
       reviewNote={statusNote}>

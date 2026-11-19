@@ -26,9 +26,12 @@ export function createLocalWorkout(server: Session, restPolicy: RestPolicy): Loc
     recordedContexts: structuredClone(server.snapshot.recordedContexts), approvalResults: structuredClone(server.snapshot.approvalResults),
     presence: Object.fromEntries([...state.performedSets, ...state.cardioResults].map(x => [x.id, 'SERVER_CONFIRMED'])), cancelled: { sets: [], cardio: [] },
     drafts: {}, weights, timers: {}, exerciseNames: Object.fromEntries(server.initialPlan.weightExercises.map(x => [x.sessionExerciseId, x.exerciseName])),
-    currentExerciseId: state.appliedPlan.weightExercises[0]?.sessionExerciseId ?? state.appliedPlan.cardioActivities[0]?.sessionActivityId ?? '',
+    currentExerciseId: state.appliedPlan.weightExercises.find(e => !weightDone(state, e.sessionExerciseId))?.sessionExerciseId
+      ?? state.appliedPlan.cardioActivities.find(a => !state.cardioResults.some(r => r.sessionActivityId === a.sessionActivityId))?.sessionActivityId
+      ?? state.appliedPlan.cardioActivities.at(-1)?.sessionActivityId ?? state.appliedPlan.weightExercises.at(-1)?.sessionExerciseId ?? '',
+    startedWeights: {}, preparationFrom: {},
     warmupCompleted: server.localRevision !== '0' || state.performedSets.length > 0 || state.cardioResults.length > 0 || !state.appliedPlan.weightExercises.length,
-    equipmentMemos: {}, restPolicy: { ...restPolicy }, rest: null }
+    equipmentMemos: {}, restPolicy: { ...restPolicy }, rests: {} }
 }
 export const emptyTimer = (): CardioTimer => ({ startedAt: null, runningSince: null, accumulatedMs: 0, segments: [], distance: '', speed: '', bpm: '', correctedSeconds: null, reviewing: false })
 function eventTime(workout: LocalWorkout, now: number) {
@@ -42,7 +45,82 @@ function freshId(workout: LocalWorkout, randomId: () => string) {
   return id
 }
 export function restSeconds(policy: RestPolicy, maxReps: number) { return maxReps <= 10 ? policy.restLowSeconds : maxReps <= 12 ? policy.restMediumSeconds : policy.restHighSeconds }
-export function restRemaining(workout: LocalWorkout, now: number) { return workout.rest ? Math.max(0, Math.ceil((Date.parse(workout.rest.endsAt) - now) / 1000)) : 0 }
+export function exerciseRest(workout: LocalWorkout, id = workout.currentExerciseId) {
+  return workout.rests?.[id] ?? (workout.rest?.sessionExerciseId === id ? workout.rest : undefined)
+}
+export function migrateRest(workout: LocalWorkout) {
+  workout.rests ??= workout.rest ? { [workout.rest.sessionExerciseId]: workout.rest } : {}
+  delete workout.rest
+  return workout.rests
+}
+export function restRemaining(workout: LocalWorkout, now: number, id = workout.currentExerciseId) {
+  const rest = exerciseRest(workout, id)
+  return rest ? Math.max(0, Math.ceil((Date.parse(rest.endsAt) - now) / 1000)) : 0
+}
+export function weightDone(snapshot: LocalWorkout['snapshot'], id: string) {
+  const plan = snapshot.appliedPlan.weightExercises.find(e => e.sessionExerciseId === id)
+  return !!plan && snapshot.performedSets.filter(s => s.sessionExerciseId === id).length >= plan.setCount
+}
+export function weightStarted(workout: LocalWorkout, id: string) {
+  return !!workout.startedWeights?.[id] || workout.snapshot.performedSets.some(s => s.sessionExerciseId === id)
+}
+export function completeWarmup(workout: LocalWorkout, now: number) {
+  if (workout.warmupCompleted !== false) return
+  workout.warmupCompletedAt = eventTime(workout, now)
+  workout.warmupCompleted = true
+}
+export function startExercise(workout: LocalWorkout, id: string, now: number) {
+  if (workout.warmupCompleted === false || workout.currentExerciseId !== id) throw new Error('현재 준비 중인 종목을 확인해 주세요.')
+  if (workout.snapshot.appliedPlan.weightExercises.some(e => e.sessionExerciseId === id)) {
+    if (weightDone(workout.snapshot, id) || weightStarted(workout, id)) return
+    const starts = workout.startedWeights ??= {}
+    starts[id] = eventTime(workout, now)
+  } else {
+    timerAction(workout, id, 'start', now)
+  }
+  if (workout.preparationFrom) delete workout.preparationFrom[id]
+}
+export function preparationCompletedAt(workout: LocalWorkout, id: string) {
+  const recordId = workout.preparationFrom?.[id]
+  if (!recordId) return
+  const set = workout.snapshot.performedSets.find(s => s.id === recordId)
+  return set && weightDone(workout.snapshot, set.sessionExerciseId) ? set.completedAt
+    : workout.snapshot.cardioResults.find(c => c.id === recordId)?.occurredAt
+}
+function exerciseOrder(snapshot: LocalWorkout['snapshot']) {
+  return [...snapshot.appliedPlan.weightExercises.map(e => e.sessionExerciseId), ...snapshot.appliedPlan.cardioActivities.map(c => c.sessionActivityId)]
+}
+export function exercisePreparationStartedAt(workout: LocalWorkout, id: string) {
+  const anchored = preparationCompletedAt(workout, id)
+  if (anchored) return anchored
+  const { snapshot } = workout, order = exerciseOrder(snapshot)
+  const previous = order[order.indexOf(id) - 1]
+  if (previous && weightDone(snapshot, previous)) {
+    const completedAt = snapshot.performedSets.reduce<string | undefined>((latest, set) =>
+      set.sessionExerciseId === previous && (!latest || Date.parse(set.completedAt) > Date.parse(latest)) ? set.completedAt : latest, undefined)
+    if (completedAt) return completedAt
+  }
+  return snapshot.cardioResults.find(r => r.sessionActivityId === previous && r.status === 'COMPLETED')?.occurredAt
+    ?? workout.warmupCompletedAt ?? workout.startedAt
+}
+/** Called inside the same durable transaction as the new completion record. */
+export function advanceAfterCompletion(workout: LocalWorkout, id: string) {
+  if (workout.currentExerciseId !== id) return
+  const { snapshot } = workout
+  const weight = weightDone(snapshot, id)
+  const record = weight ? snapshot.performedSets.findLast(s => s.sessionExerciseId === id)
+    : snapshot.cardioResults.find(c => c.sessionActivityId === id && c.status === 'COMPLETED')
+  if (!record) return
+  const order = exerciseOrder(snapshot)
+  const next = order.slice(order.indexOf(id) + 1).find(target => !weightDone(snapshot, target) && !snapshot.cardioResults.some(c => c.sessionActivityId === target))
+  if (!next) return
+  if (!weightStarted(workout, next) && !workout.timers[next]?.startedAt) {
+    const origins = workout.preparationFrom ??= {}
+    origins[next] = record.id
+  }
+  // Keep the existing finish/continue choice at the WEIGHT → CARDIO boundary.
+  if (!weight || snapshot.appliedPlan.weightExercises.some(e => e.sessionExerciseId === next)) workout.currentExerciseId = next
+}
 export function draftFor(workout: LocalWorkout, id: string, ordinal: number): SetDraft { return workout.drafts[slotKey(id, ordinal)] ?? { weight: workout.weights[id]?.value ?? '', reps: '' } }
 export function editDraft(workout: LocalWorkout, id: string, ordinal: number, patch: Partial<ReturnType<typeof draftFor>>) {
   requireWeight(workout, id)
@@ -72,12 +150,15 @@ export function completeSet(workout: LocalWorkout, id: string, ordinal: number, 
   // Preserve the original input text, including trailing decimal zeros.
   workout.drafts[slotKey(id, ordinal)] = { ...draft }
   const seconds = restSeconds(workout.restPolicy, plan.maxReps)
-  workout.rest = workout.snapshot.performedSets.filter(s => s.sessionExerciseId === id).length >= plan.setCount ? null
-    : { startedAt: completedAt, endsAt: new Date(now + seconds * 1000).toISOString(), seconds, sessionExerciseId: id, ordinal }
+  const rests = migrateRest(workout)
+  if (weightDone(workout.snapshot, id)) delete rests[id]
+  else rests[id] = { startedAt: completedAt, endsAt: new Date(now + seconds * 1000).toISOString(), seconds, sessionExerciseId: id, ordinal }
 }
 export function undoSet(workout: LocalWorkout, recordId: string) {
   const record = workout.snapshot.performedSets.find(x => x.id === recordId)
   if (!record) throw new Error('완료 기록을 찾지 못했습니다.')
+  const starts = workout.startedWeights ??= {}
+  starts[record.sessionExerciseId] ??= record.completedAt
   workout.cancelled.sets.push(structuredClone(record))
   // Local-only tombstones stay in cancelled, not in a server deletion list for nonexistent rows.
   // Unknown delivery must be reconciled in 5C; it is never silently treated as local-only.
@@ -85,7 +166,7 @@ export function undoSet(workout: LocalWorkout, recordId: string) {
   if (!workout.presence[record.id] || workout.presence[record.id] === 'UNKNOWN') { workout.presence[record.id] = 'UNKNOWN'; workout.syncState = 'UNKNOWN' }
   workout.snapshot.performedSets = workout.snapshot.performedSets.filter(x => x.id !== recordId)
   workout.drafts[slotKey(record.sessionExerciseId, record.ordinal)] ??= { weight: record.weightKg, reps: String(record.reps), ...(record.bodyweightLoad ? { additionalWeight: record.bodyweightLoad.additionalWeightKg ?? '' } : {}) }
-  if (workout.rest?.sessionExerciseId === record.sessionExerciseId && workout.rest.ordinal === record.ordinal) workout.rest = null
+  if (exerciseRest(workout, record.sessionExerciseId)?.ordinal === record.ordinal) delete migrateRest(workout)[record.sessionExerciseId]
 }
 export function changeWeight(workout: LocalWorkout, id: string, value: string, approve: boolean, now: number, randomId = () => crypto.randomUUID()) {
   requireWeight(workout, id)
@@ -159,6 +240,9 @@ export function removeExercise(workout: LocalWorkout, id: string) {
   if (p.weightExercises.length + p.cardioActivities.length <= 1) throw new Error('현재 계획에는 한 종목 이상이 필요합니다.')
   if (workout.timers[id]?.runningSince) throw new Error('유산소 타이머를 먼저 정지해 주세요.')
   p.weightExercises = p.weightExercises.filter(x => x.sessionExerciseId !== id); p.cardioActivities = p.cardioActivities.filter(x => x.sessionActivityId !== id)
+  delete migrateRest(workout)[id]
+  if (workout.startedWeights) delete workout.startedWeights[id]
+  if (workout.preparationFrom) delete workout.preparationFrom[id]
   workout.currentExerciseId = p.weightExercises[0]?.sessionExerciseId ?? p.cardioActivities[0]?.sessionActivityId ?? ''
 }
 export function elapsed(timer: CardioTimer, now: number) {
@@ -182,7 +266,7 @@ export function reviewCardio(workout: LocalWorkout, id: string, now: number) {
   if (!workout.timers[id].startedAt) throw new Error('유산소를 먼저 시작해 주세요.')
   workout.timers[id].reviewing = true
 }
-export function completeCardio(workout: LocalWorkout, id: string, now: number, randomId = () => crypto.randomUUID()) {
+export function completeCardio(workout: LocalWorkout, id: string, now: number, randomId: () => string = () => crypto.randomUUID()) {
   timerAction(workout, id, 'pause', now)
   const timer = workout.timers[id], activity = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)
   if (!timer?.startedAt || !activity) throw new Error('유산소를 먼저 시작해 주세요.')
@@ -212,14 +296,16 @@ export function exerciseList(workout: LocalWorkout) {
     priority: initial.has(x.sessionExerciseId) && workout.snapshot.performedSets.filter(s => s.sessionExerciseId === x.sessionExerciseId).length < x.setCount ? 0 : 1 }))
   return [...weights.sort((a, b) => a.priority - b.priority), ...workout.snapshot.appliedPlan.cardioActivities.map(x => ({ id: x.sessionActivityId, name: x.plan.name, kind: 'CARDIO' as const, priority: 2 }))]
 }
-export function applyLocalChange(previous: LocalWorkout, transform: (next: LocalWorkout) => void): LocalWorkout {
+export function applyLocalChange(previous: LocalWorkout, transform: (next: LocalWorkout) => void, deferWeightTiming = false): LocalWorkout {
   const next = structuredClone(previous); transform(next)
   for (const record of previous.snapshot.performedSets) {
     const current = next.snapshot.performedSets.find(s => s.id === record.id)
     if (current && (current.manufacturerId !== record.manufacturerId || current.loadType !== record.loadType)) throw new Error('완료 당시 장비는 변경할 수 없습니다.')
   }
   if (!snapshot(next.snapshot)) throw new Error('운동 저장 형식을 확인하지 못했습니다.')
-  if (JSON.stringify(previous.snapshot) !== JSON.stringify(next.snapshot) || !previous.finish && next.finish) {
+  // Clock checkpoints stay durable locally. The next record edit or FINISH carries them with its snapshot.
+  const snapshotJson = (state: LocalWorkout['snapshot']) => JSON.stringify(deferWeightTiming ? { ...state, weightTiming: undefined } : state)
+  if (snapshotJson(previous.snapshot) !== snapshotJson(next.snapshot) || !previous.finish && next.finish) {
     next.localRevision = increment(previous.localRevision)
     next.syncState = next.syncState === 'UNKNOWN' ? 'UNKNOWN' : 'UNSENT'
   }

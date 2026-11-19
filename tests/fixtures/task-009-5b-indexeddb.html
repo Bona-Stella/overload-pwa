@@ -28,10 +28,12 @@ document.querySelector('#run').onclick=async()=>{
     const originalSession=session(), originalKey=keyOf(originalSession)
     await new Promise((resolve,reject)=>{const tx=old.transaction(['meta','startAttempts','sessionCopies'],'readwrite');tx.objectStore('meta').put(start.editorDeviceId,'editorDeviceId');tx.objectStore('startAttempts').put({...scope,request:start,requestJson:JSON.stringify(start)});tx.objectStore('sessionCopies').put({...scope,sessionId:originalSession.id,editorDeviceId:originalSession.editorDeviceId,writerEpoch:originalSession.writerEpoch,server:originalSession});tx.oncomplete=resolve;tx.onabort=()=>reject(tx.error)})
     old.close();const upgraded=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),upgradeName)
-    try{check(await upgraded.deviceId()===start.editorDeviceId&&(await upgraded.attempt(scope)).requestJson===JSON.stringify(start)&&(await upgraded.copies(scope)).length===1,'v1 preservation');await upgraded.openLocal(originalSession,bootstrap.settings,()=>true);check((await upgraded.readLocal(originalKey)).localRevision==='0','v2 local store')}finally{await upgraded.close()}
-    passed.push('실제 DB v1→v2 업그레이드: 기기 UUID·고정 START·서버 사본 보존, 새 로컬 저장소 추가')
+    try{check(await upgraded.deviceId()!==start.editorDeviceId&&await upgraded.attempt(scope)===null&&(await upgraded.copies(scope)).length===0,'pre-release v1 reset on DB v3');await upgraded.saveSession(scope,originalSession);await upgraded.openLocal(originalSession,bootstrap.settings,()=>true);check((await upgraded.readLocal(originalKey)).localRevision==='0','v3 local store')}finally{await upgraded.close()}
+    passed.push('격리 픽스처 DB v1→v3 전환: 현행 출시 전 초기화 정책과 새 로컬 저장소 확인')
     store=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database);second=new WorkoutStore(indexedDB,()=>crypto.randomUUID(),database)
     const s=session({dataGeneration:String(Date.now())}), key=keyOf(s)
+    s.initialPlan.weightExercises[0].setCount=5
+    s.snapshot.state.appliedPlan.weightExercises[0].setCount=5
     await store.saveSession(s,s);let w=await store.openLocal(s,bootstrap.settings,()=>true)
     const base=structuredClone(w), draft=change(w,x=>m.editDraft(x,E,1,{weight:'00062.500000',reps:'0008'}))
     await store.saveLocal(draft,w.editVersion,()=>true);w=draft
@@ -40,10 +42,10 @@ document.querySelector('#run').onclick=async()=>{
     IDBObjectStore.prototype.put=function(...args){const r=originalPut.apply(this,args);if(this.transaction.db.name===database&&this.name==='localWorkouts')this.transaction.abort();return r}
     let rejected=false;try{await store.saveLocal(change(w,x=>m.completeSet(x,E,1,now)),w.editVersion,()=>true)}catch{rejected=true}finally{IDBObjectStore.prototype.put=originalPut}
     check(rejected,'abort rejects');const after=await store.readLocal(key)
-    check(after.localRevision==='0'&&after.snapshot.performedSets.length===0&&after.rest===null&&after.drafts[E+':1'].reps==='0008','abort entire completion')
+    check(after.localRevision==='0'&&after.snapshot.performedSets.length===0&&!m.exerciseRest(after,E)&&after.drafts[E+':1'].reps==='0008','abort entire completion')
     passed.push('완료 put 이후 실제 transaction.abort: 수행·revision·휴식 전체 롤백, 초안 유지')
     const next=change(w,x=>m.completeSet(x,E,1,now));await store.saveLocal(next,w.editVersion,()=>true);w=next
-    const saved=await second.readLocal(key);check(saved.snapshot.performedSets.length===1&&saved.localRevision==='1'&&saved.rest,'atomic complete')
+    const saved=await second.readLocal(key);check(saved.snapshot.performedSets.length===1&&saved.localRevision==='1'&&m.exerciseRest(saved,E),'atomic complete')
     passed.push('완료·수행 UUID·실제 수치·휴식·revision·미전송 상태를 한 번에 커밋')
     let stale=false;try{await second.saveLocal(change(draft,x=>m.editDraft(x,E,2,{weight:'0',reps:'8'})),draft.editVersion,()=>true)}catch(e){stale=e instanceof LocalWriteBlocked}check(stale,'CAS stale')
     passed.push('두 연결의 오래된 editVersion 저장 차단')
@@ -64,7 +66,7 @@ document.querySelector('#run').onclick=async()=>{
     await store.saveSession(s,s);check(JSON.stringify((await store.readLocal(key)).snapshot)===JSON.stringify(w.snapshot),'server copy must not overwrite local')
     passed.push('서버 InitialPlan 재조회가 미전송 로컬 운동을 덮어쓰지 않음')
     const newer=session({...s,version:'1',writerEpoch:'1',editorDeviceId:OTHER});await store.saveSession(s,newer)
-    let lost=false;try{await store.saveLocal(change(w,x=>{x.rest=null}),w.editVersion,()=>true)}catch(e){lost=e instanceof LocalWriteBlocked}check(lost,'known takeover blocks old writer')
+    let lost=false;try{await store.saveLocal(change(w,x=>{delete x.rests[E]}),w.editVersion,()=>true)}catch(e){lost=e instanceof LocalWriteBlocked}check(lost,'known takeover blocks old writer')
     check((await store.readLocal(key)).snapshot.performedSets.length===4,'old epoch retained');passed.push('다른 epoch 확인 후 구 사본 쓰기 차단·구 수행 보존')
     const ownSession=session({...s,id:crypto.randomUUID()}), ownKey=keyOf(ownSession);await store.saveSession(s,ownSession)
     let held=true;controller=new LocalWorkoutController(store,()=>true,async()=>({held:()=>held,release(){held=false}}));await controller.open(ownSession,bootstrap.settings)
@@ -73,8 +75,25 @@ document.querySelector('#run').onclick=async()=>{
     let complete;try{complete=await controller.complete(x=>m.completeSet(x,E,1,now))}finally{IDBObjectStore.prototype.put=originalPut}
     check(complete===false&&controller.getSnapshot().workout.snapshot.performedSets.length===0&&(await store.readLocal(ownKey)).localRevision==='0','UI controller completion abort')
     passed.push('실제 IDB 실패를 받은 제품 controller가 완료 UI를 확정하지 않음')
+    await controller.change(x=>{
+      m.completeWarmup(x,now)
+      m.updateTargets(x,E,1,8,10)
+      m.addWeight(x,x.initialPlan.weightExercises[0].standardExerciseId,'다음 종목')
+      x.currentExerciseId=E
+      m.startExercise(x,E,now)
+    })
+    const preparationAt=now+25000
+    const completeAndAdvance=x=>{m.completeSet(x,E,1,preparationAt);m.advanceAfterCompletion(x,E)}
+    IDBObjectStore.prototype.put=function(...args){const r=originalPut.apply(this,args);if(this.transaction.db.name===database&&this.name==='localWorkouts')this.transaction.abort();return r}
+    try{check(!await controller.complete(completeAndAdvance),'advance abort')}finally{IDBObjectStore.prototype.put=originalPut}
+    check((await store.readLocal(ownKey)).currentExerciseId===E,'advance cannot precede durable commit')
+    check(await controller.complete(completeAndAdvance),'advance commit')
+    const prepared=await store.readLocal(ownKey), preparationId=prepared.currentExerciseId
+    check(preparationId!==E&&!m.weightStarted(prepared,preparationId),'destination remains in preparation')
+    passed.push('완료와 자동 이동 원자 저장 및 다음 종목 준비 상태 유지')
     controller.stop();controller=null
-    const proof={key,baseInitialPlan:base.initialPlan,revision:w.localRevision,editVersion:w.editVersion,cardioId:c,recordIds:w.snapshot.performedSets.map(x=>x.id)}
+    const proof={key,baseInitialPlan:base.initialPlan,revision:w.localRevision,editVersion:w.editVersion,cardioId:c,recordIds:w.snapshot.performedSets.map(x=>x.id),
+      preparationKey:ownKey,preparationId,preparationAt:new Date(preparationAt).toISOString(),warmupAt:new Date(now).toISOString()}
     sessionStorage.setItem('phase5b-idb-proof',JSON.stringify(proof))
     result.textContent='PASS '+passed.length+'\n'+passed.join('\n')+'\n이 페이지를 새로고침한 뒤 복원 검증을 누르세요.'
   }catch(error){result.textContent='FAIL '+error.stack}finally{controller?.stop();await store?.close();await second?.close()}
@@ -84,8 +103,11 @@ document.querySelector('#restore').onclick=async()=>{
   try{check(proof,'run first');const w=await store.readLocal(proof.key)
     check(w.localRevision===proof.revision&&w.editVersion===proof.editVersion,'revision reload');check(JSON.stringify(w.initialPlan)===JSON.stringify(proof.baseInitialPlan),'initial immutability')
     check(w.drafts[E+':1'].weight==='00062.500000'&&w.drafts[E+':1'].reps==='0008','draft original reload');check(w.snapshot.performedSets.map(x=>x.id).join()===proof.recordIds.join(),'record UUID reload')
-    check(w.cancelled.sets.length===1&&w.rest&&w.timers[proof.cardioId].runningSince&&w.timers[proof.cardioId].accumulatedMs===3000&&w.timers[proof.cardioId].distance==='0001.250000','timer tombstone reload')
-    result.textContent='PASS 실제 새로고침 이후 InitialPlan·AppliedPlan·완료 UUID·입력 문자열·취소 원문·revision·미전송 상태·휴식 종료 앵커·유산소 구간/누적/재개 앵커 복원'
+    check(w.cancelled.sets.length===1&&m.exerciseRest(w,E)&&w.timers[proof.cardioId].runningSince&&w.timers[proof.cardioId].accumulatedMs===3000&&w.timers[proof.cardioId].distance==='0001.250000','timer tombstone reload')
+    const prepared=await store.readLocal(proof.preparationKey)
+    check(prepared.warmupCompletedAt===proof.warmupAt&&prepared.currentExerciseId===proof.preparationId&&m.preparationCompletedAt(prepared,proof.preparationId)===proof.preparationAt
+      &&m.weightStarted(prepared,E)&&!m.weightStarted(prepared,proof.preparationId),'preparation and explicit start reload')
+    result.textContent='PASS 실제 새로고침 이후 InitialPlan·AppliedPlan·완료 UUID·입력 문자열·취소 원문·revision·미전송 상태·휴식 종료 앵커·유산소 구간/누적/재개 앵커·다음 종목 준비 기준 시각 복원'
   }catch(error){result.textContent='FAIL '+error.stack}finally{await store.close()}
 }
 const lockKey={...scope,sessionId:'60000000-1111-4222-8333-000000000099',editorDeviceId:'20000000-1111-4222-8333-000000000099',writerEpoch:'0'}

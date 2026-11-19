@@ -166,7 +166,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   if (warmup) {
     actions = <Button variant="primary" onClick={() => { onChange({ ...session, warmup: false }); window.scrollTo(0, 0) }}>준비운동 완료</Button>
   } else if (weight && editing) {
-    actions = <Button variant="primary" onClick={() => setEditing(false)}>편집 닫기</Button>
+    actions = <Button className={flow.editClose} onClick={() => setEditing(false)}>편집 닫기</Button>
   } else if (weight && remaining > 0) {
     actions = <RestActions remaining={remaining} flash={visual.bottom}
       onEnd={() => {

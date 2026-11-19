@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs'
 import * as m from '../src/features/workout-local/model.ts'
 import { localWorkout } from '../src/features/workout-local/validation.ts'
 import { LocalWorkoutController } from '../src/features/workout-local/controller.ts'
+import { activeWorkoutProgress } from '../src/features/home/active-workout.ts'
+import { observedWeightMs } from '../src/features/workout-local/weight-timing.ts'
 import { acquireEditor, editorLockName } from '../src/features/workout-local/lock.ts'
 import { LocalStoreError, LocalWriteBlocked } from '../src/features/workout-online/storage.ts'
 import { AuthController } from '../src/features/auth/controller.ts'
@@ -54,7 +56,7 @@ test('initial plan and server copy stay unchanged while applied plan and exact t
 })
 test('draft, navigation, timer ticks and rest adjustments do not advance snapshot revision',()=>{
   let w=change(local(),x=>m.editDraft(x,E,1,{weight:'',reps:''}))
-  w=change(w,x=>{x.currentExerciseId=E;x.rest=null})
+  w=change(w,x=>{x.currentExerciseId=E;delete x.rests[E]})
   assert.equal(w.localRevision,'0');assert.equal(w.editVersion,'2');assert.equal(w.snapshot.performedSets.length,0)
   for(let i=0;i<100;i++)m.restRemaining(w,at+i)
   assert.equal(w.editVersion,'2');assert.equal(w.syncState,'CLEAN')
@@ -95,7 +97,7 @@ test('consecutive completed sets have independent UUIDs, ordinals and monotonic 
 test('rest uses Task 008 upper-repetition bands and absolute deadlines',()=>{
   for(const [max,seconds] of [[1,180],[8,180],[9,180],[10,180],[11,120],[12,120],[13,90]]){
     let w=change(local(),x=>m.updateTargets(x,E,3,1,max));w=set(w)
-    assert.equal(w.rest.seconds,seconds);assert.equal(m.restRemaining(w,at+1001),seconds-1);assert.equal(m.restRemaining(w,at+seconds*1000+1),0)
+    assert.equal(m.exerciseRest(w).seconds,seconds);assert.equal(m.restRemaining(w,at+1001),seconds-1);assert.equal(m.restRemaining(w,at+seconds*1000+1),0)
   }
 })
 test('explicit approval intent chains preserve UUID, sequence, prior weight and immutable completed context',()=>{
@@ -180,16 +182,158 @@ async function editor(options={}) {
   await c.open(session(),policy)
   return {c,store,stored:()=>stored,fail:v=>fail=v,gate:g=>gateWrite=g,allow:v=>allowed=v}
 }
+test('last-set commit and automatic advance are atomic; preparation survives navigation and starts only on action',async()=>{
+  const e=await editor()
+  const current=()=>e.c.getSnapshot().workout
+  await e.c.change(w=>{
+    w.warmupCompleted=true
+    m.updateTargets(w,E,1,8,10)
+    m.addWeight(w,EXERCISE,'다음 웨이트')
+    w.currentExerciseId=E
+  })
+  const target=current().snapshot.appliedPlan.weightExercises[1].sessionExerciseId
+  await e.c.change((w,now)=>m.startExercise(w,E,now))
+  const complete=(w,now)=>{
+    m.editDraft(w,E,1,{weight:'62.5',reps:'8'})
+    m.completeSet(w,E,1,now)
+    m.advanceAfterCompletion(w,E)
+  }
+  e.fail(true)
+  assert.equal(await e.c.complete(complete),false)
+  assert.equal(current().currentExerciseId,E)
+  assert.equal(current().snapshot.performedSets.length,0)
+  e.fail(false)
+  assert.equal(await e.c.complete(complete),true)
+  const prepared=structuredClone(e.stored())
+  const anchor=prepared.snapshot.performedSets[0].completedAt
+  assert.equal(prepared.currentExerciseId,target)
+  assert.equal(m.preparationCompletedAt(prepared,target),anchor)
+  assert.equal(m.weightStarted(prepared,target),false)
+  assert.equal(prepared.finish,undefined)
+  assert.equal(await e.c.complete(complete),false,'a stale repeat cannot create another completion or skip a destination')
+  await e.c.change(w=>{w.currentExerciseId=E})
+  await e.c.change(w=>{w.currentExerciseId=target})
+  assert.equal(current().localRevision,prepared.localRevision)
+  assert.equal(m.preparationCompletedAt(current(),target),anchor)
+  await e.c.change((w,now)=>m.startExercise(w,target,now))
+  assert.equal(m.preparationCompletedAt(current(),target),undefined)
+  assert.ok(m.weightStarted(current(),target))
+  assert.ok(localWorkout(current()))
+  e.c.stop()
+})
+
+test('rest, drafts and observed weight checkpoints are independent of the browsed exercise',async()=>{
+  const e=await editor()
+  const current=()=>e.c.getSnapshot().workout
+  await e.c.change(w=>{w.warmupCompleted=true;m.addWeight(w,EXERCISE,'두 번째 웨이트')})
+  const second=current().currentExerciseId
+  await e.c.observeWeightVisibility(true)
+  await e.c.change((w,now)=>{w.currentExerciseId=E;m.startExercise(w,E,now)})
+  await new Promise(resolve=>setTimeout(resolve,12))
+  const revision=current().localRevision
+  await e.c.change(w=>{w.currentExerciseId=second})
+  assert.equal(current().localRevision,revision,'browsing checkpoints time locally without allocating a server revision')
+  const elapsed=observedWeightMs(current(),Date.now())
+  assert.ok(elapsed>0)
+  assert.equal(observedWeightMs(current(),Date.now()+5000),elapsed)
+  for(const id of [E,second]){
+    await e.c.change((w,now)=>{
+      w.currentExerciseId=id
+      m.startExercise(w,id,now)
+      m.editDraft(w,id,1,{weight:'0',reps:'8'})
+      m.completeSet(w,id,1,now)
+    })
+  }
+  const firstRest=m.exerciseRest(current(),E),secondRest=m.exerciseRest(current(),second)
+  assert.notEqual(firstRest.sessionExerciseId,secondRest.sessionExerciseId)
+  await e.c.change(w=>{w.currentExerciseId=E})
+  assert.deepEqual(m.exerciseRest(current()),firstRest)
+  assert.equal(current().drafts[E+':1'].reps,'8')
+  e.c.stop()
+})
+
+test('completed cardio prepares the next activity without starting its clock or finishing the session',()=>{
+  let w=cardio(), first=w.currentExerciseId
+  w=change(w,x=>m.addCardio(x,{...x.snapshot.appliedPlan.cardioActivities[0].plan,name:'두 번째 유산소'}))
+  const next=w.currentExerciseId
+  w=change(w,x=>{x.currentExerciseId=first;x.warmupCompleted=true;m.startExercise(x,first,at)})
+  w=change(w,x=>{m.completeCardio(x,first,at+2000);m.advanceAfterCompletion(x,first)})
+  assert.equal(w.currentExerciseId,next)
+  assert.equal(w.timers[next],undefined)
+  assert.equal(m.preparationCompletedAt(w,next),new Date(at+2000).toISOString())
+  w=change(w,x=>m.startExercise(x,next,at+5000))
+  assert.equal(m.elapsed(w.timers[next],at+6000),1000)
+  w=change(w,x=>{m.completeCardio(x,next,at+6000);m.advanceAfterCompletion(x,next)})
+  assert.equal(w.currentExerciseId,next)
+  assert.equal(w.finish,undefined)
+})
+test('finishing warmup stores the first preparation anchor once and keeps it through reopening',()=>{
+  let w=change(local(),x=>m.completeWarmup(x,at))
+  assert.equal(w.localRevision,'0')
+  w=change(w,x=>m.completeWarmup(x,at+3000))
+  const restored=JSON.parse(JSON.stringify(w))
+  assert.ok(localWorkout(restored))
+  assert.equal(m.exercisePreparationStartedAt(restored,E),new Date(at).toISOString())
+  assert.equal(m.weightStarted(restored,E),false)
+  assert.equal('warmupCompletedAt' in restored.snapshot,false)
+})
+test('last weight retains the finish/continue choice and the original cardio preparation time',()=>{
+  let w=cardio(), target=w.currentExerciseId
+  w=change(w,x=>{
+    x.currentExerciseId=E
+    m.completeWarmup(x,at)
+    m.startExercise(x,E,at)
+    m.updateTargets(x,E,1,8,10)
+    m.editDraft(x,E,1,{weight:'0',reps:'8'})
+    m.completeSet(x,E,1,at+1000)
+    m.advanceAfterCompletion(x,E)
+  })
+  assert.equal(w.currentExerciseId,E)
+  assert.deepEqual(w.snapshot.cardioResults,[])
+  assert.equal(w.finish,undefined)
+  w=change(w,x=>{x.currentExerciseId=target})
+  const restored=structuredClone(w)
+  assert.equal(m.exercisePreparationStartedAt(restored,target),new Date(at+1000).toISOString())
+  delete restored.preparationFrom
+  assert.equal(m.exercisePreparationStartedAt(restored,target),new Date(at+1000).toISOString(),'saved completion evidence recovers an absent local anchor')
+  assert.equal(restored.timers[target],undefined)
+  w=change(w,x=>m.startExercise(x,target,at+5000))
+  assert.equal(m.preparationCompletedAt(w,target),undefined)
+  assert.equal(w.timers[target].startedAt,new Date(at+5000).toISOString())
+})
+
+test('home uses current applied plan and local progress only for the active session and writer',()=>{
+  const server=session()
+  let w=set(m.createLocalWorkout(server,policy))
+  w=change(w,x=>{x.warmupCompleted=true;m.addWeight(x,EXERCISE,'임시 종목');m.updateTargets(x,E,4,8,10)})
+  const active=activeWorkoutProgress(server,w,[])
+  assert.equal(active.status(at),'임시 종목 · 시작 전')
+  assert.equal(active.completedSets,1)
+  assert.deepEqual(active.weights.map(p=>p.setCount),[4,3])
+  assert.equal(activeWorkoutProgress(server,{...w,writerEpoch:'9'},[]).weights.length,1)
+  assert.equal(activeWorkoutProgress(server,{...w,dataGeneration:'9'},[]).status(at),'현재 종목 확인 필요')
+})
+test('an existing local session retains its original rest deadline when opened with per-exercise rests',()=>{
+  const workout=set(local())
+  const rest=m.exerciseRest(workout,E)
+  delete workout.rests
+  workout.rest=rest
+  assert.ok(localWorkout(workout))
+  const migrated=change(workout,w=>m.migrateRest(w))
+  assert.equal(migrated.rest,undefined)
+  assert.deepEqual(m.exerciseRest(migrated,E),rest)
+  assert.equal(migrated.localRevision,workout.localRevision)
+})
 test('completion success waits for durable commit: no optimistic completion, rest or revision',async()=>{
   const e=await editor(), disk=gate();e.gate(disk)
   const saving=e.c.change(x=>{m.editDraft(x,E,1,{reps:'8',weight:'0'});m.completeSet(x,E,1,at)})
-  await settle();assert.equal(e.c.getSnapshot().workout.snapshot.performedSets.length,0);assert.equal(e.c.getSnapshot().workout.localRevision,'0');assert.equal(e.c.getSnapshot().workout.rest,null)
+  await settle();assert.equal(e.c.getSnapshot().workout.snapshot.performedSets.length,0);assert.equal(e.c.getSnapshot().workout.localRevision,'0');assert.equal(m.exerciseRest(e.c.getSnapshot().workout),undefined)
   disk.resolve();assert.equal(await saving,true);assert.equal(e.c.getSnapshot().workout.snapshot.performedSets.length,1);assert.equal(e.stored().localRevision,'1');e.c.stop()
 })
 test('IndexedDB failure leaves completion, rest and revision unconfirmed while retaining input draft',async()=>{
   const e=await editor();e.c.draft(E,1,{weight:'00062.500000',reps:'9'});await e.c.settled();e.fail(true)
   assert.equal(await e.c.complete(x=>m.completeSet(x,E,1,at)),false)
-  assert.equal(e.c.getSnapshot().workout.snapshot.performedSets.length,0);assert.equal(e.stored().localRevision,'0');assert.equal(e.stored().drafts[E+':1'].weight,'00062.500000');assert.equal(e.c.getSnapshot().workout.rest,null);e.c.stop()
+  assert.equal(e.c.getSnapshot().workout.snapshot.performedSets.length,0);assert.equal(e.stored().localRevision,'0');assert.equal(e.stored().drafts[E+':1'].weight,'00062.500000');assert.equal(m.exerciseRest(e.c.getSnapshot().workout),undefined);e.c.stop()
 })
 test('failed unsaved draft cannot complete older values; retry preserves multiple slot inputs',async()=>{
   const e=await editor();e.fail(true);e.c.draft(E,1,{weight:'65.',reps:'9'});await e.c.settled()
@@ -279,5 +423,5 @@ test('memo failure retains latest text through retry and never changes the serve
 })
 test('last planned set removes rest without manufacturing another completed set',()=>{
   let w=change(local(),x=>m.updateTargets(x,E,1,6,10));w=set(w)
-  assert.equal(w.rest,null);assert.equal(w.snapshot.performedSets.length,1)
+  assert.equal(m.exerciseRest(w),undefined);assert.equal(w.snapshot.performedSets.length,1)
 })

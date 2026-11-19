@@ -1,9 +1,16 @@
-import type { Session, PerformedSet, StandardExercise } from '../workout-online/types.ts'
+import type { CardioResult, Session, PerformedSet, StandardExercise } from '../workout-online/types.ts'
 import type { CardioFocusData, SetResult, WeightFocusData } from '../workout-flow/types.ts'
 import type { EditorState } from './controller.ts'
-import type { LocalWorkout } from './types.ts'
+import type { CardioTimer, LocalWorkout } from './types.ts'
 import { slotKey } from './types.ts'
 import { draftFor, elapsed, emptyTimer } from './model.ts'
+
+export function workoutExerciseName(id: string, snapshot: LocalWorkout['snapshot'], initialPlan: LocalWorkout['initialPlan'],
+  definitions: StandardExercise[], names?: LocalWorkout['exerciseNames']) {
+  const standardId = snapshot.sessionExercises.find(e => e.id === id)?.standardExerciseId
+  return names?.[id] ?? initialPlan.weightExercises.find(e => e.sessionExerciseId === id)?.exerciseName
+    ?? definitions.find(e => e.id === standardId)?.name ?? '추가된 운동'
+}
 
 export function resultView(set: PerformedSet): SetResult {
   return { kg: set.weightKg, reps: set.reps, additionalKg: set.bodyweightLoad?.additionalWeightKg ?? null,
@@ -45,7 +52,7 @@ export function flowWeights(state: EditorState, history: Session[] = [], definit
     const performed = w.snapshot.performedSets.filter(s => s.sessionExerciseId === id)
     return { id, standardId: w.snapshot.sessionExercises.find(e => e.id === id)?.standardExerciseId ?? '',
       plannedCount: plan.setCount,
-      name: w.exerciseNames[id] ?? initial?.exerciseName ?? definitions.find(e => e.id === w.snapshot.sessionExercises.find(e => e.id === id)?.standardExerciseId)?.name ?? '추가된 운동', min: plan.minReps, max: plan.maxReps,
+      name: workoutExerciseName(id, w.snapshot, w.initialPlan, definitions, w.exerciseNames), min: plan.minReps, max: plan.maxReps,
       manufacturerId: plan.manufacturerId, loadType: plan.loadType, working: working?.value ?? '',
       approved: applied?.nextApprovedWeightKg ?? initial?.approvedWeightKg ?? null,
       mode: working?.context.kind === 'INITIAL_APPROVED' ? 'approved' : working?.context.kind === 'APPROVAL_REQUEST' ? 'progression' : 'today',
@@ -63,12 +70,15 @@ export function flowCardio(state: EditorState, now: number): (CardioFocusData & 
   return w.snapshot.appliedPlan.cardioActivities.map(activity => {
     const id = activity.sessionActivityId, timer = { ...(w.timers[id] ?? emptyTimer()), ...state.cardioDrafts[id] }
     const result = w.snapshot.cardioResults.find(r => r.sessionActivityId === id)
-    return { id, plan: activity.plan, phase: result ? result.status === 'SKIPPED' ? 'skipped' : 'completed'
-      : timer.reviewing ? 'review' : timer.runningSince ? 'running' : timer.startedAt ? 'paused' : 'ready',
+    return { id, plan: activity.plan, phase: cardioPhase(result, timer),
       draft: { distance: timer.distance, speed: timer.speed ?? '', bpm: timer.bpm, correctedSeconds: timer.correctedSeconds },
       // A committed START may be newer than this render's 250ms display tick.
       // Clamp display only; timer mutations still reject an actual clock reversal.
       result: result?.result ?? undefined, activeMs: result?.result?.activeMs ?? elapsed(timer, Math.max(now, timer.runningSince ? Date.parse(timer.runningSince) : now)) }
   })
+}
+export function cardioPhase(result: CardioResult | undefined, timer: CardioTimer | undefined): CardioFocusData['phase'] {
+  return result ? result.status === 'SKIPPED' ? 'skipped' : 'completed'
+    : timer?.reviewing ? 'review' : timer?.runningSince ? 'running' : timer?.startedAt ? 'paused' : 'ready'
 }
 export const isWeightDone = (weight: WeightFocusData) => weight.sets.filter(s => !!s.result).length >= (weight.plannedCount ?? weight.sets.length)

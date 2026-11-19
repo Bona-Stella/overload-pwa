@@ -13,10 +13,11 @@ import type { WorkoutApi } from '../workout-online/api.ts'
 import { useProgressAssessment } from './useProgressAssessment.ts'
 export { LocalWorkoutView } from './LocalWorkoutFlow.tsx'
 
-export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, offlineRestart = false, visible = true, onHome, backLabel, history = [], assessmentApi, referenceRecords = [], referenceRoutine = null }: {
+export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, onWorkoutChange, offlineRestart = false, visible = true, onHome, backLabel, history = [], assessmentApi, referenceRecords = [], referenceRoutine = null }: {
   server: Session; policy: RestPolicy; definitions: StandardExercise[]; manufacturers?: Manufacturer[]; activities?: CardioActivity[]
   authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
-  onReady?: (workout: LocalWorkout) => void; offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[]
+  onReady?: (workout: LocalWorkout) => void; onWorkoutChange?: (workout: LocalWorkout) => void
+  offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[]
   assessmentApi?: Pick<WorkoutApi, 'progressAssessment'>; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
 }) {
   const [initial] = useState(() => ({ server, policy, onReady }))
@@ -43,13 +44,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
     window.addEventListener('beforeunload', onUnload)
     return () => window.removeEventListener('beforeunload', onUnload)
   }, [state.pending, state.unsavedDrafts])
-  const timingReady=!!state.workout&&state.writable&&!state.workout.finish
-  useEffect(()=>{
-    if(!timingReady)return
-    const observe=()=>{void controller.observeWeightVisibility(visible&&document.visibilityState==='visible')}
-    observe();document.addEventListener('visibilitychange',observe)
-    return()=>{document.removeEventListener('visibilitychange',observe)}
-  },[controller,timingReady,visible])
+  useEffect(() => { if (state.workout) onWorkoutChange?.(state.workout) }, [state.workout, onWorkoutChange])
   if (!state.workout) return <section hidden={!visible} className="stack" aria-label="실제 운동 로컬 기록">
     {state.loading && <p role="status">로컬 운동과 편집 잠금을 확인하고 있습니다.</p>}
     {state.issue && <StatusNotice error>{state.issue}</StatusNotice>}

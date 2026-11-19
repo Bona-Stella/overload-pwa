@@ -131,9 +131,9 @@ export function CardioFocus({ cardio, activeMs, navigation, issue, editing, edit
       issue={issue} onDraft={onDraft} onCancel={onCancelReview} preview={preview} />}
     {result && <Card className={cardioStyles.card}><h2>실제 완료 기록</h2><CardioActual result={result} />
       <Button onClick={preview ? undefined : onUndo}>유산소 완료 취소</Button></Card>}
-    <Button className={cardioStyles.editSession} aria-expanded={editing} onClick={preview ? undefined : onEdit}>
-      {editing ? '임시 편집 닫기' : '현재 세션에서 종목 변경 · 유산소 추가'}
+    <Button className={`${cardioStyles.editSession} ${styles.editClose}`} aria-expanded={editing} onClick={preview ? undefined : onEdit}>
+      {editing ? '편집 닫기' : '운동·세트 편집'}
     </Button>
-    {editing && editTools}
+    {editing && <section aria-label="운동·세트 편집" className="stack">{editTools}</section>}
   </>
 }

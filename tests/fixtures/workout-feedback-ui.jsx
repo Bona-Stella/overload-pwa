@@ -5,7 +5,7 @@ import '../../src/features/statistics/statistics.css'
 import React,{useState,useSyncExternalStore} from 'react'
 import {createRoot} from 'react-dom/client'
 import {LocalWorkoutController} from '../../src/features/workout-local/controller.ts'
-import {createLocalWorkout,editDraft} from '../../src/features/workout-local/model.ts'
+import {createLocalWorkout,editDraft,exerciseRest} from '../../src/features/workout-local/model.ts'
 import {WorkoutFrame,WeightRecommendation} from '../../src/features/workout-flow/WorkoutFrame.tsx'
 import {Button} from '../../src/components/ui.tsx'
 import {ClosedWorkoutView} from '../../src/features/workout-online/ClosedWorkout.tsx'
@@ -37,7 +37,8 @@ window.AudioContext=class{
 }
 window.feedback={
  c,ready:false,
- rest:seconds=>c.change(w=>{const now=Date.now();w.rest={sessionExerciseId:w.currentExerciseId,ordinal:1,startedAt:new Date(now).toISOString(),endsAt:new Date(now+seconds*1000).toISOString(),seconds:180}}),
+ currentRest:()=>exerciseRest(c.getSnapshot().workout)??null,
+ rest:seconds=>c.change((w,now)=>{w.rests[w.currentExerciseId]={sessionExerciseId:w.currentExerciseId,ordinal:1,startedAt:new Date(now).toISOString(),endsAt:new Date(now+seconds*1000).toISOString(),seconds:180}}),
  hold(){gate=new Promise(r=>release=r)},release(){gate=null;release?.()},
  title:name=>c.change(w=>{w.exerciseNames[w.currentExerciseId]=name}),
  stored:()=>stored

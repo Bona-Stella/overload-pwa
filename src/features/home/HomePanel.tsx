@@ -17,21 +17,51 @@ import { DeloadMoon } from '../../components/DeloadMoon.tsx'
 import { scheduleRoutineLabel } from './tags.ts'
 import { presetNumber } from '../workout-online/preset-schedule.ts'
 import type { SchedulePreset } from '../workout-online/preset-schedule.ts'
+import type { ActiveWorkoutProgress, PlanWeight, PlanCardio } from './active-workout.ts'
+import { formatDuration } from '../workout/model.ts'
 import routineStyles from '../workout-online/Routine.module.css'
 import styles from './Home.module.css'
 
 const wordmark = new URL('../../assets/OVERLOAD_white_transparent_4x.png', import.meta.url).href
 
 export function RoutinePlan({ routine }: { routine: Routine }) {
-  const weights = activeWeights(routine), cardio = activeCardio(routine)
+  return <PlanList weights={activeWeights(routine).map(weight => ({ ...weight, weightKg: weight.approvedWeightKg }))} cardio={activeCardio(routine)} />
+}
+function PlanList({ weights, cardio }: { weights: PlanWeight[]; cardio: PlanCardio[] }) {
   return <>
-    <div className={styles.planSection}><h3>WEIGHT <span>총 {weights.length}종목</span></h3><ol>{weights.map(p => <li key={p.id}><span title={p.exerciseName}>{p.exerciseName}</span><strong>{p.approvedWeightKg}kg · {p.setCount}세트 · {p.minReps === p.maxReps ? p.minReps : `${p.minReps}~${p.maxReps}`}회</strong></li>)}</ol>{!weights.length && <p className={styles.emptyPlan}>계획된 웨이트 없음</p>}</div>
+    <div className={styles.planSection}><h3>WEIGHT <span>총 {weights.length}종목</span></h3><ol>{weights.map(p => <li key={p.id}><span title={p.exerciseName}>{p.exerciseName}</span><strong>{p.weightKg == null ? '중량 미확인' : p.weightKg + 'kg'} · {p.setCount}세트 · {p.minReps === p.maxReps ? p.minReps : `${p.minReps}~${p.maxReps}`}회</strong></li>)}</ol>{!weights.length && <p className={styles.emptyPlan}>계획된 웨이트 없음</p>}</div>
     <div className={styles.planSection}><h3>CARDIO <span>총 {cardio.length}종목</span></h3><ol>{cardio.map(p => <li key={p.id}><span title={p.plan.name}>{p.plan.name}</span><strong>{cardioPlanLabel(p.plan)}</strong></li>)}</ol>{!cardio.length && <p className={styles.emptyPlan}>유산소 계획 없음</p>}</div>
   </>
+}
+function ActiveRoutine({ routineName, progress, busy, onResume }: {
+  routineName: string; progress: ActiveWorkoutProgress; busy: boolean; onResume: () => void
+}) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const tick = () => setNow(Date.now())
+    const interval = window.setInterval(tick, 1000)
+    window.addEventListener('pageshow', tick)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('pageshow', tick)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [])
+  const plannedSets = progress.weights.reduce((sum, weight) => sum + weight.setCount, 0)
+  return <Card hero className={styles.today} aria-label="진행 중인 운동">
+    <div className={styles.kicker}><span>진행 중인 운동</span><span className={styles.activeStatus}>{progress.status(now)}</span></div>
+    <h2>{routineName}</h2>
+    <div className={styles.activeSummary}><span>전체 경과시간 <strong>{formatDuration(Math.max(0, now - progress.startedAt))}</strong></span>
+      <span>웨이트 <strong>{progress.completedSets}/{plannedSets}세트</strong></span></div>
+    <PlanList weights={progress.weights} cardio={progress.cardio} />
+    <Button className={styles.resume} variant="primary" disabled={busy} onClick={onResume}>운동 이어가기</Button>
+  </Card>
 }
 type Props = {
   scope: Scope; routines: RoutineList['routines']; api: WorkoutApi; training: TrainingSchedule; statistics: StatisticsApi; visit: number;
   refreshKey: string; active: Session | null; attempt: boolean; busy: boolean; localReady: boolean; issue: string | null;
+  progress?: ActiveWorkoutProgress
   onStart: (routine: Routine) => Promise<void>; onResume: () => void; onRetry: () => void; onNavigate: (tab: AppTab) => void;
   onHistory?:()=>void; onOpen: (id: string) => void; onInvalid: (error: unknown) => void
 }
@@ -92,7 +122,7 @@ type HomeViewData = Pick<HomeData, 'summaries' | 'routines' | 'recent' | 'recent
 
 type HomeViewProps = Pick<Props, 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen'> & {
   active: Pick<Session, 'initialPlan'> | null
-  resumeDetails?: ReactNode
+  progress?: ActiveWorkoutProgress
   data?: HomeViewData | null
   today: string
   loading?: boolean
@@ -109,6 +139,7 @@ type HomeViewProps = Pick<Props, 'attempt' | 'busy' | 'localReady' | 'issue' | '
 
 export function HomeView(props: HomeViewProps) {
   const { data, today, loading } = props
+  const active = props.progress?.confirmedFinished ? null : props.active
   const dates = weekDates(today)
   const [override, setOverride] = useState<{ date: string; id: string } | null>(null)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
@@ -138,16 +169,16 @@ export function HomeView(props: HomeViewProps) {
     <header className={styles.homeHeader}><img className={styles.brand} src={wordmark} alt="OVERLOAD" width={3624} height={428} />{props.header ?? <span className={styles.headerIcon} title="디로딩 분석 상태 미연동"><DeloadMoon /></span>}</header>
     {props.headerActions}
     {props.issue && <StatusNotice error>{props.issue}</StatusNotice>}
+    {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy} onResume={props.onResume} />}
     {loading ? <StatusNotice>오늘의 루틴과 일정을 불러오고 있습니다.</StatusNotice> : !data ? <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
-      <Card hero className={styles.today} aria-label="오늘의 루틴">
+      {!active && <Card hero className={styles.today} aria-label="오늘의 루틴">
         <div className={styles.kicker}><span>TODAY'S ROUTINE</span><time dateTime={today}>{today.slice(5).replace('-', '.')} {weekdays[dayOfWeek(today) - 1]}</time></div>
         <h2>{props.todayNotice ?? chosen?.name ?? (chosenId ? '루틴 확인 필요' : data.schedule.version !== '0' ? '오늘은 쉬어가는 날' : '첫 루틴을 준비해 보세요')}</h2>
         {!props.todayNotice && chosen?.tag && <span className={styles.routineTag}>{chosen.tag}</span>}
         {!props.todayNotice && (chosen ? <RoutinePlan routine={chosen} /> : <p className="muted small">{chosenId ? '이 루틴의 최신 구성을 확인하지 못했습니다. 새로고침하거나 다른 루틴을 선택하세요.' : data.schedule.version !== '0' ? '정해진 휴식일입니다. 원하면 오늘만 다른 루틴을 선택할 수 있습니다.' : '루틴 탭에서 운동과 주간 일정을 등록할 수 있습니다.'}</p>)}
-      </Card>
-      {props.active ? <><StatusNotice>진행 중 · {props.active.initialPlan.routineName}</StatusNotice>{props.resumeDetails}<Button className={styles.start} variant="primary" disabled={props.busy} onClick={props.onResume}>운동 이어가기</Button></>
-        : props.attempt ? <><StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice><Button className={styles.start} variant="primary" disabled={props.busy || !props.localReady} onClick={props.onRetry}>기존 시작 요청 다시 확인</Button></>
-          : <Button className={styles.start} variant="primary" disabled={props.busy || !props.canStart || props.protectedView || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length} onClick={() => { if (chosen) void props.onStart(chosen) }}>운동 시작</Button>}
+      </Card>}
+      {!props.active && (props.attempt ? <><StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice><Button className={styles.start} variant="primary" disabled={props.busy || !props.localReady} onClick={props.onRetry}>기존 시작 요청 다시 확인</Button></>
+          : <Button className={styles.start} variant="primary" disabled={props.busy || !props.canStart || props.protectedView || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length} onClick={() => { if (chosen) void props.onStart(chosen) }}>운동 시작</Button>)}
       {!props.hideChooser && <details className={styles.chooser} ref={chooser}><summary><b>오늘만 다른 루틴 선택</b><span className={styles.plus} aria-hidden="true" /></summary>
         {!data.summaries.length && <><p>아직 루틴이 없습니다.</p><Button onClick={() => props.onNavigate('routines')}>루틴 만들러 가기</Button></>}
         {presetFilter && <div className={styles.choiceFilters} role="group" aria-label="루틴 일정 필터">

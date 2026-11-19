@@ -348,7 +348,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   assert.match(await body(), /25kg · 8–12회 × 3세트.*제조사 미지정 · 원판식/s)
   assert.equal(await evaluate(`document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect().top`), 0)
   const initialClockTop = await evaluate(`document.querySelector('[aria-label="운동 시간"]').getBoundingClientRect().top`)
-  assert.equal(initialClockTop, 6)
+  assert.equal(initialClockTop, 0)
   assert.equal(await evaluate(`!!document.querySelector('nav[aria-label="기본 탐색"]')`), false)
   await screenshot('warmup-393')
   await verifyFrameLayouts('warmup')
@@ -367,7 +367,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     const nav = bar.parentElement.nextElementSibling
     const title = nav.querySelector('strong').getBoundingClientRect()
     const rect = nav.getBoundingClientRect()
-    return [columns[0] >= columns[1], columns[2] >= columns[1],
+    return [Math.abs(columns[0] - columns[1]) <= 1, Math.abs(columns[2] - columns[1]) <= 1,
       Math.abs(title.x + title.width / 2 - rect.x - rect.width / 2) < 1,
       bar.children[1].querySelectorAll('div').length === 1 &&
         bar.children[0].querySelectorAll('div').length === 0 && bar.children[2].querySelectorAll('div').length === 0,
@@ -384,7 +384,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   assert.deepEqual(await evaluate(`(() => {
     const buttons = [...document.querySelectorAll('button')]
     const end = buttons.find(b => b.textContent === '운동 종료')
-    const edit = buttons.find(b => b.textContent === '세트 기록 / 임시 편집')
+    const edit = buttons.find(b => b.textContent === '운동·세트 편집')
     const endStyle = getComputedStyle(end), editStyle = getComputedStyle(edit)
     return [endStyle.color, endStyle.backgroundColor === editStyle.backgroundColor,
       endStyle.borderColor === endStyle.color, end.getBoundingClientRect().height === edit.getBoundingClientRect().height,
@@ -401,7 +401,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
       fields.every(e => e.scrollWidth <= e.clientWidth && e.getBoundingClientRect().height < 23),
       controls.map(e => getComputedStyle(e).borderTopWidth),
       controls.every(e => e.getBoundingClientRect().height >= 44 && e.getBoundingClientRect().width >= 44)]
-  })()`), ['12px', '4px', true, ['13px', '13px', '13px'], true, ['0px', '1px', '0px'], true])
+  })()`), ['12px', '4px', true, ['13px', '13px', '13px'], true, ['0px', '0px', '0px'], true])
   await press('1세트 이번 반복 횟수 증가')
   assert.equal(await evaluate(`document.querySelector('[aria-label="1세트 이번 반복 횟수"] > button:nth-child(2)').textContent`), '9 회')
   await press('1세트 이번 반복 횟수 감소')
@@ -474,7 +474,9 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await wait(() => evaluate(`(() => {
     const header = document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect()
     const weight = document.querySelector('[aria-label="진행 중량"]').getBoundingClientRect()
-    return Math.abs(weight.top - header.bottom - 8) < 2
+    const page = document.scrollingElement
+    const target = Math.max(0, Math.min(window.scrollY + weight.top - header.bottom - 8, page.scrollHeight - page.clientHeight))
+    return Math.abs(window.scrollY - target) < 2 && weight.top >= header.bottom + 6
   })()`), 'completed set scrolls weight card below sticky header')
   assert.equal(await evaluate('document.querySelector(\'[aria-label="2세트 완료"]\').disabled'), true)
   await openList()
@@ -628,7 +630,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await dialogClick('취소')
   await notOpen()
 
-  await click('세트 기록 / 임시 편집')
+  await click('운동·세트 편집')
   await verifyEndClearance()
   await verifyFrameLayouts('set-edit')
   await labelInput('제조사 · 선택', '10000000-0000-4000-8000-000000000017')
@@ -663,7 +665,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('2세트 완료')
   assert.equal(await rowContains(2, '해머 스트렝스 · 핀·스택식'), false)
   await click('휴식 종료')
-  await click('세트 기록 / 임시 편집')
+  await click('운동·세트 편집')
   await setRep(3, '8')
   await press('3세트 완료')
   await click('오늘만 장비 변경 적용')
@@ -685,7 +687,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await dragExercise(1, 0)
   await dialogClick('변경하기')
   assert.equal(await evaluate('document.querySelectorAll("[data-filled=true]").length'), 1)
-  await click('세트 기록 / 임시 편집')
+  await click('운동·세트 편집')
   await click('현재 종목 교체')
   await dialogClick('취소')
   assert.equal(await title(), longName)
@@ -709,7 +711,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await notOpen()
   await openList()
   await click('벤치 프레스', 'textContent', dialog + ' strong')
-  await click('세트 기록 / 임시 편집')
+  await click('운동·세트 편집')
   await click('+ 유산소 추가')
   assert.equal(await evaluate(`getComputedStyle(document.querySelector('dialog[open]')).paddingBottom`), '23px')
   assert.equal(await evaluate(`getComputedStyle(document.querySelector('dialog[open] form')).paddingBottom`), '0px')

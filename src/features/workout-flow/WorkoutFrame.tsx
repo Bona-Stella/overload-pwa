@@ -31,7 +31,8 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     const dock = timeBar.current
     if (!dock) return
     const measure = () => {
-      root.current?.style.setProperty('--workout-clock-height', dock.getBoundingClientRect().height + 'px')
+      const clockHeight = dock.getBoundingClientRect().height
+      if (clockHeight) root.current?.style.setProperty('--workout-clock-height', clockHeight + 'px')
       const height = footer.current?.getBoundingClientRect().height
       if (height) root.current?.style.setProperty('--workout-footer-height', height + 'px')
       else if (!footer.current) root.current?.style.setProperty('--workout-footer-height', '0px')
@@ -41,7 +42,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     observer.observe(dock)
     if (footer.current) observer.observe(footer.current)
     return () => observer.disconnect()
-  }, [timeBar, hasActions, cardioFocus])
+  }, [timeBar, hasActions, hidden])
   const currentExercise = swipe?.currentId
   useLayoutEffect(() => {
     if (!exerciseScroll || exerciseScroll.exerciseId !== currentExercise || appliedScroll.current === exerciseScroll) return

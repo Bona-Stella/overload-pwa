@@ -31,7 +31,7 @@ import { ReviewHeader } from './ReviewHeader.tsx'
 import { SettingsReview } from './SettingsReview.tsx'
 import { WorkoutReview } from './WorkoutReview.tsx'
 import { WorkoutRecordReview } from './WorkoutRecordReview.tsx'
-import { WorkoutResumeDetails } from './WorkoutResumeDetails.tsx'
+import { reviewResumeProgress } from './workout-resume-progress.ts'
 import { useRestAudio } from './useRestAudio.ts'
 import { captureReview, startReview } from './workout-model.ts'
 import type { ReviewRecord, ReviewSession } from './workout-model.ts'
@@ -239,7 +239,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
         todayNotice={scenario === 'completed' ? '오늘은 회복 마무리' : undefined}
         presetFilter={{ presets: schedule.presets, activeId: schedule.activeId, visit: homeVisit }}
         busy={busy} active={session} attempt={false} localReady canStart protectedView={protectedView && !deloadView}
-        resumeDetails={session && tab === 'home' && <WorkoutResumeDetails session={session} />}
+        progress={session ? reviewResumeProgress(session) : undefined}
         hideChooser={deloadView || scenario === 'completed'}
         issue={scenario === 'completed' ? '디로딩 완료 당일 · 일반 운동은 다음 날부터 시작할 수 있습니다.'
           : scenario === 'active' ? normalView ? '일반 보기 · 디로딩 기간은 계속 진행 중입니다.' : '회복 주간 · 3일차' : null}

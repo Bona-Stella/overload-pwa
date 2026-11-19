@@ -1,5 +1,5 @@
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { Button, Card, Help } from '../../components/ui.tsx'
 import { NumberWheel } from '../../components/NumberWheel.tsx'
@@ -32,7 +32,7 @@ export function KgWheel({ label, value, onChange, editorStep, preview }: { label
 }
 
 export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, resting, editing, editTools,
-  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, preview = false }: {
+  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, memoOpen = true, onMemoToggle, preview = false }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
   issue: ReactNode; resting: boolean; editing: boolean; editTools: ReactNode
   onDraft: (id: number, draft: Partial<SetDraft>) => void; onComplete: (id: number) => void
@@ -41,12 +41,17 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
   onWeight: () => void; onEdit: () => void; onMemo: (memo: string) => void
   onList: () => void; onEnd: () => void
   memoContent?: ReactNode; memoNote?: string; approvalNote?: string; additionalInput?: boolean; preview?: boolean
+  memoOpen?: boolean; onMemoToggle?: () => void
 }) {
   const completed = weight.sets.filter(s => s.result).length
   const count = weight.plannedCount ?? weight.sets.length
   const title = `${String(position).padStart(2, '0')}. ${weight.name}`
   const titleRef = useFitWorkoutTitle(title, !preview)
   const manufacturer = manufacturers.find(m => m.id === weight.manufacturerId)
+  const memoId = useId()
+  const memo = memoContent ?? <><label>기구 세팅 메모<textarea data-workout-memo={preview ? undefined : ''} rows={2} value={weight.memo} readOnly={preview}
+    onChange={preview ? undefined : event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
+    <small className="muted">{memoNote ?? '검토 세션에서 메모를 확인할 수 있습니다.'}</small></>
   return <>
     <section className={styles.focus}>
       <p className={styles.eyebrow}>WEIGHT</p>
@@ -80,7 +85,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
         {weight.sets.map(set => {
           const ordinal = set.id
           const result = set.result
-          return <div key={set.id} role="row" className={styles.setRow}>
+          return <div key={set.id} role="row" className={styles.setRow} data-done={!!result || undefined}>
             <b role="cell">{String(ordinal).padStart(2, '0')}</b>
             <span role="cell" className={styles.prior}>{set.previous ? set.previous.reps + '회' : '—'}</span>
             <div role="cell" className={styles.setValues}>{result ? <strong>{result.reps}회</strong> :
@@ -109,12 +114,15 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       </div>
     </Card>
     {weight.sets.length < count && <p className="muted small">입력할 세트 주변 20개와 완료 기록을 표시합니다. 전체 {count}세트 계획은 유지됩니다.</p>}
-    {!editing && <Button aria-expanded={false} onClick={preview ? undefined : onEdit}>세트 기록 / 임시 편집</Button>}
-    {editing && editTools}
-    <Card data-workout-memo-card={weight.id}>
-      {memoContent ?? <><label>기구 세팅 메모<textarea data-workout-memo={preview ? undefined : ''} rows={2} value={weight.memo} readOnly={preview} onChange={preview ? undefined : event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
-      <small className="muted">{memoNote ?? '검토 세션에서 메모를 확인할 수 있습니다.'}</small></>}
-    </Card>
+    {!editing && <Button aria-expanded={false} onClick={preview ? undefined : onEdit}>운동·세트 편집</Button>}
+    {editing && <section aria-label="운동·세트 편집" className="stack">{editTools}</section>}
+    <section className={styles.memoSection} data-workout-memo-card={weight.id}>
+      {onMemoToggle && <Button variant="quiet" className={styles.memoToggle} aria-expanded={memoOpen} aria-controls={memoId} onClick={preview ? undefined : onMemoToggle}>
+        기구 세팅 메모
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
+      </Button>}
+      {onMemoToggle ? <div id={memoId} hidden={!memoOpen}>{memo}</div> : memo}
+    </section>
     <Button className={styles.endWorkout} onClick={preview ? undefined : onEnd}>운동 종료</Button>
   </>
 }

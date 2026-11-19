@@ -9,11 +9,16 @@ import react from '@vitejs/plugin-react'
 test('real React reconciliation removes statistics across workout, account, generation and late-response boundaries', { timeout: 60000 }, async () => {
   const directory = resolve('logs/workspace-boundary'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
   await mkdir(profile, { recursive: true })
-  const stub = `export class WorkoutApi {cardioActivities=async()=>[];closed=async()=>({sessions:[]});};
+  const stub = `import {createElement} from 'react';
+    export class WorkoutApi {cardioActivities=async()=>[];closed=async()=>({sessions:[]});};
     export class WorkoutOnlineController { getSnapshot=()=>window.boundaryState; subscribe=()=>()=>{}; connect=()=>()=>{}; invalidateScope=()=>{}; }
     export class StatisticsApi { overview=(scope,period,signal)=>window.boundaryOverview(scope,period,signal); }
     export function useTrainingSchedule(){return {loading:false,canWrite:false,refresh:()=>{}}};
-    export const PresetAssignmentEditor=()=>null,LocalWorkoutScreen=()=>null,ClosedWorkout=()=>null,WorkoutHistory=()=>null;
+    export const PresetAssignmentEditor=()=>null,LocalWorkoutScreen=()=>null,WorkoutHistory=()=>null;
+    export function ClosedWorkout({session, summary, onBack}) {
+      return createElement('section', {'data-boundary-summary': String(summary)}, session.id,
+        createElement('button', {onClick:onBack}, '복귀'));
+    }
     export const offlineAccess={scope:async()=>{},source:async()=>null};`
   const replaced = new Set(['./api.ts', './controller.ts', '../statistics/api.ts', './useTrainingSchedule.ts', '../statistics/WeeklySchedulePanel.tsx', '../workout-local/LocalWorkoutScreen.tsx', './ClosedWorkout.tsx', '../workout-local/offline.ts'])
   const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'workspace-component-only', enforce: 'pre',
@@ -61,6 +66,20 @@ test('real React reconciliation removes statistics across workout, account, gene
     await render('A', '1'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("0세트")'))
     assert.equal(await count(), 1); await render('expired'); assert.equal(await count(), 0)
     await send('Page.reload'); await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7세트")')); assert.equal(await count(), 1)
+    await evaluate("window.renderBoundary('A','0',true,true)")
+    await wait(() => evaluate('!!document.querySelector("#test-open-workout")'))
+    await evaluate('document.querySelector("#test-open-workout").click()')
+    await wait(() => evaluate("document.body.innerText.includes('세션 상태·편집 기기 확인')"))
+    await evaluate("window.renderBoundary('A','0','finished',true)")
+    await wait(() => evaluate('!!document.querySelector("[data-boundary-summary=true]")'))
+    const finishedEntry = await evaluate('history.state.overloadNavigation')
+    assert.equal(finishedEntry.values['boundary-tab'], 'history')
+    assert.equal(Object.keys(finishedEntry.values).some(key => key.startsWith('workout-view:')), false)
+    await evaluate('document.querySelector("[data-boundary-summary] button").click()')
+    await wait(() => evaluate('!document.querySelector("[data-boundary-summary]")&&!!document.querySelector("[aria-label=홈]")'))
+    assert.equal(await evaluate('document.body.innerText.includes("운동 이어가기")'), false)
+    await evaluate('history.forward()')
+    await wait(() => evaluate('!!document.querySelector("[data-boundary-summary=true]")'))
   } catch(error){if(ws?.readyState===1){try{console.error('Boundary DOM:',await evaluate('document.body.innerText'));console.error('Boundary requests:',await evaluate('window.boundaryRequests'))}catch{}}throw error} finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))

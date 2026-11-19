@@ -36,6 +36,7 @@ import type { AppTab } from '../../app/types.ts'
 import { Metadata, StatusNotice } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { HomePanel } from '../home/HomePanel.tsx'
+import { activeWorkoutProgress } from '../home/active-workout.ts'
 import { RestSettings } from '../settings/RestSettings.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 
@@ -332,6 +333,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   const visible = (localOnly || auth.status === 'authenticated' && auth.pending !== 'logout' && state.userId === auth.userId) && !auth.accountOpen
   const preserveDrafts = auth.offlineNetworkFailure && !!state.scope && state.scope.userId === auth.localWorkoutUserId
   const session = state.detail
+  const [homeWorkout, setHomeWorkout] = useState<LocalWorkout | null>(null)
   const [retainedNames, setRetainedNames] = useState<{ key: string; exercises: StandardExercise[] } | null>(null)
   const nameUser = accountReady ? session?.userId : null
   const missingNames = JSON.stringify([...new Set(session?.snapshot.state.sessionExercises.filter(e => e.kind === 'WEIGHT'
@@ -468,7 +470,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     {visible && navigationIssue && <StatusNotice error>입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.</StatusNotice>}
     <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'home'}>{visible && !localOnly && (state.status === 'ready' && state.scope && state.data ? <HomePanel
       key={'home:' + state.scope.userId + ':' + state.scope.dataGeneration} scope={state.scope} routines={state.data.routines} api={api} training={training} statistics={statistics} visit={visit.count}
-      refreshKey={scheduleRevision} active={state.active} attempt={state.attempt !== null} busy={state.busy} localReady={state.localReady}
+      refreshKey={scheduleRevision} active={state.active} progress={state.active ? activeWorkoutProgress(state.active, homeWorkout, state.data.exercises) : undefined}
+      attempt={state.attempt !== null} busy={state.busy} localReady={state.localReady}
       issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void resume()} onRetry={() => void startWorkout()}
       onStart={async routine => {
         if (homeStarting.current) return
@@ -501,7 +504,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       visible={focused} onHome={leaveWorkout} backLabel={tab === 'routines' ? '루틴' : undefined}
       history={referenceHistory?.key === referenceKey ? referenceHistory.sessions : []}
       referenceRecords={referenceHistory?.key===referenceKey?referenceHistory.references:[]} referenceRoutine={referenceHistory?.key===referenceKey?referenceHistory.routine:null}
-      server={session} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
+      server={session} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline} onWorkoutChange={setHomeWorkout}
       sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
     <div hidden={!visible || focused || !recordFocused}>{visible && !localOnly && recordFocused && (session?.id !== recordId || session.status === 'ACTIVE') &&
       <><RecordSubpageHeader title="운동 기록 상세" onBack={backFromRecord} backLabel={tab === 'home' ? '홈으로' : '기록으로'} /><StatusNotice error={!!state.issue}>{state.issue ?? '운동 기록을 확인하고 있습니다.'}</StatusNotice></>}

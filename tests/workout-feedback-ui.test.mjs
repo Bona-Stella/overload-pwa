@@ -257,8 +257,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(memoEntry.paddingAfter,memoEntry.paddingBefore,'memo focus must keep the measured footer reservation while hiding the footer')
     const workoutFooter='[data-workout-frame] > footer'
     const workoutIdentity=()=>evaluate(`(()=>{
-      const {sessionId,currentExerciseId,localRevision,rest}=window.feedback.c.getSnapshot().workout
-      return {sessionId,currentExerciseId,localRevision,rest}
+      const {sessionId,currentExerciseId,localRevision}=window.feedback.c.getSnapshot().workout
+      return {sessionId,currentExerciseId,localRevision,rest:window.feedback.currentRest()}
     })()`)
     const beforeKeyboard=await workoutIdentity()
     await evaluate(`(async()=>{
@@ -289,15 +289,17 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.ok(Math.abs(await evaluate('scrollY - Math.min('+modalPosition+', document.documentElement.scrollHeight-innerHeight)'))<=1,'moving to a numeric input discards the prior memo restoration')
     assert.deepEqual(await workoutIdentity(),beforeKeyboard,'keyboard and cancel retain the workout identity, draft revision and rest state')
     // Start through the real completion UI to unlock audio, then shorten only the fixture clock.
+    await click('운동 시작하기')
+    await wait(()=>evaluate('document.querySelector(\'[aria-label="1세트 완료"]\')?.disabled === false'))
     await evaluate("document.querySelector('[aria-label=\"1세트 완료\"]').click()")
-    await wait(()=>evaluate('!!window.feedback.c.getSnapshot().workout.rest'))
+    await wait(()=>evaluate('!!window.feedback.currentRest()'))
     await evaluate('window.feedback.rest(1)')
     await wait(()=>evaluate('window.feedbackAudio.starts>0'))
     const before=await evaluate('window.feedbackAudio.starts')
     await click('휴식 종료');await click('휴식 종료').catch(()=>{})
     await new Promise(r=>setTimeout(r,350))
     assert.equal(await evaluate('window.feedbackAudio.starts'),before,'manual end cannot create a new 1-second tone')
-    assert.equal(await evaluate('window.feedback.c.getSnapshot().workout.rest'),null)
+    assert.equal(await evaluate('window.feedback.currentRest()'),null)
     assert.equal(await evaluate('document.body.textContent.includes("휴식 종료")'),false)
     assert(await evaluate('window.feedbackAudio.stops')>0,'manual end stops an active countdown tone')
 
@@ -309,7 +311,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await new Promise(r=>setTimeout(r,80))
     assert.equal(await evaluate('document.body.textContent.includes("휴식 종료")'),false,'manual hide is immediate even before durable completion')
     await evaluate('window.feedback.release()')
-    await wait(()=>evaluate('window.feedback.c.getSnapshot().workout.rest===null'))
+    await wait(()=>evaluate('window.feedback.currentRest()===null'))
     await new Promise(r=>setTimeout(r,350))
     assert.equal(await evaluate('window.feedbackAudio.starts'),prior,'queued extension cannot revive manual audio')
 
@@ -366,7 +368,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     })()`))
     await click('+30초')
     await wait(async () => !await dimmed())
-    assert.ok(await evaluate('Date.parse(window.feedback.c.getSnapshot().workout.rest.endsAt) - Date.now() > 36000'))
+    assert.ok(await evaluate('Date.parse(window.feedback.currentRest().endsAt) - Date.now() > 36000'))
     await evaluate('window.feedback.rest(8)'); await wait(dimmed)
     await click('휴식 종료'); await wait(async () => !await dimmed())
 

@@ -6,6 +6,7 @@ export type SetDraft = { weight: string; reps: string; additionalWeight?: string
 export type CardioTimer = { startedAt: string | null; runningSince: string | null; accumulatedMs: number;
   segments: { startedAt: string; stoppedAt: string }[]; distance: string; speed?: string; bpm: string; correctedSeconds: string | null; reviewing: boolean }
 export type RestPolicy = { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
+export type ExerciseRest = { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number }
 export type ExitGuardRegistration = (guard: (() => Promise<boolean>) | null) => void
 export type LocalWorkout = LocalKey & {
   schemaVersion: 2
@@ -26,8 +27,11 @@ export type LocalWorkout = LocalKey & {
   weights: Record<string, { value: string; context: ActiveWeightContext }>
   timers: Record<string, CardioTimer>
   currentExerciseId: string
+  startedWeights?: Record<string, string>
+  preparationFrom?: Record<string, string>
   weightClock?:{visible:boolean;runningSince:string|null;observedAt:string}
   warmupCompleted?: boolean
+  warmupCompletedAt?: string
   // The current server contract has no equipment memo field. Never send these as snapshots.
   equipmentMemos?: Record<string, string>
   // Local UI link only; the current snapshot API cannot transmit replacement-slot evidence.
@@ -36,7 +40,8 @@ export type LocalWorkout = LocalKey & {
   excludedSetOrdinals?: Record<string, number[]>
   exerciseNames: Record<string, string>
   restPolicy: RestPolicy
-  rest: { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number } | null
+  rests?: Record<string, ExerciseRest>
+  rest?: ExerciseRest | null
   // At most one frozen snapshot, never a command queue.
   pendingSnapshot?: { request: SnapshotRequest; requestJson: string; localOnlyIds: string[]; rejected?: boolean } | null
   pendingResolution?: { request: ActiveResolution; requestJson: string; rejected?: boolean; workingBefore?: { value: string; context: ActiveWeightContext } } | null

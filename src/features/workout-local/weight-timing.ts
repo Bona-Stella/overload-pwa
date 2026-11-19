@@ -1,7 +1,9 @@
 import type {LocalWorkout} from './types.ts'
+import { exerciseRest, weightDone, weightStarted } from './model.ts'
 export function weightWorking(w:LocalWorkout,now:number){
- const plan=w.snapshot.appliedPlan.weightExercises.find(p=>p.sessionExerciseId===w.currentExerciseId)
- return !!plan&&w.warmupCompleted!==false&&!w.finish&&w.snapshot.performedSets.filter(s=>s.sessionExerciseId===plan.sessionExerciseId).length<plan.setCount&&(!w.rest||Date.parse(w.rest.endsAt)<=now)
+ const id = w.currentExerciseId, rest = exerciseRest(w)
+ return w.warmupCompleted !== false && !w.finish && w.snapshot.appliedPlan.weightExercises.some(p => p.sessionExerciseId === id)
+  && weightStarted(w, id) && !weightDone(w.snapshot, id) && (!rest || Date.parse(rest.endsAt) <= now)
 }
 function append(w:LocalWorkout,start:number,end:number){
  if(end<=start)return
@@ -13,11 +15,20 @@ function append(w:LocalWorkout,start:number,end:number){
 export function settleWeightClock(w:LocalWorkout,now:number){
  const c=w.weightClock;if(!c||!w.snapshot.weightTiming)return
  if(!Number.isSafeInteger(now)||now<Date.parse(c.observedAt))throw Error('웨이트 측정 시각이 이전 시각보다 이릅니다. 기기 시각을 확인해 주세요.')
- if(c.visible){
-  if(c.runningSince)append(w,Date.parse(c.runningSince),now)
-  else if(w.rest&&Date.parse(w.rest.endsAt)<=now&&weightWorking(w,now))append(w,Math.max(Date.parse(c.observedAt),Date.parse(w.rest.endsAt)),now)
- }
+ const runningSince = observedStart(w, now)
+ if (runningSince !== null) append(w, runningSince, now)
  c.runningSince=null;c.observedAt=new Date(now).toISOString()
+}
+function observedStart(w: LocalWorkout, now: number) {
+ const clock = w.weightClock
+ if (!clock?.visible || !weightWorking(w, now)) return null
+ if (clock.runningSince) return Date.parse(clock.runningSince)
+ const rest = exerciseRest(w)
+ return rest ? Math.max(Date.parse(clock.observedAt), Date.parse(rest.endsAt)) : null
+}
+export function observedWeightMs(w: LocalWorkout, now: number) {
+ const runningSince = observedStart(w, now)
+ return totalWeightMs(w.snapshot.weightTiming) + (runningSince === null ? 0 : Math.max(0, now - runningSince))
 }
 export function resumeWeightClock(w:LocalWorkout,now:number){
  const c=w.weightClock;if(!c)return
@@ -36,4 +47,5 @@ export function recoverWeightClock(w:LocalWorkout,now:number){
  if(c.visible&&(c.runningSince||weightWorking(w,now))&&w.snapshot.weightTiming)w.snapshot.weightTiming.complete=false
  c.visible=false;c.runningSince=null;c.observedAt=new Date(now).toISOString()
 }
-export function measuredWeightMs(w:Pick<LocalWorkout,'snapshot'>){const t=w.snapshot.weightTiming;return t?.complete?t.intervals.reduce((n,s)=>n+Date.parse(s.endedAt)-Date.parse(s.startedAt),0):null}
+const totalWeightMs = (timing: LocalWorkout['snapshot']['weightTiming']) => timing?.intervals.reduce((n,s)=>n+Date.parse(s.endedAt)-Date.parse(s.startedAt),0) ?? 0
+export function measuredWeightMs(w:Pick<LocalWorkout,'snapshot'>){const t=w.snapshot.weightTiming;return t?.complete ? totalWeightMs(t) : null}

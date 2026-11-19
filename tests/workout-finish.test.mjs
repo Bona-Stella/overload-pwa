@@ -90,6 +90,28 @@ test('offline finish persists once, locks later edits and resumes with original 
   assert.equal(e.calls.length,0);assert.equal(await e.c.change(w=>complete(w,2)),false);e.c.draft(E,2,{weight:'70',reps:'9'});assert.equal(e.c.getSnapshot().unsavedDrafts,false)
   e.online(true);await e.c.retrySync();assert.equal(e.calls.length,1);assert.equal(e.calls[0].kind,'finish');assert.equal(e.calls[0].body.endedAt,new Date(at+20).toISOString());e.c.stop()
 })
+test('ending at the weight/cardio choice keeps the plan and records only completed weight',async()=>{
+  const e=await editor()
+  e.online(false)
+  assert.equal(await e.c.change(w=>{
+    m.addCardio(w,{kind:'TREADMILL',name:'러닝',targetSeconds:600,targetDistanceKm:null,intensity:null,inclinePercent:null,resistance:null})
+    w.currentExerciseId=E
+    m.updateTargets(w,E,1,8,10)
+    complete(w,1)
+    m.advanceAfterCompletion(w,E)
+  }),true)
+  assert.equal(e.read().currentExerciseId,E)
+  assert.equal(await e.c.finish(at+20),true)
+  e.online(true);await e.c.retrySync()
+  const [finish]=e.calls
+  assert.equal(finish.kind,'finish')
+  assert.equal(finish.body.snapshot.performedSets.length,1)
+  assert.equal(finish.body.snapshot.appliedPlan.cardioActivities.length,1)
+  assert.deepEqual(finish.body.snapshot.cardioResults,[])
+  assert.equal(e.remote().status,'FINISHED')
+  assert.equal(e.read().finish.ack.status,'FINISHED')
+  e.c.stop()
+})
 test('a durable unresolved approval resolution is confirmed before freezing FINISH',async()=>{
   let w=change(local(),x=>m.changeWeight(x,E,'65',true,at));w.serverRevision=w.localRevision;w.syncState='CLEAN';w.serverVersion='1'
   const approval=w.snapshot.approvalRequests[0],result={id:approval.id,sessionExerciseId:E,sequence:'1',status:'PENDING',reason:'ROUTINE_CHANGED',approvalEventId:null,routineVersionBefore:null,routineVersionAfter:null,resolvedAt:null,resolvedByRequestId:null}

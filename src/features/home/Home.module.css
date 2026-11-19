@@ -6,6 +6,10 @@
 .home .today { display: block; padding: 16px 13px; border-radius: 5px; }
 .kicker { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; font-weight: 750; color: var(--accent); margin: 0 0 10px; }
 .kicker time { flex: none; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.kicker > span:first-child { flex-shrink: 0; }
+.activeStatus { min-width: 0; font-size: 12px; font-weight: 500; text-align: end; color: var(--text-muted); overflow-wrap: anywhere; }
+.activeSummary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin-block: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 12px; }
+.activeSummary strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .today h2 { font-size: 22px; line-height: 1.4; margin: 9px 0 5px; overflow-wrap: anywhere; }
 .planSection h3 { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 5px; font-size: 13px; font-weight: 750; letter-spacing: .055em; color: var(--accent); }
 .planSection h3 span { color: var(--text-muted); letter-spacing: 0; font-size: 11px; font-weight: 400; }
@@ -16,7 +20,8 @@
 .planSection li > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .planSection li > strong { font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .emptyPlan { font-size: 11px; color: var(--text-muted); line-height: 1.55; margin: 11px 0; }
-.home .start { min-height: 44px; padding: 12px 7px; font-size: 15px; border: 1.5px solid var(--accent); border-radius: 2px; font-weight: 700; }
+.home :is(.start, .resume) { min-height: 44px; padding: 12px 7px; font-size: 15px; border: 1.5px solid var(--accent); border-radius: 2px; font-weight: 700; }
+.home .resume { width: 100%; margin-top: 14px; border-radius: 5px; }
 .chooser summary { display: flex; align-items: center; justify-content: space-between; list-style: none; cursor: pointer; min-height: 56px; padding: 14px 12px; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--surface-card); font-size: 12px; }
 .chooser summary::-webkit-details-marker { display: none; }
 .plus::before { content: '+'; display: block; font-size: 19px; font-weight: 400; line-height: 20px; }
