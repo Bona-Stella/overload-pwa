@@ -632,7 +632,7 @@ iPhone의 화면 구조를 고려합니다.
 
 **루틴 탭 현황 갱신(2026-11-18).** 상세는 `9cd2684`, 편집·생성은 `3f761b2`에 반영했다. [컴포넌트와 검증 이력](#루틴-탭-리디자인-현황--2026-11-18)을 따른다.
 
-**공통 하단 내비게이션 현황 갱신(2026-11-19).** `c123c07`에 최종 탭바 규격·아이콘·슬라이드·하단 배치를 반영했다. [구현과 검증 이력](#공통-하단-내비게이션-리디자인-현황--2026-11-19)을 따른다.
+**공통 하단 내비게이션 현황 갱신(2026-11-19).** `c123c07`에 확장형 탭바를, `2a911e5`에 스크롤 접기·펼치기와 최종 정렬·색상 보정을 반영했다. [구현과 검증 이력](#공통-하단-내비게이션-리디자인-현황--2026-11-19)을 따른다.
 
 | 현행 영역 | 실제 모듈·연결 | 남은 범위 |
 |---|---|---|
@@ -938,11 +938,13 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 #### 공통 하단 내비게이션 리디자인 현황 — 2026-11-19
 
 - [AppShell.tsx](../../src/app/AppShell.tsx)는 운영 `AuthApp`과 합성 `RoutinePreview`가 공유한다. 홈·루틴·기록·설정의 버튼은 전달받은 `tab`을 기준으로 `aria-current="page"`를 설정하고 `onNavigate`를 부른다. 재선택 시 탭 루트로 복귀하고 뒤로·앞으로 이동 시 기존 [탐색 이력](../../src/app/navigation.ts)이 화면 상태를 복원한다. 초안 이탈 확인, 모달 이력, 기존 세션 및 휴식 푸터 경로를 사용한다.
-- [AppShell.module.css](../../src/app/AppShell.module.css)의 단일 `::before`가 균등한 grid 한 칸을 차지하며 `translateX(calc(100% * var(--tab-index)))`로 이동한다. 셸은 현재 탭의 배열 인덱스를 처음부터 넘긴다. 이동은 CSS `transform 200ms ease`이며 `prefers-reduced-motion: reduce`에서 전환을 끈다. SVG는 경로를 유지하며 홈·설정만 검은색 `fill`과 `evenodd`를 사용한다. 루틴·기록은 `fill="none"`에서 검은색 2.4px `stroke`를 쓰고 비활성은 1.6px이다. 버튼 이름과 SVG의 `aria-hidden`, Tab·Enter·Space 기본 조작, `focus-visible`을 적용한다. [시각 명세](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#15-공통-하단-내비게이션--2026-11-19)
-- 너비는 `min(calc(100% - 24px), 336px)`이며 높이는 56px이다. `viewport-fit=cover`를 사용하고 탭바의 고정 위치에는 `--tabs-offset: env(safe-area-inset-bottom)`을 적용한다. 표시 중 `.withTabs`는 `56px + --tabs-offset + 16px`로 기본 하단 패딩을 대체한다. 보이는 `WorkoutFrame`이 자체 고정 액션 높이를 예약하는 화면에서는 셸의 하단 패딩을 해제한다.
+- `useTabBarCollapse`는 표시 중에만 `window`의 passive 스크롤 이벤트를 받는다. `requestAnimationFrame`에서 `document.scrollingElement.scrollTop`을 문서의 실제 범위로 제한하고 이전 위치와의 차를 같은 방향으로 24px씩 누적한다. 방향 전환이나 열린 모달에서는 누적값을 초기화한다. 새 탭이나 표시 조건 변경, 최상단에서는 펼침을 기본으로 한다. 모달과 내부 목록의 별도 스크롤은 문서 위치를 바꾸지 않는 한 대상이 아니다. 포커스가 비활성 탭에 있을 때는 자동 축소를 보류한다. 조건 변경과 해제 시 이벤트 및 예약 프레임을 정리한다.
+- 접힌 활성 버튼은 `하단 메뉴 펼치기` 이름과 `aria-expanded=false`를 사용하며, `onNavigate` 대신 펼침만 수행한다. 비활성 버튼은 `inert`와 `aria-hidden`으로 접근성을 차단한다. 펼친 상태의 Tab·Enter·Space, `aria-current="page"`, `focus-visible`과 기존 SVG는 유지한다. 홈·설정은 검은색 `fill` 및 `evenodd`, 루틴·기록은 활성 3px 검은색·비활성 1.6px 중립색 윤곽선이다.
+- [AppShell.module.css](../../src/app/AppShell.module.css)는 표면의 크기와 탭 칸의 위치를 분리한다. 펼침 칸은 고정된 4등분 트랙을 사용한다. 각 칸의 `transform`이 자신의 중심과 전체 중앙을 잇고, 버튼 너비와 SVG의 `scale`·불투명도는 각각 적용한다. 완료 시 칸을 재배치하는 단계가 없다. 캡슐은 탭 인덱스의 `transform 200ms ease`와 접힘에 쓰는 독립 `translate`를 사용한다. 접기 320ms·펼치기 340ms의 `cubic-bezier(.32, .08, .26, 1)`에 맞춰 `#6C93C6`과 `#5E82B1`을 전환한다. `prefers-reduced-motion: reduce`에서는 전환을 끈다. [시각 명세](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#15-공통-하단-내비게이션--2026-11-19)
+- 확장 표면은 `min(calc(100% - 24px), 336px)` × 56px, 축소 표면과 버튼은 46×46px이다. 두 상태에서 `viewport-fit=cover`와 `--tabs-offset: env(safe-area-inset-bottom)`을 유지한다. `.withTabs`의 `56px + --tabs-offset + 16px` 패딩은 접힐 때도 유지한다. 보이는 `WorkoutFrame`이 자체 고정 액션 영역을 확보하는 경우 셸 패딩을 해제한다.
 - 인증됐고 집중 화면 또는 키보드 표시 상태가 아니면 탭바를 표시한다. `visualViewport.resize`와 `focusin`·`focusout`에서 다음 애니메이션 프레임에 측정한다. 확대 배율이 1.01 이하이고 레이아웃 높이 `max(innerHeight, documentElement.clientHeight)`와 `visualViewport.height`의 차가 100px을 넘을 때, 편집 가능한 입력에 포커스가 있거나 이미 키보드로 숨긴 상태라면 계속 숨긴다. 뷰포트가 복구되면 현재 탭 위치로 표시한다.
-- **구현 당시 검증.** Chrome 320·375·393·430·1280 CSS px에서 배치와 아이콘을 확인했다. 모의 안전 영역 0px·34px에서 하단 간격 0px·34px, 본문 여백 72px·106px을 측정했다. 관련 테스트 5/5와 전체 651/651, TypeScript·린트·프로덕션 빌드·`git diff --check`가 통과했다. 브라우저 이력, 빠른 탭 전환, 키보드 조작과 숨김, 모달 및 운동 푸터는 관련 검증에 포함됐다. 기존 500kB 초과 청크 경고가 남아 있다.
-- **후속 범위.** iPhone Safari·설치형 PWA의 실제 홈 인디케이터 간격과 iOS 소프트 키보드 동작은 실기기에서 확인해야 한다. 앱 전역 공통 UI 모듈 정리는 별도 작업이다. HTML 베이스라인은 기존 무채색 프레임에서 탭바 시연을 제공한다.
+- **이전 검증 이력.** 확장 탭바와 최초 접기·펼치기 단계의 전체 651/651은 당시 결과다. 마지막 좌표 보정 전 Chrome 320·375·393·430·1280px에서 프레임·색상 전환을 측정했고, 모의 안전 영역 0px·34px에서 하단 간격 0px·34px, 본문 여백 72px·106px을 확인했다. 같은 개선 단계의 전체 테스트는 650/651로, 펼침 프레임 검사가 실패했다.
+- **최종 코드 검증 범위.** 마지막 보정 이후 관련 단위 테스트 30/30, TypeScript·린트·프로덕션 빌드·`git diff --check`가 통과했다. 기존 500kB 초과 청크 경고가 남아 있다. 자동 승인 검토의 사용량 한도로 최종 Chrome과 전체 재실행이 보류됐다. iPhone Safari·설치형 PWA의 스크롤 감도·터치 관성·홈 인디케이터·소프트 키보드·애니메이션은 실기기에서 검증해야 한다. 앱 전역 공통 UI 모듈 정리는 별도 작업이다.
 
 #### 현황 갱신
 
@@ -950,7 +952,9 @@ Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/doc
 
 #### 화면별 구현 근거
 
-[UI/UX 적용 지점](../product/ui-ux.md)의 화면별 링크를 사용합니다. 무채색 HTML은 배치와 조작의 시연이고 [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)은 실제 색상·위계의 기준입니다. 검색·선택에는 [원본 PNG 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다.
+[UI/UX 적용 지점](../product/ui-ux.md)의 Markdown에서 조작 규칙을, [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)에서 실제 색상·위계를 확인합니다. [HTML 베이스라인](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 현재 UI를 기준으로 한 저충실도 검토 자료입니다. 문서 안의 화면과 준비된 상태를 화면 선택기, 링크, 모달, 토글로 확인합니다. JavaScript는 기본 검토 조작에만 사용합니다. 실제 애니메이션·타이머·오디오·저장·통계·서버 통신과 기능 검증은 운영 React 앱 또는 검토 앱에서 수행합니다. 검색·선택에는 [원본 PNG 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다.
+
+전면 정적화 당시 브라우저 검사 두 건에서 이전 HTML 구조 의존성이 확인됐다. 화면 선택기 `#screen`은 기본 검토 조작으로 복원했으며, 기록 품질 검사가 의존하는 동적 통계·승인 흐름은 운영 검토 앱에서 확인해야 한다. 루틴 태그 설명은 HTML 표에 있고 기존 검사는 인라인 `routineTagDescriptions`를 읽는다. 전체 검증 전에 테스트의 참조 방식을 갱신해야 한다. [기록 품질 검사](../../tests/record-quality.test.mjs) · [루틴 UI 검사](../../tests/routine-ui.test.mjs)
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
@@ -981,7 +985,7 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보�
 
 `assignments/version/timeZone/appliedAt`은 당시 PWA의 단일 일정 응답이다. 쿼리 없는 조회, 프리셋별 쓰기, 상태·프리셋 버전, 수동 적용·순환은 [현행 Backend 계약](../../../overload-server/docs/api/weekly-schedule.md)을 사용한다. 04시 검사와 과거 근거는 계속 서버 책임이다.
 
-루틴/일정 쓰기는 기존 온라인 인증·CSRF·소유권·세대/version을 사용한다. 진행 운동의 IndexedDB3/schema2·snapshot·ACK·writerEpoch·계정 경계는 그대로다. 문서용 HTML은 독립 합성 상태로만 동작하며 운영 데이터나 고정 요청을 수정하지 않는다. T02-A [마감 문서](../tasks/ui-v09-t02a-closeout.md)의 당시 종료/재개 절차는 환경 보존 기록이며 이번 문서 작업에서 서버를 시작·종료하지 않는다.
+루틴/일정 쓰기는 기존 온라인 인증·CSRF·소유권·세대/version을 사용한다. 진행 운동의 IndexedDB3/schema2·snapshot·ACK·writerEpoch·계정 경계는 그대로다. 문서용 HTML은 합성 수치의 정적 화면이고 실제 조작은 검토 앱에서 확인한다. T02-A [마감 문서](../tasks/ui-v09-t02a-closeout.md)의 당시 종료/재개 절차는 환경 보존 기록이며 이번 문서 작업에서 서버를 시작·종료하지 않는다.
 
 | 영역 | 현재 계정 경로의 구현 | 후속 구현할 내용 |
 |---|---|---|

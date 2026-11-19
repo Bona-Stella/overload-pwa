@@ -224,7 +224,7 @@ Overload는 **모바일 퍼스트(Mobile First)** 방식을 기반으로 설계�
 
 ## 🖥 주요 화면 구성
 
-홈·루틴·기록·설정은 아이콘 전용 하단 탭바를 공유합니다. 선택 캡슐이 현재 탭으로 이동하며, 모바일 브라우저와 설치형 PWA의 하단 안전 영역을 고려합니다. 입력 중 키보드가 화면을 가리면 탭바를 잠시 숨겼다가 복원합니다. 탭 탐색과 운동 세션은 기존 흐름을 따릅니다. [하단 내비게이션 명세](docs/product/ui-ux.md#공통-하단-내비게이션)
+홈·루틴·기록·설정은 아이콘 전용 하단 탭바를 공유합니다. 스크롤 방향에 따라 현재 탭의 원형 버튼으로 접히거나 네 탭으로 펼쳐집니다. 원형 버튼을 누르면 현재 화면에서 메뉴가 열립니다. 두 상태 모두 모바일 브라우저와 PWA의 하단 안전 영역을 따르며, 키보드가 화면을 가리면 탭바를 잠시 숨깁니다. [하단 내비게이션 명세](docs/product/ui-ux.md#공통-하단-내비게이션)
 
 ### 1. Home
 
@@ -625,7 +625,7 @@ Local Development
 
 개발은 [AGENTS.md 3절](AGENTS.md#3-required-engineering-documents)에서 작업별 현행 계약을 찾고 [Frontend 개발 규칙](docs/engineering/frontend.md)을 적용합니다.
 
-- 화면·조작은 [UI/UX 적용 지점](docs/product/ui-ux.md), 실제 색상·토큰은 [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md), 배치·클릭 검토는 [현재 HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)을 참조합니다.
+- 화면·조작은 [UI/UX 적용 지점](docs/product/ui-ux.md), 실제 색상·토큰은 [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md)을 참조합니다. [HTML 베이스라인](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)은 밝은 무채색의 저충실도 검토 자료입니다. 화면 선택, 버튼 이동, 모달, 간단한 상태 비교에 JavaScript를 사용합니다. 실제 기능과 애니메이션은 앱에서 검증합니다.
 - 현재 구현·후속 단계·마지막 검증은 [Frontend 개발 현황](docs/engineering/frontend.md#87-v09-적용-범위와-구현-상태)을 확인합니다.
 - 변경 이유나 당시 검증이 필요하면 [문서 감사 기록](docs/tasks/documentation-audit-2026-11-09.md)에서 이전 버전·핸드오프·보고서를 찾습니다.
 
