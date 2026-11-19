@@ -3,9 +3,18 @@ import { useCallback, useEffect, useRef } from 'react'
 
 type SampleResult = 'finished' | 'cancelled' | 'unavailable'
 
+function traceRestAudio(event: string, seconds?: number, context?: AudioContext | null) {
+  if (import.meta.env.DEV && location.pathname.replace(/\/$/, '') === '/rest-audio-preview') {
+    window.dispatchEvent(new CustomEvent('overload:rest-audio-check', {
+      detail: { event, seconds, state: context === undefined ? undefined : context?.state ?? '미생성', audioTime: context?.currentTime, hidden: document.hidden },
+    }))
+  }
+}
+
 // Reuse the set-rest tone for the countdown, individual samples and the three-beep alert.
 export function useRestAudio(enabled: boolean, volume = 70) {
   const audio = useRef<AudioContext | null>(null)
+  const activated = useRef(false)
   const played = useRef(new Set<string>())
   const muted = useRef(new Set<number>())
   const tones = useRef(new Map<OscillatorNode, GainNode>())
@@ -24,15 +33,33 @@ export function useRestAudio(enabled: boolean, volume = 70) {
     finishSample.current = null
   }, [])
   useEffect(() => stop, [stop, enabled, volume])
-  useEffect(() => {
-    const hide = () => { if (document.hidden) stop() }
-    document.addEventListener('visibilitychange', hide)
-    return () => {
-      document.removeEventListener('visibilitychange', hide)
-      void audio.current?.close().catch(() => {})
-      audio.current = null
+  const resume = useCallback(async (context: AudioContext) => {
+    try {
+      if (context.state !== 'running') {
+        if (import.meta.env.DEV) traceRestAudio('오디오 재개 요청', undefined, context)
+        await context.resume()
+      }
+      const ready = audio.current === context && context.state === 'running'
+      if (import.meta.env.DEV) traceRestAudio(ready ? '오디오 준비' : '오디오 사용 불가', undefined, context)
+      return ready
+    } catch {
+      if (import.meta.env.DEV) traceRestAudio('오디오 재개 실패', undefined, context)
+      return false
     }
-  }, [stop])
+  }, [])
+  useEffect(() => {
+    const visibility = () => {
+      if (document.hidden) stop()
+      else if (enabled && volume && activated.current && audio.current) void resume(audio.current)
+    }
+    document.addEventListener('visibilitychange', visibility)
+    return () => document.removeEventListener('visibilitychange', visibility)
+  }, [enabled, volume, resume, stop])
+  useEffect(() => () => {
+    void audio.current?.close().catch(() => {})
+    audio.current = null
+    activated.current = false
+  }, [])
 
   const unlock = useCallback(async () => {
     if (!enabled || volume === 0) return false
@@ -40,10 +67,13 @@ export function useRestAudio(enabled: boolean, volume = 70) {
     if (!Audio) return false
     try {
       const context = audio.current ??= new Audio()
-      if (context.state !== 'running') await context.resume()
-      return context.state === 'running'
+      if (await resume(context) && audio.current === context) {
+        activated.current = true
+        return true
+      }
     } catch { return false }
-  }, [enabled, volume])
+    return false
+  }, [enabled, volume, resume])
 
   const emit = useCallback((count: 1 | 3, onFinished?: () => void) => {
     const context = audio.current
@@ -70,7 +100,11 @@ export function useRestAudio(enabled: boolean, volume = 70) {
   const play = useCallback((ends: number, remaining: number) => {
     const key = `${ends}:${remaining}`
     if (muted.current.has(ends) || remaining < 1 || remaining > 5 || played.current.has(key)) return
-    if (emit(1)) played.current.add(key)
+    const finished = import.meta.env.DEV ? () => traceRestAudio('음원 처리 완료', remaining, audio.current) : undefined
+    if (emit(1, finished)) {
+      played.current.add(key)
+      if (import.meta.env.DEV) traceRestAudio('음원 시작', remaining, audio.current)
+    } else if (import.meta.env.DEV) traceRestAudio('음원 시작 안 함', remaining, audio.current)
   }, [emit])
   const middle = useCallback(() => emit(3), [emit])
   const silence = useCallback((ends: number) => { muted.current.add(ends); stop() }, [stop])
@@ -100,8 +134,16 @@ export function useRestTimerAudio(audio: ReturnType<typeof useRestAudio>, id: st
   const announced = useRef(new Set<string>())
   useEffect(() => stop, [ends, id, stop])
   useEffect(() => {
-    if (!id || ends === undefined || remaining <= 0) { previous.current = null; return }
     const last = previous.current
+    if (!id || ends === undefined || remaining <= 0) {
+      if (import.meta.env.DEV && last) {
+        if (id === last.id && ends !== undefined && now >= ends) traceRestAudio('카운트다운', 0)
+        else traceRestAudio('휴식 알림 중단')
+      }
+      previous.current = null
+      return
+    }
+    if (import.meta.env.DEV && (last?.id !== id || last.remaining !== remaining)) traceRestAudio('카운트다운', remaining)
     previous.current = { id, ends, remaining }
     play(ends, remaining)
     if (middleAt === null || remaining !== middleAt || announced.current.has(id)) return

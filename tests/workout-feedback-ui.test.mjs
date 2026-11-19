@@ -320,6 +320,21 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     const ended=await evaluate('window.feedbackAudio.starts')
     await new Promise(r=>setTimeout(r,350));assert.equal(await evaluate('window.feedbackAudio.starts'),ended,'automatic expiry does not repeat tones')
 
+    // Model a browser interrupting an already activated context while the page is hidden.
+    await evaluate(`(()=>{
+      Object.defineProperty(document,'hidden',{configurable:true,value:true})
+      window.feedbackAudio.context.state='suspended'
+      document.dispatchEvent(new Event('visibilitychange'))
+    })()`)
+    await evaluate('window.feedback.rest(3)')
+    await new Promise(r=>setTimeout(r,350))
+    const hiddenAudio=await evaluate('({starts:window.feedbackAudio.starts,resumes:window.feedbackAudio.resumes})')
+    assert.equal(hiddenAudio.starts,ended,'background ticks schedule no tones')
+    await evaluate("delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))")
+    assert.equal(await evaluate('window.feedbackAudio.resumes'),hiddenAudio.resumes+1,'foregrounding resumes the existing activated context')
+    await wait(()=>evaluate('window.feedbackAudio.starts>'+ended))
+    await click('휴식 종료')
+
     const dimSwitch = '[role="switch"][aria-label="화면 어둡게"]'
     const dimmed = () => evaluate('!!document.querySelector("[data-workout-frame] [data-rest-countdown]")')
     const preference = value => evaluate(`document.querySelector(${JSON.stringify(dimSwitch)})?.getAttribute('aria-checked') === '${value}'`)

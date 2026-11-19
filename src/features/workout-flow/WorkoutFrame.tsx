@@ -10,10 +10,10 @@ import styles from './WorkoutFlow.module.css'
 type Step = { id: string; name: string }
 type Navigation = { previous?: Step; next?: Step; onGo: (id: string) => void }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, onHome, onEnd, clockRef, navigation, reviewNote, hidden, cardioFocus }: {
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, onHome, onEnd, onRestInteraction, clockRef, navigation, reviewNote, hidden, cardioFocus }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
   timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; dim?: number; children: ReactNode; actions?: ReactNode
-  onHome: () => void; onEnd: () => void
+  onHome: () => void; onEnd: () => void; onRestInteraction?: () => void
   clockRef?: RefObject<HTMLDivElement | null>
   navigation?: Navigation; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
 }) {
@@ -38,7 +38,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     return () => observer.disconnect()
   }, [timeBar, hasActions])
 
-  return <div className={styles.flow} ref={root} hidden={hidden} data-workout-frame data-fixed-actions={hasActions || undefined}
+  return <div className={styles.flow} ref={root} hidden={hidden} onClickCapture={onRestInteraction} data-workout-frame data-fixed-actions={hasActions || undefined}
     data-weight-focus={!!navigation || undefined} data-cardio-focus={cardioFocus || undefined}>
     <div className={styles.clockDock} ref={timeBar} data-keyboard-header>
       <div className={`${styles.clock} ${styles.restFlash}`} data-flash={flash || undefined} aria-label="운동 시간">

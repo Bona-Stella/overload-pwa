@@ -27,12 +27,13 @@ const c=new LocalWorkoutController({readLocal:async()=>structuredClone(stored),o
  if(!guard()||expected!==stored.editVersion)throw Error('Fixture write conflict')
  stored=structuredClone(next)
 }},()=>true,async()=>({held:()=>true,release(){}}))
-window.feedbackAudio={starts:0,stops:0}
+window.feedbackAudio={starts:0,stops:0,resumes:0}
 window.AudioContext=class{
  state='running';currentTime=0;destination={}
+ constructor(){window.feedbackAudio.context=this}
  createGain(){return{gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}}}
  createOscillator(){return{frequency:{value:0},connect(g){return g},disconnect(){},start(){window.feedbackAudio.starts++},stop(at){if(at===undefined)window.feedbackAudio.stops++}}}
- async close(){} async resume(){}
+ async close(){} async resume(){window.feedbackAudio.resumes++;this.state='running'}
 }
 window.feedback={
  c,ready:false,

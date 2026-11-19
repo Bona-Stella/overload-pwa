@@ -54,7 +54,7 @@ function requireWeight(workout: LocalWorkout, id: string) {
   if (!e) throw new Error('현재 적용 계획에 없는 종목입니다.')
   return e
 }
-export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId = () => crypto.randomUUID()) {
+export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId: () => string = () => crypto.randomUUID()) {
   const plan = requireWeight(workout, id)
   if (!count(ordinal) || workout.snapshot.performedSets.some(x => x.sessionExerciseId === id && x.ordinal === ordinal)) throw new Error('이미 완료한 세트입니다.')
   const draft = draftFor(workout, id, ordinal), weightKg = decimalDraft(draft.weight), reps = countDraft(draft.reps)
