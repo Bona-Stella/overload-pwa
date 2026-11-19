@@ -91,7 +91,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     })()`)
     const hidden = () => evaluate(`(() => {
       const footer = document.querySelector('footer')
-      return footer.hidden && getComputedStyle(footer).display === 'none' && footer.getClientRects().length === 0
+      return getComputedStyle(footer).display === 'none' && footer.getClientRects().length === 0
     })()`)
     const baseline = await footerGeometry()
     assert.ok(baseline[1] > 44)
@@ -101,11 +101,21 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
       field.focus()
     })()`)
     await evaluate('window.scrollTo(0, Math.max(0, document.documentElement.scrollHeight - innerHeight - 12))')
-    let entryScroll = await evaluate('window.scrollY')
-    assert.ok(entryScroll > 0, 'restore a real nonzero entry position')
+    const entryScroll = await evaluate('window.scrollY')
+    assert.ok(entryScroll > 0, 'enter from a real nonzero scroll position')
+    if (keyboard) {
+      const focusedScroll = await evaluate(`(async () => {
+        const field = document.querySelector('[data-workout-memo]');
+        field.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        field.focus({ preventScroll: true });
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+        return scrollY;
+      })()`)
+      assert.ok(Math.abs(focusedScroll - entryScroll) <= 1, 'hiding the footer does not clamp the page before the keyboard opens')
+    }
     await focusMemo()
     await wait(hidden, 'memo focus completely hides footer')
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[data-weight-focus]')).paddingBottom`), '8px')
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[data-weight-focus]')).paddingBottom`), baseline[5])
     let memoValue = '시트 높이 3 · 메모 검토 ' + width
     await set('[data-workout-memo]', memoValue)
     if (keyboard) {
@@ -120,20 +130,20 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
         for (const key of ['height', 'offsetTop']) Object.defineProperty(viewport, key, {
           configurable: true, get: () => window.memoViewportTest[key],
         })
+        Object.defineProperty(viewport, 'pageTop', { configurable: true, get: () => window.scrollY + viewport.offsetTop })
       })()`)
       try {
         for (let cycle = 0; cycle < 4; cycle++) {
-          let manuallyScrolled = false
           if (cycle) {
-            entryScroll = await evaluate('window.scrollY')
             await focusMemo()
           }
           if (cycle === 2) {
             await send('Emulation.setDeviceMetricsOverride', { width, height: 732, deviceScaleFactor: 1, mobile: true })
             await evaluate(`window.memoViewportTest.fullHeight = window.innerHeight`)
           }
+          const openingCalls = await evaluate('window.memoViewportTest.scrollCalls.length')
           await evaluate(`(() => {
-            window.memoViewportTest.height = window.memoViewportTest.fullHeight - 300
+            window.memoViewportTest.height = ${cycle === 2 ? '280' : 'window.memoViewportTest.fullHeight - 300'}
             window.memoViewportTest.offsetTop = ${width === 393 ? 40 : 0}
             window.visualViewport.dispatchEvent(new Event('resize'))
           })()`)
@@ -144,16 +154,16 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             await delay(240)
             assert.equal(await evaluate('window.scrollY'), requested, 'touch cancels pending opening correction')
             assert.equal(await evaluate('window.memoViewportTest.scrollCalls.length'), callsBeforeUser)
-            manuallyScrolled = true
           } else await wait(() => evaluate(`(() => {
-            const rect = document.querySelector('[data-workout-memo-card]').getBoundingClientRect()
+            const rect = document.querySelector('[data-workout-memo]').getBoundingClientRect()
             const viewport = window.visualViewport
-            return rect.bottom <= viewport.offsetTop + viewport.height - 47 &&
-              rect.top >= Math.max(viewport.offsetTop, document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect().bottom) + 7
-          })()`), 'entire memo card clears simulated keyboard accessory row')
+            return rect.bottom <= viewport.offsetTop + viewport.height + 1 &&
+              rect.top >= Math.max(viewport.offsetTop, document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect().bottom) - 1
+          })()`), 'memo input clears the header and simulated keyboard')
           assert.equal(await hidden(), true)
-          const occlusion = await evaluate(`Math.max(window.innerHeight, document.documentElement.clientHeight) - window.visualViewport.height`)
-          assert.ok(Math.abs(await evaluate(`parseFloat(getComputedStyle(document.querySelector('[data-weight-focus]')).paddingBottom)`) - occlusion - 8) < 1, 'keyboard reserve does not accumulate across focus cycles')
+          await delay(200)
+          assert.ok(await evaluate('window.memoViewportTest.scrollCalls.length') - openingCalls <= 1,'one memo placement per opening')
+          assert.ok(await evaluate(`parseFloat(getComputedStyle(document.querySelector('[data-weight-focus]')).paddingBottom)`) >= parseFloat(baseline[5]), 'keyboard positioning retains the measured footer reserve')
           if (cycle === 0) {
             const longMemo = '\n' + '긴 메모 입력과 운동 상태 보존을 확인합니다. '.repeat(25)
             await evaluate(`(() => { const field = document.querySelector('[data-workout-memo]'); field.setSelectionRange(field.value.length, field.value.length) })()`)
@@ -164,6 +174,10 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             await evaluate(`window.visualViewport.dispatchEvent(new Event('resize')); window.visualViewport.dispatchEvent(new Event('resize'))`)
             await delay(200)
             assert.equal(await evaluate('window.scrollY'), stableScroll, 'visible card does not keep scrolling on unchanged viewport')
+            await evaluate(`window.memoViewportTest.height-=32; window.visualViewport.dispatchEvent(new Event('resize'))`)
+            await delay(210)
+            assert.equal(await evaluate('window.scrollY'),stableScroll,'a late viewport step does not trigger a second app correction')
+            await evaluate(`window.memoViewportTest.height+=32; window.visualViewport.dispatchEvent(new Event('resize'))`)
             await screenshot('final-memo-card-viewport-simulated-' + width)
             await evaluate(`window.scrollBy(0, -24); window.visualViewport.dispatchEvent(new Event('scroll'))`)
             const scroll = await evaluate('window.scrollY')
@@ -186,7 +200,6 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             assert.equal(afterPan.padding, beforePan.padding, 'viewport panning must not mutate memo scroll space')
             assert.equal(afterPan.scroll, requestedScroll, 'manual scroll with viewport resize must not snap back')
             assert.equal(await evaluate('window.memoViewportTest.scrollCalls.length'), scrollCalls, 'no application correction after manual pan')
-            manuallyScrolled = true
             for (const [offset, jitter, distance] of [[65, 1, 36], [12, -1, -48], [90, 0, 24], [40, 96, -24]]) {
               await evaluate(`(() => {
                 document.querySelector('[data-workout-memo]').dispatchEvent(new Event('touchmove', { bubbles: true }))
@@ -207,11 +220,11 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             for (const rotatedWidth of [width === 320 ? 393 : 320, width]) {
               await send('Emulation.setDeviceMetricsOverride', { width: rotatedWidth, height: 852, deviceScaleFactor: 1, mobile: true })
               await wait(() => evaluate(`(() => {
-                const card = document.querySelector('[data-workout-memo-card]').getBoundingClientRect()
+                const card = document.querySelector('[data-workout-memo]').getBoundingClientRect()
                 const viewport = window.visualViewport
-                return card.top >= Math.max(viewport.offsetTop, document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect().bottom) + 7 &&
-                  card.bottom <= viewport.offsetTop + viewport.height - 47
-              })()`), 'rotation may realign card after manual takeover')
+                return card.top >= Math.max(viewport.offsetTop, document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect().bottom) - 1 &&
+                  card.bottom <= viewport.offsetTop + viewport.height + 1
+              })()`), 'rotation may realign the field after manual takeover')
             }
           }
           if (cycle === 1) {
@@ -219,27 +232,17 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             await delay(200)
             assert.equal(await hidden(), true, 'closing keyboard alone keeps focused memo protected')
           }
-          if (cycle === 2) {
-            await evaluate(`window.memoViewportTest.height = 280; window.memoViewportTest.offsetTop = 0; window.visualViewport.dispatchEvent(new Event('resize'))`)
-            await wait(() => evaluate(`(() => {
-              const label = document.querySelector('[data-workout-memo]').parentElement.getBoundingClientRect()
-              const header = document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect()
-              return label.top >= header.bottom + 7 && label.bottom <= window.visualViewport.height - 47
-            })()`), 'small viewport prioritizes memo label and input')
-          }
           if (cycle === 3) {
             await evaluate(`window.memoViewportTest.height = window.memoViewportTest.fullHeight; window.memoViewportTest.offsetTop = 0; window.visualViewport.dispatchEvent(new Event('resize'))`)
-            await wait(() => evaluate(`getComputedStyle(document.querySelector('[data-workout-frame]')).paddingBottom === '8px'`), 'focused keyboard dismissal releases temporary space')
-            entryScroll = await evaluate('window.scrollY')
-            manuallyScrolled = false
+            await wait(() => evaluate(`!document.querySelector('[data-keyboard-open]') && getComputedStyle(document.querySelector('[data-workout-frame]')).paddingBottom === ${JSON.stringify(baseline[5])}`), 'focused keyboard dismissal releases only the temporary space')
             await evaluate(`window.memoViewportTest.height = window.memoViewportTest.fullHeight - 300; window.visualViewport.dispatchEvent(new Event('resize'))`)
             await wait(() => evaluate(`(() => {
-              const card = document.querySelector('[data-workout-memo-card]').getBoundingClientRect()
-              return parseFloat(getComputedStyle(document.querySelector('[data-workout-frame]')).paddingBottom) === 308 &&
-                card.bottom <= window.visualViewport.height - 47
+              const field = document.querySelector('[data-workout-memo]').getBoundingClientRect()
+              return !!document.querySelector('[data-keyboard-open]') && field.bottom <= window.visualViewport.height + 1
             })()`), 'keyboard reopens without a second focus event')
           }
           const beforeCloseScroll = await evaluate('window.scrollY')
+          const closingCalls = await evaluate('window.memoViewportTest.scrollCalls.length')
           await evaluate(`document.querySelector('[data-workout-memo]').blur()`)
           await delay(200)
           if (cycle !== 1) {
@@ -252,18 +255,19 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
           if (cycle !== 1) assert.equal(await hidden(), true, 'footer waits for settled dismissal')
           await wait(async () => !(await hidden()), 'footer restored after blur and keyboard dismissal')
           assert.deepEqual(await footerGeometry(), baseline, 'footer dimensions and reserved space restored')
-          const expectedScroll = await evaluate(`Math.min(${manuallyScrolled ? beforeCloseScroll : entryScroll}, document.documentElement.scrollHeight - innerHeight)`)
-          assert.ok(Math.abs(await evaluate('window.scrollY') - expectedScroll) < 1, 'entry scroll restored after footer layout')
+          const expectedScroll = await evaluate(`Math.min(${beforeCloseScroll}, document.documentElement.scrollHeight - innerHeight)`)
+          assert.ok(Math.abs(await evaluate('window.scrollY') - expectedScroll) < 1, 'dismissal keeps the current position within the document range')
+          assert.equal(await evaluate('window.memoViewportTest.scrollCalls.length'),closingCalls,'dismissal does not scroll back to the memo entry position')
           await delay(180)
           assert.ok(Math.abs(await evaluate('window.scrollY') - expectedScroll) < 1, 'restored position remains stable')
           assert.equal(await evaluate(`document.querySelector('[data-workout-memo]').value`), memoValue)
           assert.equal(await displayedTitle(), '01. 벤치 프레스')
-          assert.equal(await evaluate(`document.querySelector('[data-workout-frame]').style.getPropertyValue('--workout-memo-space')`), '', 'keyboard-only reserve removed')
+          assert.equal(await evaluate(`document.querySelector('[data-workout-frame]').style.getPropertyValue('--editor-keyboard-space')`), '', 'keyboard-only reserve removed')
         }
       } finally {
         await evaluate(`(() => {
           document.querySelector('[data-workout-memo]').blur()
-          delete window.visualViewport.height; delete window.visualViewport.offsetTop
+          delete window.visualViewport.height; delete window.visualViewport.offsetTop; delete window.visualViewport.pageTop
           window.scrollTo = window.memoViewportTest.nativeScrollTo
           delete window.memoViewportTest
           window.visualViewport.dispatchEvent(new Event('resize'))
@@ -272,10 +276,11 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
       }
     } else {
       await screenshot('fifth-memo-focus-desktop')
+      const desktopScroll = await evaluate('window.scrollY')
       await evaluate(`document.querySelector('[data-workout-memo]').blur()`)
       await wait(async () => !(await hidden()), 'desktop memo blur restores footer')
       assert.deepEqual(await footerGeometry(), baseline)
-      assert.ok(Math.abs(await evaluate('window.scrollY') - entryScroll) < 1, 'desktop entry scroll restored')
+      assert.ok(Math.abs(await evaluate('window.scrollY') - desktopScroll) < 1, 'desktop blur leaves the current scroll position intact')
       assert.equal(await evaluate(`document.querySelector('[data-workout-memo]').value`), '시트 높이 3 · 메모 검토 ' + width)
     }
     await wait(async () => !(await hidden()), 'memo test restores footer')
@@ -414,12 +419,12 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     const field = document.querySelector('[data-workout-memo]')
     field.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); field.focus()
   })()`)
-  await wait(() => evaluate('document.querySelector("footer").hidden'), 'memo protected before navigation')
+  await wait(() => evaluate('getComputedStyle(document.querySelector("footer")).display==="none"'), 'memo protected before navigation')
   await evaluate(`(() => {
     const next = document.querySelector('[data-exercise-navigation] button:last-child')
     next.focus({ preventScroll: true }); next.click()
   })()`)
-  await wait(() => evaluate('!document.querySelector("footer").hidden'), 'footer restored after leaving memo exercise')
+  await wait(() => evaluate('getComputedStyle(document.querySelector("footer")).display!=="none"'), 'footer restored after leaving memo exercise')
   await delay(180)
   assert.equal(await currentPosition(), '현재 2 / 3종목')
   assert.equal(await evaluate('window.scrollY'), 0, 'old memo scroll must not override navigation')

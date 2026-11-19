@@ -56,10 +56,69 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     }
     const identityMatches=async()=>{
       const value=await evaluate(`(()=>{const controls=[document.querySelector('input[placeholder="나의 루틴"]'),document.querySelector('[aria-label="루틴 태그"]')];return controls.map(e=>{const s=getComputedStyle(e),l=getComputedStyle(e.closest('label'));return ['height','padding','fontSize','color','backgroundColor','borderColor','borderWidth','borderRadius'].map(k=>s[k]).concat(['fontSize','color','gap'].map(k=>l[k]))})})()`)
-      assert.deepEqual(value[0],value[1],'name and tag controls have identical label and field styling')
+      assert.equal(value[0][2],'16px','the editable name avoids Safari focus zoom')
+      assert.equal(value[1][2],'14px','the tag button keeps its typography')
+      assert.deepEqual(value[0].filter((_,i)=>i!==2),value[1].filter((_,i)=>i!==2),'name and tag retain matching field geometry and colors')
     }
 
     const viewport = width => send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true})
+    const verifyScrollBoundary = async selector => {
+      const target = await evaluate(`(()=>{
+        const e=document.querySelector(${JSON.stringify(selector)});
+        if (e.scrollHeight<=e.clientHeight) e.style.maxHeight='70px';
+        e.scrollIntoView({block:'center'});e.scrollTop=e.scrollHeight;
+        const r=e.getBoundingClientRect(),x=r.left+r.width/2,y=r.top+r.height/2;
+        return {x,y,page:scrollY,overflow:e.scrollHeight>e.clientHeight,hit:e.contains(document.elementFromPoint(x,y))};
+      })()`)
+      assert.ok(target.overflow && target.hit, 'the nested scroll area receives the wheel input')
+      await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:target.x,y:target.y,deltaX:0,deltaY:160})
+      await new Promise(r=>setTimeout(r,140))
+      assert.equal(await evaluate('scrollY'),target.page,'wheel input at the nested boundary stays inside the control')
+      await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});e.style.removeProperty('max-height');e.scrollTop=0})()`)
+    }
+    const closeKeyboard = async () => {
+      await evaluate(`(()=>{document.activeElement.blur();delete visualViewport.height;delete visualViewport.offsetTop;delete visualViewport.pageTop;visualViewport.dispatchEvent(new Event('resize'))})()`)
+      await wait(() => evaluate(`[...document.querySelectorAll('form footer')].some(e=>e.getClientRects().length&&getComputedStyle(e).visibility==='visible')`))
+    }
+    const keyboardField = async (selector, { manual = false, fits = false } = {}) => {
+      await evaluate(`(()=>{
+        const e=document.querySelector(${JSON.stringify(selector)}), vv=visualViewport;
+        e.focus({preventScroll:true});
+        if (!e.closest('dialog') && !${fits}) window.scrollTo(0,Math.max(0,scrollY+e.getBoundingClientRect().top-680));
+        else if (${fits}) window.scrollTo(0,0);
+        window.keyboardEntryScroll=scrollY;
+        Object.defineProperty(vv,'height',{configurable:true,value:innerHeight-140});
+        Object.defineProperty(vv,'offsetTop',{configurable:true,value:18});
+        Object.defineProperty(vv,'pageTop',{configurable:true,get:()=>scrollY+vv.offsetTop});
+        vv.dispatchEvent(new Event('resize'));
+        Object.defineProperty(vv,'height',{configurable:true,value:innerHeight-390});
+        vv.dispatchEvent(new Event('resize'));
+      })()`)
+      await wait(() => evaluate(`(()=>{
+        const e=document.activeElement,d=e.closest('dialog'),f=e.closest('form'),r=e.getBoundingClientRect(),vv=visualViewport;
+        const top=Math.max(vv.offsetTop,d?d.getBoundingClientRect().top:f.querySelector('header').getBoundingClientRect().bottom);
+        return e.matches(${JSON.stringify(selector)})&&parseFloat(getComputedStyle(e).fontSize)>=16
+          &&getComputedStyle(f.querySelector('footer')).visibility==='hidden'&&vv.scale===1
+          &&r.top>=top-1&&r.bottom<=vv.offsetTop+vv.height+1&&r.left>=0&&r.right<=innerWidth
+          &&(!d||d.getBoundingClientRect().bottom<=vv.offsetTop+vv.height);
+      })()`))
+      await new Promise(r=>setTimeout(r,180))
+      if (fits) assert.equal(await evaluate('scrollY===window.keyboardEntryScroll'),true,'a visible field stays in place')
+      if (manual) {
+        const entry = await evaluate('({scroll:scrollY,value:document.activeElement.value})')
+        await send('Input.insertText',{text:'메모'})
+        await new Promise(r=>setTimeout(r,180))
+        assert.equal(await evaluate('scrollY'),entry.scroll,'typing does not realign the field')
+        await evaluate(`(()=>{const e=document.activeElement;Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(e,${JSON.stringify(entry.value)});e.dispatchEvent(new Event('input',{bubbles:true}))})()`)
+        await evaluate(`window.dispatchEvent(new WheelEvent('wheel'));window.scrollTo(0,scrollY-180);
+          window.manualKeyboardScroll=scrollY;Object.defineProperty(visualViewport,'height',{configurable:true,value:innerHeight-415});
+          visualViewport.dispatchEvent(new Event('resize'))`)
+        await new Promise(r=>setTimeout(r,180))
+        assert.equal(await evaluate('scrollY===window.manualKeyboardScroll'),true,'manual scroll is not overridden by viewport changes')
+      }
+      await closeKeyboard()
+      assert.equal(await evaluate(`!document.querySelector('[data-edit-keyboard]')&&[...document.forms].every(f=>!f.style.getPropertyValue('--editor-keyboard-space'))`),true)
+    }
     const cardPosition = label => evaluate(`(()=>{const card=document.querySelector('form section[aria-label="${label}"]'),header=card.closest('form').querySelector('header')
       return {gap:card.getBoundingClientRect().top-header.getBoundingClientRect().bottom,headerTop:header.getBoundingClientRect().top,
         title:card.querySelector('h3').textContent,editingInput:document.activeElement.matches('input,textarea,select')}
@@ -78,8 +137,12 @@ test('routine UI preserves individual edits and supports weekly views, compact c
 
     assert.doesNotMatch(await evaluate('document.querySelector("form").textContent'),/운동 요일/)
     await identityMatches()
+    await viewport(375)
+    await keyboardField('[aria-label="웨이트 2"] textarea',{manual:true})
     await evaluate(`document.querySelector('[aria-label="루틴 태그"]').click()`)
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="루틴 태그 선택"] [role="option"]').length`),11)
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="루틴 태그 선택"]')).overscrollBehaviorY`),'contain')
+    await verifyScrollBoundary('[aria-label="루틴 태그 선택"]')
     const officialTags=JSON.parse((await readFile(resolve('docs/product/Overload_UI_Baseline_Wireframe_v0.9.html'),'utf8')).match(/const routineTagDescriptions=(\[.*\]);/)[1])
     assert.deepEqual(await evaluate(`Array.from(document.querySelectorAll('[aria-label="루틴 태그 선택"] [role="option"]')).slice(1).map(b=>[b.querySelector('strong').textContent,b.querySelector('small').textContent])`),officialTags,'tag descriptions reuse the official metadata verbatim')
     await shot('routine-edit-tags-393',393);await shot('routine-edit-tags-320',320)
@@ -102,11 +165,13 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await evaluate(`document.querySelector('[aria-label="웨이트 1"] button').click()`);await new Promise(r=>setTimeout(r,80))
     await searchVisible()
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="표준 운동 목록"] li > button:first-child').length`),2,'catalog list opens on the shared input control')
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"]')).overscrollBehaviorY`),'contain')
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"] li > button:first-child')).backgroundColor`),'rgba(0, 0, 0, 0)','results are inline rows, not autocomplete cards')
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"] li > button:first-child')).borderRadius`),'0px','picker reuses the shared inline catalog rows')
     assert.match(await evaluate(`document.querySelector('[aria-label="표준 운동 목록"] li > button:first-child').textContent`),/벤치프레스.*가슴.*대흉근/)
     assert.equal(await evaluate(`document.querySelector('[aria-label="표준 운동 목록"] img').width`),32)
     assert.equal(await evaluate(`document.querySelectorAll('[role="combobox"],[role="listbox"],[role="option"]').length`),0,'no autocomplete popup is rendered')
+    await verifyScrollBoundary('[aria-label="표준 운동 목록"]')
     await shot('exercise-change-list-393',393);await shot('exercise-change-list-320',320)
     await click('종목 선택 닫기');assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"]').textContent`),oldFirst)
     await evaluate(`document.querySelector('[aria-label="웨이트 1"] button').click()`);await new Promise(r=>setTimeout(r,80))
@@ -120,6 +185,13 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] button[aria-label="설정 중량"]').textContent.trim()`),'입력','new exercise does not inherit an approved weight')
     assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] input[inputmode="numeric"]').value`),'3')
     const wheel = async (section,value) => { await evaluate(`document.querySelector('${section} button[aria-label="설정 중량"]').click()`);await click('직접 입력');await input('dialog[open] input',value);await click('확인') }
+    await viewport(320)
+    await tap(setting(1)+'[aria-label="설정 중량"]')
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('dialog [aria-label="설정 중량 선택값"]')).overscrollBehaviorY`),'contain')
+    await verifyScrollBoundary('dialog [aria-label="설정 중량 선택값"]')
+    await click('직접 입력')
+    await keyboardField('dialog[open] input')
+    await click('취소')
     await wheel('[aria-label="웨이트 1"]','40.000001')
     await viewport(320)
     await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]})
@@ -171,9 +243,10 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     const keyboard = await evaluate(`(()=>{const input=document.querySelector('[aria-label="유산소 1"] input'),footer=input.form.querySelector('footer'),viewport=window.visualViewport;
       input.focus();Object.defineProperty(viewport,'height',{configurable:true,value:innerHeight-280});viewport.dispatchEvent(new Event('resize'));
       const result={focused:document.activeElement===input,scale:viewport.scale,inset:innerHeight-viewport.height,hidden:getComputedStyle(footer).visibility==='hidden'};
-      delete viewport.height;input.blur();viewport.dispatchEvent(new Event('resize'));return {...result,restored:getComputedStyle(footer).visibility==='visible'}
+      delete viewport.height;input.blur();viewport.dispatchEvent(new Event('resize'));return result
     })()`)
-    assert.ok(keyboard.focused && keyboard.hidden && keyboard.restored,JSON.stringify(keyboard))
+    assert.ok(keyboard.focused && keyboard.hidden,JSON.stringify(keyboard))
+    await wait(() => evaluate(`getComputedStyle(document.querySelector('form footer')).visibility==='visible'`))
     const maxReps = '[aria-label="웨이트 1"] input[inputmode="numeric"]'
     await evaluate(`(()=>{const e=[...document.querySelectorAll('${maxReps}')].at(-1);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'2');e.dispatchEvent(new Event('input',{bubbles:true}))})()`)
     await click('변경 사항 저장')
@@ -278,12 +351,14 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.documentElement.scrollWidth<=1280&&document.querySelector('${createForm} footer').offsetWidth===520`),true)
     await viewport(393)
     await writeFile(resolve(directory,'routine-create-empty-393.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'))
+    await keyboardField(nameInput,{fits:true})
     assert.equal(await evaluate(`(()=>{const input=document.querySelector('${nameInput}'),footer=input.form.querySelector('footer'),viewport=window.visualViewport
       input.focus();Object.defineProperty(viewport,'height',{configurable:true,value:innerHeight-280});viewport.dispatchEvent(new Event('resize'))
       const hidden=getComputedStyle(footer).visibility==='hidden'
       delete viewport.height;input.blur();viewport.dispatchEvent(new Event('resize'))
-      return hidden&&getComputedStyle(footer).visibility==='visible'
+      return hidden
     })()`),true,'creation footer follows the shared keyboard behavior')
+    await wait(() => evaluate(`getComputedStyle(document.querySelector('${createForm} footer')).visibility==='visible'`))
     await click('루틴 생성')
     assert.match(await evaluate(`document.querySelector('${createForm} [role="alert"]').textContent`),/루틴 이름과 한 개 이상의 운동/)
     assert.equal(await evaluate('window.listUi.routineWrites.length'),0)
@@ -303,6 +378,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await click('+ 웨이트 종목 추가');await searchVisible();assert.equal(await evaluate(`document.querySelectorAll('[aria-label="표준 운동 목록"] li > button:first-child').length`),1)
     await searchVisible()
     await shot('exercise-add-list-393',393);await shot('exercise-add-list-320',320)
+    await keyboardField('input[type="search"]')
     await tap('[aria-label="표준 운동 목록"] li > button:first-child')
     await assertAligned('웨이트 1','벤치프레스','smooth')
     assert.equal(await empty('웨이트'),null)
@@ -334,7 +410,9 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     const cardioCard = '[aria-label="유산소 1"]'
     for (const width of [375,393,430]) {
       await viewport(width)
-      await click('+ 유산소 종목 추가');await click('달리기');await input('[aria-label="유산소 종목 추가 선택"] select','ca000000-0000-4000-8000-000000000011')
+      await click('+ 유산소 종목 추가')
+      if (width === 430) await keyboardField('[aria-label="유산소 종목 추가 선택"] input')
+      await click('달리기');await input('[aria-label="유산소 종목 추가 선택"] select','ca000000-0000-4000-8000-000000000011')
       await assertAligned('유산소 1','러닝머신','smooth')
       assert.equal(await empty('유산소'),null)
       assert.match(await evaluate(`document.querySelector('${cardioCard} h3').nextElementSibling.textContent`),/달리기 · 러닝머신/)

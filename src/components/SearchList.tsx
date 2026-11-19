@@ -50,6 +50,10 @@ export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,
    </button>
   </div>
   {tags&&open&&<div className={styles.filters}><p className={styles.filterLabel}>{tags.label}</p><div className={styles.filterStrip} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}
-  {issue?<p className="notice" role="status">{issue}</p>:open&&<><SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled} onSelect={(id,event)=>{onSelect(id,event);if(closeOnSelect)setState({mode:'SELECTED',hideScope:false})}}/>{!options.length&&<p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
+  {issue?<p className="notice" role="status">{issue}</p>:open&&<><SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled} onSelect={(id,event)=>{
+    if(closeOnSelect)region.current?.querySelector('input')?.blur()
+    onSelect(id,event)
+    if(closeOnSelect)setState({mode:'SELECTED',hideScope:false})
+  }}/>{!options.length&&<p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
  </div>
 }

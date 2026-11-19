@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { AppTab, DisplayTheme } from './types'
 import styles from './AppShell.module.css'
 import theme from './theme.module.css'
+import { EditorViewportOccluded, useEditorKeyboard } from '../components/useEditorKeyboard.ts'
 
 const tabs: { id: AppTab; label: string; path: string }[] = [
   { id: 'home', label: '홈', path: 'm3 10 9-7 9 7v11h-6v-7H9v7H3Z' },
@@ -69,35 +70,15 @@ function useTabBarCollapse(tab: AppTab, visible: boolean) {
 export function AppShell({ children, tab, onNavigate, authenticated, focused = false, busy = false, displayTheme = 'normal' }: {
   children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; busy?: boolean; displayTheme?: DisplayTheme
 }) {
-  const [keyboardOpen, setKeyboardOpen] = useState(false)
-  useEffect(() => {
-    const viewport = window.visualViewport
-    if (!viewport) return
-    let frame = 0
-    const measure = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        const field = document.activeElement
-        const typing = field instanceof HTMLElement && (field.isContentEditable || field.matches('textarea:not([readonly]), input:not([readonly]):is([type="text"], [type="number"], [type="email"], [type="tel"], [type="search"], [type="password"], :not([type]))'))
-        const occluded = viewport.scale <= 1.01 && Math.max(window.innerHeight, document.documentElement.clientHeight) - viewport.height > 100
-        setKeyboardOpen(open => occluded && (typing || open))
-      })
-    }
-    measure()
-    viewport.addEventListener('resize', measure)
-    document.addEventListener('focusin', measure)
-    document.addEventListener('focusout', measure)
-    return () => {
-      cancelAnimationFrame(frame)
-      viewport.removeEventListener('resize', measure)
-      document.removeEventListener('focusin', measure)
-      document.removeEventListener('focusout', measure)
-    }
-  }, [])
-  const showTabs = authenticated && !focused && !keyboardOpen
+  const shell = useRef<HTMLDivElement>(null)
+  const { occluded, keyboardOpen } = useEditorKeyboard(shell)
+  const reserveTabs = authenticated && !focused
+  const showTabs = reserveTabs && !keyboardOpen
   const { navigation, collapsed, expand } = useTabBarCollapse(tab, showTabs)
-  return <div className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme}>
-    <main className={`${styles.content} ${showTabs ? styles.withTabs : ''} ${authenticated && !focused && tab === 'home' ? styles.homeContent : ''} page`}>{children}</main>
+  return <div ref={shell} className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme} data-keyboard-open={keyboardOpen || undefined}>
+    <main className={`${styles.content} ${reserveTabs ? styles.withTabs : ''} ${authenticated && !focused && tab === 'home' ? styles.homeContent : ''} page`}>
+      <EditorViewportOccluded value={occluded}>{children}</EditorViewportOccluded>
+    </main>
     {showTabs && <nav ref={navigation} className={styles.tabs} aria-label="기본 탐색" data-collapsed={collapsed}>
       <span className={styles.tabSurface} data-tab-surface aria-hidden="true" />
       <div className={styles.tabTrack} style={{ '--tab-index': tabs.findIndex(item => item.id === tab) } as CSSProperties}>

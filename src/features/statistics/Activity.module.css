@@ -38,7 +38,7 @@
 .scope { position: relative; }
 .page .trend .scopeTrigger { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 4px; white-space: nowrap; }
 .scopeTrigger svg { flex: none; color: var(--text-muted); }
-.scopeList { position: absolute; top: calc(100% + 6px); inset-inline-start: 0; z-index: 2; min-width: 132px; padding: 5px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-input); }
+.scopeList { position: absolute; top: calc(100% + 6px); inset-inline-start: 0; z-index: 2; min-width: 132px; padding: 5px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-input); overflow-y: auto; overscroll-behavior: contain; }
 .scopeList[data-placement='above'] { top: auto; bottom: calc(100% + 6px); }
 .scopeList:focus { outline: none; }
 .scopeList[data-keyboard='true']:focus { outline: 2px solid var(--border-focus); outline-offset: 2px; }

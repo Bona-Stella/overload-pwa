@@ -1,7 +1,7 @@
 
 import { suggestedApproval } from '../workout-online/approval-weight.ts'
 import type { LoadType } from '../workout-online/types.ts'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { formatDuration } from '../workout/model.ts'
@@ -20,8 +20,6 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
   const root = useRef<HTMLDivElement>(null)
   const ownClock = useRef<HTMLDivElement>(null)
   const footer = useRef<HTMLElement>(null)
-  const restoreScroll = useRef<{ left: number; top: number } | null>(null)
-  const [memoActive, setMemoActive] = useState(false)
   const hasActions = !!actions
   const timeBar = clockRef ?? ownClock
   useLayoutEffect(() => {
@@ -34,176 +32,15 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
       else if (!footer.current) root.current?.style.setProperty('--workout-footer-height', '0px')
     }
     measure()
-    if (!memoActive) root.current?.style.removeProperty('--workout-memo-space')
-    if (!memoActive && restoreScroll.current) {
-      const position = restoreScroll.current
-      restoreScroll.current = null
-      const page = document.scrollingElement
-      const maxScroll = page ? Math.max(0, page.scrollHeight - page.clientHeight) : position.top
-      if (!root.current?.hidden) window.scrollTo({ left: position.left, top: Math.min(position.top, maxScroll), behavior: 'instant' })
-    }
     const observer = new ResizeObserver(measure)
     observer.observe(dock)
     if (footer.current) observer.observe(footer.current)
     return () => observer.disconnect()
-  }, [timeBar, memoActive, hasActions])
-  useEffect(() => {
-    const viewport = window.visualViewport
-    const container = root.current
-    if (!container) return
-    let memo: HTMLTextAreaElement | null = null
-    let editing = false
-    let userControlled = false
-    let entryScroll: { left: number; top: number } | null = null
-    let entryMemoId: string | null = null
-    let settledSize: { width: number; height: number } | null = null
-    let memoSpace = 0
-    let settleTimer: ReturnType<typeof setTimeout>
-    const layoutHeight = () => Math.max(window.innerHeight, document.documentElement.clientHeight)
-    const size = () => ({ width: document.documentElement.clientWidth, height: viewport?.height ?? window.innerHeight })
-    const occlusion = () => viewport ? Math.max(0, layoutHeight() - viewport.height) : 0
-    const inset = () => viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0
-    const writeInset = () => document.documentElement.style.setProperty('--keyboard-inset', inset() + 'px')
-    const reserve = (height: number) => {
-      if (Math.abs(height - memoSpace) < 1) return
-      memoSpace = height
-      container.style.setProperty('--workout-memo-space', height + 'px')
-    }
-    const settle = () => {
-      const currentSize = size()
-      const closed = occlusion() <= 2 && inset() <= 2
-      if (!memo) {
-        if (!closed) return
-        editing = false
-        const currentMemoId = container.querySelector('[data-workout-memo-card]')?.getAttribute('data-workout-memo-card')
-        // A user's new position takes priority over the saved entry position.
-        restoreScroll.current = !container.hidden && !userControlled && currentMemoId === entryMemoId ? entryScroll : null
-        entryScroll = null
-        memoSpace = 0
-        settledSize = null
-        document.documentElement.style.setProperty('--keyboard-inset', '0px')
-        setMemoActive(false)
-        return
-      }
-      if (document.activeElement !== memo) return
-      if (closed && settledSize) {
-        reserve(0)
-        if (userControlled) entryScroll = { left: window.scrollX, top: window.scrollY }
-        userControlled = false
-        settledSize = currentSize
-        return
-      }
-      const rotated = settledSize && Math.abs(currentSize.width - settledSize.width) > 2
-      // Safari toolbar height changes during a drag are not a new alignment request.
-      // Once the user takes over, only rotation or a fresh focus may reposition the page.
-      if (userControlled && settledSize && !rotated) {
-        if (closed) reserve(0)
-        return
-      }
-      // Keyboard space depends on height, never on the viewport's pan offset.
-      // Keep it stable until genuine geometry change or completed keyboard dismissal.
-      reserve(closed ? 0 : Math.max(memoSpace, occlusion()))
-      const mayAlign = !userControlled || !!rotated
-      settledSize = currentSize
-      if (!mayAlign) return
-      const card = memo.closest<HTMLElement>('[data-workout-memo-card]')
-      if (!card) return
-      const delta = () => {
-        const rect = card.getBoundingClientRect()
-        const top = Math.max(viewport?.offsetTop ?? 0, timeBar.current?.getBoundingClientRect().bottom ?? 0) + 8
-        const bottom = (viewport ? viewport.offsetTop + viewport.height : window.innerHeight) - 48
-        // On very small viewports, preserve the label and input before the supporting note.
-        const target = rect.height > bottom - top ? memo!.parentElement!.getBoundingClientRect() : rect
-        return target.height > bottom - top ? target.top - top
-          : target.bottom > bottom ? target.bottom - bottom : target.top < top ? target.top - top : 0
-      }
-      const page = document.scrollingElement
-      if (!page) return
-      const missing = Math.max(0, window.scrollY + delta() - (page.scrollHeight - page.clientHeight))
-      if (missing > 1) reserve(memoSpace + missing)
-      const target = Math.max(0, Math.min(window.scrollY + delta(), page.scrollHeight - page.clientHeight))
-      if (Math.abs(target - window.scrollY) > 1) window.scrollTo({ top: target, behavior: 'instant' })
-    }
-    // One quiet-period job owns opening, real geometry changes, and closing.
-    const schedule = () => {
-      clearTimeout(settleTimer)
-      if (editing) settleTimer = setTimeout(settle, 160)
-    }
-    const resize = () => {
-      if (container.hidden) return
-      if (!editing) { writeInset(); return }
-      if (!memo) { schedule(); return }
-      const next = size()
-      const changed = !settledSize || Math.abs(next.width - settledSize.width) > 2 || Math.abs(next.height - settledSize.height) > 2
-      if (changed) schedule()
-    }
-    const scroll = () => {
-      if (container.hidden) return
-      if (!editing) { writeInset(); return }
-      // Do not change document height or re-align on a Safari viewport pan.
-      if (!memo || !settledSize && !userControlled) schedule()
-    }
-    const focus = (event: FocusEvent) => {
-      if (!(event.target instanceof HTMLTextAreaElement) || !event.target.matches('[data-workout-memo]')) return
-      if (!editing) entryMemoId = event.target.closest('[data-workout-memo-card]')?.getAttribute('data-workout-memo-card') ?? null
-      if (!editing && !entryScroll) entryScroll = { left: window.scrollX, top: window.scrollY }
-      memo = event.target
-      editing = true
-      userControlled = false
-      settledSize = null
-      setMemoActive(true)
-      schedule()
-    }
-    const blur = (event: FocusEvent) => {
-      if (event.target !== memo) return
-      memo = null
-      schedule()
-    }
-    const userScroll = () => {
-      if (!editing) return
-      userControlled = true
-      schedule()
-    }
-    const pointerMove = (event: PointerEvent) => { if (event.buttons) userScroll() }
-    // Capture the entry before Safari's native focus scroll.
-    const remember = () => {
-      if (!editing) entryScroll = { left: window.scrollX, top: window.scrollY }
-    }
-    const keydown = (event: KeyboardEvent) => {
-      if (event.key === 'Tab') remember()
-      else if (['PageUp', 'PageDown', 'Home', 'End'].includes(event.key)) userScroll()
-    }
-    resize()
-    container.addEventListener('pointerdown', remember, true)
-    container.addEventListener('keydown', keydown, true)
-    container.addEventListener('focusin', focus)
-    container.addEventListener('focusout', blur)
-    viewport?.addEventListener('resize', resize)
-    viewport?.addEventListener('scroll', scroll)
-    window.addEventListener('resize', resize)
-    window.addEventListener('wheel', userScroll, { passive: true })
-    window.addEventListener('touchmove', userScroll, { passive: true })
-    window.addEventListener('pointermove', pointerMove, { passive: true })
-    return () => {
-      clearTimeout(settleTimer)
-      container.removeEventListener('pointerdown', remember, true)
-      container.removeEventListener('keydown', keydown, true)
-      container.removeEventListener('focusin', focus)
-      container.removeEventListener('focusout', blur)
-      viewport?.removeEventListener('resize', resize)
-      viewport?.removeEventListener('scroll', scroll)
-      window.removeEventListener('resize', resize)
-      window.removeEventListener('wheel', userScroll)
-      window.removeEventListener('touchmove', userScroll)
-      window.removeEventListener('pointermove', pointerMove)
-      container.style.removeProperty('--workout-memo-space')
-      document.documentElement.style.removeProperty('--keyboard-inset')
-    }
-  }, [timeBar])
+  }, [timeBar, hasActions])
 
   return <div className={styles.flow} ref={root} hidden={hidden} data-workout-frame data-fixed-actions={hasActions || undefined}
-    data-weight-focus={!!navigation || undefined} data-cardio-focus={cardioFocus || undefined} data-memo-active={memoActive || undefined}>
-    <div className={styles.clockDock} ref={timeBar}>
+    data-weight-focus={!!navigation || undefined} data-cardio-focus={cardioFocus || undefined}>
+    <div className={styles.clockDock} ref={timeBar} data-keyboard-header>
       <div className={`${styles.clock} ${styles.restFlash}`} data-flash={flash || undefined} aria-label="운동 시간">
         <div><small>전체 운동 시간</small><strong>{formatDuration(elapsed)}</strong></div>
         <div><small>운동 진행</small><strong>{position ? `현재 ${position} / ${count}종목` : '준비운동'}</strong>
@@ -224,8 +61,8 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     </header>
     {reviewNote}
     {children}
-    {dim !== undefined && !memoActive && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
-    {hasActions && <footer className={styles.footer} ref={footer} hidden={memoActive}>{actions}</footer>}
+    {dim !== undefined && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
+    {hasActions && <footer className={styles.footer} ref={footer}>{actions}</footer>}
   </div>
 }
 

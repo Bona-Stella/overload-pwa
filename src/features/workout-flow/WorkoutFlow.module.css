@@ -1,9 +1,9 @@
 
 .flow, .summary { display: grid; gap: 14px; min-width: 0; overflow-wrap: anywhere; word-break: keep-all; }
 .controls { display: contents; }
-.flow { margin-top: calc(-20px - env(safe-area-inset-top)); padding-top: calc(var(--workout-clock-height, 80px) + 8px); padding-bottom: calc(var(--workout-footer-height, 0px) + var(--keyboard-inset, 0px) + 8px); }
-.flow:not([data-fixed-actions]) { padding-bottom: calc(var(--keyboard-inset, 0px) + env(safe-area-inset-bottom) + 8px); }
-.flow[data-memo-active] { padding-bottom: calc(var(--workout-memo-space, 0px) + env(safe-area-inset-bottom) + 8px); }
+.flow { --workout-input-space: var(--editor-keyboard-space, 0px); margin-top: calc(-20px - env(safe-area-inset-top)); padding-top: calc(var(--workout-clock-height, 80px) + 8px); padding-bottom: calc(var(--workout-footer-height, 0px) + var(--workout-input-space) + 8px); }
+.flow:not([data-fixed-actions]) { padding-bottom: calc(var(--workout-input-space) + env(safe-area-inset-bottom) + 8px); }
+.flow:has([data-workout-memo]) { --workout-input-space: max(var(--workout-memo-space, 0px), var(--editor-keyboard-space, 0px)); }
 .flow h1, .summary h1 { font-size: clamp(22px, 6.5vw, 29px); line-height: 1.2; }
 .flow h2, .summary h2 { font-size: 16px; }
 .summary h4 { margin: 0; font-size: 14px; }
@@ -32,7 +32,7 @@
   .clock[data-flash] small, .clock[data-flash] .segments span[data-filled] { animation: none; }
 }
 .restDimmer {
-  position: fixed; z-index: 16; inset: 0 0 calc(var(--workout-footer-height, 0px) + var(--keyboard-inset, 0px));
+  position: fixed; z-index: 16; inset: 0 0 var(--workout-footer-height, 0px);
   width: min(100%, 520px); margin-inline: auto; display: grid; place-items: center;
   background: rgb(8 9 12 / 91%); pointer-events: none;
 }
@@ -94,11 +94,12 @@
 .flow :global(button.outline).endWorkout { color: var(--status-danger-text); border-color: var(--status-danger-text); border-width: 2px; padding-block: 10px; }
 .setActions { grid-column: 1 / -1; display: flex; gap: 8px; padding-block: 3px; }
 .setActions > button { flex: 1; min-width: 0; min-height: 44px; padding: 7px 6px; font-size: 12px; }
-.footer { position: fixed; z-index: 8; bottom: var(--keyboard-inset, 0px); left: 50%; transform: translateX(-50%); width: min(100%, 520px); display: grid; gap: 6px; padding: 9px var(--space-page) calc(9px + env(safe-area-inset-bottom)); background: var(--surface-page); border-top: 1px solid var(--line); }
+.footer { position: fixed; z-index: 8; bottom: 0; left: 50%; transform: translateX(-50%); width: min(100%, 520px); display: grid; gap: 6px; padding: 9px var(--space-page) calc(9px + env(safe-area-inset-bottom)); background: var(--surface-page); border-top: 1px solid var(--line); }
 .footer > button { min-height: 46px; }
 .footer:has(> .recommendation) { grid-auto-rows: minmax(64px, 1fr); }
 .footer > * { width: 100%; min-width: 0; margin: 0; }
-.footer[hidden] { display: none; }
+:global([data-keyboard-open]) .flow .footer,
+.flow:has([data-workout-memo]:focus) :is(.footer, .restDimmer) { display: none; }
 .actions { display: flex; gap: 8px; width: 100%; margin: 0; }
 .actions > button { flex: 1 1 0; min-width: 0; min-height: 46px; padding-inline: 7px; }
 .prepare { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; color: var(--status-warning); border: 1px solid var(--status-warning); background: var(--surface-warning); border-radius: var(--radius-control); }

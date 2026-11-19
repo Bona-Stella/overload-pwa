@@ -1,6 +1,7 @@
 import { KgWheel } from '../workout-flow/WeightFocus.tsx'
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
+import { EditorViewportOccluded } from '../../components/useEditorKeyboard.ts'
 import { Card } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { newId } from '../../id.ts'
@@ -70,6 +71,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const [cardioPicker, setCardioPicker] = useState<string | null>(null)
   const [addedCardId, setAddedCardId] = useState<string | null>(null)
   const form = useRef<HTMLFormElement>(null)
+  const keyboardOccludesPage = useContext(EditorViewportOccluded)
   const addedCard = useRef<HTMLElement>(null)
   const feedback = useRef<HTMLDivElement>(null)
   const searchRegion = useRef<HTMLElement>(null)
@@ -77,55 +79,18 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const showPicker = (target: string) => {
     setPicker(target)
     requestAnimationFrame(() => {
-      searchRegion.current?.scrollIntoView({ block:'start', inline:'nearest' })
+      if (!keyboardOccludesPage) searchRegion.current?.scrollIntoView({ block:'nearest', inline:'nearest' })
       searchRegion.current?.querySelector('input')?.focus({ preventScroll:true })
     })
   }
-  useEffect(() => {
-    if (picker === null) return
-    const revealFocusedSearch = () => {
-      if (searchRegion.current?.contains(document.activeElement)) searchRegion.current.scrollIntoView({block:'start',inline:'nearest'})
-    }
-    window.visualViewport?.addEventListener('resize', revealFocusedSearch)
-    window.addEventListener('resize', revealFocusedSearch)
-    return () => { window.visualViewport?.removeEventListener('resize', revealFocusedSearch); window.removeEventListener('resize', revealFocusedSearch) }
-  }, [picker])
-  useEffect(() => {
-    const editor = form.current
-    const viewport = window.visualViewport
-    if (!editor || !viewport) return
-    const syncKeyboard = () => {
-      const input = document.activeElement
-      const keyboard = editor.contains(input) && input instanceof HTMLElement &&
-        input.matches('textarea, input:not([type]), input[type="text"], input[type="search"], input[type="number"]') &&
-        viewport.scale === 1 && window.innerHeight - viewport.height > 100
-      editor.toggleAttribute('data-edit-keyboard', keyboard)
-      if (keyboard && !input.closest('dialog')) {
-        const rect = input.getBoundingClientRect()
-        if (rect.bottom > viewport.offsetTop + viewport.height - 12) window.scrollBy(0, rect.bottom - viewport.offsetTop - viewport.height + 12)
-      }
-    }
-    const clearKeyboard = () => editor.removeAttribute('data-edit-keyboard')
-    editor.addEventListener('focusin', syncKeyboard)
-    editor.addEventListener('focusout', clearKeyboard)
-    viewport.addEventListener('resize', syncKeyboard)
-    return () => {
-      editor.removeEventListener('focusin', syncKeyboard)
-      editor.removeEventListener('focusout', clearKeyboard)
-      viewport.removeEventListener('resize', syncKeyboard)
-    }
-  }, [])
   useEffect(() => {
     const editor = form.current
     const card = addedCard.current
     const header = editor?.querySelector(':scope > header')
     const scroll = document.scrollingElement
-    if (!addedCardId || !editor || !card || !header || !scroll) return
+    if (keyboardOccludesPage || !addedCardId || !editor || !card || !header || !scroll) return
 
-    const viewport = window.visualViewport
-    let frame = 0
-    const alignCard = () => {
-      if (viewport && window.innerHeight - viewport.height > 100) return
+    const frame = requestAnimationFrame(() => {
       const headerInset = Number.parseFloat(getComputedStyle(header).top) || 0
       const top = Math.max(0, scroll.scrollTop + card.getBoundingClientRect().top - headerInset - header.getBoundingClientRect().height - 8)
       // The last CARDIO card may need extra room to reach the header.
@@ -137,18 +102,9 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
       scroll.scrollTo({ top, behavior: reducedMotion ? 'instant' : 'smooth' })
       setAddedCardId(null)
-    }
-    const schedule = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(alignCard)
-    }
-    viewport?.addEventListener('resize', schedule)
-    schedule()
-    return () => {
-      cancelAnimationFrame(frame)
-      viewport?.removeEventListener('resize', schedule)
-    }
-  }, [addedCardId])
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [addedCardId, keyboardOccludesPage])
   const [saving, setSaving] = useState(false)
   const guard = useRef(false), abort = useRef(new AbortController())
   useEffect(() => { abort.current = new AbortController(); return () => abort.current.abort() }, [])
@@ -188,7 +144,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     const id = newId()
     setCardio(values => [...values, { id, existing: false, ...emptyCardio() }])
     openCardioPicker(id)
-    requestAnimationFrame(() => cardioSearchRegion.current?.scrollIntoView({ block: 'start' }))
+    if (!keyboardOccludesPage) requestAnimationFrame(() => cardioSearchRegion.current?.scrollIntoView({ block: 'nearest' }))
   }
   function lookupRemoved() {
     if (!routine) return
@@ -238,7 +194,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const saveLabel = locked ? '서버 확인 중…' : submitted ? '고정된 저장 요청 다시 확인' : editing ? '변경 사항 저장' : '루틴 생성'
   const title = editing ? '루틴 편집' : '루틴 생성'
   const cardClass = `stack ${editStyles.exercise}`
-  return <form ref={form} className={`${styles.editor} stack online-routine ${editStyles.form}${editing ? '' : ' ' + editStyles.create}`} data-picking={picker !== null} aria-label={title} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
+  return <form ref={form} className={`${styles.editor} stack online-routine ${editStyles.form}${editing ? '' : ' ' + editStyles.create}`} data-keyboard-editor data-picking={picker !== null} aria-label={title} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
     <RecordSubpageHeader title={title} onBack={close} backLabel="루틴 목록으로" backDisabled={locked} />
     <fieldset disabled={locked || managementBlocked || submitted !== null} className="stack online-fieldset">
       <h2 className={editStyles.group}>기본 정보</h2>

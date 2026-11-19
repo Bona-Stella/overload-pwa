@@ -20,7 +20,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
   try {
     await server.listen()
     const origin = `http://127.0.0.1:${server.httpServer.address().port}`
-    browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
+    browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless', '--enable-smooth-scrolling', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
     const port = await wait(async () => { try { return Number((await readFile(resolve(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]) } catch { return false } })
     const target = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(t => t.type === 'page')
     ws = new WebSocket(target.webSocketDebuggerUrl); await new Promise((r, j) => { ws.onopen = r; ws.onerror = j })
@@ -31,6 +31,263 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
 
     await wait(()=>evaluate('!!window.feedback?.ready'))
     const click=async text=>{await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled).click()`)}
+    const viewport = width => send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true})
+    const closeKeyboard = async () => {
+      await evaluate(`delete visualViewport.height;delete visualViewport.offsetTop;delete visualViewport.pageTop;visualViewport.dispatchEvent(new Event('resize'))`)
+      await wait(() => evaluate(`!document.querySelector('[data-keyboard-open]')`))
+    }
+    const verifyKeyboardField = async (selector, modal = false) => {
+      const previousScroll = await evaluate(`(()=>{
+        document.querySelector(${JSON.stringify(selector)}).focus({preventScroll:true})
+        Object.defineProperty(visualViewport,'height',{configurable:true,value:260})
+        Object.defineProperty(visualViewport,'offsetTop',{configurable:true,value:20})
+        Object.defineProperty(visualViewport,'pageTop',{configurable:true,get:()=>scrollY+20})
+        visualViewport.dispatchEvent(new Event('resize'))
+        return scrollY
+      })()`)
+      await wait(() => evaluate(`(()=>{
+        const input=document.activeElement,vv=visualViewport,r=input.getBoundingClientRect()
+        const dialog=input.closest('dialog'),d=dialog?.getBoundingClientRect()
+        return input.matches(${JSON.stringify(selector)})&&parseFloat(getComputedStyle(input).fontSize)>=16
+          &&vv.scale===1&&r.top>=vv.offsetTop+8&&r.bottom<=vv.offsetTop+vv.height-8
+          &&r.left>=0&&r.right<=innerWidth&&(!${modal}||d&&d.top>=vv.offsetTop&&d.bottom<=vv.offsetTop+vv.height)
+      })()`)).catch(async error => {
+        const geometry = await evaluate(`(()=>{
+          const input=document.querySelector(${JSON.stringify(selector)}),vv=visualViewport
+          return {focused:document.activeElement===input,font:getComputedStyle(input).fontSize,
+            rect:input.getBoundingClientRect().toJSON(),scrollY,scale:vv.scale,inset:vv.offsetTop,height:vv.height,
+            keyboard:document.querySelector('.app-shell').dataset.keyboardOpen,clearance:document.querySelector('main').style.getPropertyValue('--editor-keyboard-space')}
+        })()`)
+        throw new Error(selector + ' keyboard geometry: ' + JSON.stringify(geometry), {cause:error})
+      })
+      if (modal) {
+        assert.equal(await evaluate('scrollY'),previousScroll,'modal keyboard positioning leaves background scroll unchanged')
+        assert.equal(await evaluate(`(()=>{
+          const dialog=document.activeElement.closest('dialog')
+          const confirm=[...dialog.querySelectorAll('button')].find(button=>button.textContent==='확인')
+          dialog.scrollTop=dialog.scrollHeight
+          const {top,bottom}=confirm.getBoundingClientRect()
+          return top>=visualViewport.offsetTop&&bottom<=visualViewport.offsetTop+visualViewport.height
+        })()`),true,'the modal confirmation can be reached above the keyboard')
+        assert.equal(await evaluate('scrollY'),previousScroll,'scrolling the dialog does not move the background')
+      }
+    }
+    await viewport(320)
+    for (const mode of ['app', 'native']) {
+      const result = await evaluate(`(async () => {
+        const root=document.documentElement, field=document.querySelector('[data-workout-memo]'), vv=visualViewport
+        const original=window.scrollTo, calls=[]
+        const settle=()=>new Promise(resolve=>setTimeout(resolve,250))
+        root.dataset.keyboardDiagnostic=${JSON.stringify(mode)}
+        window.scrollTo=(...args)=>{calls.push(args);original.apply(window,args)}
+        try {
+          const end=document.scrollingElement.scrollHeight-innerHeight
+          original.call(window,0,Math.max(0,end-35))
+          field.focus({preventScroll:true})
+          // Emulate the native reveal, leaving the field fully visible with only 4px to spare.
+          original.call(window,0,end)
+          const height=innerHeight-300
+          Object.defineProperty(vv,'height',{configurable:true,value:height})
+          Object.defineProperty(vv,'offsetTop',{configurable:true,value:field.getBoundingClientRect().bottom+4-height})
+          Object.defineProperty(vv,'pageTop',{configurable:true,get:()=>scrollY+vv.offsetTop})
+          vv.dispatchEvent(new Event('resize'));await settle()
+          const opened=scrollY
+          field.blur();delete vv.height;delete vv.offsetTop;delete vv.pageTop;vv.dispatchEvent(new Event('resize'))
+          await settle()
+          return {calls,opened,closed:scrollY,end}
+        } finally { window.scrollTo=original;delete root.dataset.keyboardDiagnostic }
+      })()`)
+      assert.deepEqual(result, {calls:[],opened:result.end,closed:result.end,end:result.end}, mode+' keeps a visible memo in place through dismissal')
+    }
+    const memoRunway = []
+    for (const width of [320, 375, 393, 430]) {
+      await viewport(width)
+      const reducedMotion = width === 430
+      await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:reducedMotion?'reduce':'no-preference'}]})
+      const result = await evaluate(`(async () => {
+        const field=document.querySelector('[data-workout-memo]'), frame=field.closest('[data-workout-frame]')
+        const page=document.scrollingElement, vv=visualViewport, scroll=window.scrollTo, calls=[]
+        const settle=()=>new Promise(resolve=>setTimeout(resolve,260))
+        const until=async (condition, label)=>{
+          const deadline=performance.now()+2500
+          while (!condition()) {
+            if (performance.now()>deadline) throw Error('Memo '+label+' timed out at '+scrollY+'px with '+space()+'px reserved')
+            await new Promise(requestAnimationFrame)
+          }
+        }
+        const touch=type=>field.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:1,pointerType:'touch',isPrimary:true}))
+        const touchGesture=(type, held)=>{
+          const event=new Event(type,{bubbles:true})
+          Object.defineProperty(event,'touches',{value:held?[{}]:[]})
+          field.dispatchEvent(event)
+        }
+        const space=()=>parseFloat(frame.style.getPropertyValue('--workout-memo-space'))||0
+        const footer=()=>getComputedStyle(frame.querySelector('footer')).display
+        const attempts=[]
+        try {
+          await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))
+          const ordinaryLimit=page.scrollHeight-page.clientHeight
+          const visible=innerHeight/2
+          scroll.call(window,0,ordinaryLimit)
+          const rect=field.getBoundingClientRect()
+          const nativeTarget=Math.round(scrollY+rect.top+rect.height/2-visible/2)
+          touch('pointerdown')
+          const cancelledSpace=space()
+          touch('pointercancel')
+          await settle()
+          const afterCancel=space()
+          for (let attempt=0;attempt<2;attempt++) {
+            const firstAttempt=attempt===0
+            const manual=firstAttempt && ${width === 375}
+            const fastRefocus=firstAttempt && ${width === 393}
+            const y=scrollY, top=field.getBoundingClientRect().top, unfocused=document.activeElement!==field
+            touch('pointerdown')
+            const prepared={pixels:space(),y:scrollY,top:field.getBoundingClientRect().top,focused:document.activeElement===field}
+            touch('pointerup')
+            field.focus({preventScroll:true})
+            // Chrome cannot produce the iPhone keyboard. Replay the native centering
+            // move with the real document scroll limit and inspect subsequent app calls.
+            scroll.call(window,0,nativeTarget)
+            const nativeY=scrollY
+            window.scrollTo=(...args)=>{calls.push(args);scroll.apply(window,args)}
+            const callStart=calls.length
+            Object.defineProperty(vv,'height',{configurable:true,value:visible})
+            vv.dispatchEvent(new Event('resize'))
+            await settle()
+            const opened={y:scrollY,pixels:space(),bottom:field.getBoundingClientRect().bottom,footer:footer()}
+            field.blur()
+            Object.defineProperty(vv,'height',{configurable:true,value:innerHeight-70})
+            vv.dispatchEvent(new Event('resize'))
+            await settle()
+            const closing={pixels:space(),footer:footer()}
+            delete vv.height
+            vv.dispatchEvent(new Event('resize'))
+            await until(()=>footer()==='grid','footer restoration')
+            const restored={y:scrollY,pixels:space()}
+            let interrupted
+            if (manual) {
+              touchGesture('touchstart',true)
+              scroll.call(window,0,ordinaryLimit+12)
+              await settle()
+              interrupted={y:scrollY,pixels:space(),calls:calls.length-callStart}
+              scroll.call(window,0,ordinaryLimit-12)
+              touchGesture('touchend',false)
+            }
+            if (fastRefocus) {
+              await until(()=>calls.length>callStart,'start of automatic return')
+              const beforeRetouch=scrollY
+              touch('pointerdown')
+              interrupted={beforeRetouch,y:scrollY,pixels:space(),calls:calls.slice(callStart)}
+              touch('pointerup')
+              field.focus({preventScroll:true})
+              scroll.call(window,0,nativeTarget)
+              Object.defineProperty(vv,'height',{configurable:true,value:visible})
+              vv.dispatchEvent(new Event('resize'))
+              await settle()
+              interrupted.reopened={y:scrollY,pixels:space(),footer:footer(),calls:calls.length-callStart}
+              field.blur()
+              delete vv.height
+              vv.dispatchEvent(new Event('resize'))
+            }
+            const positions=[]
+            await until(()=>{
+              positions.push(scrollY)
+              return space()===0
+            },'clearance removal')
+            attempts.push({y,top,unfocused,prepared,nativeY,opened,closing,restored,interrupted,
+              closed:{y:scrollY,pixels:space(),footer:footer()},calls:calls.slice(callStart),positions})
+            window.scrollTo=scroll
+          }
+          return {ordinaryLimit,nativeTarget,visible,attempts,cancelledSpace,afterCancel}
+        } finally {
+          window.scrollTo=scroll
+          delete vv.height
+        }
+      })()`)
+      const [first, second] = result.attempts
+      assert.ok(result.nativeTarget > result.ordinaryLimit, 'fixture needs additional scroll range')
+      assert.ok(result.cancelledSpace > 0 && result.afterCancel === 0, 'a touch that becomes a gesture releases the preparation')
+      for (const attempt of result.attempts) {
+        assert.equal(attempt.unfocused,true)
+        assert.deepEqual(attempt.prepared,{pixels:first.prepared.pixels,y:attempt.y,top:attempt.top,focused:false}, 'touch adds space before focus without moving the memo or accumulating')
+        assert.equal(attempt.nativeY,result.nativeTarget)
+        assert.equal(attempt.opened.y,attempt.nativeY)
+        assert.equal(attempt.opened.pixels,first.prepared.pixels)
+        assert.ok(attempt.opened.bottom <= result.visible)
+        assert.deepEqual(attempt.closing,{pixels:first.prepared.pixels,footer:'none'})
+        assert.deepEqual(attempt.restored,{y:attempt.nativeY,pixels:first.prepared.pixels}, 'viewport and footer restore before scrolling or removing the space')
+        assert.ok(attempt.closed.y<=result.ordinaryLimit && attempt.closed.y>=result.ordinaryLimit-12,
+          width+'px ended at '+attempt.closed.y+'px; expected normal limit '+result.ordinaryLimit+'px')
+        assert.equal(attempt.closed.pixels,0)
+        assert.equal(attempt.closed.footer,'grid')
+      }
+      assert.equal(second.y,first.closed.y,'refocus starts at the recovered position')
+      const returnCall = [{top:result.ordinaryLimit,behavior:reducedMotion?'instant':'smooth'}]
+      assert.deepEqual(second.calls,returnCall.map(call=>[call]),'visible memo uses only one scroll, after the keyboard closes')
+      assert.ok(second.positions.every((y,index,readings)=>index===0 || y<=readings[index-1]),'automatic return never moves in reverse')
+      if (!reducedMotion) assert.ok(second.positions.some(y=>y<second.nativeY && y>result.ordinaryLimit),'smooth return moves through intermediate positions')
+      if (width === 375) {
+        assert.deepEqual(first.interrupted,{y:result.ordinaryLimit+12,pixels:first.prepared.pixels,calls:0},'a held touch and manual scrolling postpone automatic return')
+        assert.deepEqual(first.calls,[],'a manual return into the normal range needs no added scroll')
+      } else if (width === 393) {
+        assert.equal(first.interrupted.y,first.interrupted.beforeRetouch,'refocus stops the return without jumping')
+        assert.deepEqual(first.interrupted.reopened,{y:result.nativeTarget,pixels:first.prepared.pixels,footer:'none',calls:2})
+        assert.deepEqual(first.calls,[[returnCall[0]],[{left:0,top:first.interrupted.beforeRetouch,behavior:'instant'}],[returnCall[0]]])
+      } else {
+        assert.deepEqual(first.calls,returnCall.map(call=>[call]))
+      }
+      memoRunway.push({ width, ...result })
+    }
+    await send('Emulation.setEmulatedMedia',{features:[]})
+    await viewport(320)
+    const memoEntry = await evaluate(`(async()=>{
+      const field=document.querySelector('[data-workout-memo]')
+      const frame=field.closest('[data-workout-frame]')
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))
+      window.scrollTo(0,document.documentElement.scrollHeight-innerHeight)
+      const before=scrollY
+      const paddingBefore=getComputedStyle(frame).paddingBottom
+      field.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))
+      field.focus({preventScroll:true})
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))
+      return {before,after:scrollY,paddingBefore,paddingAfter:getComputedStyle(frame).paddingBottom}
+    })()`)
+    assert.ok(memoEntry.before>0)
+    assert.ok(Math.abs(memoEntry.after-memoEntry.before)<=1,'memo focus must not shrink the scroll range before the keyboard opens')
+    assert.equal(memoEntry.paddingAfter,memoEntry.paddingBefore,'memo focus must keep the measured footer reservation while hiding the footer')
+    const workoutFooter='[data-workout-frame] > footer'
+    const workoutIdentity=()=>evaluate(`(()=>{
+      const {sessionId,currentExerciseId,localRevision,rest}=window.feedback.c.getSnapshot().workout
+      return {sessionId,currentExerciseId,localRevision,rest}
+    })()`)
+    const beforeKeyboard=await workoutIdentity()
+    await evaluate(`(async()=>{
+      const memo=document.querySelector('[data-workout-memo]')
+      memo.blur()
+      for (const type of ['pointerdown','pointerup']) memo.dispatchEvent(new PointerEvent(type,{bubbles:true,pointerId:1,pointerType:'touch',isPrimary:true}))
+      memo.focus({preventScroll:true})
+      Object.defineProperty(visualViewport,'height',{configurable:true,value:innerHeight/2})
+      visualViewport.dispatchEvent(new Event('resize'))
+    })()`)
+    await wait(()=>evaluate(`!!document.querySelector('[data-keyboard-open] [data-memo-keyboard-space]')`))
+    await evaluate(`document.activeElement.blur();delete visualViewport.height
+      visualViewport.dispatchEvent(new Event('resize'));window.feedback.record('chart')`)
+    await wait(()=>evaluate(`!document.querySelector('[data-workout-frame]') && !document.querySelector('[data-keyboard-open]')`))
+    await evaluate(`window.feedback.record(null)`)
+    await wait(()=>evaluate(`!!document.querySelector('[data-workout-memo]')`))
+    assert.equal(await evaluate(`!!document.querySelector('[data-memo-keyboard-space]')`),false,'returning to the workout does not reuse the previous screen’s temporary clearance')
+    assert.deepEqual(await workoutIdentity(),beforeKeyboard,'leaving during keyboard dismissal preserves the session')
+    await verifyKeyboardField('[data-workout-memo]')
+    await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').click()`)
+    await click('직접 입력')
+    await verifyKeyboardField('dialog[open] input',true)
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(workoutFooter)})).display`),'none')
+    const modalPosition = await evaluate('scrollY')
+    await click('취소')
+    await closeKeyboard()
+    await wait(()=>evaluate(`!document.querySelector('dialog[open]')&&document.querySelector(${JSON.stringify(workoutFooter)}).getClientRects().length>0`))
+    assert.ok(Math.abs(await evaluate('scrollY - Math.min('+modalPosition+', document.documentElement.scrollHeight-innerHeight)'))<=1,'moving to a numeric input discards the prior memo restoration')
+    assert.deepEqual(await workoutIdentity(),beforeKeyboard,'keyboard and cancel retain the workout identity, draft revision and rest state')
     // Start through the real completion UI to unlock audio, then shorten only the fixture clock.
     await evaluate("document.querySelector('[aria-label=\"1세트 완료\"]').click()")
     await wait(()=>evaluate('!!window.feedback.c.getSnapshot().workout.rest'))
@@ -184,7 +441,16 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.deepEqual(await fontAudit(),[],'correction dialog and dynamic activity text use the app font')
     const duration=()=>evaluate('[...document.querySelectorAll(".duration-wheels > div > div > button")].map(b=>b.textContent)')
     assert.deepEqual(await duration(),['0 시간','20 분','30 초'])
-    const setDuration=async(label,value)=>{await evaluate('document.querySelector('+JSON.stringify('button[aria-label="'+label+'"]')+').click()');await click('직접 입력');await wait(()=>evaluate('!!document.querySelector("dialog[open]:not(:has(dialog[open])) input")'));await evaluate('(()=>{const e=document.querySelector("dialog[open]:not(:has(dialog[open])) input");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(e,'+JSON.stringify(value)+');e.dispatchEvent(new Event("input",{bubbles:true}))})()');await click('확인')}
+    const setDuration=async(label,value)=>{
+      await evaluate('document.querySelector('+JSON.stringify('button[aria-label="'+label+'"]')+').click()')
+      await click('직접 입력')
+      const direct = 'dialog[open]:not(:has(dialog[open])) input'
+      await wait(()=>evaluate(`!!document.querySelector(${JSON.stringify(direct)})`))
+      await verifyKeyboardField(direct,true)
+      await evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(direct)});Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event('input',{bubbles:true}))})()`)
+      await click('확인')
+      await closeKeyboard()
+    }
     await setDuration('실제 활동 분','21')
     assert.deepEqual(await duration(),['0 시간','21 분','30 초'])
     await click('취소')
@@ -204,6 +470,41 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(await evaluate('document.querySelector(".record-search select")'),null,'growth search has no scope')
     await evaluate('document.querySelector(".search-disclosure").click()')
     await wait(()=>evaluate('!!document.querySelector(".record-search li button")'))
+    await viewport(375)
+    const searchReveal = await evaluate(`(async()=>{
+      const field = document.querySelector('.record-search input'), vv = visualViewport
+      field.focus({preventScroll:true})
+      const original = window.scrollTo, calls = []
+      const initialScroll = scrollY
+      const padding = document.body.style.paddingBlock
+      document.body.style.paddingBlock = '410px'
+      original.call(window,0,scrollY+field.getBoundingClientRect().top-162)
+      const y = scrollY, rect = field.getBoundingClientRect()
+      // The iPhone log reports pageTop == scrollY while offsetTop is still 330px.
+      Object.defineProperty(vv,'height',{configurable:true,value:365})
+      Object.defineProperty(vv,'offsetTop',{configurable:true,value:330})
+      Object.defineProperty(vv,'pageTop',{configurable:true,get:()=>scrollY})
+      window.scrollTo=(...args)=>{calls.push(args);original.apply(window,args)}
+      try {
+        vv.dispatchEvent(new Event('resize'))
+        vv.dispatchEvent(new Event('scroll'))
+        await new Promise(r=>setTimeout(r,250))
+        return {y,after:scrollY,top:rect.top,bottom:rect.bottom,calls}
+      } finally {
+        window.scrollTo=original
+        document.body.style.paddingBlock=padding
+        original.call(window,0,initialScroll)
+      }
+    })()`)
+    assert.ok(searchReveal.y > 1 && searchReveal.top >= 0 && searchReveal.bottom <= 365 && searchReveal.top < 330,JSON.stringify(searchReveal))
+    assert.deepEqual(searchReveal.calls,[],'a search already revealed by Safari needs no additional scroll')
+    assert.equal(searchReveal.after,searchReveal.y)
+    await closeKeyboard()
+    const nativeSearchPosition = await evaluate('scrollY')
+    const expectedSearchMove = await evaluate('(()=>{const bottom=document.querySelector(".record-search input").getBoundingClientRect().bottom;return bottom>281?bottom-268:0})()')
+    await verifyKeyboardField('.record-search input')
+    assert.ok(Math.abs(await evaluate('scrollY')-nativeSearchPosition-expectedSearchMove)<=1,'the lower search moves by the hidden distance plus 12px')
+    await closeKeyboard()
     const candidate=await evaluate('(()=>{const b=document.querySelector(".record-search li button");b.scrollIntoView({block:"center"});const r=b.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()')
     await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...candidate});await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...candidate})
     await wait(()=>evaluate('document.querySelectorAll(".growth-event").length===2&&document.querySelectorAll(".recharts-line-curve").length>0'))
@@ -244,7 +545,16 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(past.buttons,0);assert.equal(past.inputs,0);assert.match(past.text,/45kg/);assert.match(past.text,/12회.*12회.*13회/)
     assert.match(await evaluate('document.querySelector(\'[aria-label="웨이트 수행"]\').textContent'),/45kg × 5회/)
     assert.equal(await evaluate('!!document.querySelector(\'summary[aria-label="운동 기록 메뉴"]\')'),true,'record correction menu remains available')
-    await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts},null,2))
+    for(const [kind, selector, width, typed] of [['login','#auth-email',393,'sample@example.invalid'],['otp','#auth-code',430,'123456']]){
+      await viewport(width)
+      await send('Page.navigate',{url:origin+'/boundary?input='+kind})
+      await wait(()=>evaluate(`!!document.querySelector(${JSON.stringify(selector)})`))
+      await verifyKeyboardField(selector)
+      await send('Input.insertText',{text:typed})
+      await closeKeyboard()
+      assert.equal(await evaluate(`document.querySelector(${JSON.stringify(selector)}).value`),typed)
+    }
+    await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts,memoRunway},null,2))
   } finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))

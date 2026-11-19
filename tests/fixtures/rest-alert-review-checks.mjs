@@ -189,11 +189,11 @@ export async function verifyRestAlerts({ send, evaluate, wait, click, set, body,
   await wait(() => evaluate('!!document.querySelector("[data-workout-frame] [data-rest-countdown]")'), 'workout uses the same dim preference')
   await advance(2100)
   await wait(() => evaluate('!!document.querySelector("[data-workout-frame] [data-rest-countdown][data-warning]")'), 'workout countdown turns yellow')
-  assert.ok(await evaluate(`(() => {
+  await wait(() => evaluate(`(() => {
     const frame=document.querySelector('[data-workout-frame]'), overlay=frame.querySelector('[data-rest-countdown]').parentElement, footer=frame.querySelector('footer');
     return !overlay.querySelector('button') && Math.abs(overlay.getBoundingClientRect().bottom-footer.getBoundingClientRect().top)<1
       && [...footer.querySelectorAll('button')].every(b=>{const r=b.getBoundingClientRect();return b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))});
-  })()`), 'dim layer clears both real footer controls')
+  })()`), 'dim layer clears both real footer controls after the footer is measured')
   await screenshot('rest-alert-dim-workout-393')
   await click('+30초')
   await wait(() => evaluate('!document.querySelector("[data-workout-frame] [data-rest-countdown]")'), 'extension removes the dim layer')

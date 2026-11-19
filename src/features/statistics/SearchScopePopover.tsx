@@ -17,8 +17,12 @@ export function SearchScopePopover({ options, value, disabled, onOpen, onChange 
     const bounds = list.current.getBoundingClientRect()
     const anchor = trigger.current.getBoundingClientRect()
     const nav = region.current?.closest('.app-shell')?.querySelector('main ~ nav')
-    const bottom = Math.min(window.visualViewport?.height ?? window.innerHeight, nav?.getBoundingClientRect().top ?? Infinity)
-    if (bounds.bottom > bottom - 8 && anchor.top >= bounds.height + 14) list.current.dataset.placement = 'above'
+    const viewport = window.visualViewport
+    const top = viewport?.offsetTop ?? 0
+    const bottom = Math.min(top + (viewport?.height ?? window.innerHeight), nav?.getBoundingClientRect().top ?? Infinity)
+    const above = bounds.bottom > bottom - 8 && anchor.top - top > bottom - anchor.bottom
+    if (above) list.current.dataset.placement = 'above'
+    list.current.style.maxHeight = Math.max(44, (above ? anchor.top - top : bottom - anchor.bottom) - 14) + 'px'
     list.current.focus({ preventScroll: true })
   }, [open])
 
