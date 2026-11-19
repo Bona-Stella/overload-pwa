@@ -241,3 +241,20 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 확장 상태의 Dusty Blue `#6C93C6` 선택 캡슐은 아이콘 아래에서 200ms `ease`로 이동한다. 접히면 하단 중앙에 46×46px 원형과 24px 활성 아이콘만 남는다. 배경은 축소 중 `#5E82B1`로 짙어지고 펼칠 때 원래 색으로 돌아온다. 접기 320ms·펼치기 340ms에 `cubic-bezier(.32, .08, .26, 1)`을 적용한다. 움직임 줄이기에서는 모든 전환을 즉시 적용한다. 키보드 `focus-visible`은 별도의 흰색 윤곽선으로 표시한다.
 
 두 상태 모두 하단 안전 영역에 맞춰 고정한다. 본문은 확장 높이 56px에 안전 영역과 16px을 더해 확보한다. 위 색상·SVG·치수는 앱 셸의 탭바 전용 규칙이다. HTML에서는 밝은 무채색의 확장 캡슐과 원형을 간단한 기호로 표시하며 버튼 선택에 따라 즉시 전환한다. [동작 및 안전 영역](ui-ux.md#공통-하단-내비게이션)
+
+## 16. 공통 UI Preview 시각 규칙
+
+아래 규칙은 2026-11-19에 구현한 공통 부품의 Preview에 적용한다. 표면·글자·포커스·상태에는 Onyx의 역할 토큰을 사용한다. 위험 확정의 채움색은 버튼 CSS Module 안의 `--danger-button-fill`로 관리한다. [Onyx 토큰](../../src/app/theme.module.css) · [결정과 적용 범위](Overload_UI_Decision_Log_v0.9.md#1039--공통-ui-컴포넌트와-독립-preview--2026-11-19)
+
+| 요소 | 구현 값과 상태 |
+|---|---|
+| 위험 확정 | `danger-primary`는 기본 `#A83143`, 호버 `#B4374A`, 눌림 `#892637`로 채운다. 활성 글자는 `--text-primary`(`#F0F1F4`), 키보드 포커스는 `--status-danger-text`(`#F0B7BF`) 2px 윤곽선과 3px 간격이다. |
+| 비활성·처리 중·보조 | 위험 확정의 비활성과 처리 중 바탕은 `--surface-danger`(`#302127`), 테두리는 `--status-missed` 35%와 위험 표면의 혼합이다. 비활성 글자는 중립색의 낮은 대비를 사용하고 처리 중 문구·스피너는 `--status-danger-text`를 쓴다. 옆 취소 `contrast-outline`은 투명 바탕에 `--text-primary` 글자·테두리를 쓴다. 위험 작업 진입 `danger-outline`은 붉은 윤곽과 카드 바탕을 사용한다. |
+| 버튼·모달 | 일반·모달·소형 버튼 최소 높이는 48·44·36px이다. 모달 버튼은 999px 모서리다. 일반 주요 버튼은 `--accent` 72%와 페이지 표면을 혼합하고 밝은 글자를 사용한다. 처리 중 스피너는 16px, 회전은 700ms이며 움직임 줄이기에서 버튼 전환과 회전을 끈다. 모달 폭은 `min(calc(100% - 32px), 448px)`, 버튼 간격은 8px이다. |
+| 스켈레톤 | 실제 슬롯의 외곽·내부 패딩과 행 간격을 유지한다. 기본 선 높이는 11px이며 선·원·블록을 슬롯 위에 배치한다. 색은 `--text-muted` 20%와 `--surface-card`의 혼합이다. 1.6초 동안 불투명도를 0.6까지 바꾸는 교대 애니메이션을 쓰며 움직임 줄이기에서는 정적으로 표시한다. |
+| 검색 태그 UI | 기존 운동량 추이 CSS의 Onyx 검색 줄을 재사용한다. 범위 84px, 유동 입력, 원형 제어 42px이며 열 간격은 6px이다. 검색 입력·범위 버튼은 `--surface-input`의 캡슐형이고, 칩의 최소 시각 높이는 32px이다. 선택 칩은 `--accent` 채움과 `--on-accent` 글자, 비선택 칩은 `--surface-input` 바탕과 `--border-subtle` 윤곽을 쓴다. 칩 줄은 내부 가로 스크롤을 사용한다. |
+| 루틴 태그 선택 | 5px 목록 모서리, `--surface-card`와 `--border-subtle` 구분선, 최소 높이 52px와 패딩 10px의 행이다. 이름 14px·750, 설명 12px의 `--text-muted`이며 선택은 `--accent-soft` 바탕과 강조 제목으로 구분한다. 비활성 행은 보조색과 0.62 불투명도로 표시한다. |
+| 기본형 헤더 로고 | 제공된 투명 PNG 3624×428px를 `width: clamp(112px, 35vw, 148px)`, `height: auto`로 표시한다. 헤더의 최소 높이 44px와 제목 22px를 유지하며 로고를 오른쪽 끝과 수직 중앙에 맞춘다. 긴 제목은 왼쪽 열에서 줄바꿈한다. 우측 액션형에서는 액션을 표시한다. |
+| 기타 피드백 | 토스트는 `--surface-input`의 캡슐형에 성공 `--status-done`, 오류 `--status-danger-text`, 안내 `--accent`를 사용한다. 160ms 등장 애니메이션은 움직임 줄이기에서 끈다. 필드 오류는 `--status-missed` 테두리와 `--status-danger-text` 문구로 표시한다. |
+
+[버튼](../../src/components/common-ui/ActionButton.module.css) · [모달](../../src/components/common-ui/ActionDialog.module.css) · [스켈레톤·피드백](../../src/components/common-ui/ContentFeedback.module.css) · [검색](../../src/features/statistics/Activity.module.css) · [루틴 태그](../../src/components/common-ui/RoutineTagList.module.css) · [헤더](../../src/components/RecordSubpageHeader.module.css) · [OVERLOAD 투명 PNG](../../src/assets/OVERLOAD_white_transparent_4x.png) · [토스트](../../src/components/common-ui/Toast.module.css)

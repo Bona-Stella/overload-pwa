@@ -490,6 +490,14 @@ http://localhost:3000
 
 개발 서버는 `host: true`로 LAN 접속을 허용하며, 같은 네트워크의 iPhone에서는 `http://<PC의 LAN IP>:3000`으로 접속합니다. 네트워크·방화벽에서 해당 접속을 허용해야 합니다. `port: 3000`, `strictPort: true`이므로 3000번 포트가 사용 중이면 실행에 실패합니다. iPhone에서도 API 요청은 같은 Origin의 `/api`를 사용하며, 기존 Vite 프록시가 PC의 `http://127.0.0.1:8080`으로 전달합니다.
 
+### 공통 UI Preview
+
+```bash
+npm run dev -- --mode ui-review
+```
+
+[공통 UI Preview](http://127.0.0.1:4173/common-ui-preview)에서 재사용 가능한 React 부품을 합성 데이터로 검토합니다. 일반 개발 서버에서는 [localhost:3000의 같은 경로](http://localhost:3000/common-ui-preview)를 사용할 수 있습니다. 새 공통 UI의 사용 범위는 개발용 Preview이며, 운영 화면별 적용은 후속 단계입니다. [조작 명세](docs/product/ui-ux.md#314-공통-ui-preview) · [구현과 검증](docs/engineering/frontend.md#공통-ui-컴포넌트와-독립-preview--2026-11-19)
+
 ### Production Build
 
 Google 인증은 위 localhost 주소와 [고정 PWA 복귀 설정](docs/engineering/authentication.md)을 사용합니다.

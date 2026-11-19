@@ -579,6 +579,8 @@ Overload는 세련되고 깔끔한 모던 다크 모드를 사용하며, iPhone 
 
 기존 자체 컴포넌트를 우선하며 UI v0.9에는 shadcn/ui를 도입하지 않습니다. [Dialog](../../src/components/Dialog.tsx)의 닫기·초점 복귀와 [RepsInput](../../src/components/RepsInput.tsx)의 숫자 키패드·직접 입력·증감을 재사용할 수 있습니다. 화면 가장자리 배치나 초점 이동이 복잡한 팝오버에 한해 Radix UI 같은 개별 primitive를 검토합니다.
 
+새 공통 UI 부품은 `src/components/common-ui/`에서 CSS Modules와 기존 Onyx 역할 토큰을 사용합니다. 상위 화면이 상태와 콜백을 제공하며, 합성 데이터와 상태 전환 버튼은 독립 Preview에 둡니다. [공통 UI 구현과 검토 범위](#공통-ui-컴포넌트와-독립-preview--2026-11-19)
+
 ### 8.4 터치 UI
 
 - 버튼과 입력 영역은 충분한 터치 크기를 확보합니다.
@@ -633,6 +635,8 @@ iPhone의 화면 구조를 고려합니다.
 **루틴 탭 현황 갱신(2026-11-18).** 상세는 `9cd2684`, 편집·생성은 `3f761b2`에 반영했다. [컴포넌트와 검증 이력](#루틴-탭-리디자인-현황--2026-11-18)을 따른다.
 
 **공통 하단 내비게이션 현황 갱신(2026-11-19).** `c123c07`에 확장형 탭바를, `2a911e5`에 스크롤 접기·펼치기와 최종 정렬·색상 보정을 반영했다. [구현과 검증 이력](#공통-하단-내비게이션-리디자인-현황--2026-11-19)을 따른다.
+
+**공통 UI 현황 갱신(2026-11-19).** `2a1e10e`에 공통 부품과 독립 Preview의 최종 피드백을 반영했다. 현재 사용 범위는 개발용 Preview이며 서비스 화면별 적용은 후속 단계다. [구성·접근·검증](#공통-ui-컴포넌트와-독립-preview--2026-11-19)
 
 | 현행 영역 | 실제 모듈·연결 | 남은 범위 |
 |---|---|---|
@@ -946,6 +950,28 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 - **이전 검증 이력.** 확장 탭바와 최초 접기·펼치기 단계의 전체 651/651은 당시 결과다. 마지막 좌표 보정 전 Chrome 320·375·393·430·1280px에서 프레임·색상 전환을 측정했고, 모의 안전 영역 0px·34px에서 하단 간격 0px·34px, 본문 여백 72px·106px을 확인했다. 같은 개선 단계의 전체 테스트는 650/651로, 펼침 프레임 검사가 실패했다.
 - **최종 코드 검증 범위.** 마지막 보정 이후 관련 단위 테스트 30/30, TypeScript·린트·프로덕션 빌드·`git diff --check`가 통과했다. 기존 500kB 초과 청크 경고가 남아 있다. 자동 승인 검토의 사용량 한도로 최종 Chrome과 전체 재실행이 보류됐다. iPhone Safari·설치형 PWA의 스크롤 감도·터치 관성·홈 인디케이터·소프트 키보드·애니메이션은 실기기에서 검증해야 한다. 앱 전역 공통 UI 모듈 정리는 별도 작업이다.
 
+#### 공통 UI 컴포넌트와 독립 Preview — 2026-11-19
+
+**구현·검토 범위.** `2a1e10e`는 재사용할 공통 UI의 구현과 독립 Preview 검토 결과다. 공통 UI 컴포넌트는 구현 및 Preview 검토 단계이며, 실제 서비스 화면으로의 일괄 적용은 진행하지 않았다. 기존 운영 화면은 각각의 버튼·저장·검색 흐름과 기존 호출부를 사용한다. [최종 제품 결정](../product/Overload_UI_Decision_Log_v0.9.md#1039--공통-ui-컴포넌트와-독립-preview--2026-11-19) · [조작](../product/ui-ux.md#314-공통-ui-preview) · [시각 규칙](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#16-공통-ui-preview-시각-규칙)
+
+| 부품 | 실제 인터페이스와 책임 |
+|---|---|
+| [ActionButton](../../src/components/common-ui/ActionButton.tsx) | 네이티브 버튼 props에 `appearance`(`primary`, `secondary`, `danger-outline`, `danger-primary`, `contrast-outline`), `size`(`regular`, `modal`, `small`), `loading`·`loadingLabel`을 추가한다. 로딩 시 활성 내용을 스피너·문구로 바꾸고 `disabled`·`aria-busy`로 클릭을 차단한다. |
+| [ActionDialog](../../src/components/common-ui/ActionDialog.tsx) | `open`, `kind`, 제목·설명·버튼 라벨과 `onDismiss`·`onConfirm`을 받는다. `confirm`·`destructive`에 `pending`과 `pendingLabel`을 줄 수 있다. `alert`의 확인은 닫기다. 기존 [Dialog](../../src/components/Dialog.tsx)의 네이티브 모달, 브라우저 이력과 포커스 복귀를 재사용하며 제목·설명을 연결한다. 새 스타일은 전달된 클래스에 적용한다. |
+| [Toast](../../src/components/common-ui/Toast.tsx) | 한 건의 `toast` 또는 `null`, `onDismiss(id)`와 선택적인 `bottomClearance`를 받는다. 성공·안내 4초, 오류 7초이며 포인터 호버나 닫기 버튼 포커스 중에 자동 종료를 멈춘다. 메시지 ID 교체 시 타이머를 정리하고 오류는 `alert`, 나머지는 `status` 영역으로 알린다. |
+| [ContentFeedback](../../src/components/common-ui/ContentFeedback.tsx) | `SkeletonRegion`은 자식 레이아웃을 유지하고 `aria-busy`·`inert`로 로딩 상태를 전달한다. `SkeletonSlot`은 `visibility: hidden`으로 실제 콘텐츠의 크기를 남기고 같은 영역에 선·원·블록을 겹친다. `FieldValidation`은 전달받은 오류를 입력의 설명 및 `aria-invalid`와 연결한다. `EmptyState`와 `ConnectionBanner`는 아이콘·문구 및 오프라인/동기화 상태를 표현한다. |
+| [RoutineTagList](../../src/components/common-ui/RoutineTagList.tsx) | `options`, `selectedId`, `onSelect`에 선택적인 `onCancel`, `loading`, `emptyLabel`을 받는다. 단일 선택 `listbox`의 행 포커스 이동에서 비활성 항목을 건너뛰고, `onCancel`을 전달하면 Escape로 부모의 닫기 동작을 호출한다. 제목·설명 슬롯은 로딩 전후 동일한 구조다. |
+| 검색 태그 UI | [TagPickerExamples](../../src/review/TagPickerExamples.tsx)가 기존 [SearchList](../../src/components/SearchList.tsx), [SearchScopePopover](../../src/features/statistics/SearchScopePopover.tsx)와 운동량 추이 스타일을 조합한다. 검색어·범위·선택 칩·후보를 예시 상태로 전달한다. 화면 내 필터링은 합성 운동·분류·근육 후보에만 적용된다. |
+| [StatusIndicator](../../src/components/common-ui/StatusIndicator.tsx) | `StatusTag`와 `StatusText`에 `kind`와 라벨을 전달한다. 증량 권고는 선택적인 `onOpenDetails`로 안내를 열 수 있다. 아이콘은 [FeedbackIcon](../../src/components/common-ui/FeedbackIcon.tsx) 모듈에서 사용한다. |
+| [RecordSubpageHeader](../../src/components/RecordSubpageHeader.tsx) | 기존 헤더에 선택적인 `brandImage { src, alt, width, height }`를 추가했다. `action`이 있으면 우측은 액션을 표시한다. Preview 기본형은 [제공된 투명 4x PNG](../../src/assets/OVERLOAD_white_transparent_4x.png)를 전달하며 운영 호출부는 기존 헤더 props를 사용한다. |
+
+**개발 진입과 데이터.** [CommonUiPreview](../../src/review/CommonUiPreview.tsx)는 같은 컴포넌트를 호출하는 보기·상태 전환 화면이다. 기존 `AppShell`을 사용하고 탭 선택, 저장·삭제 성공, 연결 카드, 운동 검색은 브라우저 메모리 상태와 합성 데이터로 시연한다. 셸의 탭 표시용 `authenticated` 값과 실제 사용자 인증은 별개다. Preview에는 로그인 절차가 없고 테스트에서 API 요청과 IndexedDB 생성이 없음을 확인했다.
+
+- `npm run dev -- --mode ui-review`의 [4173 검토 경로](http://127.0.0.1:4173/common-ui-preview)는 [Vite 설정](../../vite.config.ts)이 전용 [검토 진입점](../../src/review/main.tsx)을 제공한다. 기본은 루프백이며 `OVERLOAD_MOCK_LAN_IP`를 설정한 경우 승인된 사설 인터페이스 서브넷에서 접근한다. 검토 모드는 API·OAuth 경로를 차단한다. 일반 Vite 개발 서버는 [기본 진입점](../../src/main.tsx)의 `import.meta.env.DEV` 조건에서 같은 경로를 로딩한다.
+- Vite 프로덕션 빌드에는 Preview 경로 분기, Preview 전용 부품과 4x 이미지가 포함되지 않는다. `npm run preview`는 운영 산출물을 제공한다. 운영에서도 사용하는 `Dialog`·`RecordSubpageHeader`·`SearchList`는 각 기존 호출부에서 재사용한다.
+
+**구현 당시 검증.** Chrome **320·375·393·430·1280px**에서 [공통 UI Preview 테스트](../../tests/common-ui-preview.test.mjs) 단독 실행이 통과했다. 위험 버튼 상태, 검색 범위·긴 칩, 루틴 태그 선택과 빈/로딩 상태, 로고 비율과 제목 겹침, 계정 카드·루틴 태그 목록의 로딩 전후 경계 상자와 주변 위치, 가로 넘침, 포커스와 모달 닫기, 움직임 줄이기를 확인했다. 전체 테스트 **652/652**에는 기존 홈·루틴·기록·설정 브라우저 회귀도 포함된다. TypeScript·린트·프로덕션 빌드와 Preview의 번들 제외 검사가 통과했다. 빌드는 기존 500kB 초과 청크 경고를 냈다. `logs/common-ui-round3-full.log`는 당시 전체 실행 기록이며 문서 갱신에서는 코드와 그 기록을 대조했다. iPhone Safari·설치형 PWA 실기기와 서비스 화면별 적용 검증은 후속 단계다.
+
 #### 현황 갱신
 
 Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/docs/engineering/backend.md#현황-갱신)에 따라 이 절의 해당 항목을 갱신한다. 화면 작업은 [UI 단계 A~D](#181-기본-ui-개발-절차), 사용자 승인과 실기기 검증 범위를 함께 기록한다. 서버 쪽 상태는 [Backend 개발 현황](../../../overload-server/docs/engineering/backend.md#11-현재-개발-현황)으로 연결한다.
@@ -954,7 +980,7 @@ Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/doc
 
 [UI/UX 적용 지점](../product/ui-ux.md)의 Markdown에서 조작 규칙을, [Visual Theme Spec](../product/Overload_UI_Visual_Theme_Spec_v0.9.md)에서 실제 색상·위계를 확인합니다. [HTML 베이스라인](../product/Overload_UI_Baseline_Wireframe_v0.9.html)은 현재 UI를 기준으로 한 저충실도 검토 자료입니다. 문서 안의 화면과 준비된 상태를 화면 선택기, 링크, 모달, 토글로 확인합니다. JavaScript는 기본 검토 조작에만 사용합니다. 실제 애니메이션·타이머·오디오·저장·통계·서버 통신과 기능 검증은 운영 React 앱 또는 검토 앱에서 수행합니다. 검색·선택에는 [원본 PNG 6종](../product/assets/exercise-icons/README.md)을 32 CSS px로 재사용합니다.
 
-전면 정적화 당시 브라우저 검사 두 건에서 이전 HTML 구조 의존성이 확인됐다. 화면 선택기 `#screen`은 기본 검토 조작으로 복원했으며, 기록 품질 검사가 의존하는 동적 통계·승인 흐름은 운영 검토 앱에서 확인해야 한다. 루틴 태그 설명은 HTML 표에 있고 기존 검사는 인라인 `routineTagDescriptions`를 읽는다. 전체 검증 전에 테스트의 참조 방식을 갱신해야 한다. [기록 품질 검사](../../tests/record-quality.test.mjs) · [루틴 UI 검사](../../tests/routine-ui.test.mjs)
+전면 정적화 당시 브라우저 검사 두 건에서 이전 HTML 구조 의존성이 확인됐다. 현재 HTML의 화면 선택기 `#screen`은 기본 검토 조작에 사용하고, 루틴 UI 검사는 인라인 `routineTagDescriptions`를 읽는다. 동적 기록 통계·승인 조작은 React 검토 화면에서 확인한다. 공통 UI 구현 당시 전체 실행에는 두 검사 모두 통과한 기록이 있다. [기록 품질 검사](../../tests/record-quality.test.mjs) · [루틴 UI 검사](../../tests/routine-ui.test.mjs) · [현재 검증 기록](#공통-ui-컴포넌트와-독립-preview--2026-11-19)
 
 게이지·누적 종목 위치·주간 상태·완료/취소 컨트롤·수행값/장비 텍스트 위계·물음표 도움말의 공식 절은 [UI/UX 적용 지점](../product/ui-ux.md)을 참조합니다. 공통 컴포넌트와 역할 토큰을 사용하고 테마 변경으로 입력·타이머를 초기화하지 않습니다. Visual Theme Spec의 작은 도움말 시각 크기를 실제 터치 영역 축소로 해석하지 않습니다.
 
