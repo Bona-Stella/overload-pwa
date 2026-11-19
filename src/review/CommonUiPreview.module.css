@@ -1,0 +1,28 @@
+.intro h1 { margin: 0; font-size: 24px; }
+.intro p, .section > p { color: var(--text-muted); font-size: 13px; }
+.section, .examples { display: grid; gap: 10px; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.controls button[aria-pressed='true'] { border-color: var(--border-focus); }
+.buttonPair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.section + .section { padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.headerExample { display: grid; gap: 8px; padding-left: 6px; }
+.loadingRow { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; min-height: 44px; }
+.loadingRow > div, .stats > div { display: grid; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.loadingRow small, .stats > div { color: var(--text-muted); font-size: 13px; }
+.stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding-top: 12px; border-top: 1px solid var(--hero-border); }
+.stats > div { justify-items: center; }
+.stats > div + div { border-left: 1px solid var(--hero-border); }
+.stats strong { color: var(--text-primary); }
+.statuses { gap: 0; }
+.statuses > div { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-block: 8px; }
+.statuses > div + div { border-top: 1px solid var(--border-subtle); }
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}

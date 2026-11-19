@@ -1,0 +1,50 @@
+.tag, .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.tag {
+  min-height: 22px;
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 10%, var(--surface-input));
+}
+.tag[data-kind='recommendation'] {
+  border-color: var(--status-done);
+  color: color-mix(in srgb, var(--status-done) 82%, var(--text-primary));
+  background: transparent;
+}
+.tag[data-kind='activity'] {
+  background: color-mix(in srgb, var(--accent) 22%, var(--surface-card));
+  color: color-mix(in srgb, var(--accent) 65%, var(--text-primary));
+}
+button.tagTrigger[aria-haspopup='dialog'] {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin-block: -8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-weight: 400;
+}
+.status { color: var(--text-muted); }
+.status svg { flex: none; }
+.status[data-kind='connected'], .status[data-kind='online'] { color: var(--status-done); }
+.status:is([data-kind='online'], [data-kind='offline'])::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
