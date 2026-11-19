@@ -13,10 +13,10 @@ import type { WorkoutApi } from '../workout-online/api.ts'
 import { useProgressAssessment } from './useProgressAssessment.ts'
 export { LocalWorkoutView } from './LocalWorkoutFlow.tsx'
 
-export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, offlineRestart = false, visible = true, onHome, history = [], assessmentApi, referenceRecords = [], referenceRoutine = null }: {
+export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, offlineRestart = false, visible = true, onHome, backLabel, history = [], assessmentApi, referenceRecords = [], referenceRoutine = null }: {
   server: Session; policy: RestPolicy; definitions: StandardExercise[]; manufacturers?: Manufacturer[]; activities?: CardioActivity[]
   authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
-  onReady?: (workout: LocalWorkout) => void; offlineRestart?: boolean; visible?: boolean; onHome?: () => void; history?: Session[]
+  onReady?: (workout: LocalWorkout) => void; offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[]
   assessmentApi?: Pick<WorkoutApi, 'progressAssessment'>; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
 }) {
   const [initial] = useState(() => ({ server, policy, onReady }))
@@ -65,5 +65,5 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
       && <ApprovalControls key="approval" state={state} controller={controller} />,
   ].filter(Boolean)
   return <LocalWorkoutView state={state} controller={controller} definitions={definitions} manufacturers={manufacturers} activities={activities}
-    referenceRecords={referenceRecords} referenceRoutine={referenceRoutine} history={history} visible={visible} onHome={onHome} notices={notices} progressAssessment={progress.value} />
+    referenceRecords={referenceRecords} referenceRoutine={referenceRoutine} history={history} visible={visible} onHome={onHome} backLabel={backLabel} notices={notices} progressAssessment={progress.value} />
 }

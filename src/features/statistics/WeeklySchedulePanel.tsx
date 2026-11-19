@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { Dialog } from '../../components/Dialog.tsx'
 import { sameAssignments } from '../workout-online/routine-schedule.ts'
 import { useEffect, useRef, useState } from 'react'
+import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 import type { RoutineList } from '../workout-online/types.ts'
 import type { Assignment } from './weekly-schedule.ts'
 
@@ -11,7 +12,7 @@ import { routineTags } from '../home/tags.ts'
 import styles from '../workout-online/Routine.module.css'
 
 const weekdays = ['월', '화', '수', '목', '금', '토', '일']
-export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave, onCancel, preset }: { state: { assignments: Assignment[] }; routines: RoutineList['routines']; busy: boolean; readOnly?: boolean; onSave: (assignments: Assignment[]) => void; onCancel: () => void; preset?: { controls: (leave: (action: () => void) => void) => ReactNode; priorityId?: string; active: boolean; stale: boolean; initialApply?: boolean } }) {
+export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave, onCancel, preset, navigationKey }: { state: { assignments: Assignment[] }; routines: RoutineList['routines']; busy: boolean; readOnly?: boolean; onSave: (assignments: Assignment[]) => void | Promise<boolean>; onCancel: () => void; navigationKey?: string; preset?: { controls: (leave: (action: () => void) => void) => ReactNode; priorityId?: string; active: boolean; stale: boolean; initialApply?: boolean } }) {
   const [draft, setDraft] = useState<Assignment[]>(() => state.assignments.map(a => ({ ...a })))
   const [filter, setFilter] = useState('all'), [popup, setPopup] = useState<'assignment'|'tag'|null>(null)
   const tags = routineTags.filter(tag => routines.some(r => r.tag === tag))
@@ -21,7 +22,14 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave
   const candidates = routines.filter(r => r.id !== priority?.id).filter(r => filter === 'all' || (filter === 'assigned' ? assignedIds.has(r.id) : filter === 'unassigned' ? !assignedIds.has(r.id) : r.tag === filter.slice(4)))
   const [confirm, setConfirm] = useState(false)
   const dirty = !sameAssignments(state.assignments, draft)
-  const leave = (action: () => void) => { if (!preset || !dirty || window.confirm('저장하지 않은 배정 변경을 버릴까요?')) action() }
+  const saved = useRef(false)
+  const canLeave = () => !preset || !dirty || window.confirm('저장하지 않은 배정 변경을 버릴까요?')
+  useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(), navigationKey)
+  const leave = (action: () => void) => { if (canLeave()) action() }
+  const close = () => {
+    if (navigationKey) navigateBack(() => leave(onCancel))
+    else leave(onCancel)
+  }
   const first = useRef<HTMLButtonElement>(null), tagButton = useRef<HTMLButtonElement>(null), filters = useRef<HTMLFieldSetElement>(null)
   useEffect(() => { first.current?.focus() }, [])
   useEffect(() => {
@@ -32,7 +40,7 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave
   }, [popup])
   const canSubmit = !busy && !readOnly && !preset?.stale && (!preset || dirty || preset.initialApply)
   return <form className={styles.scheduleEditor} data-preset={!!preset} aria-label="주간 일정 편집" onSubmit={e => { e.preventDefault(); if (canSubmit) { if (preset) setConfirm(true); else onSave(draft) } }}>
-    <div className="section-heading"><h2>주간 일정 편집</h2><button data-close-text type="button" className="quiet" disabled={busy} onClick={() => leave(onCancel)}>닫기</button></div>
+    <div className="section-heading"><h2>주간 일정 편집</h2><button data-close-text type="button" className="quiet" disabled={busy} onClick={close}>닫기</button></div>
     <p>{preset && !preset.active ? '조회 중인 일정의 배정만 저장합니다.' : '저장 즉시 적용합니다. 지난 일정과 시작한 운동의 계획은 유지합니다.'}</p>
     {preset?.controls(leave)}
     <fieldset ref={filters} className={styles.candidateFilters} aria-label="루틴 후보 필터" disabled={busy || readOnly} onKeyDown={e=>{if(popup&&e.key==='Escape'){setPopup(null);(popup==='assignment'?first:tagButton).current?.focus()}}}>
@@ -57,18 +65,21 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave
       const after = draft.find(a => a.dayOfWeek === index + 1)?.routineId
       const nameFor = (id?: string) => id ? routines.find(r => r.id === id)?.name ?? '사용할 수 없는 루틴' : '휴식'
       return before === after ? null : <li key={name}>{name}요일 · {nameFor(before)} → {nameFor(after)}</li>
-    })}</ul><div className="row"><button type="button" onClick={() => setConfirm(false)}>취소</button><button type="button" className="primary" onClick={() => { setConfirm(false); onSave(draft) }}>변경 확인</button></div></Dialog>}
+    })}</ul><div className="row"><button type="button" onClick={() => setConfirm(false)}>취소</button><button type="button" className="primary" onClick={async () => {
+      setConfirm(false)
+      if (await onSave(draft) && navigationKey) { saved.current = true; navigateBack(onCancel) }
+    }}>변경 확인</button></div></Dialog>}
   </form>
 }
-export function PresetAssignmentEditor({ base, current, id, priorityId, routines, busy, readOnly, initialApply, onSelect, onReload, onSave, onClose }: {
+export function PresetAssignmentEditor({ base, current, id, priorityId, routines, busy, readOnly, initialApply, onSelect, onReload, onSave, onClose, navigationKey }: {
   base: PresetSchedule; current: PresetSchedule | undefined; id: string; priorityId?: string; routines: RoutineList['routines']
-  busy: boolean; readOnly: boolean; initialApply?: boolean; onSelect: (id: string) => void; onReload: () => void; onSave: (assignments: Assignment[]) => void; onClose: () => void
+  busy: boolean; readOnly: boolean; initialApply?: boolean; onSelect: (id: string) => void; onReload: () => void; onSave: (assignments: Assignment[]) => void | Promise<boolean>; onClose: () => void; navigationKey?: string
 }) {
   const preset = base.presets.find(p => p.id === id)!
   const latest = current?.presets.find(p => p.id === id)
   const stale = base.version !== current?.version || preset.version !== latest?.version
   const options = current?.presets ?? base.presets
-  return <ScheduleEditor key={id + ':' + base.version + ':' + preset.version} state={preset} routines={routines} busy={busy} readOnly={readOnly}
+  return <ScheduleEditor key={id + ':' + base.version + ':' + preset.version} state={preset} routines={routines} busy={busy} readOnly={readOnly} navigationKey={navigationKey}
     preset={{ priorityId, active: id === current?.activeId, stale, initialApply, controls: leave => <>
       <label>편집할 주간 일정<select aria-label="편집할 주간 일정" value={id} disabled={busy || !current} onChange={event => {
         const next = event.target.value

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef } from 'react'
 
 /** Measure the rendered number/name together; preserve the existing flex row and button. */
-export function useFitWorkoutTitle(title: string) {
+export function useFitWorkoutTitle(title: string, observe = true) {
   const ref = useRef<HTMLHeadingElement>(null)
   useLayoutEffect(() => {
     const node = ref.current, row = node?.parentElement
@@ -19,17 +19,18 @@ export function useFitWorkoutTitle(title: string) {
         node.style.setProperty('--workout-title-size', size + 'px')
       }
     }
+    fit()
+    if (!observe) return
     const schedule = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(fit) }
     const observer = new ResizeObserver(([entry]) => {
       if (Math.abs(entry.contentRect.width - lastWidth) < 0.5) return
       lastWidth = entry.contentRect.width
       schedule()
     })
-    fit()
     observer.observe(row)
     void document.fonts.ready.then(() => { if (!disposed) schedule() })
     document.fonts.addEventListener('loadingdone', schedule)
     return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); document.fonts.removeEventListener('loadingdone', schedule) }
-  }, [title])
+  }, [title, observe])
   return ref
 }

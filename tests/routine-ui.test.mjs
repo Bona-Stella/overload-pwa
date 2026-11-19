@@ -440,6 +440,13 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelectorAll('article details[open]').length`),0,'another card selection closes the menu')
     assert.equal(await evaluate('window.listUi.selected.at(-1)'),await evaluate('window.listUi.ids[0]'))
     const detail = 'section[aria-label="루틴 상세"]'
+    const closeDetail = async () => {
+      await wait(() => evaluate(`!!document.querySelector('${detail}')?.getClientRects().length`), 'routine detail restored')
+      const index = await evaluate('history.state.overloadNavigation.index')
+      await tap(detail + ' button[aria-label="루틴 목록으로"]')
+      await wait(() => evaluate(`!document.querySelector('${detail}') && !!document.querySelector('article[aria-label^="상체 PUSH"]')?.getClientRects().length`), 'routine list restored')
+      assert.equal(await evaluate('history.state.overloadNavigation.index'), index - 1)
+    }
     await wait(()=>evaluate(`!!document.querySelector('${detail}')`))
     assert.equal(await evaluate(`document.querySelector('${detail}').querySelectorAll('form, input, select, textarea').length`),0)
     assert.doesNotMatch(await evaluate(`document.querySelector('${detail}').textContent`),/루틴 저장|제거한 배치|새 중량 승인|종목 추가|↑ 위로|↓ 아래로/)
@@ -488,12 +495,13 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.match(await evaluate(`document.querySelector('input[placeholder="나의 루틴"]').value`),/상체 PUSH/)
     assert.equal(await evaluate(`document.querySelector('input[placeholder="나의 루틴"]').matches(':disabled')`),false)
     const editForm = 'form[aria-label="루틴 편집"]'
-    const editBack = editForm+' button[aria-label="루틴 목록으로"]'
+    const editBack = editForm+' button[aria-label="루틴 상세로"]'
     const cancelEdit = editForm+' footer button:first-child'
     const confirmations = await evaluate('window.listUi.confirms.length')
     await tap(cancelEdit)
     assert.equal(await evaluate(`!!document.querySelector('${editForm}')`),false)
     assert.equal(await evaluate('window.listUi.confirms.length'),confirmations,'unchanged cancel returns without confirmation')
+    await closeDetail()
     await tap('article[aria-label^="상체 PUSH"] button[aria-label$="상세"]')
     await click('편집')
     await input('input[placeholder="나의 루틴"]','미저장 편집값')
@@ -509,6 +517,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`!!document.querySelector('${editForm}')`),false)
     assert.equal(await evaluate('window.listUi.routineWrites.length'),beforeReadonly,'cancel never submits draft changes')
     assert.doesNotMatch(await evaluate('document.body.innerText'),/미저장 편집값/)
+    await closeDetail()
     await tap('article[aria-label^="달리기"] button[aria-label$="상세"]')
     assert.match(await evaluate(`document.querySelector('${detail}').textContent`),/WEIGHT.*총 0종목.*등록된 웨이트 종목 없음.*CARDIO.*총 1종목/)
     await click('편집')
@@ -517,9 +526,10 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await assertAligned('웨이트 1','벤치프레스','smooth')
     await writeFile(resolve(directory,'routine-added-card-393.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'))
     await tap(cancelEdit)
+    await closeDetail()
     await tap('article[aria-label^="태그 없는"] button[aria-label$="상세"]')
     assert.match(await evaluate(`document.querySelector('${detail}').textContent`),/CARDIO.*총 0종목.*등록된 유산소 계획 없음.*총 0개 일정.*배정된 주간 일정 없음/)
-    await tap(detail+' button[aria-label="루틴 목록으로"]')
+    await closeDetail()
     await evaluate('window.listUi.staleSelection()');await new Promise(r=>setTimeout(r,80))
     assert.doesNotMatch(await evaluate(`document.querySelector('article[aria-label^="상체 PUSH"]').textContent`),/STALE EXERCISE/,'an older selected detail must not replace the current card preview')
     await tap('article[aria-label^="상체 PUSH"] summary')
@@ -535,7 +545,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="루틴 태그 선택"] [role="option"]').length`),11,'creation and editing reuse exactly the same descriptive dropdown')
     await evaluate(`document.querySelector('[aria-label="루틴 태그"]').click()`)
     assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction+1,'edit loads its routine once and opens only the editor')
-    await tap(editBack)
+    await tap(editForm+' button[aria-label="루틴 목록으로"]')
     await tap('article[aria-label^="상체 PUSH"] summary');await tap('article[aria-label^="상체 PUSH"] details button:last-child')
     assert.equal(await evaluate('window.listUi.deleted.at(-1)'),await evaluate('window.listUi.ids[0]'))
     assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction+2,'edit/delete each load once without a bubbling card-detail selection')

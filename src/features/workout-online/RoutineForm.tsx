@@ -20,7 +20,7 @@ import type { WorkoutOnlineController } from './controller.ts'
 import { ExerciseSearch } from './ExerciseSearch.tsx'
 import { EquipmentFields } from './EquipmentFields.tsx'
 import { CombinationMemo } from './CombinationMemo.tsx'
-import { useNavigationGuard } from '../../app/navigation.ts'
+import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 
 import { newWeights, updatedWeights } from './routine-weights.ts'
 import type { WeightDraft } from './routine-weights.ts'
@@ -61,8 +61,8 @@ function EmptyExerciseList({ weight = false }: { weight?: boolean }) {
   </Card>
 }
 
-export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, activities = [], onSaved, managementBlocked = false }: {
-  activities?:CardioActivity[]; onSaved?:(id: string, name: string)=>void; managementBlocked?:boolean; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: Pick<WorkoutOnlineController, 'saveRoutine' | 'removedRoutine' | 'invalidateScope'>; onClose: () => void
+export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, activities = [], onSaved, managementBlocked = false, navigationKey, backLabel = '루틴 목록으로' }: {
+  activities?:CardioActivity[]; onSaved?:(id: string, name: string)=>void; managementBlocked?:boolean; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: Pick<WorkoutOnlineController, 'saveRoutine' | 'removedRoutine' | 'invalidateScope'>; onClose: () => void; navigationKey?: string; backLabel?: string
 }) {
   const editing = routine !== null
   const [id] = useState(() => routine?.id ?? newId())
@@ -123,8 +123,14 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const chosenCardio = editing ? cardio : cardio.filter(c => c.standardExerciseId)
   const draft = JSON.stringify({ name, weights, cardio: chosenCardio, tag })
   const [initialDraft] = useState(draft)
-  useNavigationGuard(() => draft === initialDraft || window.confirm('작성 중인 변경을 버리고 이동할까요?'))
-  const close = () => { if(draft===initialDraft || window.confirm('작성 중인 변경을 버리고 닫을까요?')) onClose() }
+  const saved = useRef(false)
+  const canLeave = () => saved.current || draft === initialDraft || window.confirm('작성 중인 변경을 버리고 닫을까요?')
+  useNavigationGuard(canLeave, navigationKey)
+  const close = () => {
+    const fallback = () => { if (canLeave()) onClose() }
+    if (navigationKey) navigateBack(fallback)
+    else fallback()
+  }
   const changeWeight = (id: string, patch: Partial<WeightDraft>) => setWeights(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
   const changeCardio = (id: string, patch: Partial<CardioDraft>) => setCardio(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
   function openCardioPicker(id: string | null) {
@@ -182,8 +188,10 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       validating = false
       setError('')
       if (await controller.saveRoutine(body, routine?.id) && !abort.current.signal.aborted) {
+        saved.current = true
         onSaved?.(id, body.name.trim())
-        onClose()
+        if (navigationKey) navigateBack(onClose)
+        else onClose()
       }
     } catch (error) {
       if (boundaryError(error)) controller.invalidateScope(error)
@@ -195,7 +203,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const title = editing ? '루틴 편집' : '루틴 생성'
   const cardClass = `stack ${editStyles.exercise}`
   return <form ref={form} className={`${styles.editor} stack online-routine ${editStyles.form}${editing ? '' : ' ' + editStyles.create}`} data-keyboard-editor data-picking={picker !== null} aria-label={title} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
-    <RecordSubpageHeader title={title} onBack={close} backLabel="루틴 목록으로" backDisabled={locked} />
+    <RecordSubpageHeader title={title} onBack={close} backLabel={backLabel} backDisabled={locked} />
     <fieldset disabled={locked || managementBlocked || submitted !== null} className="stack online-fieldset">
       <h2 className={editStyles.group}>기본 정보</h2>
       <section className={styles.formbox}>

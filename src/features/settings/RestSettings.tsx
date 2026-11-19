@@ -24,7 +24,7 @@ function minutes(seconds: number) {
 
 export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = false, hidden = false, review = false, loadIssue }: {
   settings?: RestPolicy
-  onBack: () => void
+  onBack: (canLeave?: () => boolean) => void
   onRequest: (values: RestPolicy | null) => Promise<SaveIssue | null>
   onExitGuard?: ExitGuard
   busy?: boolean
@@ -103,7 +103,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
 
   return <section className={styles.page} hidden={hidden} aria-label="세트 사이 휴식">
     <RecordSubpageHeader title="세트 사이 휴식" backLabel="설정으로" headingRef={heading} backDisabled={saving}
-      onBack={() => { if (canLeave()) onBack() }}
+      onBack={() => { if (onExitGuard) onBack(canLeave); else if (canLeave()) onBack() }}
       action={<Button className={styles.headerAction} disabled={!settings || busy || saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>} />
     {settings ? <form className={styles.form} onSubmit={event => void submit(event)} aria-busy={saving}>
       <Card className={styles.card}>

@@ -420,14 +420,20 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     field.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); field.focus()
   })()`)
   await wait(() => evaluate('getComputedStyle(document.querySelector("footer")).display==="none"'), 'memo protected before navigation')
-  await evaluate(`(() => {
+  const navigationTop = await evaluate(`(() => {
     const next = document.querySelector('[data-exercise-navigation] button:last-child')
+    const top = window.scrollY
     next.focus({ preventScroll: true }); next.click()
+    return top
   })()`)
   await wait(() => evaluate('getComputedStyle(document.querySelector("footer")).display!=="none"'), 'footer restored after leaving memo exercise')
   await delay(180)
   assert.equal(await currentPosition(), '현재 2 / 3종목')
-  assert.equal(await evaluate('window.scrollY'), 0, 'old memo scroll must not override navigation')
+  await wait(() => evaluate(`(() => {
+    const page = document.scrollingElement
+    return !document.querySelector('[data-memo-keyboard-space]') &&
+      Math.abs(window.scrollY - Math.min(${navigationTop}, page.scrollHeight - page.clientHeight)) <= 1
+  })()`), 'memo space clears and navigation keeps the reachable scroll position')
   await press('이전 운동 · 벤치 프레스')
   assert.equal(await displayedTitle(), '01. 벤치 프레스')
   await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === '운동 종료').scrollIntoView({block:'center'})`)
@@ -777,6 +783,13 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     const last = document.querySelector('article').lastElementChild.getBoundingClientRect()
     return last.bottom <= document.querySelector('nav[aria-label="기본 탐색"]').getBoundingClientRect().top - 8
   })()`), true, 'summary has only normal navigation clearance')
+  const resultEntry = await evaluate('history.state.overloadNavigation.index')
+  await evaluate('history.back()')
+  await wait(()=>evaluate('!!document.querySelector("section[aria-label=홈]")'),'completed workout back to home')
+  assert.equal(await evaluate('!!document.querySelector("[data-workout-frame]")'), false)
+  assert.equal(await evaluate('history.state.overloadNavigation.index'), resultEntry - 1)
+  await evaluate('history.forward()');await has('운동 기록 요약')
+  assert.equal(await evaluate('history.state.overloadNavigation.index'), resultEntry)
   await click('홈으로 돌아가기');await wait(()=>evaluate('!!document.querySelector("section[aria-label=홈]")'),'finished CTA home');await click('기록', 'ariaLabel', 'nav button')
   await wait(()=>evaluate('!!document.querySelector(".recent-records .session-record-card")'),'recent record card')
   await evaluate('document.querySelector(".recent-records .session-record-card").click()')

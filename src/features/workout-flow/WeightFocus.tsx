@@ -24,15 +24,15 @@ function adjustReps(value: string, direction: -1 | 1) {
   const next = adjustRepsDraft(value, direction)
   return next !== null && Number(next) <= 2147483647 ? next : null
 }
-export function KgWheel({ label, value, onChange, editorStep }: { label: string; value: string; onChange: (value: string) => void; editorStep?: 1 | 2.5 }) {
-  return <NumberWheel label={label} value={value} onChange={onChange} unit="kg" start="0"
+export function KgWheel({ label, value, onChange, editorStep, preview }: { label: string; value: string; onChange: (value: string) => void; editorStep?: 1 | 2.5; preview?: boolean }) {
+  return <NumberWheel preview={preview} label={label} value={value} onChange={onChange} unit="kg" start="0"
     adjust={adjustKg} validate={value => value.trim() ? decimalDraft(value) : ''}
     stepLabel={editorStep === undefined ? '2.5' : ''} compactStepper={editorStep !== undefined}
     stepAdjust={editorStep === undefined ? undefined : (value, direction) => adjustKg(value, direction, editorStep)} />
 }
 
 export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, resting, editing, editTools,
-  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent }: {
+  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, preview = false }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
   issue: ReactNode; resting: boolean; editing: boolean; editTools: ReactNode
   onDraft: (id: number, draft: Partial<SetDraft>) => void; onComplete: (id: number) => void
@@ -40,25 +40,25 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
   onAddSet: () => void; workingRef?: RefObject<HTMLElement | null>
   onWeight: () => void; onEdit: () => void; onMemo: (memo: string) => void
   onList: () => void; onEnd: () => void
-  memoContent?: ReactNode; memoNote?: string; approvalNote?: string; additionalInput?: boolean
+  memoContent?: ReactNode; memoNote?: string; approvalNote?: string; additionalInput?: boolean; preview?: boolean
 }) {
   const completed = weight.sets.filter(s => s.result).length
   const count = weight.plannedCount ?? weight.sets.length
   const title = `${String(position).padStart(2, '0')}. ${weight.name}`
-  const titleRef = useFitWorkoutTitle(title)
+  const titleRef = useFitWorkoutTitle(title, !preview)
   const manufacturer = manufacturers.find(m => m.id === weight.manufacturerId)
   return <>
     <section className={styles.focus}>
       <p className={styles.eyebrow}>WEIGHT</p>
       <div className={styles.focusTitle}>
         <h1 ref={titleRef} className={styles.exerciseTitle} title={title} aria-label={title}>{title}</h1>
-        <Button className={styles.listTrigger} onClick={onList}>종목 보기/변경</Button>
+        <Button className={styles.listTrigger} onClick={preview ? undefined : onList}>종목 보기/변경</Button>
       </div>
       <p className="muted small">{description}</p>
       {progressNote && <p className="muted small">{progressNote}</p>}
     </section>
     <Card hero className={styles.working} ref={workingRef} aria-label="진행 중량">
-      <div className={styles.workingHead}><span>진행 중량 · 잠금</span><Button variant="quiet" className={styles.weightChange} onClick={onWeight}><span>중량 변경</span></Button></div>
+      <div className={styles.workingHead}><span>진행 중량 · 잠금</span><Button variant="quiet" className={styles.weightChange} onClick={preview ? undefined : onWeight}><span>중량 변경</span></Button></div>
       <div className={styles.workingValues}>
         <strong>{weight.working || '—'} <small>kg</small></strong>
         <p className="muted small">승인 중량 {weight.approved === null ? '없음' : weight.approved + ' kg'}
@@ -84,18 +84,18 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
             <b role="cell">{String(ordinal).padStart(2, '0')}</b>
             <span role="cell" className={styles.prior}>{set.previous ? set.previous.reps + '회' : '—'}</span>
             <div role="cell" className={styles.setValues}>{result ? <strong>{result.reps}회</strong> :
-              <NumberWheel label={`${ordinal}세트 이번 반복 횟수`} value={set.draft.reps}
+              <NumberWheel preview={preview} label={`${ordinal}세트 이번 반복 횟수`} value={set.draft.reps}
                 onChange={reps => onDraft(set.id, { reps })} unit="회" start="1" plainSteps
                 adjust={adjustReps} validate={value => value.trim() ? String(countDraft(value)) : ''} />
             }
               {additionalInput && weight.loadType === 'BODYWEIGHT' && (result
                 ? <small>{result.additionalKg === null ? '추가 부하 미기록' : `추가 ${result.additionalKg}kg`}</small>
-                : <><KgWheel label={`${ordinal}세트 추가 중량 kg`} value={set.draft.additional} onChange={additional => onDraft(set.id, { additional })} />
+                : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} value={set.draft.additional} onChange={additional => onDraft(set.id, { additional })} />
                   <small className="muted">선택 입력 · 체중은 포함하지 않습니다.</small></>)}
             </div>
             <div role="cell" className={styles.checkCell}>
               <Button variant="quiet" className={styles.check} aria-label={`${ordinal}세트 ${result ? '완료 취소' : '완료'}`}
-                disabled={!result && resting} data-done={!!result || undefined} onClick={() => result ? onUndo(set.id) : onComplete(set.id)}>
+                disabled={!result && resting} data-done={!!result || undefined} onClick={preview ? undefined : () => result ? onUndo(set.id) : onComplete(set.id)}>
                 <span aria-hidden="true">{result ? '✓' : ''}</span>
               </Button>
             </div>
@@ -109,13 +109,13 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       </div>
     </Card>
     {weight.sets.length < count && <p className="muted small">입력할 세트 주변 20개와 완료 기록을 표시합니다. 전체 {count}세트 계획은 유지됩니다.</p>}
-    {!editing && <Button aria-expanded={false} onClick={onEdit}>세트 기록 / 임시 편집</Button>}
+    {!editing && <Button aria-expanded={false} onClick={preview ? undefined : onEdit}>세트 기록 / 임시 편집</Button>}
     {editing && editTools}
     <Card data-workout-memo-card={weight.id}>
-      {memoContent ?? <><label>기구 세팅 메모<textarea data-workout-memo rows={2} value={weight.memo} onChange={event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
+      {memoContent ?? <><label>기구 세팅 메모<textarea data-workout-memo={preview ? undefined : ''} rows={2} value={weight.memo} readOnly={preview} onChange={preview ? undefined : event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
       <small className="muted">{memoNote ?? '검토 세션에서 메모를 확인할 수 있습니다.'}</small></>}
     </Card>
-    <Button className={styles.endWorkout} onClick={onEnd}>운동 종료</Button>
+    <Button className={styles.endWorkout} onClick={preview ? undefined : onEnd}>운동 종료</Button>
   </>
 }
 

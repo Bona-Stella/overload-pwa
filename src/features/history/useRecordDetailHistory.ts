@@ -1,8 +1,8 @@
 import { useLayoutEffect, useRef } from 'react'
-import { useScreenHistory } from '../../app/navigation.ts'
+import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import type { AppTab } from '../../app/types.ts'
 
-type RecordRoute = { id: string; returnScroll?: number }
+type RecordRoute = { id: string; returnScroll?: number; summary?: boolean; backLabel?: string }
 
 function restoreParentScroll(position: number) {
   const restore = () => {
@@ -40,9 +40,6 @@ export function useRecordDetailHistory(key: string, tab: AppTab) {
     }
   }, [id, key, returnScroll, tab])
   const open = (id: string, returnScroll = window.scrollY) => setRoute({ id, returnScroll })
-  const back = () => {
-    if (window.history.state?.overloadNavigation?.index > 0) window.history.back()
-    else setRoute(null, true)
-  }
-  return { route, setRoute, open, back }
+  const back = () => navigateBack(() => setRoute(null, true))
+  return { route, open, back }
 }

@@ -8,6 +8,7 @@ import { exerciseDescription } from '../features/workout-online/catalog-label.ts
 import { equipmentLabel } from '../features/workout-online/equipment.ts'
 import type { Session, StandardExercise } from '../features/workout-online/types.ts'
 import { WorkoutFrame, ExerciseNavigation, RestActions, Warmup, WeightRecommendation } from '../features/workout-flow/WorkoutFrame.tsx'
+import type { ExerciseScrollPosition } from '../features/workout-flow/WorkoutFrame.tsx'
 import { WeightFocus, EquipmentEditor } from '../features/workout-flow/WeightFocus.tsx'
 import { AddCardio, ConfirmWorkoutAction, ExerciseList, SessionExerciseSearch, WeightChange } from '../features/workout-flow/WorkoutDialogs.tsx'
 import { CardioFocus } from '../features/workout-flow/CardioFocus.tsx'
@@ -39,6 +40,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   const clockRef = useRef<HTMLDivElement>(null)
   const workingRef = useRef<HTMLElement>(null)
   const [completedScroll, setCompletedScroll] = useState(0)
+  const [exerciseScroll, setExerciseScroll] = useState<ExerciseScrollPosition | null>(null)
   useLayoutEffect(() => {
     if (!completedScroll) return
     const frame = requestAnimationFrame(() => {
@@ -55,7 +57,8 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   }, [issue])
 
   const { weights, cardio, currentId, warmup } = session
-  const items = [...weights, ...cardio.map(c => ({ id: c.id, name: c.plan.name }))]
+  const exercises = [...weights, ...cardio]
+  const items = exercises.map(exercise => ({ id: exercise.id, name: 'plan' in exercise ? exercise.plan.name : exercise.name, cardio: 'plan' in exercise }))
   const index = items.findIndex(item => item.id === currentId)
   const weight = weights.find(w => w.id === currentId)
   const activity = cardio.find(c => c.id === currentId)
@@ -78,8 +81,14 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   const updateCardio = (updated: ReviewCardio) => onChange({ ...session, cardio: cardio.map(c => c.id === updated.id ? updated : c) })
   const close = () => setModal(null)
   const go = (id: string) => {
-    if (id !== currentId) { setEditing(false); setIssue(''); onChange({ ...session, currentId: id }); window.scrollTo(0, 0) }
+    if (id !== currentId) {
+      setExerciseScroll({ exerciseId: id, top: window.scrollY })
+      setEditing(false)
+      setIssue('')
+      onChange({ ...session, currentId: id })
+    }
     close()
+    return id !== currentId
   }
   const finish = () => onEnd(reviewClock())
   const requestEnd = () => allDone || session.deload ? finish() : setModal('end')
@@ -142,7 +151,6 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     } catch (error) { setIssue(error instanceof Error ? error.message : '실제 활동 값을 확인해 주세요.') }
   }
 
-  const navigation = <ExerciseNavigation previous={items[index - 1]} next={items[index + 1]} onList={() => setModal('list')} onGo={go} />
   const issueView = issue ? <div ref={issueRef}><StatusNotice error>{issue}</StatusNotice></div> : null
   const finalActions = <>
     {weightsDone && <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>}
@@ -194,14 +202,57 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     : transition ? '완료' : '휴식 없음'
   const timer = activity ? activity.result?.activeMs ?? cardioElapsed(activity, now)
     : remaining ? remaining * 1000 : undefined
-  const source = session.initialPlan.weightExercises.find(p => p.sessionExerciseId === currentId)
-  const original = weight && session.deload ? recoveryOriginal.weightPlacements.find(p => p.id === source?.sourcePlacementId) : undefined
 
   if (weight && !warmup && !editing && notice) actions = <>{notice}{actions}</>
+  const renderExercise = (at: number, preview = false) => {
+    const exercise = exercises[at]
+    if (!exercise) return null
+    const weight = 'sets' in exercise ? exercise : undefined
+    const activity = 'plan' in exercise ? exercise : undefined
+    const navigation = <ExerciseNavigation previous={items[at - 1]} next={items[at + 1]} onList={() => setModal('list')} onGo={go} preview={preview} />
+    const source = session.initialPlan.weightExercises.find(p => p.sessionExerciseId === exercise.id)
+    const original = weight && session.deload ? recoveryOriginal.weightPlacements.find(p => p.id === source?.sourcePlacementId) : undefined
+    return <>
+      {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
+      {weight && <WeightFocus preview={preview} weight={weight} position={at + 1}
+        memoContent={<CombinationMemo preview={preview} exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />} workingRef={preview ? undefined : workingRef} onAddSet={() => updateWeight(addSet(weight))}
+        description={exerciseDescription(sessionExercises.find(e => e.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
+        manufacturers={manufacturers} progressNote={original ? `디로딩 목표 ${source?.approvedWeightKg}kg · 원본 목표 ${original.approvedWeightKg}kg × ${original.setCount}세트` : undefined}
+        issue={preview ? null : issueView} resting={restRemaining(weight, now) > 0} editing={!preview && editing}
+        onList={() => setModal('list')} onEnd={requestEnd}
+        onWeight={() => setModal('weight')} onEdit={() => setEditing(value => !value)} onComplete={complete} onUndo={undo => setModal({ undo })}
+        onDraft={(id, draft) => { updateWeight({ ...weight, sets: weight.sets.map(s => s.id === id && !s.result ? { ...s, draft: { ...s.draft, ...draft } } : s) }); setIssue('') }}
+        onExcludeSet={id => updateWeight({ ...weight, sets: weight.sets.filter(s => s.id !== id) })}
+        onMemo={memo => updateWeight({ ...weight, memo })}
+        editTools={<>
+          <EquipmentEditor key={weight.id} equipment={weight} manufacturers={manufacturers} onApply={equipment => updateWeight({ ...weight, ...equipment })} />
+          <Card>
+            <p className="muted small">변경은 이번 운동에만 적용됩니다. 교체하거나 제외하려면 완료 세트를 먼저 취소해 주세요.</p>
+            <Button onClick={() => setModal('add')}>+ 다음 종목 추가</Button>
+            <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
+            <Button disabled={doneCount(weight) > 0} onClick={() => setModal('replace')}>현재 종목 교체</Button>
+            <Button variant="danger" disabled={doneCount(weight) > 0 || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
+          </Card>
+        </>} />}
+      {activity && <CardioFocus preview={preview} cardio={activity} activeMs={cardioElapsed(activity, now)}
+        navigation={navigation} issue={preview ? null : issueView} editing={!preview && editing} onEdit={() => setEditing(value => !value)}
+        onDraft={draft => { updateCardio({ ...activity, draft: { ...activity.draft, ...draft } }); setIssue('') }}
+        editTools={<Card>
+          <p className="muted small">이번 운동에만 적용됩니다. 제외하려면 진행 중인 측정을 멈추고, 완료한 기록은 먼저 취소해 주세요.</p>
+          <Button onClick={() => setModal('add')}>+ 종목 추가</Button>
+          <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
+          <Button variant="danger" disabled={!!activity.result || activity.phase === 'running' || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
+        </Card>} onCancelReview={() => cardioPhase('paused')} onUndo={() => setModal('undo-cardio')} />}
+      {!preview && activity && activity.phase !== 'review' && issueView}
+    </>
+  }
   return <>
-    <WorkoutFrame routine={session.initialPlan.routineName} deload={session.deload}
+    <WorkoutFrame routine={session.initialPlan.routineName} deload={session.deload} exerciseScroll={exerciseScroll}
       clockRef={clockRef}
       navigation={weight && !warmup ? { previous: items[index - 1], next: items[index + 1], onGo: go } : undefined}
+      swipe={!warmup && index >= 0 ? { currentId, previous: items[index - 1], next: items[index + 1],
+        renderPreview: next => renderExercise(exercises.findIndex(exercise => exercise.id === next), true),
+        disabled: !!modal || editing || visual.dim, onGo: go } : undefined}
       cardioFocus={!!activity && !warmup}
       reviewNote={<aside className="muted small" aria-label="검토용 세션">UI 검토 · 합성 데이터{shortRest ? ' · 휴식 12초 시연' : ''}</aside>}
       elapsed={Math.max(0, now - session.startedAt)} position={warmup ? 0 : index + 1} count={items.length}
@@ -210,39 +261,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
       {warmup ? <Warmup next={weight ? { name: weight.name,
         target: `${weight.working || '중량 미지정'}${weight.working ? 'kg' : ''} · ${weight.min}–${weight.max}회 × ${weight.sets.length}세트`,
         equipment: equipmentLabel(weight, manufacturers) }
-        : { name: activity!.plan.name, target: '목표 ' + cardioPlanLabel(activity!.plan) }} /> : <>
-        {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
-        {weight && <WeightFocus weight={weight} position={index + 1}
-          memoContent={<CombinationMemo exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />} workingRef={workingRef} onAddSet={() => updateWeight(addSet(weight))}
-          description={exerciseDescription(sessionExercises.find(e => e.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
-          manufacturers={manufacturers} progressNote={original ? `디로딩 목표 ${source?.approvedWeightKg}kg · 원본 목표 ${original.approvedWeightKg}kg × ${original.setCount}세트` : undefined}
-          issue={issueView} resting={remaining > 0} editing={editing}
-          onList={() => setModal('list')} onEnd={requestEnd}
-          onWeight={() => setModal('weight')} onEdit={() => setEditing(value => !value)} onComplete={complete} onUndo={undo => setModal({ undo })}
-          onDraft={(id, draft) => { updateWeight({ ...weight, sets: weight.sets.map(s => s.id === id && !s.result ? { ...s, draft: { ...s.draft, ...draft } } : s) }); setIssue('') }}
-          onExcludeSet={id => updateWeight({ ...weight, sets: weight.sets.filter(s => s.id !== id) })}
-          onMemo={memo => updateWeight({ ...weight, memo })}
-          editTools={<>
-            <EquipmentEditor key={weight.id} equipment={weight} manufacturers={manufacturers} onApply={equipment => updateWeight({ ...weight, ...equipment })} />
-            <Card>
-              <p className="muted small">변경은 이번 운동에만 적용됩니다. 교체하거나 제외하려면 완료 세트를 먼저 취소해 주세요.</p>
-              <Button onClick={() => setModal('add')}>+ 다음 종목 추가</Button>
-              <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
-              <Button disabled={doneCount(weight) > 0} onClick={() => setModal('replace')}>현재 종목 교체</Button>
-              <Button variant="danger" disabled={doneCount(weight) > 0 || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
-            </Card>
-          </>} />}
-        {activity && <CardioFocus cardio={activity} activeMs={cardioElapsed(activity, now)}
-          navigation={navigation} issue={issueView} editing={editing} onEdit={() => setEditing(value => !value)}
-          onDraft={draft => { updateCardio({ ...activity, draft: { ...activity.draft, ...draft } }); setIssue('') }}
-          editTools={<Card>
-            <p className="muted small">이번 운동에만 적용됩니다. 제외하려면 진행 중인 측정을 멈추고, 완료한 기록은 먼저 취소해 주세요.</p>
-            <Button onClick={() => setModal('add')}>+ 종목 추가</Button>
-            <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
-            <Button variant="danger" disabled={!!activity.result || activity.phase === 'running' || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
-          </Card>} onCancelReview={() => cardioPhase('paused')} onUndo={() => setModal('undo-cardio')} />}
-        {activity && activity.phase !== 'review' && issueView}
-      </>}
+        : { name: activity!.plan.name, target: '목표 ' + cardioPlanLabel(activity!.plan) }} /> : renderExercise(index)}
     </WorkoutFrame>
     {modal === 'weight' && weight && <WeightChange weight={weight} progressionAllowed={!session.deload && weight.approved !== null}
       onSave={(value, mode) => {

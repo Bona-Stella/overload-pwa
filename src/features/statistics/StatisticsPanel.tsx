@@ -13,7 +13,7 @@ import type { StandardExercise } from '../workout-online/types.ts'
 import type { LiveSchedule } from './weekly-schedule.ts'
 import { SearchList } from '../../components/SearchList.tsx'
 import { Button, Card } from '../../components/ui.tsx'
-import { useScreenHistory } from '../../app/navigation.ts'
+import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import { RecordFeed } from '../history/RecordFeed.tsx'
 import { WeeklyMusclePlan, WeeklyMuscleStatistics } from './MuscleAnalysis.tsx'
 import { muscleGroups } from './muscle-analysis.ts'
@@ -246,7 +246,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
     })).then(()=>{if(!abort.signal.aborted)setEvidence({key:evidenceKey,rows})})
     return()=>abort.abort()
   },[workoutApi,preview,screen,weekly,evidenceKey,scope])
-  const back = () => { if (window.history.state?.overloadNavigation?.index > 0) window.history.back(); else setScreen('summary', true) }
+  const back = () => navigateBack(() => setScreen('summary', true))
   return <section className={`stack statistics record-screen ${screen==='summary'?styles.main:''} ${screen==='activity'?activityStyles.page:''}`} aria-label="운동 기록·분석">
     {screen === 'activity' || screen === 'plan' || screen === 'muscles' || screen === 'history' ? <RecordSubpageHeader title={screen==='activity'?'운동 현황':screen==='plan'?'주간 근육 계획':screen==='muscles'?'주간 근육 통계':'전체 운동 이력'} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} /> : null}
     {screen === 'activity' && <PeriodControls variant="activity" days={current?.plannedDays} value={activityPeriod} onChange={value => setActivityPeriod(value, true)} />}

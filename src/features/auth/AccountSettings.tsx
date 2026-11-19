@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { ComponentType, ReactNode, Ref } from 'react'
-import { useScreenHistory } from '../../app/navigation.ts'
+import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { AccountIcon, AccountItem, AccountNote, AccountStatus } from './AccountDetailUi.tsx'
@@ -38,10 +38,10 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
       window.scrollTo(0, devicesScroll.current)
     }
   }, [devicesOpen])
-  if (devicesOpen) return <DevicesPage headingRef={devicesHeading} onBack={() => window.history.back()} />
+  if (devicesOpen) return <DevicesPage headingRef={devicesHeading} onBack={() => navigateBack(() => setDevicesOpen(false, true))} />
   return <><section className={styles.page} aria-label="계정 설정" aria-busy={busy}>
     <RecordSubpageHeader title="계정 설정" backLabel="설정으로" backDisabled={busy} headingRef={headingRef}
-      onBack={() => { clear(); if (controller) controller.closeAccount(); else onBack?.() }} />
+      onBack={() => { clear(); if (onBack) onBack(); else controller?.closeAccount() }} />
     {!account.loaded ? <Card className={styles.card} role="status"><p>{busy ? '계정 정보를 확인하고 있어요.' : '계정 정보를 불러오지 못했습니다.'}</p></Card> : <>
       <IdentityManagement state={state} controller={controller} />
       <Card className={styles.card} id="account-email-proof">

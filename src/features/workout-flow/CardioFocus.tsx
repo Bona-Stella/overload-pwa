@@ -20,9 +20,9 @@ export function CardioActual({ result }: { result: ActualCardio }) {
   </div>
 }
 
-function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel }: {
+function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel, preview }: {
   draft: CardioDraft; activeMs: number; motion: boolean; issue: ReactNode
-  onDraft: (value: Partial<CardioDraft>) => void; onCancel: () => void
+  onDraft: (value: Partial<CardioDraft>) => void; onCancel: () => void; preview: boolean
 }) {
   const [seconds, setSeconds] = useState<string | null>(null)
   const editButton = useRef<HTMLButtonElement>(null)
@@ -48,7 +48,7 @@ function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel }: {
       </strong>
       <button ref={editButton} type="button" className={`quiet ${cardioStyles.editTime}`} aria-label="실제 활동 시간 수정"
         aria-expanded={seconds !== null} aria-controls={seconds !== null ? editorId : undefined}
-        onClick={() => setSeconds(seconds === null ? draft.correctedSeconds ?? measuredSeconds : null)}>
+        onClick={preview ? undefined : () => setSeconds(seconds === null ? draft.correctedSeconds ?? measuredSeconds : null)}>
         <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m5 11.5-1 4.5 4.5-1L16 7.5 12.5 4zM11 5.5 14.5 9" />
         </svg>
@@ -66,11 +66,11 @@ function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel }: {
     </div>}
     <div className={cardioStyles.measurements}>
       <label>실제 거리 (km)<input inputMode="decimal" placeholder={motion ? '선택 입력' : '지원하지 않음'} disabled={!motion} aria-describedby={measurementNoteId}
-        value={draft.distance} onChange={event => onDraft({ distance: event.target.value })} /></label>
+        value={draft.distance} readOnly={preview} onChange={preview ? undefined : event => onDraft({ distance: event.target.value })} /></label>
       <label>실제 평균 속도 (km/h)<input inputMode="decimal" placeholder={motion ? '선택 입력' : '지원하지 않음'} disabled={!motion} aria-describedby={measurementNoteId}
-        value={draft.speed} onChange={event => onDraft({ speed: event.target.value })} /></label>
+        value={draft.speed} readOnly={preview} onChange={preview ? undefined : event => onDraft({ speed: event.target.value })} /></label>
       <label>평균 심박수 (BPM)<input inputMode="numeric" placeholder="선택 입력"
-        value={draft.bpm} onChange={event => onDraft({ bpm: event.target.value })} /></label>
+        value={draft.bpm} readOnly={preview} onChange={preview ? undefined : event => onDraft({ bpm: event.target.value })} /></label>
       <label>실제 경사도 (%)<input inputMode="decimal" placeholder="저장 미지원" disabled /></label>
     </div>
     <small className={cardioStyles.measurementNote} id={measurementNoteId}>{motion
@@ -78,15 +78,15 @@ function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel }: {
       : '이 종목은 거리와 평균 속도 기록을 지원하지 않습니다.'}</small>
     {issue}
     <div className={cardioStyles.reviewActions}>
-      <Button onClick={onCancel}>완료 취소 · 일시정지로 돌아가기</Button>
+      <Button onClick={preview ? undefined : onCancel}>완료 취소 · 일시정지로 돌아가기</Button>
     </div>
   </Card>
 }
 
-export function CardioFocus({ cardio, activeMs, navigation, issue, editing, editTools, onEdit, onDraft, onCancelReview, onUndo }: {
+export function CardioFocus({ cardio, activeMs, navigation, issue, editing, editTools, onEdit, onDraft, onCancelReview, onUndo, preview = false }: {
   cardio: CardioFocusData; activeMs: number; navigation: ReactNode; issue: ReactNode
   editing: boolean; editTools: ReactNode; onEdit: () => void; onDraft: (value: Partial<CardioDraft>) => void
-  onCancelReview: () => void; onUndo: () => void
+  onCancelReview: () => void; onUndo: () => void; preview?: boolean
 }) {
   const { plan, phase, draft, result } = cardio
   const motion = ['TREADMILL', 'BIKE', 'OUTDOOR'].includes(plan.kind)
@@ -128,10 +128,10 @@ export function CardioFocus({ cardio, activeMs, navigation, issue, editing, edit
       <small className={cardioStyles.timerStatus} data-phase={phase}>{measurementStatus}</small>
     </Card>
     {phase === 'review' && <CardioReview key={cardio.id} draft={draft} activeMs={activeMs} motion={motion}
-      issue={issue} onDraft={onDraft} onCancel={onCancelReview} />}
+      issue={issue} onDraft={onDraft} onCancel={onCancelReview} preview={preview} />}
     {result && <Card className={cardioStyles.card}><h2>실제 완료 기록</h2><CardioActual result={result} />
-      <Button onClick={onUndo}>유산소 완료 취소</Button></Card>}
-    <Button className={cardioStyles.editSession} aria-expanded={editing} onClick={onEdit}>
+      <Button onClick={preview ? undefined : onUndo}>유산소 완료 취소</Button></Card>}
+    <Button className={cardioStyles.editSession} aria-expanded={editing} onClick={preview ? undefined : onEdit}>
       {editing ? '임시 편집 닫기' : '현재 세션에서 종목 변경 · 유산소 추가'}
     </Button>
     {editing && editTools}

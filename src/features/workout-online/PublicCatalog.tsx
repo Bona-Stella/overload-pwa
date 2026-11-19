@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import type { Ref } from 'react'
 import { ReviewExerciseMediaContext } from '../../review/context.ts'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
@@ -34,7 +35,7 @@ export function PublicCatalog({ api, userId, onInvalid, onBack }: {
     catch (error) { if (!signal.aborted) invalidate(error); throw error }
   }, [api, userId, invalidate])
   const current = result?.userId === userId ? result : null
-  return <CatalogView key={userId} items={current?.items ?? null} failed={current?.failed} loadDetail={loadDetail} mediaSources={mediaSources} onBack={onBack} />
+  return <CatalogView key={userId} items={current?.items ?? null} failed={current?.failed} loadDetail={loadDetail} mediaSources={mediaSources} onBack={onBack} historyScope={userId ?? 'unavailable'} />
 }
 
 function CatalogHeading({ title, backLabel, onBack, headingRef }: {
@@ -48,11 +49,13 @@ function CatalogHeading({ title, backLabel, onBack, headingRef }: {
 
 type DetailLoader = (id: string, signal: AbortSignal) => Promise<CatalogBrowseExercise>
 
-export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, loadDetail, onBack }: {
+export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, loadDetail, onBack, historyScope = 'review' }: {
   items: CatalogBrowseExercise[] | null; failed?: boolean; reviewNote?: string
-  instructionNotes?: Readonly<Record<string, string>>; mediaSources?: Readonly<Record<string, string>>; loadDetail?: DetailLoader; onBack: () => void
+  instructionNotes?: Readonly<Record<string, string>>; mediaSources?: Readonly<Record<string, string>>; loadDetail?: DetailLoader; onBack: () => void; historyScope?: string
 }) {
-  const [selected, setSelected] = useState<CatalogBrowseExercise | null>(null)
+  const [selectedId, setSelected] = useScreenHistory<string | null>('exercise-detail:catalog:' + historyScope, null)
+  const selected = items?.find(item => item.id === selectedId)
+  const back = () => navigateBack(() => setSelected(null, true))
   const listTitle = useRef<HTMLHeadingElement>(null)
   const detailTitle = useRef<HTMLHeadingElement>(null)
   const selectedRow = useRef<HTMLButtonElement>(null)
@@ -72,17 +75,19 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
   }, [selected])
 
   return <>
-    <div className={styles.screen} hidden={!!selected}>
+    <div className={styles.screen} hidden={!!selectedId}>
       <CatalogHeading title="운동 종목 보기" backLabel="설정으로 돌아가기" onBack={onBack} headingRef={listTitle} />
       <Card className={styles.catalogCard}>
         <div className={styles.sectionHeader}><h2>표준 운동 DB</h2><span className={styles.tag}>조회 전용</span></div>
         <p className={styles.description}>등록·편집·삭제는 관리자가 수행합니다. 사용자는 이름·별칭으로 검색하고 정보를 확인합니다.</p>
         <ExerciseSearch exercises={items ?? []} loading={items === null && !failed} failed={failed} resetOnSelect={false} defaultOpen
-          onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item) }} />
+          onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item.id) }} />
         {reviewNote && <p className={styles.description}>{reviewNote}</p>}
       </Card>
     </div>
-    {selected && <CatalogDetail exercise={selected} onBack={()=>setSelected(null)} headingRef={detailTitle} loadDetail={loadDetail} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} reviewNote={reviewNote}/>}
+    {selected ? <CatalogDetail exercise={selected} onBack={back} headingRef={detailTitle} loadDetail={loadDetail} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} reviewNote={reviewNote}/>
+      : selectedId && <div className={styles.screen}><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={back} headingRef={detailTitle} />
+        <p role="status">{items === null && !failed ? '운동 정보를 불러오고 있어요.' : '운동 정보를 찾을 수 없어요.'}</p></div>}
   </>
 }
 

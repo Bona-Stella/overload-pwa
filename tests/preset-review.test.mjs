@@ -6,6 +6,7 @@ import { basename, dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createServer } from 'vite'
 import { verifyWorkoutReview } from './fixtures/workout-review-checks.mjs'
+import { verifyExerciseSwipe } from './fixtures/workout-swipe-checks.mjs'
 
 test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support their workflows', { timeout: 150000 }, async () => {
   const liveOrigin = process.env.OVERLOAD_WORKOUT_REVIEW_ORIGIN
@@ -795,6 +796,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.equal(await evaluate(`document.querySelector('${settingsPage}').hidden`), false)
     assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '운동 종목 보기')
     await verifyWorkoutReview({ origin, send, evaluate, wait, click, set, body, verifyWidth, drag })
+    await verifyExerciseSwipe({ origin, send, evaluate, wait, click, set, verifyWidth })
     assert.deepEqual(apiRequests, [])
     assert.deepEqual(errors, [])
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)

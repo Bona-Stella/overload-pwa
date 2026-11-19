@@ -1,9 +1,26 @@
 
 .flow, .summary { display: grid; gap: 14px; min-width: 0; overflow-wrap: anywhere; word-break: keep-all; }
 .controls { display: contents; }
+.swipeViewport, .swipeTrack { min-width: 0; }
+.swipeViewport { --exercise-swipe-gap: 24px; flex: 1 0 auto; }
+.swipePage { display: grid; gap: 14px; align-content: start; min-width: 0; }
+.swipePage[data-cardio-page] { gap: 12px; }
+.swipeViewport[data-swiping] { overflow: clip; background-color: var(--surface-page); }
+.swipeViewport[data-swiping] > .swipeTrack { position: relative; transform: translate3d(var(--exercise-swipe-offset), 0, 0); will-change: transform; }
+.swipeViewport[data-swipe-settling] > .swipeTrack { transition: transform 220ms cubic-bezier(.2, .7, .3, 1); }
+.swipePreview { position: absolute; inset-block-start: var(--exercise-swipe-clamp, 0px); width: 100%; pointer-events: none; display: none; }
+.swipePreview[data-swipe-preview='previous'] { right: calc(100% + var(--exercise-swipe-gap)); }
+.swipePreview[data-swipe-preview='next'] { left: calc(100% + var(--exercise-swipe-gap)); }
+.swipeViewport[data-swiping='previous'] [data-swipe-preview='previous'],
+.swipeViewport[data-swiping='next'] [data-swipe-preview='next'] { display: grid; }
+@media (prefers-reduced-motion: reduce) {
+  .swipeViewport[data-swipe-settling] > .swipeTrack { transition: none; }
+}
 .flow { --workout-input-space: var(--editor-keyboard-space, 0px); margin-top: calc(-20px - env(safe-area-inset-top)); padding-top: calc(var(--workout-clock-height, 80px) + 8px); padding-bottom: calc(var(--workout-footer-height, 0px) + var(--workout-input-space) + 8px); }
 .flow:not([data-fixed-actions]) { padding-bottom: calc(var(--workout-input-space) + env(safe-area-inset-bottom) + 8px); }
 .flow:has([data-workout-memo]) { --workout-input-space: max(var(--workout-memo-space, 0px), var(--editor-keyboard-space, 0px)); }
+:global(html):has([data-workout-frame]:not([hidden]) [data-exercise-swipe]) { overflow-anchor: none; }
+.flow:is([data-weight-focus], [data-cardio-focus]) { display: flex; flex-direction: column; min-block-size: 100dvh; }
 .flow h1, .summary h1 { font-size: clamp(22px, 6.5vw, 29px); line-height: 1.2; }
 .flow h2, .summary h2 { font-size: 16px; }
 .summary h4 { margin: 0; font-size: 14px; }
@@ -118,7 +135,7 @@
 .exerciseOrderRow .listSelect { min-width: 0; width: 100%; text-align: left; padding: 5px 8px; }
 .exerciseOrderRow .listSelect[aria-current] { border-color: var(--accent); background: var(--accent-soft); }
 .listSelect small { display: block; color: var(--text-muted); }
-.flow[data-cardio-focus] { gap: 12px; }
+.flow[data-cardio-focus] { --workout-content-gap: 12px; gap: var(--workout-content-gap); }
 .flow[data-cardio-focus] .clock { grid-template-columns: repeat(3, minmax(0, 1fr)); border-radius: var(--radius-card); padding-block: 12px; }
 .flow[data-cardio-focus] .clock > div { padding-block: 0; }
 .flow[data-cardio-focus] .clock > div > strong { font-size: clamp(12px, 4vw, 16px); }
@@ -127,7 +144,7 @@
 .flow[data-cardio-focus] .segments span { height: 3px; }
 .flow[data-cardio-focus] .topNav { padding-bottom: 12px; }
 .flow[data-cardio-focus] .topNav > button:last-child { color: var(--status-danger-text); }
-.flow[data-cardio-focus] .exerciseNav { align-items: center; }
+.swipePage[data-cardio-page] .exerciseNav { align-items: center; }
 .flow[data-cardio-focus] .footer { background: var(--surface-card); padding-block: 12px calc(12px + env(safe-area-inset-bottom)); }
 .flow[data-cardio-focus] .footer button { min-height: 48px; border-radius: 12px; font-size: 14px; }
 .flow[data-cardio-focus] .footer .actions > :global(.outline) { background: var(--surface-input); }

@@ -7,6 +7,7 @@ import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import { WorkoutFrame, Warmup, RestActions, ExerciseNavigation, WeightRecommendation } from '../workout-flow/WorkoutFrame.tsx'
+import type { ExerciseScrollPosition } from '../workout-flow/WorkoutFrame.tsx'
 import { WeightFocus, EquipmentEditor } from '../workout-flow/WeightFocus.tsx'
 import { CardioFocus } from '../workout-flow/CardioFocus.tsx'
 import { ExerciseList, WeightChange, ConfirmWorkoutAction, SessionExerciseSearch, AddCardio } from '../workout-flow/WorkoutDialogs.tsx'
@@ -27,15 +28,16 @@ import styles from '../workout-flow/WorkoutFlow.module.css'
 
 type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'remove' | 'undo-cardio' | { undo: number }
 const restKey = (rest: LocalWorkout['rest'] | undefined) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
-export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, notices, progressAssessment, referenceRecords = [], referenceRoutine = null, createSetId }: {
+export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, referenceRecords = [], referenceRoutine = null, createSetId }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
-  activities?: CardioActivity[]; history?: Session[]; visible?: boolean; onHome?: () => void; notices?: ReactNode
+  activities?: CardioActivity[]; history?: Session[]; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
   progressAssessment?: ProgressAssessment; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
   createSetId?: () => string
 }) {
   const [now, setNow] = useState(Date.now), [modal, setModal] = useState<Modal | null>(null), [editing, setEditing] = useState(false)
   const [hiddenRecommendations,setHiddenRecommendations]=useState<Set<string>>(()=>new Set())
   const [completedScroll, setCompletedScroll] = useState(0)
+  const [exerciseScroll, setExerciseScroll] = useState<ExerciseScrollPosition | null>(null)
   const [endingRest, setEndingRest] = useState<string | null>(null)
   const manualRest = useRef<string | null>(null)
   const action = useRef(false), clock = useRef<HTMLDivElement>(null), working = useRef<HTMLElement>(null)
@@ -62,7 +64,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const workout = state.workout
   if (!workout) return null
   const weights = flowWeights(state, history, definitions), cardio = flowCardio(state, now)
-  const items = [...weights, ...cardio.map(c => ({ id: c.id, name: c.plan.name }))]
+  const exercises = [...weights, ...cardio]
+  const items = exercises.map(exercise => ({ id: exercise.id, name: 'plan' in exercise ? exercise.plan.name : exercise.name, cardio: 'plan' in exercise }))
   const id = workout.currentExerciseId, index = items.findIndex(e => e.id === id)
   const weight = weights.find(w => w.id === id), activity = cardio.find(c => c.id === id)
   const warmup = workout.warmupCompleted === false && weights.length > 0
@@ -95,7 +98,19 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
       if (!saved) { manualRest.current = null; setEndingRest(null) }
     })
   }
-  const go = (next: string) => { void act(w => { w.currentExerciseId = next }).then(saved => { if (saved) { setModal(null); setEditing(false); window.scrollTo(0, 0) } }) }
+  const go = async (next: string) => {
+    if (action.current || blocked) return false
+    const scrollPosition = next === id ? null : { exerciseId: next, top: window.scrollY }
+    if (scrollPosition) setExerciseScroll(scrollPosition)
+    const saved = await act(w => { w.currentExerciseId = next })
+    if (saved) {
+      setModal(null)
+      setEditing(false)
+    } else if (scrollPosition) {
+      setExerciseScroll(position => position === scrollPosition ? null : position)
+    }
+    return saved
+  }
   const end = async () => {
     if (action.current || blocked) return
     action.current = true
@@ -115,7 +130,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     const plan = w.snapshot.appliedPlan.weightExercises.find(p => p.sessionExerciseId === id)!
     model.updateTargets(w, id, plan.setCount + 1, plan.minReps, plan.maxReps)
   })
-  const navigation = <ExerciseNavigation previous={items[index - 1]} next={items[index + 1]} onList={() => setModal('list')} onGo={go} />
   const finalActions = <>{allWeights && <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>}
     {pending ? <><Button variant="primary" onClick={() => go(pending.id)}>다음 종목으로</Button>
       {allWeights && <Button variant="quiet" onClick={() => void end()}>남은 유산소 건너뛰고 종료</Button>}</>
@@ -159,55 +173,67 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const statusNote = state.issue || state.unsavedDrafts || state.syncIssue || syncNotice || Children.count(notices) > 0
     ? <aside className="muted small" role="status">{state.issue ? '최근 변경 미확정' : state.unsavedDrafts ? '입력 보존 확인 필요' : syncNotice}
       {state.syncIssue && <p>{state.syncIssue}</p>}{notices}{issue}</aside> : undefined
+  const renderExercise = (at: number, preview = false) => {
+    const exercise = exercises[at]
+    if (!exercise) return null
+    const weight = 'sets' in exercise ? exercise : undefined
+    const activity = 'plan' in exercise ? exercise : undefined
+    const navigation = <ExerciseNavigation previous={items[at - 1]} next={items[at + 1]} onList={() => setModal('list')} onGo={go} preview={preview} />
+    const id = exercise.id
+    return <>
+      {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
+      {weight && <WeightFocus preview={preview} additionalInput weight={weight} position={at + 1} workingRef={preview ? undefined : working} manufacturers={manufacturers}
+        description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
+        issue={preview ? null : issue} resting={remaining > 0} editing={!preview && editing}
+        memoContent={<CombinationMemo preview={preview} exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />}
+        progressNote={workout.replacementSlots?.[id] ? '대체 수행 ' + weight.sets.filter(s => s.result).length + '/' + weight.sets.length + '세트 · 원계획 슬롯 완료 인정은 서버 확인이 필요합니다.' : changedCombination ? '오늘만 조합 변경 · 공식 중량 검토 제외' : undefined}
+        approvalNote={workout.approvalResults.some(r => r.sessionExerciseId === id && r.status === 'PENDING') ? '승인 확인 필요' : '승인 요청 상태 확인'}
+        onDraft={(ordinal, draft) => {
+          const current = controller.getSnapshot().workout
+          if (!current) return
+          const value = controller.getSnapshot().drafts[slotKey(id, ordinal)] ?? inputDraft(current, id, ordinal, history)
+          controller.draft(id, ordinal, { ...value, ...(draft.reps !== undefined ? { reps: draft.reps } : {}),
+            ...(draft.kg !== undefined ? { weight: draft.kg } : {}), ...(draft.additional !== undefined ? { additionalWeight: draft.additional } : {}) })
+        }}
+        onComplete={complete} onUndo={ordinal => setModal({ undo: ordinal })} onAddSet={addSet}
+        onExcludeSet={ordinal => void act(w => {
+          if (w.snapshot.performedSets.some(s => s.sessionExerciseId === id && s.ordinal === ordinal)) throw new Error('완료 기록을 먼저 취소해 주세요.')
+          const plan = w.snapshot.appliedPlan.weightExercises.find(p => p.sessionExerciseId === id)!
+          model.updateTargets(w, id, plan.setCount - 1, plan.minReps, plan.maxReps)
+          w.excludedSetOrdinals = { ...w.excludedSetOrdinals, [id]: [...(w.excludedSetOrdinals?.[id] ?? []), ordinal] }
+        })}
+        onWeight={() => setModal('weight')} onEdit={() => setEditing(true)} onMemo={value => controller.memo(id, value)}
+        onList={() => setModal('list')} onEnd={requestEnd}
+        editTools={<><EquipmentEditor key={id} equipment={weight} manufacturers={manufacturers} onApply={value => act(w => model.changeEquipment(w, id, value))} />
+          <Card><p className="muted small">변경은 이번 운동에만 적용됩니다. 완료 세트를 취소한 뒤 교체하거나 제외할 수 있습니다.</p>
+            <Button onClick={() => setModal('add')}>+ 다음 종목 추가</Button><Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
+            <Button disabled={weight.sets.some(s => !!s.result)} onClick={() => setModal('replace')}>현재 종목 교체</Button>
+            <Button variant="danger" disabled={weight.sets.some(s => !!s.result) || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
+          </Card></>} />}
+      {activity && <CardioFocus preview={preview} cardio={activity} activeMs={activity.activeMs} navigation={navigation} issue={preview ? null : issue} editing={!preview && editing}
+        onEdit={() => setEditing(v => !v)} onUndo={() => setModal('undo-cardio')}
+        onDraft={patch => controller.cardioDraft(id, patch)}
+        onCancelReview={() => void act(w => { if (w.timers[id]) w.timers[id].reviewing = false })}
+        editTools={<Card><p className="muted small">이번 운동에만 적용됩니다. 제외하려면 진행 중인 측정을 멈추고, 완료한 기록은 먼저 취소해 주세요.</p>
+          <Button onClick={() => setModal('add')}>+ 종목 추가</Button><Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
+          <Button variant="danger" disabled={!!workout.snapshot.cardioResults.find(c => c.sessionActivityId === id) || activity.phase === 'running' || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button></Card>} />}
+    </>
+  }
   return <>
-    <WorkoutFrame hidden={!visible} routine={workout.initialPlan.routineName} deload={false}
+    <WorkoutFrame hidden={!visible} routine={workout.initialPlan.routineName} deload={false} exerciseScroll={exerciseScroll}
       elapsed={Math.max(0, now - Date.parse(workout.startedAt))} position={warmup ? 0 : index + 1} count={items.length}
       flash={visual.top} dim={visual.dim && !editing && !blocked && !modal ? remaining : undefined}
       timerHeading={timerHeading} timerLabel={timerLabel} timer={timer} clockRef={clock}
       navigation={weight && !warmup ? { previous: items[index - 1], next: items[index + 1], onGo: go } : undefined}
+      swipe={!warmup && index >= 0 ? { currentId: id, previous: items[index - 1], next: items[index + 1],
+        renderPreview: next => renderExercise(exercises.findIndex(exercise => exercise.id === next), true),
+        disabled: !visible || blocked || !!modal || editing || visual.dim, canMove: () => !action.current, onGo: go } : undefined}
       cardioFocus={!!activity && !warmup}
-      onHome={onHome} onEnd={requestEnd} actions={actions} onRestInteraction={visible && !blocked && remaining > 0 ? unlock : undefined}
+      onHome={onHome} backLabel={backLabel} onEnd={requestEnd} actions={actions} onRestInteraction={visible && !blocked && remaining > 0 ? unlock : undefined}
       reviewNote={statusNote}>
       <fieldset disabled={blocked} className={styles.controls}>
         {warmup ? <Warmup next={weight ? { name: weight.name, target: `${weight.working || '중량 미지정'}kg · ${weight.min}–${weight.max}회 × ${weight.plannedCount ?? weight.sets.length}세트`,
-          equipment: equipmentLabel(weight, manufacturers) } : { name: activity!.plan.name, target: '목표 ' + activity!.plan.targetSeconds + '초' }} /> : <>
-          {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
-          {weight && <WeightFocus additionalInput weight={weight} position={index + 1} workingRef={working} manufacturers={manufacturers}
-            description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
-            issue={issue} resting={remaining > 0} editing={editing}
-            memoContent={<CombinationMemo exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />}
-            progressNote={workout.replacementSlots?.[id] ? '대체 수행 ' + weight.sets.filter(s => s.result).length + '/' + weight.sets.length + '세트 · 원계획 슬롯 완료 인정은 서버 확인이 필요합니다.' : changedCombination ? '오늘만 조합 변경 · 공식 중량 검토 제외' : undefined}
-            approvalNote={workout.approvalResults.some(r => r.sessionExerciseId === id && r.status === 'PENDING') ? '승인 확인 필요' : '승인 요청 상태 확인'}
-            onDraft={(ordinal, draft) => {
-              const current = controller.getSnapshot().workout
-              if (!current) return
-              const value = controller.getSnapshot().drafts[slotKey(id, ordinal)] ?? inputDraft(current, id, ordinal, history)
-              controller.draft(id, ordinal, { ...value, ...(draft.reps !== undefined ? { reps: draft.reps } : {}),
-                ...(draft.kg !== undefined ? { weight: draft.kg } : {}), ...(draft.additional !== undefined ? { additionalWeight: draft.additional } : {}) })
-            }}
-            onComplete={complete} onUndo={ordinal => setModal({ undo: ordinal })} onAddSet={addSet}
-            onExcludeSet={ordinal => void act(w => {
-              if (w.snapshot.performedSets.some(s => s.sessionExerciseId === id && s.ordinal === ordinal)) throw new Error('완료 기록을 먼저 취소해 주세요.')
-              const plan = w.snapshot.appliedPlan.weightExercises.find(p => p.sessionExerciseId === id)!
-              model.updateTargets(w, id, plan.setCount - 1, plan.minReps, plan.maxReps)
-              w.excludedSetOrdinals = { ...w.excludedSetOrdinals, [id]: [...(w.excludedSetOrdinals?.[id] ?? []), ordinal] }
-            })}
-            onWeight={() => setModal('weight')} onEdit={() => setEditing(true)} onMemo={value => controller.memo(id, value)}
-            onList={() => setModal('list')} onEnd={requestEnd}
-            editTools={<><EquipmentEditor key={id} equipment={weight} manufacturers={manufacturers} onApply={value => act(w => model.changeEquipment(w, id, value))} />
-              <Card><p className="muted small">변경은 이번 운동에만 적용됩니다. 완료 세트를 취소한 뒤 교체하거나 제외할 수 있습니다.</p>
-                <Button onClick={() => setModal('add')}>+ 다음 종목 추가</Button><Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
-                <Button disabled={weight.sets.some(s => !!s.result)} onClick={() => setModal('replace')}>현재 종목 교체</Button>
-                <Button variant="danger" disabled={weight.sets.some(s => !!s.result) || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
-              </Card></>} />}
-          {activity && <CardioFocus cardio={activity} activeMs={activity.activeMs} navigation={navigation} issue={issue} editing={editing}
-            onEdit={() => setEditing(v => !v)} onUndo={() => setModal('undo-cardio')}
-            onDraft={patch => controller.cardioDraft(id, patch)}
-            onCancelReview={() => void act(w => { if (w.timers[id]) w.timers[id].reviewing = false })}
-            editTools={<Card><p className="muted small">이번 운동에만 적용됩니다. 제외하려면 진행 중인 측정을 멈추고, 완료한 기록은 먼저 취소해 주세요.</p>
-              <Button onClick={() => setModal('add')}>+ 종목 추가</Button><Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
-              <Button variant="danger" disabled={!!workout.snapshot.cardioResults.find(c => c.sessionActivityId === id) || activity.phase === 'running' || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button></Card>} />}
-        </>}
+          equipment: equipmentLabel(weight, manufacturers) } : { name: activity!.plan.name, target: '목표 ' + activity!.plan.targetSeconds + '초' }} /> : renderExercise(index)}
       </fieldset>
     </WorkoutFrame>
     {modal === 'list' && <ExerciseList saveIssue={issue} current={id} weights={weights.map(w => ({ id: w.id, name: w.name, status: `${w.sets.filter(s => s.result).length}/${w.plannedCount ?? w.sets.length}세트 완료` }))}

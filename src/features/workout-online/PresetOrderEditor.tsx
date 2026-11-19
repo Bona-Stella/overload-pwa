@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 import { useDragOrder } from '../../components/useDragOrder.ts'
 import { dayNames } from './routine-schedule.ts'
 import { presetLimit, presetNumber } from './preset-schedule.ts'
@@ -7,9 +8,9 @@ import styles from './Presets.module.css'
 import routineStyles from './Routine.module.css'
 
 type Entry = Pick<SchedulePreset, 'id' | 'included'>
-export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName, onSave, onClose, onReload }: {
+export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName, onSave, onClose, onReload, navigationKey }: {
   schedule: PresetSchedule; busy: boolean; readOnly: boolean; stale: boolean
-  routineName: (id: string) => string; onSave: (entries: Entry[]) => void; onClose: () => void; onReload: () => void
+  routineName: (id: string) => string; onSave: (entries: Entry[]) => void | Promise<boolean>; onClose: () => void; onReload: () => void; navigationKey?: string
 }) {
   const [draft, setDraft] = useState(() => schedule.presets.map(({ id, included }) => ({ id, included })))
   const sortingState = useDragOrder<boolean>(move)
@@ -18,7 +19,14 @@ export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName
   const ordered = [...draft.filter(p => p.included), ...draft.filter(p => !p.included)]
   const changed = draft.some((p, index) => p.id !== schedule.presets[index].id || p.included !== schedule.presets[index].included)
   const tooFew = schedule.autoEnabled && draft.filter(p => p.included).length < 2
-  const leave = (action: () => void) => { if (!changed || window.confirm('저장하지 않은 순환 설정을 버릴까요?')) action() }
+  const saved = useRef(false)
+  const canLeave = () => saved.current || !changed || window.confirm('저장하지 않은 순환 설정을 버릴까요?')
+  useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(), navigationKey)
+  const leave = (action: () => void) => { if (canLeave()) action() }
+  const close = () => {
+    if (navigationKey) navigateBack(() => leave(onClose))
+    else leave(onClose)
+  }
   function move(group: boolean, id: string, targetId: string, handle: HTMLButtonElement) {
     const from = ordered.findIndex(entry => entry.id === id), to = ordered.findIndex(entry => entry.id === targetId)
     if (busy || readOnly || from < 0 || to < 0 || from === to || ordered[from].included !== group || ordered[to].included !== group) return
@@ -63,7 +71,9 @@ export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName
     })}
     {tooFew && <p role="status">자동 순환에는 포함 프리셋이 최소 2개 필요합니다.</p>}
     {stale && <button type="button" className="outline" onClick={() => leave(onReload)}>최신 구성 다시 열기</button>}
-    <div className="row"><button data-close-text={readOnly||undefined} type="button" className="outline" disabled={busy} onClick={() => leave(onClose)}>{readOnly ? '닫기' : '취소'}</button>
-      {!readOnly && <button type="button" className="primary" disabled={busy || !!drag || stale || tooFew || !changed} onClick={() => onSave(ordered)}>변경사항 저장</button>}</div>
+    <div className="row"><button data-close-text={readOnly||undefined} type="button" className="outline" disabled={busy} onClick={close}>{readOnly ? '닫기' : '취소'}</button>
+      {!readOnly && <button type="button" className="primary" disabled={busy || !!drag || stale || tooFew || !changed} onClick={async () => {
+        if (await onSave(ordered) && navigationKey) { saved.current = true; navigateBack(onClose) }
+      }}>변경사항 저장</button>}</div>
   </section>
 }

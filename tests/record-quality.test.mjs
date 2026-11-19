@@ -56,7 +56,13 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   const cards=await evaluate('[...document.querySelectorAll(".record-screen .app-card,#viewer .wire,.muscle-analysis .app-card")].filter(e=>e.getClientRects().length).map(e=>({text:e.textContent.slice(0,45),width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))')
   report.screens.push({name,side,width:w,cards,overflow:await evaluate('document.documentElement.scrollWidth>screen.width')})
  }
- const go=async path=>{await send('Page.navigate',{url:origin+path});await wait(()=>evaluate('document.readyState==="complete"'),'page load')}
+ let visit = 0
+ const go = async path => {
+  const url = new URL(path, origin)
+  if (url.pathname === '/routine-preview') url.searchParams.set('testVisit', String(++visit))
+  await send('Page.navigate', { url: url.href })
+  await wait(() => evaluate(`location.href === ${JSON.stringify(url.href)} && document.readyState === "complete"`), 'page load')
+ }
  let origin
  try{
   await vite.listen();origin='http://127.0.0.1:'+vite.httpServer.address().port
@@ -127,7 +133,14 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await verifyRecordReturnButton('기록으로 돌아가기')
   await click('기록으로 돌아가기'); await title('전체 운동 이력')
   await tab('기록');await click('운동 현황 ›');await title('운동 현황');await click('기록으로');await title('이번 주 요약');report.navigation.push('activity/back/root')
-  await send('Runtime.evaluate',{expression:'history.forward()'});await title('운동 현황');await tab('기록');await title('이번 주 요약');report.navigation.push('browser forward and same tab root')
+  await send('Runtime.evaluate',{expression:'history.forward()'});await title('운동 현황')
+  const activityEntry = await evaluate('history.state.overloadNavigation.index')
+  const historyLength = await evaluate('history.length')
+  await tab('기록');await title('이번 주 요약')
+  assert.equal(await evaluate('history.state.overloadNavigation.index'), activityEntry - 1)
+  assert.equal(await evaluate('history.length'), historyLength)
+  await evaluate('history.forward()');await title('운동 현황');await tab('기록');await title('이번 주 요약')
+  report.navigation.push('browser forward and same tab root without duplicate history')
   const captures=[]
   async function reactCapture(name){for(const w of [320,375,390,430])await capture(name,'react',w);captures.push(name)}
   await reactCapture('records-main')

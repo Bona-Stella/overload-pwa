@@ -5,21 +5,26 @@ import { useLayoutEffect, useRef } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { formatDuration } from '../workout/model.ts'
+import { ExerciseSwipe } from './ExerciseSwipe.tsx'
+import type { ExerciseSwipeOptions } from './ExerciseSwipe.tsx'
 import styles from './WorkoutFlow.module.css'
 
 type Step = { id: string; name: string }
 type Navigation = { previous?: Step; next?: Step; onGo: (id: string) => void }
+export type ExerciseScrollPosition = { exerciseId: string; top: number }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, onHome, onEnd, onRestInteraction, clockRef, navigation, reviewNote, hidden, cardioFocus }: {
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, hidden, cardioFocus, exerciseScroll }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
   timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; dim?: number; children: ReactNode; actions?: ReactNode
-  onHome: () => void; onEnd: () => void; onRestInteraction?: () => void
+  onHome: () => void; backLabel?: string; onEnd: () => void; onRestInteraction?: () => void
   clockRef?: RefObject<HTMLDivElement | null>
-  navigation?: Navigation; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
+  navigation?: Navigation; swipe?: ExerciseSwipeOptions; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
+  exerciseScroll?: ExerciseScrollPosition | null
 }) {
   const root = useRef<HTMLDivElement>(null)
   const ownClock = useRef<HTMLDivElement>(null)
   const footer = useRef<HTMLElement>(null)
+  const appliedScroll = useRef<ExerciseScrollPosition | null>(null)
   const hasActions = !!actions
   const timeBar = clockRef ?? ownClock
   useLayoutEffect(() => {
@@ -36,7 +41,19 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     observer.observe(dock)
     if (footer.current) observer.observe(footer.current)
     return () => observer.disconnect()
-  }, [timeBar, hasActions])
+  }, [timeBar, hasActions, cardioFocus])
+  const currentExercise = swipe?.currentId
+  useLayoutEffect(() => {
+    if (!exerciseScroll || exerciseScroll.exerciseId !== currentExercise || appliedScroll.current === exerciseScroll) return
+    appliedScroll.current = exerciseScroll
+    const frame = root.current, page = document.scrollingElement
+    if (!frame?.getClientRects().length || !page || frame.closest('[data-keyboard-open]') ||
+      document.activeElement?.matches('input, textarea, select, [contenteditable]')) return
+    // The browser can follow the old bottom edge when the new exercise is taller.
+    const limit = Math.max(0, page.scrollHeight - page.clientHeight)
+    const target = Math.max(0, Math.min(exerciseScroll.top, limit))
+    if (Math.abs(page.scrollTop - target) >= 1) page.scrollTo({ top: target, behavior: 'instant' })
+  }, [currentExercise, exerciseScroll])
 
   return <div className={styles.flow} ref={root} hidden={hidden} onClickCapture={onRestInteraction} data-workout-frame data-fixed-actions={hasActions || undefined}
     data-weight-focus={!!navigation || undefined} data-cardio-focus={cardioFocus || undefined}>
@@ -53,14 +70,14 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     <header className={styles.topNav} data-exercise-navigation={!!navigation || undefined} aria-label={navigation ? '운동 종목 이동' : undefined}>
       {navigation ? <Button variant="quiet" aria-label={navigation.previous ? '이전 운동 · ' + navigation.previous.name : '이전 운동'} disabled={!navigation.previous} onClick={() => navigation.previous && navigation.onGo(navigation.previous.id)}>
         ‹ 이전<small title={navigation.previous?.name}>{navigation.previous?.name ?? '첫 종목'}</small>
-      </Button> : <Button variant="quiet" onClick={onHome}>‹ 홈</Button>}
+      </Button> : <Button variant="quiet" onClick={onHome}>‹ {backLabel}</Button>}
       <strong title={routine} aria-label={routine}>{deload && <small className={styles.eyebrow}>DELOAD</small>}<span>{routine}</span></strong>
       {navigation ? <Button variant="quiet" aria-label={navigation.next ? '다음 운동 · ' + navigation.next.name : '다음 운동'} disabled={!navigation.next} onClick={() => navigation.next && navigation.onGo(navigation.next.id)}>
         다음 ›<small title={navigation.next?.name}>{navigation.next?.name ?? '마지막 종목'}</small>
       </Button> : <Button variant="quiet" onClick={onEnd}>종료</Button>}
     </header>
     {reviewNote}
-    {children}
+    {swipe ? <ExerciseSwipe options={swipe} cardio={cardioFocus}>{children}</ExerciseSwipe> : children}
     {dim !== undefined && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
     {hasActions && <footer className={styles.footer} ref={footer}>{actions}</footer>}
   </div>
@@ -83,13 +100,13 @@ export function Warmup({ next }: { next: { name: string; target: string; equipme
   </>
 }
 
-export function ExerciseNavigation({ previous, next, onList, onGo }: {
-  previous?: Step; next?: Step; onList: () => void; onGo: (id: string) => void
+export function ExerciseNavigation({ previous, next, onList, onGo, preview = false }: {
+  previous?: Step; next?: Step; onList: () => void; onGo: (id: string) => void; preview?: boolean
 }) {
   return <nav className={styles.exerciseNav} aria-label="운동 종목 이동">
-    <Button variant="quiet" disabled={!previous} onClick={() => previous && onGo(previous.id)}>‹ 이전{previous && <small title={previous.name}>{previous.name}</small>}</Button>
-    <Button onClick={onList}>종목 목록</Button>
-    <Button variant="quiet" disabled={!next} onClick={() => next && onGo(next.id)}>다음 ›{next && <small title={next.name}>{next.name}</small>}</Button>
+    <Button variant="quiet" disabled={!previous} onClick={preview ? undefined : () => previous && onGo(previous.id)}>‹ 이전{previous && <small title={previous.name}>{previous.name}</small>}</Button>
+    <Button onClick={preview ? undefined : onList}>종목 목록</Button>
+    <Button variant="quiet" disabled={!next} onClick={preview ? undefined : () => next && onGo(next.id)}>다음 ›{next && <small title={next.name}>{next.name}</small>}</Button>
   </nav>
 }
 

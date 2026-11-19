@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useScreenHistory, useNavigationGuard, navigateTabRoot } from '../../app/navigation.ts'
+import { useScreenHistory, useNavigationGuard, navigateBack, navigateTabRoot, navigateToCurrentTabRoot } from '../../app/navigation.ts'
 import { Dialog } from '../../components/Dialog'
 import { useAuth } from './context.ts'
 import { LoginScreens } from './LoginScreens'
@@ -31,21 +31,29 @@ export function AuthApp() {
   const settingsScroll = useRef(0)
   const registerExitGuard = useCallback<ExitGuardRegistration>(guard => { localExitGuard.current = guard }, [])
   const registerRestExit = useCallback((guard: (() => boolean) | null) => { restExitGuard.current = guard }, [])
-  const navigate = useCallback(async (next: AppTab) => {
-    const before = controller.getSnapshot(), guard = localExitGuard.current
+  const tab = state.accountOpen ? 'settings' : selection?.userId === state.userId ? selection!.tab : 'home'
+  const navigateFromTabs = (next: AppTab) => {
+    if (next !== tab) { void navigate(next); return }
+    navigateToCurrentTabRoot(() => {
+      if (next !== 'home' || selection) void navigate(next, true)
+    })
+  }
+  const navigate = useCallback(async (next: AppTab, replace = false, children: Record<string, unknown> = {}) => {
+    if (next === tab && !replace) return false
+    const before = controller.getSnapshot(), guard = localExitGuard.current, origin = window.history.state?.overloadNavigation
     if (navigationPending.current || before.status !== 'authenticated' || before.pending !== null || !before.userId || restExitGuard.current?.() === false) return false
     navigationPending.current = true; setNavigating(true)
     try {
       const saved = await (guard?.() ?? Promise.resolve(true))
       setLocalExitIssue(!saved)
       const latest = controller.getSnapshot()
-      if (!saved || latest.status !== 'authenticated' || latest.pending !== null || latest.userId !== before.userId || localExitGuard.current !== guard) return false
-      if (latest.accountOpen) controller.closeAccount()
-      navigateTabRoot('app:' + before.userId, { userId: before.userId, tab: next })
+      if (!saved || latest.status !== 'authenticated' || latest.pending !== null || latest.userId !== before.userId || localExitGuard.current !== guard || window.history.state?.overloadNavigation !== origin) return false
+      if (latest.accountOpen) controller.closeAccount(false)
+      navigateTabRoot('app:' + before.userId, { userId: before.userId, tab: next }, children, latest.accountOpen ? '/' : undefined, replace)
       window.scrollTo(0, 0)
       return true
     } finally { navigationPending.current = false; setNavigating(false) }
-  }, [controller])
+  }, [controller, tab])
   useNavigationGuard(useCallback(async () => {
     const before = controller.getSnapshot(), guard = localExitGuard.current
     if (before.pending !== null || navigationPending.current || restExitGuard.current?.() === false) return false
@@ -74,7 +82,6 @@ export function AuthApp() {
   }, [controller])
   const busy = state.pending !== null
   const authenticated = state.status === 'authenticated'
-  const tab = state.accountOpen ? 'settings' : selection?.userId === state.userId ? selection!.tab : 'home'
   const settingsVisible = authenticated && tab === 'settings' && !state.accountOpen
   const catalogOpen = settingsVisible && selection?.settingsView === 'catalog' && !focused
   const restAlertsOpen = settingsVisible && selection?.settingsView === 'alerts' && !focused
@@ -86,15 +93,21 @@ export function AuthApp() {
     }
   }, [settingsMain])
   const rememberSettings = (button: HTMLButtonElement) => { settingsTrigger.current = button; settingsScroll.current = window.scrollY }
-  const settingsBack = () => setSelection(current => current && { ...current, settingsView: 'main' })
-  return <AppShell authenticated={authenticated} tab={tab} onNavigate={next => void navigate(next)} focused={focused && !state.accountOpen} busy={busy || navigating}>
+  const settingsBack = (canLeave?: () => boolean) => navigateBack(() => {
+    if (!canLeave || canLeave()) setSelection(current => current && { ...current, settingsView: 'main' }, true)
+  })
+  const accountBack = () => navigateBack(() => {
+    controller.closeAccount(false)
+    navigateTabRoot('app:' + state.userId, { userId: state.userId, tab: 'settings' }, {}, '/', true)
+  })
+  return <AppShell authenticated={authenticated} tab={tab} onNavigate={navigateFromTabs} focused={focused && !state.accountOpen} busy={busy || navigating}>
     <div id="auth-feedback" aria-live="polite">
       {state.issue && <div className="notice error" role="alert">{state.issue.message}</div>}
       {state.notice && !state.challenge && <p className="notice" role="status">{state.notice}</p>}
     </div>
     {state.status === 'checking' ? <section className="card stack" role="status"><p className="eyebrow">WELCOME BACK</p><h1>로그인 상태를<br />확인하고 있어요<span className="brand-dot">.</span></h1><p className="muted">잠시만 기다려 주세요.</p></section>
       : state.status === 'unavailable' ? <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
-      : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} /> : null
+      : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}
     {authenticated && tab === 'settings' && <SettingsMain hidden={!settingsMain} busy={busy}
       onAccount={async event => { rememberSettings(event.currentTarget); if (await flushLocal()) void controller.openAccount() }}

@@ -38,3 +38,4 @@ export function mountPanel(Component, props) {
 }
 
 export const useScreenHistory = (_key, initial) => useState(initial)
+export const navigateBack = fallback => fallback()

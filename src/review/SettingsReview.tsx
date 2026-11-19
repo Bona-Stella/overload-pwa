@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { navigateBack, useScreenHistory } from '../app/navigation.ts'
 import { Dialog } from '../components/Dialog.tsx'
 import { Button } from '../components/ui.tsx'
 import { AccountSettings } from '../features/auth/AccountSettings.tsx'
@@ -35,14 +36,16 @@ export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSave
   takeRestSaveFailure?: () => boolean
 }) {
   const mediaSources = useReviewMedia()
-  const [view, setView] = useState<View | null>(null)
+  const [view, setView] = useScreenHistory<View | null>('review-settings', null)
   const [accountMode, setAccountMode] = useState<keyof typeof accountProviders>('email')
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [rest, setRest] = useState(reviewRest)
   const trigger = useRef<HTMLButtonElement>(null)
   const menuScroll = useRef(0)
   const heading = useRef<HTMLHeadingElement>(null)
-  const back = () => setView(null)
+  const back = (canLeave?: () => boolean) => navigateBack(() => {
+    if (!canLeave || canLeave()) setView(null, true)
+  })
 
   useLayoutEffect(() => {
     if (!view && trigger.current) {

@@ -71,7 +71,7 @@ export class AuthController {
   private localWorkoutLocked = false
   private sessionRejected = false
   private readonly boundary?: AuthBoundary
-  constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route = (path: string) => window.history.pushState(null, '', path), boundary?: AuthBoundary) { this.api = api; this.now = now; this.navigate = navigate; this.route = route; this.boundary = boundary }
+  constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route: (path: string) => void = () => {}, boundary?: AuthBoundary) { this.api = api; this.now = now; this.navigate = navigate; this.route = route; this.boundary = boundary }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   private set(patch: Partial<AuthState>) { this.state = { ...this.state, ...patch, updatedAt: this.now() }; this.listeners.forEach(listener => listener()) }
@@ -271,20 +271,21 @@ export class AuthController {
     // deny() writes its synchronous fence before yielding; an IDB failure must remain visible.
     void this.boundary?.deny().catch(() => this.set({ offlineNetworkFailure: false, issue: { code: 'LOCAL_ACCESS_FAILED', message: '로컬 접근 차단을 저장하지 못했습니다. 저장소 설정을 확인해 주세요.' } }))
   }
-  async openAccount() {
+  async openAccount(updateRoute = true) {
     if (this.running || this.state.status !== 'authenticated' || !this.state.userId) return
     const entering = !this.state.accountOpen
     this.running = true
     const expected = this.state.userId, generation = ++this.generation
     this.set({ accountOpen: true, account: { ...emptyAccount(), resendAt: this.state.account.resendAt }, issue: null, notice: '', pending: 'account' })
-    if (entering) this.route('/account')
+    if (entering && updateRoute) this.route('/account')
     try { await this.readAccount(expected, generation) }
     catch (error) { this.accountFailure(error) }
     finally { await this.finish() }
   }
-  closeAccount() {
+  closeAccount(updateRoute = true) {
     if (this.running) return
-    this.generation++; this.set({ accountOpen: false, account: { ...emptyAccount(), resendAt: this.state.account.resendAt }, issue: null, notice: '' }); this.route('/')
+    this.generation++; this.set({ accountOpen: false, account: { ...emptyAccount(), resendAt: this.state.account.resendAt }, issue: null, notice: '' })
+    if (updateRoute) this.route('/')
   }
   async prepareGoogleContact() {
     const account = this.state.account

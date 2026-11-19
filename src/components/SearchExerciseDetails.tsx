@@ -4,7 +4,7 @@ import {CatalogDetail} from '../features/workout-online/PublicCatalog.tsx'
 import type {CatalogBrowseExercise} from '../features/workout-online/catalog-browse.ts'
 import {catalogDetailView} from '../features/workout-online/catalog-browse.ts'
 import type {WorkoutApi} from '../features/workout-online/api.ts'
-import {useScreenHistory} from '../app/navigation.ts'
+import {navigateBack,useScreenHistory} from '../app/navigation.ts'
 import {SearchDetailContext as Context} from './search-detail-context.ts'
 
 /** Navigate to the catalog's existing full detail page, retaining the underlying filter screen. */
@@ -17,6 +17,6 @@ export function SearchExerciseDetails({children,api,userId,preview=[]}:{children
  const seed:CatalogBrowseExercise=sample??{id:selected?.id??'',name:selected?.name??'',aliases:[],exerciseType:'WEIGHT',recordMethod:'SETS_REPS',instructionsKo:null,equipmentDescription:null}
  return <Context value={option=>{if(!option.exerciseId)return;origin.current=document.activeElement instanceof HTMLElement?document.activeElement:null;scroll.current=window.scrollY;setSelected({id:option.exerciseId,name:option.name})}}>
   <div data-exercise-detail-source hidden={!!selected} style={selected?undefined:{display:'contents'}}>{children}</div>
-  {selected&&<CatalogDetail exercise={seed} headingRef={heading} onBack={()=>{if(window.history.state?.overloadNavigation?.index>0)window.history.back();else setSelected(null,true)}} loadDetail={api&&userId?loadDetail:undefined}/>}
+  {selected&&<CatalogDetail exercise={seed} headingRef={heading} onBack={()=>navigateBack(()=>setSelected(null,true))} loadDetail={api&&userId?loadDetail:undefined}/>}
  </Context>
 }
