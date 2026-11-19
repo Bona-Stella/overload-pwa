@@ -92,19 +92,27 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
     {page?.next && <button className="outline" disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</button>}
   </section>
 }
-export function ClosedWorkout({ api, session, authorized, onServer, onInvalid, manufacturers = [], definitions = [], onBack, summary = false }: { summary?: boolean; api: WorkoutApi; session: Session; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; authorized: () => boolean; onServer: (server: Session) => void; onInvalid?: (error: unknown) => void }) {
+export function ClosedWorkout({ api, session, authorized, onServer, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false }: { summary?: boolean; api: WorkoutApi; session: Session; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session) => void; onInvalid?: (error: unknown) => void }) {
   const [initial] = useState(() => ({ session, authorized, onServer, onInvalid })) // The parent keys this panel by account/generation/session, not version.
+  const [opened, setOpened] = useState(false)
+  // A session check can interrupt the first read after restoring a history entry.
+  const canOpen = accountReady || opened
   const [view, setView] = useState<{ controller: ClosedWorkoutController; state: ClosedState } | null>(null)
   useEffect(() => {
+    if (!canOpen) return
     const store = new WorkoutStore(), c = new ClosedWorkoutController(api, store, initial.session, initial.session.id, initial.authorized, initial.onServer, undefined, initial.onInvalid)
-    const unsubscribe = c.subscribe(() => setView({ controller: c, state: c.getSnapshot() }))
+    const unsubscribe = c.subscribe(() => {
+      const state = c.getSnapshot()
+      if (!state.busy) setOpened(true)
+      setView({ controller: c, state })
+    })
     void c.open()
     return () => { unsubscribe(); c.stop(); void store.close() }
-  }, [api, initial])
-  return view ? <ClosedWorkoutView {...view} manufacturers={manufacturers} definitions={definitions} onBack={onBack} summary={summary} reviewContent={<SavedWeightReview api={api} session={view.state.server??session} readOnly={!summary} disabled={view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh}/>} /> : <p role="status">종료 기록을 확인 중입니다.</p>
+  }, [api, initial, canOpen])
+  return canOpen && view ? <ClosedWorkoutView {...view} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} reviewContent={<SavedWeightReview api={api} session={view.state.server??session} readOnly={!summary} disabled={view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh}/>} /> : <p role="status">종료 기록을 확인 중입니다.</p>
 }
 type EditTarget = { kind: 'SET'; record: PerformedSet } | { kind: 'CARDIO'; record: Extract<CardioResult, { status: 'COMPLETED' }> } | { kind: 'SKIPPED'; record: Extract<CardioResult, { status: 'SKIPPED' }> }
-export function ClosedWorkoutView({ state, controller, manufacturers = [], definitions = [], onBack = () => {}, summary = false, reviewContent }: { reviewContent?:ReactNode; summary?: boolean; state: ClosedState; controller: ClosedWorkoutController; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void }) {
+export function ClosedWorkoutView({ state, controller, manufacturers = [], definitions = [], onBack = () => {}, backLabel, summary = false, reviewContent }: { reviewContent?:ReactNode; summary?: boolean; state: ClosedState; controller: ClosedWorkoutController; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string }) {
   const [mode, setMode] = useState<'correction' | 'history' | null>(null)
   const [dialog, setDialog] = useState<'delete' | 'recovery' | EditTarget | null>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
@@ -179,7 +187,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     {[...new Set(server.snapshot.approvalResults.filter(r=>r.status==='PENDING').map(r=>r.sessionExerciseId))].map(id=><ClosedApproval key={id} server={server} id={id} controller={controller} disabled={disabled}/>)}
     {dialogs}
   </section>
-  return <><WorkoutSummary reviewContent={reviewContent} {...summaryData(server,state.assessment,definitions,state.copies.some(c => c.originalCombinationChanged === true))} manufacturers={manufacturers} onBack={onBack}
+  return <><WorkoutSummary reviewContent={reviewContent} {...summaryData(server,state.assessment,definitions,state.copies.some(c => c.originalCombinationChanged === true))} manufacturers={manufacturers} onBack={onBack} backLabel={backLabel}
     detail={!summary} recordMenu={!summary?menu:undefined} timing={!summary?{start:clockTime(server.startedAt,server.startedTimeZone),end:clockTime(server.endedAt,server.startedTimeZone)}:undefined}>
     {status}
   </WorkoutSummary>{!summary&&dialogs}</>

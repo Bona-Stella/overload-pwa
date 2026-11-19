@@ -33,11 +33,11 @@ const formatKg = (value: bigint) => {
   return (value / 1000000n).toLocaleString('ko-KR') + (fraction ? '.' + fraction : '') + 'kg'
 }
 
-export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewUnavailable = 0, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent, recordFacts, recordRange, achievementReasons = {} }: {
+export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, backLabel, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewUnavailable = 0, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent, recordFacts, recordRange, achievementReasons = {} }: {
   recordFacts?:RecordSummary;recordRange?:string;achievementReasons?:Record<string,string[]>
   routine: string; date: string; recordTime?:string; elapsed?: number; deload: boolean; weights: WeightSummary[]; dataNote?: string
   onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>;reviewContent?:ReactNode; historicalWeights?: WeightSummary[]; previewApproval?: boolean; reviewExcluded?: boolean; timing?: { start: string; end: string }; detail?: boolean; recordMenu?: ReactNode; children?: ReactNode; reviewState?: 'ready' | 'unavailable'; reviewIssue?: string; reviewUnavailable?: number
-  cardio: CardioSummary[]; manufacturers: Manufacturer[]; plannedSets: number; whole: boolean; onBack: () => void
+  cardio: CardioSummary[]; manufacturers: Manufacturer[]; plannedSets: number; whole: boolean; onBack: () => void; backLabel?: string
 }) {
   const results = weights.flatMap(weight => weight.results)
   const volume = sumVolume(results)
@@ -48,8 +48,9 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
   const completedCardio = cardio.filter(item => item.phase === 'completed').length
   const cardioCount = `${completedCardio}/${cardio.length}`
   const weightVolume = unknown && unknown === results.length ? '미확인' : formatKg(volume)
+  const returnLabel = backLabel ?? (detail ? '기록으로' : '홈으로')
   return <article className={`${styles.summary} ${detailStyles.detail}`}>
-    <RecordSubpageHeader title={detail ? '운동 기록 상세' : '운동 기록 요약'} onBack={onBack} backLabel={detail ? '기록으로' : '홈으로'} />
+    <RecordSubpageHeader title={detail ? '운동 기록 상세' : '운동 기록 요약'} onBack={onBack} backLabel={returnLabel} />
     <Card hero className={styles.summaryHeader}>
       {deload && <p className={styles.eyebrow}>DELOAD</p>}
       <div className={detailStyles.summaryTop}>
@@ -136,6 +137,6 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
     </Card>}
     {children}
     <Card className={detailStyles.preservation}><h2>기록 보존 안내</h2><p className="muted small">{dataNote??'합성 데이터 · 이 탭에서만 확인할 수 있는 시연 결과입니다.'}</p></Card>
-    <Button onClick={onBack}>{detail?'기록으로 돌아가기':'홈으로 돌아가기'}</Button>
+    <Button className={detail ? detailStyles.returnButton : undefined} onClick={onBack}>{returnLabel} 돌아가기</Button>
   </article>
 }

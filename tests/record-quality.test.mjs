@@ -67,10 +67,65 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   socket.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}if(m.method==='Page.javascriptDialogOpening'){dialogCount++;void send('Page.handleJavaScriptDialog',{accept:acceptDialogs})}if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(m.method==='Network.requestWillBeSent'&&new URL(m.params.request.url).pathname.startsWith('/api/'))api.push(m.params.request.url)}
   socket.onclose=()=>{for(const p of pending.values())p.reject(Error('Chrome closed'));pending.clear()}
   await send('Page.enable');await send('Page.addScriptToEvaluateOnNewDocument',{source:`{const BaseDate=Date,offset=Date.parse('2026-11-11T03:00:00Z')-BaseDate.now();window.Date=class extends BaseDate{constructor(...args){super(...(args.length?args:[BaseDate.now()+offset]))}static now(){return BaseDate.now()+offset}}}`});await send('Runtime.enable');await send('Network.enable')
+  await go('/routine-preview?tab=home')
+  const homeCard = '[aria-label="홈"] [data-session-id]'
+  await wait(() => evaluate(`document.querySelector('[aria-label="홈"] header img[alt="OVERLOAD"]')?.naturalWidth > 0`), 'home wordmark')
+  for (const w of [320, 375, 393, 430, 1280]) {
+   await width(w)
+   assert.ok(await evaluate(`(() => {
+    const logo = document.querySelector('[aria-label="홈"] header img[alt="OVERLOAD"]')
+    const logoBox = logo.getBoundingClientRect(), statusBox = logo.nextElementSibling.getBoundingClientRect()
+    const card = document.querySelector(${JSON.stringify(homeCard)})
+    return logoBox.left >= 0 && logoBox.right < statusBox.left && statusBox.right <= innerWidth
+      && Math.abs(logoBox.height - logoBox.width * logo.naturalHeight / logo.naturalWidth) < 1
+      && getComputedStyle(card).borderRadius === '5px'
+   })()`), 'home logo and recent card at ' + w)
+  }
+  await send('Emulation.setDeviceMetricsOverride', {width:393,height:600,deviceScaleFactor:1,mobile:true})
+  const recent = await evaluate(`(() => {
+   const card = document.querySelector(${JSON.stringify(homeCard)}), name = card.querySelector('strong').textContent
+   card.scrollIntoView({block:'center'})
+   const box = card.getBoundingClientRect()
+   return {id:card.dataset.sessionId,name,scroll:scrollY,x:box.left+12,y:box.top+box.height/2}
+  })()`)
+  assert.ok(recent.scroll > 0)
+  await send('Input.dispatchMouseEvent', {type:'mousePressed',x:recent.x,y:recent.y,button:'left',clickCount:1})
+  await send('Input.dispatchMouseEvent', {type:'mouseReleased',x:recent.x,y:recent.y,button:'left',clickCount:1})
+  await title('운동 기록 상세')
+  assert.equal(await evaluate('history.state.overloadNavigation.values["review-record"].id'), recent.id)
+  await title(recent.name)
+  assert.equal(await evaluate('document.querySelector("dialog[open]") === null'), true)
+  await click('홈으로')
+  const restoredHome = () => wait(() => evaluate(`document.querySelector(${JSON.stringify(homeCard)})?.getClientRects().length && Math.abs(scrollY - ${recent.scroll}) <= 1`), 'home scroll restored')
+  await restoredHome()
+  await evaluate('history.forward()'); await title('운동 기록 상세')
+  await evaluate('history.back()'); await restoredHome()
+  await evaluate('history.forward()'); await title('운동 기록 상세')
+  const verifyRecordReturnButton = async label => {
+   for (const w of [320, 393]) {
+    await send('Emulation.setDeviceMetricsOverride', {width:w,height:600,deviceScaleFactor:1,mobile:true})
+    assert.ok(await evaluate(`(() => {
+     const button = [...document.querySelectorAll('article > button')].find(e => e.textContent === ${JSON.stringify(label)} && e.getClientRects().length)
+     if (!button) return false
+     const box = button.getBoundingClientRect(), article = button.parentElement.getBoundingClientRect()
+     return getComputedStyle(button).borderRadius === '5px' && box.height >= 44
+       && Math.abs(box.left - article.left) < 1 && Math.abs(box.right - article.right) < 1
+       && box.left >= 0 && box.right <= innerWidth
+    })()`), label + ' at ' + w)
+   }
+  }
+  await verifyRecordReturnButton('홈으로 돌아가기')
+  await click('홈으로 돌아가기'); await restoredHome()
+  await click('전체 보기 ›', '[aria-label="최근 운동"] button')
+  await title('전체 운동 이력')
+  report.navigation.push('home recent card/session detail/top and bottom return/browser back and forward/home scroll/all history')
   await go('/routine-preview?tab=history');await title('이번 주 요약')
   await click('운동 현황 ›');await title('운동 현황');await tab('홈');await tab('기록');await title('이번 주 요약');report.navigation.push('records/activity/home/records/root')
   await click('주간 근육 계획 ›');await title('주간 근육 계획');await tab('루틴');await tab('기록');await title('이번 주 요약');report.navigation.push('records/plan/routines/records/root')
   await click('전체 보기 ›');await title('전체 운동 이력');await click((await evaluate('document.querySelector(".session-record-card").textContent.trim()')),'.session-record-card');await title('운동 기록 상세');assert.doesNotMatch(await body(),/중량 검토/);await click('기록으로');await title('전체 운동 이력');report.navigation.push('history/detail/back/history')
+  await evaluate('history.forward()'); await title('운동 기록 상세')
+  await verifyRecordReturnButton('기록으로 돌아가기')
+  await click('기록으로 돌아가기'); await title('전체 운동 이력')
   await tab('기록');await click('운동 현황 ›');await title('운동 현황');await click('기록으로');await title('이번 주 요약');report.navigation.push('activity/back/root')
   await send('Runtime.evaluate',{expression:'history.forward()'});await title('운동 현황');await tab('기록');await title('이번 주 요약');report.navigation.push('browser forward and same tab root')
   const captures=[]

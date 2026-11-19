@@ -1,7 +1,7 @@
 .home { display: flex; flex-direction: column; gap: 13px; min-width: 0; line-height: normal; }
 .home h2 { font-size: 13px; margin: 0; }
 .homeHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; margin-bottom: -1px; }
-.brand { flex: none; font-size: 18px; font-weight: 700; letter-spacing: .06em; }
+.brand { display: block; flex: none; width: clamp(112px, 35vw, 148px); height: auto; }
 .headerIcon { margin-left: auto; display: flex; }
 .home .today { display: block; padding: 16px 13px; border-radius: 5px; }
 .kicker { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; font-weight: 750; color: var(--accent); margin: 0 0 10px; }
@@ -49,7 +49,7 @@
 .weekFooter span { color: var(--text-muted); font-size: 10px; }
 .weekFooter button { padding: 6px; font-size: 11px; min-height: 32px; }
 .recent { display: grid; gap: 7px; }
-.home .record { display:grid; grid-template-columns:minmax(0,1fr) max-content 18px 6px; align-items:center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; text-align: left; padding: 10px; background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); }
+.home .record { display:grid; grid-template-columns:minmax(0,1fr) max-content 18px 6px; align-items:center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; text-align: left; padding: 10px; background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: 5px; }
 .recordDate { grid-column:1 / -1; font-size:11px; white-space:nowrap; color: var(--accent); }
 .recordName { flex: 1; min-width: 24px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
 .recordFacts { display: flex; flex: none; gap: 8px; color: var(--text-primary); font-size: 13px; line-height: 18px; }

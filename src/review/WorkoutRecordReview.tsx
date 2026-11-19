@@ -8,7 +8,7 @@ import { manufacturers, reviewToday } from './routine-samples.ts'
 import { makeCardio, sessionAdvice, setVolume, weightDone } from './workout-model.ts'
 import type { ReviewRecord } from './workout-model.ts'
 
-export function WorkoutRecordReview({ record, onBack, detail = false,onPreviewApprove }: {onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>; record: ReviewRecord; onBack: () => void; detail?: boolean }) {
+export function WorkoutRecordReview({ record, onBack, backLabel, detail = false,onPreviewApprove }: {onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>; record: ReviewRecord; onBack: () => void; backLabel?: string; detail?: boolean }) {
   const saved=reviewRecordSession(record)
   const { session, endedAt } = record
   const { initialPlan, weights, cardio } = session
@@ -37,7 +37,7 @@ export function WorkoutRecordReview({ record, onBack, detail = false,onPreviewAp
     reviewExcluded={removed.length > 0 || weights.some(w => {
       const initial=initialPlan.weightExercises.find(p => p.sessionExerciseId===w.id)
       return !!initial && (initial.manufacturerId!==w.manufacturerId || initial.loadType!==w.loadType)
-    })} manufacturers={manufacturers} plannedSets={plannedSets} whole={whole} onBack={onBack}
+    })} manufacturers={manufacturers} plannedSets={plannedSets} whole={whole} onBack={onBack} backLabel={backLabel}
     weights={[...summaryWeights, ...removed.map(p => ({ id: p.sessionExerciseId, name: p.exerciseName, planned: p.setCount, goal: goal(p),
       results: [], referenceKg: p.approvedWeightKg }))]}
     cardio={[

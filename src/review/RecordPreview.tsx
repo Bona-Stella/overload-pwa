@@ -10,14 +10,12 @@ import type { PresetSchedule } from '../features/workout-online/preset-schedule.
 import { WorkoutSummary } from '../features/workout-flow/WorkoutSummary.tsx'
 import { summaryData } from '../features/workout-online/summary-data.ts'
 import { manufacturers, scope, reviewToday } from './routine-samples.ts'
-import { useScreenHistory } from '../app/navigation.ts'
 import { RecordDisplayContext } from '../features/statistics/RecordDisplayContext.ts'
 import { recordPreviewData, reviewRecordSession } from './record-data.ts'
 import { activitySample } from './activity-sample.ts'
 
-export function RecordPreview({ routines, schedule, sessions, days, records = [], onReviewRecord, initialPreset }: { routines: Routine[]; schedule: PresetSchedule; sessions: Session[]; days: PlannedDay[]; records?:ReviewRecord[]; onReviewRecord?:(id:string)=>void; initialPreset?: string }) {
+export function RecordPreview({ routines, schedule, sessions, days, records = [], selected, onOpen, onBack, backLabel, initialPreset }: { routines: Routine[]; schedule: PresetSchedule; sessions: Session[]; days: PlannedDay[]; records?: ReviewRecord[]; selected?: string; onOpen: (id: string) => void; onBack: () => void; backLabel?: string; initialPreset?: string }) {
  const [fault,setFault]=useState('normal')
- const [selected,setSelected]=useScreenHistory<string|null>('review-record',null)
  const fixture=useMemo(()=>recordPreviewData(routines,schedule,sessions,days,fault==='empty',records.map(reviewRecordSession)),[routines,schedule,sessions,days,fault,records])
  const preview=useMemo(()=>fault==='normal'&&new URLSearchParams(window.location.search).get('activity-demo')==='states'
   ? {...fixture,activity:activitySample(fixture,routines)} : fixture,[fixture,routines,fault])
@@ -35,9 +33,9 @@ export function RecordPreview({ routines, schedule, sessions, days, records = []
   }}
   return {statistics:new StatisticsApi(transport),workout:new WorkoutApi(transport)}
  },[fixture,routines,fault])
- const record=fixture.sessions.find(s=>s.id===selected)
- return <RecordDisplayContext value={preview}>{record?<WorkoutSummary {...summaryData(record,null,fixture.definitions)} detail dataNote="UI 검토 · 합성 수행 기록. 실제 저장·정정·승인 요청 없음." manufacturers={manufacturers} onBack={()=>window.history.back()} />:<>
+ const record=fixture.sessions.find(s=>s.id===selected) ?? fixture.evidence.find(s=>s.id===selected)
+ return <RecordDisplayContext value={preview}>{record?<WorkoutSummary {...summaryData(record,null,fixture.definitions)} detail dataNote="UI 검토 · 합성 수행 기록. 실제 저장·정정·승인 요청 없음." manufacturers={manufacturers} onBack={onBack} backLabel={backLabel} />:<>
   <details className="record-preview-controls"><summary>합성 데이터 시연 설정</summary><label>기록 조회 시연<select value={fault} onChange={e=>setFault(e.target.value)}><option value="normal">정상</option><option value="empty">빈 기록</option><option value="loading">느린 조회</option><option value="error">조회 오류</option></select></label></details>
-  <StatisticsPanel initialPreset={initialPreset} api={statistics} workoutApi={workout} scope={scope} schedule={{...schedule,timeZone:'Asia/Seoul',appliedVersion:'1',appliedAt:reviewToday+'T00:00:00Z',nextRotationAt:null,renameSupported:true}} definitions={fixture.definitions} refreshKey={fault} onOpen={id=>{if(records.some(r=>r.session.id===id)&&onReviewRecord)onReviewRecord(id);else setSelected(id);window.scrollTo(0,0)}} onInvalid={()=>{}} />
+  <StatisticsPanel initialPreset={initialPreset} api={statistics} workoutApi={workout} scope={scope} schedule={{...schedule,timeZone:'Asia/Seoul',appliedVersion:'1',appliedAt:reviewToday+'T00:00:00Z',nextRotationAt:null,renameSupported:true}} definitions={fixture.definitions} refreshKey={fault} onOpen={onOpen} onInvalid={()=>{}} />
  </>}</RecordDisplayContext>
 }

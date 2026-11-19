@@ -26,6 +26,7 @@ import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import './online.css'
 import { ClosedWorkout } from './ClosedWorkout.tsx'
 import { useScreenHistory } from '../../app/navigation.ts'
+import { useRecordDetailHistory } from '../history/useRecordDetailHistory.ts'
 import { WeeklyMusclePlan } from '../statistics/MuscleAnalysis.tsx'
 import { offlineAccess } from '../workout-local/offline.ts'
 import type { LocalWorkout } from '../workout-local/types.ts'
@@ -330,14 +331,22 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     return () => abort.abort()
   }, [api, controller, nameUser, nameKey, missingNames])
   const sessionDefinitions = [...(state.data?.exercises ?? []), ...(retainedNames?.key === nameKey ? retainedNames.exercises : [])]
-  const [recordRoute, setRecordRoute] = useScreenHistory<string | null>('record-detail:' + state.scope?.userId + ':' + state.scope?.dataGeneration, null)
+  const { route: recordRoute, setRoute: setRecordRoute, open: openRecordRoute, back: backFromRecord } =
+    useRecordDetailHistory('record-detail:' + state.scope?.userId + ':' + state.scope?.dataGeneration, tab)
   const [summaryRecord, setSummaryRecord] = useState<string | null>(null)
   const [,setRecordsScreen]=useScreenHistory('records:'+(state.scope?.userId??'')+':'+(state.scope?.dataGeneration??''),'summary')
   const recordIdentity = session && session.status !== 'ACTIVE' ? [session.userId, session.dataGeneration, session.id].join(':') : null
-  const recordFocused = !!recordIdentity && recordRoute === session?.id
+  const recordId = tab === 'home' || tab === 'history' ? recordRoute?.id : undefined
+  const recordFocused = !!recordIdentity && recordId === session?.id
+  const recordAttempt = useRef<string | null>(null)
   useEffect(() => {
-    if (recordRoute && tab === 'history' && accountReady && state.scope && !state.active && state.detail?.status !== 'ACTIVE' && state.detail?.id !== recordRoute) void controller.showDetail(recordRoute)
-  }, [recordRoute, tab, accountReady, state.scope, state.active, state.detail?.status, state.detail?.id, controller])
+    if (!accountReady || recordAttempt.current !== recordId) recordAttempt.current = null
+    if (recordId && accountReady && state.status === 'ready' && !state.busy && state.detail?.status !== 'ACTIVE'
+      && state.detail?.id !== recordId && recordAttempt.current !== recordId) {
+      recordAttempt.current = recordId
+      void controller.showDetail(recordId)
+    }
+  }, [recordId, accountReady, state.status, state.busy, state.detail?.status, state.detail?.id, controller])
   const [referenceHistory, setReferenceHistory] = useState<{ key: string; sessions: Session[]; references:ReferenceRecord[]; routine:Routine|null } | null>(null)
   const referenceUser = accountReady && session?.status === 'ACTIVE' ? session.userId : null
   const referenceGeneration = referenceUser ? session!.dataGeneration : null
@@ -377,12 +386,12 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       void (async () => {
         if (onNavigate && !await onNavigate('history')) return
         const latest = controller.getSnapshot()
-        if (latest.scope?.userId === finished.userId && latest.scope.dataGeneration === finished.dataGeneration && latest.detail?.id === finished.id) setRecordRoute(finished.id, true)
+        if (latest.scope?.userId === finished.userId && latest.scope.dataGeneration === finished.dataGeneration && latest.detail?.id === finished.id) setRecordRoute({ id: finished.id }, true)
       })()
     }
   }, [focused, session, onNavigate, controller, setRecordRoute])
   useEffect(() => {
-    onFocusChange?.(visible && (focused || tab === 'history' && recordFocused || tab === 'routines' && editingRoutine))
+    onFocusChange?.(visible && (focused || recordFocused || tab === 'routines' && editingRoutine))
     return () => onFocusChange?.(false)
   }, [visible, focused, tab, editingRoutine, recordFocused, onFocusChange])
   const settingsDetail = onSettingsBack && (restOpen ? <RestSettings key={state.userId + ':' + state.scope?.dataGeneration}
@@ -404,7 +413,17 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   }
   const navigate = async (next: AppTab) => onNavigate ? onNavigate(next) : flush()
   const openRecord = async (id: string) => {
-    if (await navigate('history')) { setSummaryRecord(null); await controller.showDetail(id); if (controller.getSnapshot().detail?.id === id) setRecordRoute(id); window.scrollTo(0, 0) }
+    const entry = window.history.state?.overloadNavigation
+    const returnScroll = window.scrollY
+    if (!accountReady || !await flush() || controller.getSnapshot().busy) return
+    const stillAtOrigin = () => window.history.state?.overloadNavigation === entry
+    if (!stillAtOrigin()) return
+    await controller.showDetail(id)
+    const { detail, issue } = controller.getSnapshot()
+    if (stillAtOrigin() && !issue && detail?.id === id && detail.status !== 'ACTIVE') {
+      setSummaryRecord(null)
+      openRecordRoute(id, returnScroll)
+    }
   }
   const resume = async () => {
     if (!state.active || !await flush()) return
@@ -419,7 +438,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   }
   return <CombinationMemoProvider key={state.scope?.userId + ':' + state.scope?.dataGeneration}><SearchExerciseDetails api={api} userId={state.scope?.userId}>
     {visible && navigationIssue && <StatusNotice error>입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.</StatusNotice>}
-    <div hidden={!visible || focused || tab !== 'home'}>{visible && !localOnly && (state.status === 'ready' && state.scope && state.data ? <HomePanel
+    <div hidden={!visible || focused || recordFocused || tab !== 'home'}>{visible && !localOnly && (state.status === 'ready' && state.scope && state.data ? <HomePanel
       key={'home:' + state.scope.userId + ':' + state.scope.dataGeneration} scope={state.scope} routines={state.data.routines} api={api} training={training} statistics={statistics} visit={visit.count}
       refreshKey={scheduleRevision} active={state.active} attempt={state.attempt !== null} busy={state.busy} localReady={state.localReady}
       issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void resume()} onRetry={() => void controller.start()}
@@ -453,8 +472,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       referenceRecords={referenceHistory?.key===referenceKey?referenceHistory.references:[]} referenceRoutine={referenceHistory?.key===referenceKey?referenceHistory.routine:null}
       server={session} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline}
       sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: server => { if (server.status === 'FINISHED') { setSummaryRecord([server.userId, server.dataGeneration, server.id].join(':')) } controller.observeSession(server) }, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
-    <div hidden={!visible || focused || !recordFocused || tab !== 'history'}>{visible && !localOnly && recordFocused && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} summary={summaryRecord === recordIdentity} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions}
-      onBack={() => { if (summaryRecord === recordIdentity) { setSummaryRecord(null); setRecordRoute(null, true); void navigate('home') } else if (window.history.state?.overloadNavigation?.index > 0) window.history.back(); else setRecordRoute(null, true); window.scrollTo(0, 0) }} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
+    <div hidden={!visible || focused || !recordFocused}>{visible && !localOnly && recordFocused && state.scope && session && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} accountReady={accountReady} summary={summaryRecord === recordIdentity} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions} backLabel={tab === 'home' ? '홈으로' : undefined}
+      onBack={() => { if (summaryRecord === recordIdentity) { setSummaryRecord(null); setRecordRoute(null, true); void navigate('home') } else backFromRecord() }} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
     }} />}</div>

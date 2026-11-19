@@ -20,6 +20,8 @@ import type { SchedulePreset } from '../workout-online/preset-schedule.ts'
 import routineStyles from '../workout-online/Routine.module.css'
 import styles from './Home.module.css'
 
+const wordmark = new URL('../../assets/OVERLOAD_white_transparent_4x.png', import.meta.url).href
+
 export function RoutinePlan({ routine }: { routine: Routine }) {
   const weights = activeWeights(routine), cardio = activeCardio(routine)
   return <>
@@ -133,7 +135,7 @@ export function HomeView(props: HomeViewProps) {
   const status = dayStatus(day, selected, today, selectedEvidence ? partialAchievement(selectedEvidence) : 'unknown')
   useEffect(() => { if (override?.date === today && chosen?.id === override.id && chooser.current) chooser.current.open = false }, [override, chosen, today])
   return <section className={styles.home} aria-label="홈">
-    <header className={styles.homeHeader}><span className={styles.brand}>OVERLOAD</span>{props.header ?? <span className={styles.headerIcon} title="디로딩 분석 상태 미연동"><DeloadMoon /></span>}</header>
+    <header className={styles.homeHeader}><img className={styles.brand} src={wordmark} alt="OVERLOAD" width={3624} height={428} />{props.header ?? <span className={styles.headerIcon} title="디로딩 분석 상태 미연동"><DeloadMoon /></span>}</header>
     {props.headerActions}
     {props.issue && <StatusNotice error>{props.issue}</StatusNotice>}
     {loading ? <StatusNotice>오늘의 루틴과 일정을 불러오고 있습니다.</StatusNotice> : !data ? <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
