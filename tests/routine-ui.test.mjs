@@ -442,7 +442,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     const listRadius = await evaluate(`getComputedStyle(document.querySelector('article[aria-label^="상체 PUSH"]')).borderRadius`)
     await tap('article[aria-label^="상체 PUSH"] button[aria-label$="상세"]')
     assert.equal(await evaluate(`document.querySelectorAll('article details[open]').length`),0,'another card selection closes the menu')
-    assert.equal(await evaluate('window.listUi.selected.at(-1)'),await evaluate('window.listUi.ids[0]'))
+    assert.equal(await evaluate('window.listUi.selected.length'),0,'opening a routine does not block on selecting it for a write')
     const detail = 'section[aria-label="루틴 상세"]'
     const closeDetail = async () => {
       await wait(() => evaluate(`!!document.querySelector('${detail}')?.getClientRects().length`), 'routine detail restored')
@@ -548,11 +548,11 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await evaluate(`document.querySelector('[aria-label="루틴 태그"]').click()`)
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="루틴 태그 선택"] [role="option"]').length`),11,'creation and editing reuse exactly the same descriptive dropdown')
     await evaluate(`document.querySelector('[aria-label="루틴 태그"]').click()`)
-    assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction+1,'edit loads its routine once and opens only the editor')
+    assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction,'edit uses the scoped routine and opens only the editor')
     await tap(editForm+' button[aria-label="루틴 목록으로"]')
     await tap('article[aria-label^="상체 PUSH"] summary');await tap('article[aria-label^="상체 PUSH"] details button:last-child')
     assert.equal(await evaluate('window.listUi.deleted.at(-1)'),await evaluate('window.listUi.ids[0]'))
-    assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction+2,'edit/delete each load once without a bubbling card-detail selection')
+    assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction+1,'delete verifies once without a bubbling card-detail selection')
     await click('주간 일정 편집')
     await wait(()=>evaluate(`!!document.querySelector('form[aria-label="주간 일정 편집"]')`))
     assert.equal(await evaluate(`document.querySelectorAll('form select[aria-label$="요일 루틴"]').length`),7)

@@ -15,6 +15,7 @@ registerHooks({load(url,context,next){
   return next(url,context)
 }})
 const {StatisticsView,WeightChart}=await import('../src/features/statistics/StatisticsPanel.tsx')
+const { ActivityTrendChart } = await import('../src/features/statistics/ActivityTrendChart.tsx')
 const { SearchResults } = await import('../src/components/SearchList.tsx')
 const { actualAnalysis } = await import('../src/features/statistics/muscle-analysis.ts')
 const {ScheduleEditor}=await import('../src/features/statistics/WeeklySchedulePanel.tsx')
@@ -25,6 +26,17 @@ const fixture=()=>({...scope,...period,planCoverage:'PARTIAL_SCHEDULE_HISTORY',p
   exercises:[{standardExerciseId:OTHER,name:'스쿼트',weights:{...weights}}],muscles:[{id:OTHER,name:'대퇴사두근',groupCode:'LEGS',role:'PRIMARY',weights:{...weights},contributionSets:'3.0'},
     {id:scope.userId,name:'보조근',groupCode:'LEGS',role:'SECONDARY',weights:{...weights},contributionSets:'1.5'}],groupActuals:[{groupCode:'LEGS',completedSets:'3'}],groups:[{groupCode:'LEGS',role:'PRIMARY',weights:{...weights}}],
   cardio:[{kind:'TREADMILL',name:'달리기',activeMs:'1800000',distanceKm:'3.8',recordsWithoutDistance:'0'}],recentSessions:[]})
+
+test('activity trend renders known values from one snapshot and distinguishes zero, unknown and exact decimal labels', () => {
+  const html = renderToStaticMarkup(React.createElement(ActivityTrendChart, { label: '총중량', unit: 'kg', data: [
+    { id: 'mon', label: '월', value: '0' }, { id: 'tue', label: '화', value: null }, { id: 'wed', label: '수', value: '52.500001' },
+  ] }))
+  assert.match(html, /data-activity-point="월"[^]*?height="0"[^]*?data-value="0"/)
+  assert.match(html, /data-activity-point="수"[^]*?data-value="52\.500001"/)
+  assert.match(html, /화: 확인 불가/)
+  assert.match(html, /수: 52\.500001kg/)
+  assert.equal((html.match(/data-value=/g) ?? []).length, 2)
+})
 
 test('overview uses authenticated GET with no write body and preserves the original abort signal',async()=>{
   let request

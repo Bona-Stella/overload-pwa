@@ -6,13 +6,12 @@ import type { LiveSchedule } from '../statistics/weekly-schedule.ts'
 import { WeeklyScheduleApi, scheduleIssue } from '../statistics/weekly-schedule.ts'
 import { readHomeAnalysis, readHomeProtection } from '../statistics/deload-home.ts'
 import type { HomeAnalysis, HomeProtection } from '../statistics/deload-home.ts'
-import { boundaryError } from '../home/load.ts'
+import { boundaryError, readAccessDenied } from '../home/load.ts'
 type Snapshot = {
   owner: string
   request: string
   schedule?: LiveSchedule
   protection?: HomeProtection
-  analysis?: HomeAnalysis
   issue?: string
   scheduleVerified: boolean
 }
@@ -20,6 +19,7 @@ type Snapshot = {
 export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | null, revision: string, onInvalid: (error: unknown) => void, enabled = true) {
   const [api] = useState(() => new WeeklyScheduleApi(transport))
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
+  const [analysis, setAnalysis] = useState<{ owner: string; value: HomeAnalysis } | null>(null)
   const [reload, setReload] = useState(0)
   const [saving, setSaving] = useState<{ owner: string; abort: AbortController } | null>(null)
   const [writeIssue, setWriteIssue] = useState<{ owner: string; text: string } | null>(null)
@@ -42,13 +42,21 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     const abort = new AbortController()
     readFlight.current = abort
     const scope = { userId, dataGeneration }
-    void Promise.allSettled([
-      api.read(scope, abort.signal),
-      readHomeProtection(transport, scope, abort.signal),
-      readHomeAnalysis(transport, scope, abort.signal),
-    ]).then(([schedule, protection, analysis]) => {
+    const scheduleRead = api.read(scope, abort.signal)
+    void scheduleRead.then(schedule => {
       if (abort.signal.aborted) return
-      for (const result of [schedule, protection, analysis]) {
+      setSnapshot(previous => previous?.owner === owner ? { ...previous, schedule } : { owner, request: '', schedule, scheduleVerified: false })
+    }, () => {})
+    void readHomeAnalysis(transport, scope, abort.signal).then(value => {
+      if (!abort.signal.aborted) setAnalysis({ owner, value })
+    }).catch(error => {
+      if (abort.signal.aborted) return
+      if (boundaryError(error)) onInvalid(error)
+      if (readAccessDenied(error)) setAnalysis(null)
+    })
+    void Promise.allSettled([scheduleRead, readHomeProtection(transport, scope, abort.signal)]).then(([schedule, protection]) => {
+      if (abort.signal.aborted) return
+      for (const result of [schedule, protection]) {
         if (result.status === 'rejected' && boundaryError(result.reason)) { onInvalid(result.reason); return }
       }
       const issue = schedule.status === 'rejected' ? '주간 일정을 조회하지 못했습니다. 다시 조회해 주세요.'
@@ -56,9 +64,8 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
       setSnapshot(previous => ({
         owner, request, issue,
         scheduleVerified: schedule.status === 'fulfilled',
-        schedule: schedule.status === 'fulfilled' ? schedule.value : previous?.owner === owner ? previous.schedule : undefined,
+        schedule: schedule.status === 'fulfilled' ? schedule.value : !readAccessDenied(schedule.reason) && previous?.owner === owner ? previous.schedule : undefined,
         protection: protection.status === 'fulfilled' ? protection.value : undefined,
-        analysis: analysis.status === 'fulfilled' ? analysis.value : undefined,
       }))
     })
     return () => abort.abort()
@@ -102,7 +109,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
       }
     }
   }
-  return { schedule: current?.schedule, protection: current?.protection, analysis: current?.analysis, loading, busy,
+  return { schedule: current?.schedule, protection: current?.protection, analysis: analysis?.owner === owner ? analysis.value : undefined, loading, busy,
     canWrite, issue: current?.issue, writeIssue: writeIssue?.owner === owner ? writeIssue.text : null,
     clearWriteIssue: () => setWriteIssue(null), refresh, write }
 }

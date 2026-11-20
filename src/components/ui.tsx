@@ -2,8 +2,10 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode } from 'react'
 import styles from './ui.module.css'
 
-export function Button({ variant = 'secondary', className = '', type = 'button', children, ...props }: ComponentPropsWithoutRef<'button'> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger' }) {
-  return <button {...props} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined} type={type} className={`${styles.button} ${variant === 'secondary' ? 'outline' : variant} ${className}`}>{children}</button>
+export function Button({ variant = 'secondary', className = '', type = 'button', children, loading = false, disabled, ...props }: ComponentPropsWithoutRef<'button'> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger'; loading?: boolean }) {
+  return <button {...props} disabled={disabled || loading} aria-busy={loading || props['aria-busy']} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined} type={type} className={`${styles.button} ${loading ? styles.loadingButton : ''} ${variant === 'secondary' ? 'outline' : variant} ${className}`}>
+    {loading ? <><span className={styles.busyLabel}>{children}</span><span className={styles.buttonSpinner} aria-hidden="true" /></> : children}
+  </button>
 }
 export function Card({ hero = false, className = '', ...props }: ComponentPropsWithRef<'section'> & { hero?: boolean }) {
   return <section {...props} className={`app-card ${styles.card} ${hero ? styles.hero : ''} ${className}`} />

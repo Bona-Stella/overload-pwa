@@ -15,6 +15,7 @@ type Store = Pick<WorkoutStore, 'localCopies' | 'closedWrite' | 'saveClosedWrite
 type Api = Pick<WorkoutApi, 'detail' | 'assessment' | 'changes' | 'records' | 'recover' | 'deleteSession' | 'resolveClosed' | 'routine' | 'finish' | 'snapshot' | 'resolve'>
 export type ClosedState = { server: Session | null; assessment: AssessmentView | null; changes: ChangeEvents | null; copies: LocalWorkout[]; pending: ClosedWrite | null;
   busy: boolean; writable: boolean; issue: string | null; notice: string }
+export type ClosedDisplay = Pick<ClosedState, 'server' | 'assessment' | 'changes'>
 /** One online closed-session edit at a time, with one durable result-check slot. No automatic write replay. */
 export class ClosedWorkoutController {
   private state: ClosedState = { server: null, assessment: null, changes: null, copies: [], pending: null, busy: true, writable: false, issue: null, notice: '' }
@@ -30,10 +31,13 @@ export class ClosedWorkoutController {
   private observe?: (server: Session) => void
   private acquire: typeof acquireEditor
   private invalid?: (error: unknown) => void
-  constructor(api: Api, store: Store, scope: Scope, id: string, authorized: () => boolean, observe?: (server: Session) => void, acquire = acquireEditor, invalid?: (error: unknown) => void) {
+  constructor(api: Api, store: Store, scope: Scope, id: string, authorized: () => boolean, observe?: (server: Session) => void, acquire = acquireEditor, invalid?: (error: unknown) => void, cached?: ClosedDisplay) {
     this.api = api; this.store = store; this.scope = scope; this.id = id; this.authorized = authorized; this.observe = observe
     this.acquire = acquire
     this.invalid = invalid
+    if (cached?.server?.id === id && cached.server.userId === scope.userId && cached.server.dataGeneration === scope.dataGeneration) {
+      this.state = { ...this.state, ...cached }
+    }
   }
   getSnapshot = () => this.state
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => this.listeners.delete(fn) }
@@ -41,7 +45,8 @@ export class ClosedWorkoutController {
   private canWrite = () => this.current() && !!this.lease?.held()
   private set(patch: Partial<ClosedState>) { if (!this.current()) return; this.state = { ...this.state, ...patch }; this.listeners.forEach(f => f()) }
   private failure(error: unknown) {
-    if (['DATA_GENERATION_MISMATCH','OWNER_MISMATCH','SESSION_CHANGED'].includes((error as { code?: string }).code ?? '')) {
+    const { code, status } = (error ?? {}) as { code?: string; status?: number }
+    if (['DATA_GENERATION_MISMATCH','OWNER_MISMATCH','SESSION_CHANGED','AUTHENTICATION_REQUIRED'].includes(code ?? '') || status === 401 || status === 403 || status === 404) {
       this.lease?.release(); this.set({ writable: false, server: null, assessment: null, changes: null, copies: [], pending: null }); this.invalid?.(error)
     }
     this.set({ issue: error instanceof Error && (error instanceof LocalStoreError || error.name === 'ClosedConflict') ? error.message : onlineIssue(error) })
@@ -53,8 +58,8 @@ export class ClosedWorkoutController {
       if (!this.current()) return
       this.lease = await this.acquire({ ...this.scope, sessionId: this.id, editorDeviceId: device, writerEpoch: '0' })
       if (!this.current()) { this.lease?.release(); return }
-      this.set({ writable: !!this.lease, issue: null })
       await this.read(initial)
+      this.set({ writable: !!this.lease?.held(), issue: null })
       if (!this.lease) this.set({ issue: '다른 탭이 운동을 편집 중이거나 편집 잠금을 지원하지 않습니다. 읽기 전용입니다.' })
     } catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
   }
@@ -77,7 +82,7 @@ export class ClosedWorkoutController {
       this.set({ pending: confirmed, notice: '서버 기록과 변경 이력에서 처리 결과를 확인했습니다.' })
     } else if (pending?.status === 'PENDING') this.set({ notice: '이전 요청 결과를 확인해야 합니다. 원문과 로컬 원본을 보존했습니다.' })
   }
-  refresh = async () => { if (!this.current() || this.state.busy) return; this.set({ busy: true, issue: null }); try { await this.read() } catch (error) { this.failure(error) } finally { this.set({ busy: false }) } }
+  refresh = async () => { if (!this.current() || this.state.busy) return; this.set({ busy: true, issue: null }); try { await this.read(); this.set({ writable: !!this.lease?.held() }) } catch (error) { this.failure(error) } finally { this.set({ busy: false }) } }
   private async dispatch(write: ClosedWrite) {
     switch (write.kind) {
       case 'records': return this.api.records(this.scope, this.id, write.body, this.abort.signal)

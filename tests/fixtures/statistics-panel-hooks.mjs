@@ -10,6 +10,11 @@ export function useState(initial) {
   }]
 }
 export const useRef = initial => useState(() => ({ current: initial }))[0]
+export function useEffectEvent(callback) {
+  const ref = useRef(callback)
+  ref.current = callback
+  return (...args) => ref.current(...args)
+}
 export function useEffect(effect, deps) {
   const host = active, index = host.index++, previous = host.slots[index]
   if (!previous || deps.some((value, i) => !Object.is(value, previous.deps[i]))) {

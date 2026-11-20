@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
-import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import type { RestPolicy } from '../workout-local/types.ts'
 import { countDraft } from '../workout-online/validation.ts'
@@ -146,11 +145,11 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
       {draft && <>
         {issue && <StatusNotice error>{issue}</StatusNotice>}
         {refreshed && <StatusNotice>최신 저장값은 {bands.map(({ field }) => `${settings[field]}초`).join(' · ')}입니다. 입력한 값을 확인한 뒤 다시 저장해 주세요.</StatusNotice>}
-        <Button type="submit" className={styles.save} disabled={busy || saving}>
-          {saving ? (reloading ? '확인 중…' : '저장 중…') : (reloading ? '최신 설정 다시 확인' : '변경 사항 저장')}
+        <Button type="submit" className={styles.save} disabled={busy} loading={saving}>
+          {reloading ? '최신 설정 다시 확인' : '변경 사항 저장'}
         </Button>
       </>}
-    </form> : loadIssue ? <StatusNotice error>{loadIssue}</StatusNotice> : <LoadingSkeleton layout="settings" label="휴식 정보를 확인하고 있습니다." />}
+    </form> : loadIssue ? <StatusNotice error>{loadIssue}</StatusNotice> : <div aria-busy="true" />}
     {review && <p className="muted small">검토용 예시 휴식 시간입니다.</p>}
   </section>
 }

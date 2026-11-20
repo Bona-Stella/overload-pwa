@@ -8,7 +8,6 @@ import type { RecordPreviewData } from './RecordDisplayContext.ts'
 import { SearchList } from '../../components/SearchList.tsx'
 import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import { Card, Button } from '../../components/ui.tsx'
-import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { useEffect, useRef, useState } from 'react'
 import type { Scope } from '../workout-online/types.ts'
@@ -38,7 +37,7 @@ function GrowthDelta({ point, comparison = false }: { point: GrowthPoint; compar
 }
 
 function GrowthCount({ count, partial = false }: { count?: number; partial?: boolean }) {
-  return <span>{count===undefined?'—':`${partial?'불러온 ':''}${count}건`}</span>
+  return <span>{count===undefined?'':`${partial?'불러온 ':''}${count}건`}</span>
 }
 
 function GrowthAnalysis({ controls, latest, count, partial, zone, children }: {
@@ -51,7 +50,7 @@ function GrowthAnalysis({ controls, latest, count, partial, zone, children }: {
       <div className={styles.latestRow}>
         <div className={styles.latest}>
           <span>최신 공식 승인 중량</span>
-          <strong className="growth-latest">{latest?<>{latest.approvedWeightKg}<small>kg</small></>:'미확인'}</strong>
+          <strong className="growth-latest">{latest?<>{latest.approvedWeightKg}<small>kg</small></>:count !== undefined && '미확인'}</strong>
           {latest&&<time dateTime={latest.occurredAt}>최근 승인 · {new Intl.DateTimeFormat('ko-KR',{month:'long',day:'numeric',timeZone:zone}).format(new Date(latest.occurredAt))}</time>}
         </div>
         {latest&&<GrowthDelta point={latest} comparison />}
@@ -80,7 +79,7 @@ function GrowthHistoryCard({ points, name, zone, onOpen, busy = false, known = t
   return <Card>
     <div className={styles.heading}><h2>승인 중량 변경 이력</h2><GrowthCount count={known?points.length:undefined} partial={partial} /></div>
     {points.length>0&&<ul className={styles.historyList}>{points.toReversed().map(p=><li key={p.id}><GrowthEvent point={p} name={name} zone={zone} onOpen={onOpen} /></li>)}</ul>}
-    {!busy&&!points.length&&<p className="muted small">승인 중량 변경 기록이 없습니다.</p>}
+    {known&&!busy&&!points.length&&<p className="muted small">승인 중량 변경 기록이 없습니다.</p>}
   </Card>
 }
 
@@ -110,8 +109,8 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
     catch (error) { if (!abort.signal.aborted) { onInvalid(error); setIssue('다음 운동 목록을 불러오지 못했습니다.') } }
     finally { if (!abort.signal.aborted) setBusy(false) }
   }
-  return <div className="stack"><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>{setTag(tag);onClear()}}} onSearchOpenChange={setSearchOpen} scopes={[{id:'exercise',name:'운동별'}]} scope="exercise" onScope={()=>{}} query={query} onQuery={onQuery} selected={selected} onClear={onClear} label="과거 운동 검색" issue={issue} options={(loadedQuery===query+'|'+tag?rows:[]).map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))} onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row)onSelect(row)}} resultsFooter={next!==null?<button className="outline full" disabled={busy} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
-    {searchOpen&&busy&&loadedQuery!==query+'|'+tag&&<LoadingSkeleton layout="list" label="과거 운동 확인 중…" />}</div>
+  return <div className="stack"><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>{setTag(tag);onClear()}}} onSearchOpenChange={setSearchOpen} scopes={[{id:'exercise',name:'운동별'}]} scope="exercise" onScope={()=>{}} query={query} onQuery={onQuery} selected={selected} onClear={onClear} label="과거 운동 검색" issue={issue} loading={loadedQuery!==query+'|'+tag} options={(loadedQuery===query+'|'+tag?rows:[]).map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))} onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row)onSelect(row)}} resultsFooter={loadedQuery===query+'|'+tag&&next!==null?<button className="outline full" disabled={busy} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
+    </div>
 }
 function History({ standardId, placement, exerciseName, ...context }: Context & { standardId: string; placement: GrowthPlacement; exerciseName:string }) {
   const { api, scope, period, zone, onInvalid, onOpen, controls, refreshKey } = context
@@ -133,7 +132,7 @@ function History({ standardId, placement, exerciseName, ...context }: Context & 
   }
   // History pages arrive latest-first and append older points. Keep the existing event list order.
   return <><GrowthAnalysis controls={controls} latest={points[0]} count={known?points.length:undefined} partial={next!==null} zone={zone}>
-    {known ? <GrowthChartSection points={points} zone={zone} /> : !issue && <LoadingSkeleton layout="activity" label="승인 이력 확인 중…" />}
+    {known ? <GrowthChartSection points={points} zone={zone} /> : !issue && <div className={styles.plot} aria-busy="true" />}
     {issue&&<p role="alert">{issue}</p>}
     {next!==null&&<><p className="muted small">일부 승인 이력입니다. 이전 이력을 더 불러올 수 있습니다.</p><Button disabled={busy} onClick={()=>void more()}>이전 승인 더 보기</Button></>}
   </GrowthAnalysis><GrowthHistoryCard points={points} name={exerciseName} zone={zone} onOpen={onOpen} busy={busy} known={known} partial={next!==null} /></>
@@ -151,7 +150,7 @@ function Selected({ exercise, ...context }: Context & { exercise: GrowthExercise
   const controls = <>{context.controls}{options&&options.placements.length>1&&<label className={styles.placement}>추적할 루틴 배치<select value={selected} onChange={e=>setSelected(e.target.value)}>{options.placements.map((p,i)=><option key={p.placementId} value={p.placementId}>{p.routineName} · 배치 {i+1}{p.deleted?' · 삭제됨':''}</option>)}</select></label>}</>
   if(current)return <>{issue && <p role="alert">{issue}</p>}<History key={current.placementId} {...context} controls={controls} standardId={exercise.standardExerciseId} exerciseName={exercise.name} placement={current} /></>
   return <GrowthAnalysis controls={issue?undefined:controls} count={options?0:undefined} zone={zone}>
-    {issue?<p role="alert">{issue}</p>:options?<p>이 기간의 승인 중량 변경 기록이 없습니다. 최초·현재 중량으로 과거 값을 만들지 않습니다.</p>:<LoadingSkeleton layout="settings" label="승인 배치 확인 중…" />}
+    {issue?<p role="alert">{issue}</p>:options?<p>이 기간의 승인 중량 변경 기록이 없습니다. 최초·현재 중량으로 과거 값을 만들지 않습니다.</p>:<div className={styles.plot} aria-busy="true" />}
   </GrowthAnalysis>
 }
 export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack, backLabel }: Omit<Context, 'period' | 'zone'> & { onBack?: () => void; backLabel?: string }) {

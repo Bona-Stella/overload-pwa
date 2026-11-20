@@ -4,7 +4,7 @@ import styles from './Home.module.css'
 
 export function HomeTrainingHeader({ analysis, protection }: { analysis?: HomeAnalysis; protection?: HomeProtection }) {
   if (protection) return <span className={styles.headerIcon}><DeloadMoon /><span>{protection === 'ACTIVE' ? '디로딩 진행 중' : '디로딩 완료 당일'}</span></span>
-  if (!analysis?.enabled) return <span className={styles.headerIcon} title={analysis ? '디로딩 분석 꺼짐' : '디로딩 분석 확인 필요'}><DeloadMoon /></span>
+  if (!analysis?.enabled) return <span className={styles.headerIcon} title={analysis && '디로딩 분석 꺼짐'}><DeloadMoon /></span>
   const weeks = analysis.confirmedWeeks
   if (!weeks) return <span className={styles.headerIcon}><DeloadMoon /><span>누적 미확정</span></span>
   const threshold = analysis.recommendationThreshold

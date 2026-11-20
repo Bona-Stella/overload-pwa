@@ -145,6 +145,25 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   async function reactCapture(name){for(const w of [320,375,390,430])await capture(name,'react',w);captures.push(name)}
   await reactCapture('records-main')
   await click('운동 현황 ›');await title('운동 현황');await reactCapture('activity')
+  await send('Emulation.setDeviceMetricsOverride', {width:1280,height:860,deviceScaleFactor:1,mobile:false})
+  const desktopTabBar = await evaluate(`(() => {
+    const root = document.documentElement;
+    const main = document.querySelector('main');
+    const nav = document.querySelector('nav[aria-label="기본 탐색"]');
+    const active = nav.querySelector('[aria-current="page"]');
+    const measure = () => {
+      const {left, right} = nav.getBoundingClientRect();
+      return {layoutWidth: root.getBoundingClientRect().width, left, right, hit: active.getBoundingClientRect().left};
+    };
+    const filled = measure();
+    const scrollable = root.scrollHeight > root.clientHeight;
+    main.style.display = 'none';
+    try {
+      return { scrollable, short: root.scrollHeight === root.clientHeight, filled, waiting: measure() };
+    } finally { main.style.removeProperty('display'); }
+  })()`)
+  assert.equal(desktopTabBar.scrollable && desktopTabBar.short, true, JSON.stringify(desktopTabBar))
+  assert.deepEqual(desktopTabBar.waiting, desktopTabBar.filled, 'desktop tab bar and active hit area keep their position across document overflow changes')
   for(const scope of ['all','exercise','group','muscle']){
    await set('.record-search select',scope);await evaluate('document.querySelector(".record-search input").focus()');await set('.record-search input',scope==='all'?'프레스':'')
    await wait(()=>evaluate('document.querySelectorAll(".record-search li button").length>0'),'search candidates '+scope)
@@ -159,7 +178,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
    assert.equal(await evaluate('document.querySelector(".record-pair").textContent'),selectedText,'closing search keeps the applied graph filter')
    await evaluate('document.querySelector(".record-search input").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));document.querySelector(".search-disclosure").click()')
   }
-  await click('총중량');await click('월간');await wait(()=>evaluate('document.querySelectorAll(".record-chart[data-chart-kind=bar] .recharts-bar-rectangle").length<=5'),'monthly chart')
+  await click('총중량');await click('월간');await wait(()=>evaluate(`document.querySelector('.record-period button[aria-pressed="true"]').textContent === '월간' && (()=>{const points=document.querySelectorAll('.activity-trend-canvas [data-activity-point]');return points.length>0 && points.length<=5})()`),'monthly chart')
   await evaluate('document.querySelector('+JSON.stringify('button[aria-label="달력 열기"]')+').click()')
   await wait(()=>evaluate('!!document.querySelector(".record-calendar-grid")'),'calendar')
   await evaluate('document.querySelector(".record-calendar-grid button").click()');assert.equal(await evaluate('!!document.querySelector(".record-calendar-grid")'),false)

@@ -2,7 +2,7 @@ import {SavedWeightReview} from './SavedWeightReview.tsx'
 import type {ReactNode} from 'react'
 import { durationLabel } from '../../components/duration.ts'
 import { DurationWheel } from '../../components/DurationWheel.tsx'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
@@ -11,7 +11,7 @@ import { Dialog } from '../../components/Dialog.tsx'
 import { WorkoutApi } from './api.ts'
 import { WorkoutStore } from './storage.ts'
 import { ClosedWorkoutController } from './closed-controller.ts'
-import type { ClosedState } from './closed-controller.ts'
+import type { ClosedDisplay, ClosedState } from './closed-controller.ts'
 import type { Manufacturer, CardioResult, ChangeEvents, ClosedPage, CompletionAssessment, PerformedSet, RecordEdit, Scope, Session } from './types.ts'
 import { equipmentLabel } from './equipment.ts'
 import { equipment, cardioMeasurement } from './validation.ts'
@@ -96,38 +96,49 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
     {page?.next && <button className="outline" disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</button>}
   </section>
 }
-export function ClosedWorkout({ api, session, loadIssue, onReload, authorized, onServer, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, takeInitialScroll }: { summary?: boolean; takeInitialScroll?: () => boolean; api: WorkoutApi; session: Session | null; loadIssue?: string | null; onReload?: () => void; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session) => void; onInvalid?: (error: unknown) => void }) {
-  const latest = useRef({ session, authorized, onServer, onInvalid })
-  useEffect(() => { latest.current = { session, authorized, onServer, onInvalid } }, [session, authorized, onServer, onInvalid])
-  const [opened, setOpened] = useState(false)
-  // A session check can interrupt the first read after restoring a history entry.
-  const canOpen = accountReady || opened
-  const hasSession = !!session
+export function ClosedWorkout({ api, scope, recordId, session, cache, authorized, onServer, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, takeInitialScroll }: { summary?: boolean; takeInitialScroll?: () => boolean; api: WorkoutApi; scope: Scope; recordId: string; session: Session | null; cache: Map<string, ClosedDisplay>; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session, changed: boolean) => void; onInvalid?: (error: unknown) => void }) {
+  const latest = useRef({ session, authorized, onServer, onInvalid, accountReady })
+  useLayoutEffect(() => { latest.current = { session, authorized, onServer, onInvalid, accountReady } }, [session, authorized, onServer, onInvalid, accountReady])
   const [view, setView] = useState<{ controller: ClosedWorkoutController; state: ClosedState } | null>(null)
-  useEffect(() => {
-    const initial = latest.current.session
-    if (!canOpen || !hasSession || !initial) return
+  const [retry, setRetry] = useState(0)
+  useLayoutEffect(() => {
+    if (!accountReady) return
     const store = new WorkoutStore()
-    const c = new ClosedWorkoutController(api, store, initial, initial.id, () => latest.current.authorized(),
-      server => latest.current.onServer(server), undefined, error => latest.current.onInvalid?.(error))
+    let lastServer = cache.get(recordId)?.server ?? latest.current.session
+    const c = new ClosedWorkoutController(api, store, scope, recordId, () => latest.current.authorized(),
+      server => {
+        latest.current.onServer(server, !!lastServer && lastServer.version !== server.version)
+        lastServer = server
+      }, undefined, error => {
+        cache.delete(recordId)
+        latest.current.onInvalid?.(error)
+      }, cache.get(recordId))
+    const update = () => setView({ controller: c, state: c.getSnapshot() })
     const unsubscribe = c.subscribe(() => {
       const state = c.getSnapshot()
-      if (!state.busy) setOpened(true)
-      setView({ controller: c, state })
+      if (!state.busy && !state.issue && state.server && state.assessment && state.changes) {
+        const { server, assessment, changes } = state
+        cache.delete(recordId)
+        cache.set(recordId, { server, assessment, changes })
+        if (cache.size > 12) cache.delete(cache.keys().next().value!)
+      }
+      update()
     })
-    void c.open(initial)
-    return () => { unsubscribe(); c.stop(); void store.close() }
-  }, [api, canOpen, hasSession])
-  if (!session || !canOpen || !view?.state.server) {
-    const issue = session ? !view?.state.busy && view?.state.issue : loadIssue
+    if (cache.has(recordId)) update()
+    let cancelled = false
+    queueMicrotask(() => { if (latest.current.accountReady && !cancelled) { update(); void c.open(latest.current.session ?? undefined) } })
+    return () => { cancelled = true; unsubscribe(); c.stop(); void store.close() }
+  }, [api, accountReady, cache, scope, recordId, retry])
+  if (!view?.state.server) {
+    const issue = !view?.state.busy && view?.state.issue
     return <>
       <RecordSubpageHeader title={summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={onBack} backLabel={backLabel} />
       {issue ? <Card><StatusNotice error>{issue}</StatusNotice>
-        <Button onClick={session && view ? () => void view.controller.refresh() : onReload}>다시 조회</Button></Card>
+        <Button onClick={() => setRetry(value => value + 1)}>다시 조회</Button></Card>
         : <LoadingSkeleton layout="detail" label="운동 기록을 확인하는 중입니다." />}
     </>
   }
-  return <ClosedWorkoutView {...view} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} takeInitialScroll={takeInitialScroll} reviewContent={<SavedWeightReview api={api} session={view.state.server??session} readOnly={!summary} disabled={view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh}/>} />
+  return <ClosedWorkoutView {...view} state={accountReady ? view.state : { ...view.state, writable: false }} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} takeInitialScroll={takeInitialScroll} reviewContent={<SavedWeightReview api={api} session={view.state.server} readOnly={!summary} disabled={!accountReady||view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh}/>} />
 }
 type EditTarget = { kind: 'SET'; record: PerformedSet } | { kind: 'CARDIO'; record: Extract<CardioResult, { status: 'COMPLETED' }> } | { kind: 'SKIPPED'; record: Extract<CardioResult, { status: 'SKIPPED' }> }
 export function ClosedWorkoutView({ state, controller, manufacturers = [], definitions = [], onBack = () => {}, backLabel, summary = false, reviewContent, takeInitialScroll }: { reviewContent?:ReactNode; summary?: boolean; takeInitialScroll?: () => boolean; state: ClosedState; controller: ClosedWorkoutController; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string }) {
@@ -212,7 +223,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
 }
 function DeleteDialog({ server, controller, busy, onClose }: { server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void }) {
   const [version] = useState(server.version)
-  return <Dialog title="운동 전체를 삭제할까요?" onClose={() => { if (!busy) onClose() }}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p><button className="primary" disabled={busy} onClick={async () => { if (await controller.delete(version)) onClose() }}>운동 삭제</button></div></Dialog>
+  return <Dialog title="운동 전체를 삭제할까요?" onClose={() => { if (!busy) onClose() }}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p><Button variant="primary" loading={busy} onClick={async () => { if (await controller.delete(version)) onClose() }}>운동 삭제</Button></div></Dialog>
 }
 function ClosedApproval({ server, id, controller, disabled }: { server: Session; id: string; controller: ClosedWorkoutController; disabled: boolean }) {
   const [weight, setWeight] = useState('')
@@ -265,7 +276,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
       </> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
     </fieldset>
     {issue && <StatusNotice error>{issue}</StatusNotice>}
-    <div className={styles.actions}><Button disabled={busy} onClick={onClose}>취소</Button>{target.kind!=='SKIPPED'&&<Button variant="primary" disabled={busy} onClick={()=>void submit(false)}>{busy?'저장 중':'변경 저장'}</Button>}</div>
+    <div className={styles.actions}><Button disabled={busy} onClick={onClose}>취소</Button>{target.kind!=='SKIPPED'&&<Button variant="primary" loading={busy} onClick={()=>void submit(false)}>변경 저장</Button>}</div>
     <Button variant="danger" disabled={busy} onClick={()=>void submit(true)}>이 수행 삭제</Button>
   </div></Dialog>
 }

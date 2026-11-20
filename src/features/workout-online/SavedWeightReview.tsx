@@ -1,6 +1,5 @@
 import {useEffect,useRef,useState} from 'react'
 import {Button,Card} from '../../components/ui.tsx'
-import {LoadingSkeleton} from '../../components/LoadingSkeleton.tsx'
 import {WeightReview} from '../workout-flow/WeightReview.tsx'
 import {WeightApprovalHistory} from '../workout-flow/WorkoutSummary.tsx'
 import type {WeightSummary} from '../workout-flow/WorkoutSummary.tsx'
@@ -19,7 +18,7 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,autho
  const current=view?.sessionId===session.id&&view.userId===session.userId&&view.dataGeneration===session.dataGeneration?view:null
  const frozen=current?.frozen
  const retryNotice=issue?<Card><p role="alert">{issue}</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>:null
- if(!current)return retryNotice??<LoadingSkeleton layout="row" label="당시 중량 검토 확인 중…" />
+ if(!current)return retryNotice??<div role="status" className="sr-only">당시 중량 검토 확인 중…</div>
  const approvals=current.approvals.filter(a=>a.source==='WORKOUT_REVIEW')
  const weights:WeightSummary[]=(frozen?.exercises??[]).flatMap(item=>{
   const g=item.guidance

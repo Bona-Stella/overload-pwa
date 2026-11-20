@@ -1,5 +1,4 @@
 import { partialAchievement } from '../statistics/display-achievement.ts'
-import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
@@ -11,7 +10,8 @@ import type { TrainingSchedule } from '../workout-online/useTrainingSchedule.ts'
 import { HomeTrainingHeader } from './HomeTrainingHeader.tsx'
 import { activeCardio, activeWeights, cardioPlanLabel, dateInZone, dayOfWeek, dayStatus, representativeExercises, weekdays, weekDates } from './model.ts'
 import { boundaryError, loadHome, readAccessDenied } from './load.ts'
-import type { HomeData } from './load.ts'
+import type { HomeData, HomePlan } from './load.ts'
+import { loadRecent } from './recent.ts'
 import { HomeReviewContext } from '../../app/review-context.ts'
 import { RecentWorkout } from './RecentWorkout.tsx'
 import { DeloadMoon } from '../../components/DeloadMoon.tsx'
@@ -34,8 +34,8 @@ function PlanList({ weights, cardio }: { weights: PlanWeight[]; cardio: PlanCard
     <div className={styles.planSection}><h3>CARDIO <span>총 {cardio.length}종목</span></h3><ol>{cardio.map(p => <li key={p.id}><span title={p.plan.name}>{p.plan.name}</span><strong>{cardioPlanLabel(p.plan)}</strong></li>)}</ol>{!cardio.length && <p className={styles.emptyPlan}>유산소 계획 없음</p>}</div>
   </>
 }
-function ActiveRoutine({ routineName, progress, busy, onResume }: {
-  routineName: string; progress: ActiveWorkoutProgress; busy: boolean; onResume: () => void
+function ActiveRoutine({ routineName, progress, busy, loading, onResume }: {
+  routineName: string; progress: ActiveWorkoutProgress; busy: boolean; loading?: boolean; onResume: () => void
 }) {
   const [now, setNow] = useState(Date.now)
   useEffect(() => {
@@ -56,7 +56,7 @@ function ActiveRoutine({ routineName, progress, busy, onResume }: {
     <div className={styles.activeSummary}><span>전체 경과시간 <strong>{formatDuration(Math.max(0, now - progress.startedAt))}</strong></span>
       <span>웨이트 <strong>{progress.completedSets}/{plannedSets}세트</strong></span></div>
     <PlanList weights={progress.weights} cardio={progress.cardio} />
-    <Button className={styles.resume} variant="primary" disabled={busy} onClick={onResume}>운동 이어가기</Button>
+    <Button className={styles.resume} variant="primary" disabled={busy} loading={loading} onClick={onResume}>운동 이어가기</Button>
   </Card>
 }
 type Props = {
@@ -64,8 +64,10 @@ type Props = {
   scope: Scope; routines: RoutineList['routines']; api: WorkoutApi; training: TrainingSchedule; statistics: StatisticsApi; visit: number;
   refreshKey: string; active: Session | null; attempt: boolean; busy: boolean; localReady: boolean; issue: string | null;
   progress?: ActiveWorkoutProgress
+  action?: 'start' | 'retry' | 'resume' | null
   onStart: (routine: Routine) => Promise<void>; onResume: () => void; onRetry: () => void; onNavigate: (tab: AppTab) => void;
   onHistory?:()=>void; onOpen: (id: string) => void; onInvalid: (error: unknown) => void
+  onRefreshRoutines?: () => void
 }
 export function HomePanel(props: Props) {
   const review = useContext(HomeReviewContext)
@@ -74,7 +76,8 @@ export function HomePanel(props: Props) {
   const { schedule, protection, analysis, refresh } = training
   const [clock, setClock] = useState(() => new Date())
   const [reload, setReload] = useState(0)
-  const [result, setResult] = useState<{ key: string; context: string; data: HomeData } | null>(null)
+  const [result, setResult] = useState<{ key: string; context: string; data: HomePlan } | null>(null)
+  const [recent, setRecent] = useState<{ owner: string; data?: Awaited<ReturnType<typeof loadRecent>>; failed?: boolean } | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
   const [cache] = useState(() => new Map<string, Routine>())
   const invalid = useRef(props.onInvalid)
@@ -89,14 +92,15 @@ export function HomePanel(props: Props) {
   const today = dateInZone(clock, zone)
   const activeVersion = schedule?.presets.find(p => p.id === schedule.activeId)?.version
   const summaryKey = routines.map(r => r.id + ':' + r.version).join(',')
-  const context = [scope.userId, scope.dataGeneration, schedule?.activeId, schedule?.appliedVersion, zone, today, routines.map(r => r.id).join(',')].join('|')
-  const requestKey = [context, summaryKey, activeVersion, refreshKey, props.visit, reload].join('|')
-  const inputs = useRef({ scope, schedule, clock, zone })
-  useEffect(() => { inputs.current = { scope, schedule, clock, zone } }, [scope, schedule, clock, zone])
+  const owner = scope.userId + ':' + scope.dataGeneration
+  const context = [owner, schedule?.activeId, zone, today].join('|')
+  const requestKey = [context, summaryKey, activeVersion, schedule?.appliedVersion, refreshKey, reload].join('|')
+  const inputs = useRef({ scope, schedule, clock, zone, routines })
+  useEffect(() => { inputs.current = { scope, schedule, clock, zone, routines } }, [scope, schedule, clock, zone, routines])
   useEffect(() => {
     const abort = new AbortController(), current = inputs.current
     if (props.enabled === false || !current.schedule) return
-    void loadHome(current.scope, api, current.schedule, statistics, cache, current.clock, current.zone, abort.signal).then(data => {
+    void loadHome(current.scope, api, current.routines, current.schedule, statistics, cache, current.clock, current.zone, abort.signal).then(data => {
       if (!abort.signal.aborted) { setResult({ key: requestKey, context, data }); setFailed(null) }
     }).catch(error => {
       if (abort.signal.aborted) return
@@ -106,29 +110,51 @@ export function HomePanel(props: Props) {
     })
     return () => abort.abort()
   }, [context, requestKey, props.enabled, api, statistics, cache])
+  useEffect(() => {
+    if (props.enabled === false) return
+    const abort = new AbortController()
+    void loadRecent(api, scope, abort.signal).then(data => {
+      if (!abort.signal.aborted) setRecent({ owner, data })
+    }).catch(error => {
+      if (abort.signal.aborted) return
+      if (boundaryError(error)) invalid.current(error)
+      setRecent(previous => ({ owner, failed: true, data: !readAccessDenied(error) && !boundaryError(error) && previous?.owner === owner ? previous.data : undefined }))
+    })
+    return () => abort.abort()
+  }, [api, scope, owner, refreshKey, reload, props.enabled])
   const refreshFailed = failed === requestKey
   const loading = !refreshFailed && (schedule ? result?.key !== requestKey : training.loading)
   const data = schedule && result?.context === context ? result.data : null
+  const recentResult = recent?.owner === owner ? recent : null
   const protectedView = protection !== null
   const protectionNotice = protection === 'ACTIVE' ? '일반 보기 · 디로딩 진행 중에는 일반 운동과 루틴을 변경할 수 없습니다.'
     : protection === 'COMPLETED' ? '디로딩 완료 당일 · 일반 운동은 다음 날부터 시작할 수 있습니다.' : null
-  return <HomeView {...props} data={data} today={today} loading={loading}
+  return <HomeView {...props} data={data && { ...data, recent: data.evidence }} today={today} loading={loading}
+    recent={recentResult?.data && { recent: recentResult.data.details, recentRows: recentResult.data.rows,
+      recentLimited: recentResult.data.limited, recentFailed: recentResult.data.failed }} recentFailed={recentResult?.failed}
     canStart={editingSupported && props.localReady && !loading && !refreshFailed && !training.loading && !training.issue && !training.busy}
     protectedView={protectedView} issue={props.issue ?? training.issue ?? (data && refreshFailed ? '홈 정보를 갱신하지 못했습니다. 마지막으로 확인한 내용을 표시합니다.' : protectionNotice)}
     header={<HomeTrainingHeader analysis={analysis} protection={protection} />}
     presetFilter={schedule ? { presets: schedule.presets, activeId: schedule.activeId, visit: props.visit } : undefined}
-    showHttpNote={!!review && !editingSupported} onRefresh={() => { refresh(); cache.clear(); setReload(n => n + 1) }} />
+    showHttpNote={!!review && !editingSupported} onRefresh={() => {
+      refresh()
+      cache.clear()
+      if (props.onRefreshRoutines) props.onRefreshRoutines()
+      else setReload(n => n + 1)
+    }} />
 }
 
-type HomeViewData = Pick<HomeData, 'summaries' | 'routines' | 'recent' | 'recentRows' | 'recentLimited' | 'recentFailed'> & {
+type HomeViewData = Pick<HomeData, 'summaries' | 'routines' | 'recent'> & Partial<Pick<HomeData, 'recentRows' | 'recentLimited' | 'recentFailed'>> & {
   schedule: Pick<HomeData['schedule'], 'assignments' | 'version'>
   overview: Pick<HomeData['overview'], 'plannedDays'>
 }
 
-type HomeViewProps = Pick<Props, 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen'> & {
+type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen'> & {
   active: Pick<Session, 'initialPlan'> | null
   progress?: ActiveWorkoutProgress
   data?: HomeViewData | null
+  recent?: Pick<HomeData, 'recent' | 'recentRows' | 'recentLimited' | 'recentFailed'>
+  recentFailed?: boolean
   today: string
   loading?: boolean
   canStart: boolean
@@ -174,16 +200,20 @@ export function HomeView(props: HomeViewProps) {
     <header className={styles.homeHeader}><img className={styles.brand} src={wordmark} alt="OVERLOAD" width={3624} height={428} />{props.header ?? <span className={styles.headerIcon} title="디로딩 분석 상태 미연동"><DeloadMoon /></span>}</header>
     {props.headerActions}
     {props.issue && <StatusNotice error>{props.issue}</StatusNotice>}
-    {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy} onResume={props.onResume} />}
-    {!data ? loading ? <LoadingSkeleton layout="home" label="오늘의 루틴과 일정을 불러오는 중입니다." /> : <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
+    {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy} loading={props.action === 'resume'} onResume={props.onResume} />}
+    {!data ? loading ? <div aria-busy="true" /> : <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
       {!active && <Card hero className={styles.today} aria-label="오늘의 루틴">
         <div className={styles.kicker}><span>TODAY'S ROUTINE</span><time dateTime={today}>{today.slice(5).replace('-', '.')} {weekdays[dayOfWeek(today) - 1]}</time></div>
         <h2>{props.todayNotice ?? chosen?.name ?? (chosenId ? '루틴 확인 필요' : data.schedule.version !== '0' ? '오늘은 쉬어가는 날' : '첫 루틴을 준비해 보세요')}</h2>
         {!props.todayNotice && chosen?.tag && <span className={styles.routineTag}>{chosen.tag}</span>}
         {!props.todayNotice && (chosen ? <RoutinePlan routine={chosen} /> : <p className="muted small">{chosenId ? '이 루틴의 최신 구성을 확인하지 못했습니다. 새로고침하거나 다른 루틴을 선택하세요.' : data.schedule.version !== '0' ? '정해진 휴식일입니다. 원하면 오늘만 다른 루틴을 선택할 수 있습니다.' : '루틴 탭에서 운동과 주간 일정을 등록할 수 있습니다.'}</p>)}
       </Card>}
-      {!props.active && (props.attempt ? <><StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice><Button className={styles.start} variant="primary" disabled={props.busy || !props.localReady} onClick={props.onRetry}>기존 시작 요청 다시 확인</Button></>
-          : <Button className={styles.start} variant="primary" disabled={props.busy || !props.canStart || props.protectedView || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length} onClick={() => { if (chosen) void props.onStart(chosen) }}>운동 시작</Button>)}
+      {!props.active && <Button className={styles.start} variant="primary" loading={props.action === 'start' || props.action === 'retry'}
+        data-click-action={props.attempt ? 'retry-start' : 'start'}
+        disabled={props.busy || (props.attempt ? !props.localReady : !props.canStart || props.protectedView || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length)}
+        onClick={() => { if (props.attempt) props.onRetry(); else if (chosen) void props.onStart(chosen) }}>
+        {props.action === 'retry' || props.attempt && props.action !== 'start' ? '기존 시작 요청 다시 확인' : '운동 시작'}</Button>}
+      {props.attempt && !props.action && <StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice>}
       {!props.hideChooser && <details className={styles.chooser} ref={chooser}><summary><b>오늘만 다른 루틴 선택</b><span className={styles.plus} aria-hidden="true" /></summary>
         {!data.summaries.length && <><p>아직 루틴이 없습니다.</p><Button onClick={() => props.onNavigate('routines')}>루틴 만들러 가기</Button></>}
         {presetFilter && <div className={styles.choiceFilters} role="group" aria-label="루틴 일정 필터">
@@ -217,13 +247,14 @@ export function HomeView(props: HomeViewProps) {
           {day?.selectedSessionId && <Button className={styles.dayLink} variant="quiet" onClick={() => props.onOpen(day.selectedSessionId!)}>기록 ›</Button>}</p>
         <div className={styles.weekFooter}><Button variant="quiet" onClick={() => props.onNavigate('routines')}>주간 일정 관리 ›</Button></div>
       </Card>
-      <section aria-label="최근 운동" className={styles.recent}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button variant="quiet" onClick={() => props.onHistory?props.onHistory():props.onNavigate('history')}>전체 보기 ›</Button></div>
-        {!data.recentRows.length && <Card><p>표시할 운동 기록이 없습니다.</p><Metadata>실제 수행이 있는 종료 기록이 표시됩니다.</Metadata></Card>}
-        {data.recentRows.map(item => <RecentWorkout key={item.id} row={item} detail={data.recent.get(item.id)} onOpen={props.onOpen} />)}
-        {(data.recentLimited || data.recentFailed) && <Metadata>{data.recentLimited ? '최근 60개 종료 기록 범위입니다. 이전 기록은 기록 탭에서 확인하세요.' : '일부 수행 상세를 확인하지 못했습니다. 다시 조회해 주세요.'}</Metadata>}
-        <div className={styles.tools}><Metadata>종료 당시 최초 계획 · 현재 유효 수행 기준</Metadata><Button variant="quiet" disabled={loading} onClick={props.onRefresh}>새로고침</Button></div>
+    </>}
+      <section aria-label="최근 운동" className={styles.recent} aria-busy={!(props.recent?.recentRows ?? data?.recentRows) && !props.recentFailed}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button variant="quiet" onClick={() => props.onHistory?props.onHistory():props.onNavigate('history')}>전체 보기 ›</Button></div>
+        {(props.recent?.recentRows ?? data?.recentRows)?.length === 0 && <Card><p>표시할 운동 기록이 없습니다.</p><Metadata>실제 수행이 있는 종료 기록이 표시됩니다.</Metadata></Card>}
+        {(props.recent?.recentRows ?? data?.recentRows)?.map(item => <RecentWorkout key={item.id} row={item} detail={(props.recent ?? data)?.recent.get(item.id)} onOpen={props.onOpen} />)}
+        {(props.recent?.recentLimited || data?.recentLimited) && <Metadata>최근 60개 종료 기록 범위입니다. 이전 기록은 기록 탭에서 확인하세요.</Metadata>}
+        {(props.recentFailed || props.recent?.recentFailed || data?.recentFailed) && <Metadata>최근 운동을 모두 확인하지 못했습니다. 다시 조회해 주세요.</Metadata>}
+        <div className={styles.tools}><Metadata>종료 당시 최초 계획 · 현재 유효 수행 기준</Metadata><Button variant="quiet" loading={loading && !!data} disabled={loading && !data} onClick={props.onRefresh}>새로고침</Button></div>
         {props.showHttpNote && <p className={styles.httpNote}>HTTP에서는 홈·로그인·기록을 검토할 수 있습니다. 운동 편집은 PC localhost 또는 HTTPS에서, 설치형 PWA는 별도 HTTPS 빌드에서 확인하세요.</p>}
       </section>
-    </>}
   </section>
 }

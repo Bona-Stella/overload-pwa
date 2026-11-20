@@ -1,7 +1,6 @@
 import { useId, useState } from 'react'
 import type { MouseEventHandler, ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
-import { SkeletonSlot } from '../../components/common-ui/ContentFeedback.tsx'
 import { PwaStatus } from '../../pwa/PwaStatus.tsx'
 import { useCardioEstimate } from './useCardioEstimate.ts'
 import styles from './SettingsMain.module.css'
@@ -28,16 +27,16 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
   return <section aria-label="설정" className={styles.page} hidden={hidden}>
     <Card className={styles.account} aria-busy={accountLoading}>
       <button type="button" className={styles.accountLink} onClick={onAccount} disabled={busy} aria-label="내 계정" aria-describedby={emailId}>
-        <span className={styles.avatar} aria-hidden="true">{initial?.toUpperCase() ?? '—'}</span>
+        <span className={styles.avatar} aria-hidden="true">{initial?.toUpperCase()}</span>
         <span className={styles.text}>
           <strong>내 계정</strong>
-          <small id={emailId} title={email || undefined}><SkeletonSlot loading={accountLoading}>{email || '이메일 확인 불가'}</SkeletonSlot></small>
+          <small id={emailId} title={email || undefined}>{account && (email || '이메일 확인 불가')}</small>
         </span>
         <SettingsIcon name="forward" />
       </button>
       <dl className={styles.accountStats}>
-        <div><dt>로그인 방식</dt><dd><SettingsIcon name="shield" /><SkeletonSlot loading={accountLoading}>{loginMethod}</SkeletonSlot></dd></div>
-        <div><dt>로그인된 기기</dt><dd><SettingsIcon name="devices" />{devices}</dd></div>
+        <div><dt>로그인 방식</dt><dd><SettingsIcon name="shield" />{account && loginMethod}</dd></div>
+        <div><dt>로그인된 기기</dt><dd><SettingsIcon name="devices" />{account && devices}</dd></div>
       </dl>
       {onRetryAccount && <div role="status">계정 정보를 확인하지 못했습니다. <Button variant="quiet" onClick={onRetryAccount}>다시 조회</Button></div>}
     </Card>

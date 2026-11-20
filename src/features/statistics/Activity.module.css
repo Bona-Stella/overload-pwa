@@ -2,12 +2,16 @@
 .page :global(.app-card), .page :global(.record-period.app-card) { padding: 14px 12px; border-radius: 5px; gap: 12px; }
 .page :global(.record-period[data-layout='activity']) { display: grid; margin: 0; }
 .page :global(.record-period[data-layout='activity'] > .record-tabs), .page .segment { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-page); }
-.page :global(.record-period[data-layout='activity'] > .record-tabs)::before, .page .segment::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 12px) / 2); border-radius: 7px; background: var(--accent); pointer-events: none; transform: translateX(0); transition: transform 200ms ease; }
-.page :global(.record-period[data-layout='activity'] > .record-tabs:has(> button:nth-child(2)[aria-pressed='true']))::before, .page .segment:has(> button:nth-child(2)[aria-pressed='true'])::before { transform: translateX(calc(100% + 4px)); }
+.page .segment::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 12px) / 2); border-radius: 7px; background: var(--accent); pointer-events: none; transform: translateX(0); transition: transform 200ms ease; }
+.page .segment:has(> button:nth-child(2)[aria-pressed='true'])::before { transform: translateX(calc(100% + 4px)); }
 .page :global(.record-period[data-layout='activity'] > .record-tabs > button), .page .segment > button { position: relative; min-width: 0; min-height: 40px; height: auto; padding: 8px 4px; border: 0; border-radius: 7px; background: transparent; color: var(--text-primary); font-size: 14px; font-weight: 600; }
-.page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-pressed='true']), .page .segment > button[aria-pressed='true'] { background: transparent; color: var(--on-accent); }
+.page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-pressed='true']) { background: var(--accent); color: var(--on-accent); }
+.page .segment > button[aria-pressed='true'] { background: transparent; color: var(--on-accent); }
+.page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-busy='true'])::after { content: ''; position: absolute; inset-inline-end: 14px; inset-block: 0; margin-block: auto; width: 10px; height: 10px; border: 1px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; pointer-events: none; animation: period-spin .8s linear infinite; }
+@keyframes period-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) {
-  .page :global(.record-period[data-layout='activity'] > .record-tabs)::before, .page .segment::before { transition: none; }
+  .page .segment::before { transition: none; }
+  .page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-busy='true'])::after { animation: none; }
 }
 .page :global(.record-period-row) { grid-template-columns: 36px minmax(0,1fr) 36px 36px; gap: 4px; }
 .page :global(.record-period[data-layout='activity'] .record-period-row > button) { position: relative; min-width: 36px; min-height: 44px; height: auto; border: 0; border-radius: 5px; background: transparent; color: var(--text-primary); }
@@ -54,16 +58,24 @@
 .chartHeading > span { min-width: 0; }
 .chartHeading > b { flex: none; }
 .chartContent { min-height: 220px; }
+.activityTrendCanvas { position: relative; min-height: 220px; }
+.activityTrendPlot { display: block; font-size: 10px; fill: var(--text-muted); }
+.activityTrendPlot:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; border-radius: var(--radius-control); }
+.activityTrendHit { fill: transparent; }
+.activityTrendPoint[data-active='true'] .activityTrendHit { fill: var(--accent-soft); }
+.activityTrendTooltip { position: absolute; inset-block-start: 0; inset-inline-end: 0; pointer-events: none; }
 .progress { height: 6px; background: var(--border-subtle); border-radius: 4px; overflow: hidden; }
 .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .achievementSummary { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--text-muted); }
+.achievement .sectionHeading > strong { min-block-size: 1lh; }
+.achievementSummarySlot { display: grid; align-content: start; gap: 12px; min-block-size: 46px; }
 .achievementSummary > span:last-child { flex: none; white-space: nowrap; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 10px; }
 .page .achievement :global(.record-days) { gap: 4px; margin: 0; }
 .page .achievement :global(.record-day) { border-radius: 5px; gap: 5px; padding: 8px 1px; background: var(--surface-input); }
 .weekday { color: var(--text-muted); font-size: 11px; }
 .page .achievement :global(.record-day time) { font-size: 12px; }
-.page .achievement :global(.record-day strong) { font-size: 18px; min-height: 25px; margin: 0; }
+.page .achievement :global(.record-day strong) { font-size: 18px; line-height: 1.5; min-height: 1.5em; margin: 0; }
 .page .sectionHeading > button { flex: none; min-height: 44px; padding: 7px 0 7px 8px; margin-block: -7px; color: var(--accent); font-size: 12px; }
 .cardioMetrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
 .cardioMetrics > div { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-width: 0; min-height: 82px; padding: 8px 10px 8px 0; }

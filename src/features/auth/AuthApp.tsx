@@ -28,6 +28,7 @@ export function AuthApp() {
   const [focused, setFocused] = useState(false)
   const [navigating, setNavigating] = useState(false)
   const [settingsAccount, setSettingsAccount] = useState<{ userId: string; data: Awaited<ReturnType<AuthController['readSettingsAccount']>> | null; failed?: boolean } | null>(null)
+  if (settingsAccount && (state.status !== 'authenticated' || state.userId !== settingsAccount.userId || state.pending === 'logout')) setSettingsAccount(null)
   const [settingsAccountRetry, setSettingsAccountRetry] = useState(0)
   const navigationPending = useRef(false)
   const localExitGuard = useRef<(() => Promise<boolean>) | null>(null)
@@ -47,9 +48,10 @@ export function AuthApp() {
     if (next === tab && !replace) return false
     const before = controller.getSnapshot(), guard = localExitGuard.current, origin = window.history.state?.overloadNavigation
     if (navigationPending.current || before.status !== 'authenticated' || before.pending !== null || !before.userId || restExitGuard.current?.() === false) return false
-    navigationPending.current = true; setNavigating(true)
+    navigationPending.current = true
+    if (guard) setNavigating(true)
     try {
-      const saved = await (guard?.() ?? Promise.resolve(true))
+      const saved = guard ? await guard() : true
       setLocalExitIssue(!saved)
       const latest = controller.getSnapshot()
       if (!saved || latest.status !== 'authenticated' || latest.pending !== null || latest.userId !== before.userId || localExitGuard.current !== guard || window.history.state?.overloadNavigation !== origin) return false
@@ -57,7 +59,7 @@ export function AuthApp() {
       navigateTabRoot('app:' + before.userId, { userId: before.userId, tab: next }, children, latest.accountOpen ? '/' : undefined, replace)
       window.scrollTo(0, 0)
       return true
-    } finally { navigationPending.current = false; setNavigating(false) }
+    } finally { navigationPending.current = false; if (guard) setNavigating(false) }
   }, [controller, tab])
   useNavigationGuard(useCallback(async () => {
     const before = controller.getSnapshot(), guard = localExitGuard.current
@@ -100,8 +102,10 @@ export function AuthApp() {
     const abort = new AbortController()
     void controller.readSettingsAccount(settingsUser, abort.signal).then(data => {
       if (!abort.signal.aborted) setSettingsAccount({ userId: settingsUser, data })
-    }).catch(() => {
-      if (!abort.signal.aborted) setSettingsAccount({ userId: settingsUser, data: null, failed: true })
+    }).catch(error => {
+      if (abort.signal.aborted) return
+      const denied = ['AUTHENTICATION_REQUIRED', 'SESSION_CHANGED'].includes(error?.code) || error?.status === 401 || error?.status === 403
+      setSettingsAccount(previous => ({ userId: settingsUser, data: !denied && previous?.userId === settingsUser ? previous.data : null, failed: true }))
     })
     return () => abort.abort()
   }, [controller, settingsUser, settingsAccountRetry])
@@ -129,7 +133,7 @@ export function AuthApp() {
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}
     {authenticated && tab === 'settings' && <SettingsMain userId={state.userId} hidden={!settingsMain} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary}
-      onRetryAccount={settingsSummary?.failed ? () => { setSettingsAccount(null); setSettingsAccountRetry(value => value + 1) } : undefined}
+      onRetryAccount={settingsSummary?.failed ? () => setSettingsAccountRetry(value => value + 1) : undefined}
       onAccount={async event => { rememberSettings(event.currentTarget); if (await flushLocal()) void controller.openAccount() }}
       onRest={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'rest' }) }}
       onRestAlerts={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'alerts' }) }}

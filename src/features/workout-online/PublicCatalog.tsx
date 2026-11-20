@@ -16,6 +16,8 @@ export function PublicCatalog({ api, userId, onInvalid, onBack, active = true, e
   active?: boolean; enabled?: boolean
 }) {
   const mediaSources = useContext(ReviewExerciseMediaContext)
+  const [details] = useState(() => new Map<string, CatalogBrowseExercise>())
+  const [retry, setRetry] = useState(0)
   const [result, setResult] = useState<{ userId: string; items: CatalogBrowseExercise[] | null; failed: boolean } | null>(null)
   const invalidate = useCallback((error: unknown) => {
     if (error && typeof error === 'object' && 'code' in error
@@ -29,12 +31,13 @@ export function PublicCatalog({ api, userId, onInvalid, onBack, active = true, e
     }).catch(error => {
       if (!abort.signal.aborted) {
         const denied = error && typeof error === 'object' && 'status' in error && [401, 403, 404, 409].includes(Number(error.status))
+        if (denied) details.clear()
         setResult(previous => ({ userId, items: !denied && previous?.userId === userId ? previous.items : null, failed: true }))
         invalidate(error)
       }
     })
     return () => abort.abort()
-  }, [api, userId, invalidate, active, enabled])
+  }, [api, userId, invalidate, active, enabled, details, retry])
 
   const loadDetail = useCallback(async (id: string, signal: AbortSignal) => {
     try { return catalogDetailView(await api.exerciseDetail(userId ?? '', id, signal)) }
@@ -42,7 +45,8 @@ export function PublicCatalog({ api, userId, onInvalid, onBack, active = true, e
   }, [api, userId, invalidate])
   const current = result?.userId === userId ? result : null
   if (!active) return null
-  return <CatalogView key={userId} items={current?.items ?? null} failed={current?.failed} loadDetail={loadDetail} mediaSources={mediaSources} onBack={onBack} historyScope={userId ?? 'unavailable'} />
+  return <CatalogView key={userId} items={current?.items ?? null} failed={current?.failed} loadDetail={loadDetail} detailCache={details}
+    onRetry={() => setRetry(value => value + 1)} mediaSources={mediaSources} onBack={onBack} historyScope={userId ?? 'unavailable'} />
 }
 
 function CatalogHeading({ title, backLabel, onBack, headingRef }: {
@@ -56,9 +60,10 @@ function CatalogHeading({ title, backLabel, onBack, headingRef }: {
 
 type DetailLoader = (id: string, signal: AbortSignal) => Promise<CatalogBrowseExercise>
 
-export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, loadDetail, onBack, historyScope = 'review' }: {
+export function CatalogView({ items, failed = false, reviewNote, instructionNotes, mediaSources, loadDetail, detailCache, onRetry, onBack, historyScope = 'review' }: {
   items: CatalogBrowseExercise[] | null; failed?: boolean; reviewNote?: string
   instructionNotes?: Readonly<Record<string, string>>; mediaSources?: Readonly<Record<string, string>>; loadDetail?: DetailLoader; onBack: () => void; historyScope?: string
+  detailCache?: Map<string, CatalogBrowseExercise>; onRetry?: () => void
 }) {
   const [selectedId, setSelected] = useScreenHistory<string | null>('exercise-detail:catalog:' + historyScope, null)
   const selected = items?.find(item => item.id === selectedId)
@@ -69,7 +74,7 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
   const listScroll = useRef(0)
 
   useLayoutEffect(() => {
-    if (selected) {
+    if (selectedId) {
       detailTitle.current?.focus({ preventScroll: true })
       window.scrollTo(0, 0)
     } else if (selectedRow.current?.isConnected) {
@@ -79,7 +84,7 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
       listTitle.current?.focus({ preventScroll: true })
       window.scrollTo(0, 0)
     }
-  }, [selected])
+  }, [selectedId])
 
   return <>
     <div className={styles.screen} hidden={!!selectedId}>
@@ -87,44 +92,56 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
       <Card className={styles.catalogCard}>
         <div className={styles.sectionHeader}><h2>표준 운동 DB</h2><span className={styles.tag}>조회 전용</span></div>
         <p className={styles.description}>등록·편집·삭제는 관리자가 수행합니다. 사용자는 이름·별칭으로 검색하고 정보를 확인합니다.</p>
-        {items === null && !failed ? <LoadingSkeleton layout="list" label="운동 정보를 불러오고 있어요." /> :
+        {items === null && !failed ? <div aria-busy="true" /> :
           <ExerciseSearch exercises={items ?? []} failed={failed && !items} resetOnSelect={false} defaultOpen
             onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item.id) }} />}
         {failed && items && <StatusNotice error>운동 목록을 갱신하지 못했습니다. 마지막으로 확인한 내용을 표시합니다.</StatusNotice>}
+        {failed && onRetry && <Button variant="quiet" onClick={onRetry}>운동 목록 다시 조회</Button>}
         {reviewNote && <p className={styles.description}>{reviewNote}</p>}
       </Card>
     </div>
-    {selected ? <CatalogDetail exercise={selected} onBack={back} headingRef={detailTitle} loadDetail={loadDetail} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} reviewNote={reviewNote}/>
+    {selected ? <CatalogDetail exercise={selected} onBack={back} headingRef={detailTitle} loadDetail={loadDetail} detailCache={detailCache} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} reviewNote={reviewNote}/>
       : selectedId && <div className={styles.screen}><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={back} headingRef={detailTitle} />
         {items === null && !failed ? <LoadingSkeleton layout="detail" label="운동 정보를 불러오고 있어요." /> : <p role="status">운동 정보를 찾을 수 없어요.</p>}</div>}
   </>
 }
 
 /** The existing standard catalog detail page, also used by search-result navigation. */
-export function CatalogDetail({exercise,onBack,headingRef,loadDetail,instructionNote,mediaSource,reviewNote}:{exercise:CatalogBrowseExercise;onBack:()=>void;headingRef:Ref<HTMLHeadingElement>;loadDetail?:DetailLoader;instructionNote?:string;mediaSource?:string;reviewNote?:string}){
- return <div className={styles.screen+" catalog-detail-page"} data-catalog-detail><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={onBack} headingRef={headingRef}/><SelectedExercise key={exercise.id} exercise={exercise} loadDetail={loadDetail} instructionNote={instructionNote} mediaSource={mediaSource}/>{reviewNote&&<p className={styles.description}>{reviewNote}</p>}</div>
+export function CatalogDetail({exercise,onBack,headingRef,loadDetail,detailCache,instructionNote,mediaSource,reviewNote}:{exercise:CatalogBrowseExercise;onBack:()=>void;headingRef:Ref<HTMLHeadingElement>;loadDetail?:DetailLoader;detailCache?:Map<string,CatalogBrowseExercise>;instructionNote?:string;mediaSource?:string;reviewNote?:string}){
+ return <div className={styles.screen+" catalog-detail-page"} data-catalog-detail><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={onBack} headingRef={headingRef}/><SelectedExercise key={exercise.id} exercise={exercise} loadDetail={loadDetail} detailCache={detailCache} instructionNote={instructionNote} mediaSource={mediaSource}/>{reviewNote&&<p className={styles.description}>{reviewNote}</p>}</div>
 }
 
-export function SelectedExercise({ exercise, loadDetail, instructionNote, mediaSource }: {
+export function SelectedExercise({ exercise, loadDetail, detailCache, instructionNote, mediaSource }: {
   exercise: CatalogBrowseExercise; loadDetail?: DetailLoader; instructionNote?: string; mediaSource?: string
+  detailCache?: Map<string, CatalogBrowseExercise>
 }) {
-  const [result, setResult] = useState<{ detail?: CatalogBrowseExercise; error?: unknown } | null>(null)
+  const [result, setResult] = useState<{ detail?: CatalogBrowseExercise; error?: unknown } | null>(() => {
+    const detail = detailCache?.get(exercise.id)
+    return detail ? { detail } : null
+  })
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     if (!loadDetail) return
     const abort = new AbortController()
     void loadDetail(exercise.id, abort.signal).then(detail => {
-      if (!abort.signal.aborted) setResult({ detail })
-    }).catch(error => { if (!abort.signal.aborted) setResult({ error }) })
+      if (abort.signal.aborted) return
+      detailCache?.set(exercise.id, detail)
+      setResult({ detail })
+    }).catch(error => {
+      if (abort.signal.aborted) return
+      const denied = error && [401, 403, 404, 409].includes(Number(error.status))
+      if (denied) detailCache?.delete(exercise.id)
+      setResult(previous => ({ detail: denied ? undefined : previous?.detail, error }))
+    })
     return () => abort.abort()
-  }, [exercise.id, loadDetail, attempt])
+  }, [exercise.id, loadDetail, attempt, detailCache])
   if (!loadDetail) return <ExerciseDetail exercise={exercise} instructionNote={instructionNote} mediaSource={mediaSource} />
-  if (result?.detail) return <ExerciseDetail exercise={result.detail} mediaSource={mediaSource} protectedMedia />
+  if (result?.detail && !result.error) return <ExerciseDetail exercise={result.detail} mediaSource={mediaSource} protectedMedia />
   if (!result) return <LoadingSkeleton layout="detail" label="운동 정보를 불러오는 중입니다." />
   const status = result.error && typeof result.error === 'object' && 'status' in result.error ? result.error.status : null
-  return <Card><StatusNotice error>{status === 404 ? '운동 정보를 찾을 수 없습니다.'
+  return <>{result.detail && <ExerciseDetail exercise={result.detail} mediaSource={mediaSource} protectedMedia />}<Card><StatusNotice error>{status === 404 ? '운동 정보를 찾을 수 없습니다.'
     : status === 403 ? '운동 정보를 조회할 권한이 없습니다.' : '운동 정보를 불러오지 못했습니다.'}</StatusNotice>
-    <Button variant="quiet" onClick={() => { setResult(null); setAttempt(value => value + 1) }}>다시 조회</Button></Card>
+    <Button variant="quiet" onClick={() => setAttempt(value => value + 1)}>다시 조회</Button></Card></>
 }
 
 function ExerciseDetail({ exercise, instructionNote, mediaSource, protectedMedia = false }: {

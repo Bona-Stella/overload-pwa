@@ -796,12 +796,12 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.equal(await evaluate(`document.querySelector('${settingsPage}').hidden`), false)
     assert.equal(await evaluate('document.activeElement.querySelector("strong").textContent'), '운동 종목 보기')
     await send('Page.navigate', { url: origin + '/routine-preview?tab=history&record-loading=1' })
-    await wait(() => evaluate('!!document.querySelector("[data-loading-skeleton=summary]")'), 'first records skeleton')
+    await wait(() => evaluate('!!document.querySelector(".record-statistics-body .app-card[aria-busy=true]")'), 'first records shell')
     for (const width of [320, 375, 393, 430]) {
       await verifyWidth(width)
-      assert.equal(await evaluate('!!document.querySelector("[data-loading-skeleton=summary]")'), true)
+      assert.equal(await evaluate('!document.querySelector("[data-loading-skeleton=summary]") && !!document.querySelector(`[aria-label="운동 분석 메뉴"]`)'), true)
     }
-    await wait(() => evaluate('!!document.querySelector(".record-statistics-body")'), 'first record data')
+    await wait(() => evaluate('!!document.querySelector(".record-statistics-body .app-card[aria-busy=false]")'), 'first record data')
     await evaluate('window.reviewRecordCards=document.querySelector(".record-statistics-body"); void 0')
     for (const tab of ['홈','루틴','설정']) {
       await navTo(tab); await activeTab(tab); await navTo('기록'); await activeTab('기록')

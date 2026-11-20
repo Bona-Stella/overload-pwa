@@ -311,7 +311,7 @@ test('home uses current applied plan and local progress only for the active sess
   assert.equal(active.completedSets,1)
   assert.deepEqual(active.weights.map(p=>p.setCount),[4,3])
   assert.equal(activeWorkoutProgress(server,{...w,writerEpoch:'9'},[]).weights.length,1)
-  assert.equal(activeWorkoutProgress(server,{...w,dataGeneration:'9'},[]).status(at),'현재 종목 확인 필요')
+  assert.equal(activeWorkoutProgress(server,{...w,dataGeneration:'9'},[]).status(at),'')
 })
 test('an existing local session retains its original rest deadline when opened with per-exercise rests',()=>{
   const workout=set(local())

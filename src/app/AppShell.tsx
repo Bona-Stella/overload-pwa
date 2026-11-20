@@ -71,11 +71,25 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
   children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; busy?: boolean; displayTheme?: DisplayTheme
 }) {
   const shell = useRef<HTMLDivElement>(null)
+  const pressed = useRef<{ button: HTMLButtonElement | null; pointerId: number; action?: string } | null>(null)
   const { occluded, keyboardOpen } = useEditorKeyboard(shell)
   const reserveTabs = authenticated && !focused
   const showTabs = reserveTabs && !keyboardOpen
   const { navigation, collapsed, expand } = useTabBarCollapse(tab, showTabs)
-  return <div ref={shell} className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme} data-keyboard-open={keyboardOpen || undefined}>
+  return <div ref={shell} className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme} data-keyboard-open={keyboardOpen || undefined}
+    onPointerDownCapture={event => {
+      if (!event.isPrimary || event.button !== 0) return
+      const button = event.target instanceof Element ? event.target.closest('button') : null
+      pressed.current = { button: button?.matches(':disabled') ? null : button, pointerId: event.pointerId, action: button?.dataset.clickAction }
+    }} onPointerCancelCapture={() => { pressed.current = null }} onClickCapture={event => {
+      const start = pressed.current
+      pressed.current = null
+      // Async content can move under a finger between pointerdown and click.
+      if (event.detail === 0 || !start || !(event.target instanceof Element)) return
+      if ('pointerId' in event.nativeEvent && event.nativeEvent.pointerId !== start.pointerId) return
+      const button = event.target.closest('button')
+      if (button && (button !== start.button || button.dataset.clickAction !== start.action)) { event.preventDefault(); event.stopPropagation() }
+    }}>
     <main className={`${styles.content} ${reserveTabs ? styles.withTabs : ''} ${authenticated && !focused && tab === 'home' ? styles.homeContent : ''} page`}>
       <EditorViewportOccluded value={occluded}>{children}</EditorViewportOccluded>
     </main>

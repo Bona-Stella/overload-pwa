@@ -12,6 +12,7 @@ type AuthSource = Pick<AuthController, 'getSnapshot' | 'subscribe'>
 type Store = Pick<WorkoutStore, 'deviceId' | 'attempt' | 'prepareStart' | 'saveSession' | 'copies'> & Partial<Pick<WorkoutStore, 'prepareTakeover' | 'rejectTakeover'>>
 export type OnlineState = { userId: string | null; scope: Scope | null; data: Bootstrap | null; selected: Routine | null;
   active: Session | null; detail: Session | null; deviceId: string | null; attempt: StartAttempt | null;
+  revalidatingScope?: boolean;
   status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string; recordsRevision: number }
 const empty = (): OnlineState => ({ userId: null, scope: null, data: null, selected: null, active: null, detail: null, deviceId: null, attempt: null,
   status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '', recordsRevision: 0 })
@@ -87,7 +88,7 @@ export class WorkoutOnlineController {
   }
   private failure(error: unknown) {
     const code = (error as { code?: string })?.code
-    if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED'].includes(code ?? '')) {
+    if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) {
       this.onBoundary?.()
       this.set({ ...empty(), userId: this.owner, issue: onlineIssue(error), status: 'ready' }); return
     }
@@ -96,7 +97,7 @@ export class WorkoutOnlineController {
   refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
     const previous = this.state
-    this.set({ userId: context.userId, status: 'loading', busy: true, issue: null })
+    this.set({ userId: context.userId, status: 'loading', busy: true, issue: null, revalidatingScope: keepDraftScope && !!previous.scope })
     try {
       const data = await this.api.bootstrap(context.userId, context.signal)
       if (!context.current()) return
@@ -108,7 +109,7 @@ export class WorkoutOnlineController {
       const copySaved = sameScope && previous.copySaved && previous.detail?.id === detail?.id
         && previous.detail?.writerEpoch === detail?.writerEpoch && previous.detail?.editorDeviceId === detail?.editorDeviceId
       const selected = sameScope && data.routines.some(r => r.id === previous.selected?.id && r.version === previous.selected.version) ? previous.selected : null
-      this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected,
+      this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected, revalidatingScope: false,
         recordsRevision: sameScope ? previous.recordsRevision + 1 : 0 })
       let deviceId: string | null = null, attempt: StartAttempt | null = null, copies: SessionCopy[] = []
       try {
@@ -193,6 +194,12 @@ export class WorkoutOnlineController {
     this.set({ detail, active: detail.status === 'ACTIVE' ? detail : this.state.active?.id === detail.id ? null : this.state.active,
       recordsRevision: this.state.recordsRevision + Number(recordsChanged) })
   }
+  observeClosedRecord = (detail: Session, changed = false) => {
+    if (detail.status === 'ACTIVE' || detail.userId !== this.state.scope?.userId || detail.dataGeneration !== this.state.scope?.dataGeneration) return
+    const revision = this.state.recordsRevision
+    this.observeSession(detail)
+    if (changed && this.state.recordsRevision === revision) this.set({ recordsRevision: revision + 1 })
+  }
   invalidateScope = (error: unknown) => this.failure(error)
   takeover = async () => {
     const { scope, detail, deviceId } = this.state, context = this.context()
@@ -242,12 +249,12 @@ export class WorkoutOnlineController {
     } catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
   }
-  removedRoutine = async () => {
-    const scope = this.state.scope, selected = this.state.selected, context = this.context()
-    if (!scope || !selected || !context) return null
+  removedRoutine = async (id: string) => {
+    const scope = this.state.scope, context = this.context()
+    if (!scope || !context) return null
     this.set({ busy: true, issue: null })
     try {
-      const removed = await this.api.removedPlacements(scope, selected.id, context.signal)
+      const removed = await this.api.removedPlacements(scope, id, context.signal)
       return context.current() ? removed : null
     } catch (error) { if (context.current()) this.failure(error); return null }
     finally { if (context.current()) this.set({ busy: false }) }

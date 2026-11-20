@@ -2,7 +2,7 @@ import { KgWheel } from '../workout-flow/WeightFocus.tsx'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { EditorViewportOccluded } from '../../components/useEditorKeyboard.ts'
-import { Card } from '../../components/ui.tsx'
+import { Button, Card } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { newId } from '../../id.ts'
 import { TagPicker } from './TagPicker.tsx'
@@ -143,7 +143,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   }
   function lookupRemoved() {
     if (!routine) return
-    void controller.removedRoutine().then(value => {
+    void controller.removedRoutine(routine.id).then(value => {
       if (!value) return
       if (value.version !== routine.version) setError('루틴이 변경되었습니다. 닫은 뒤 최신 루틴을 다시 조회해 주세요.')
       else setRemoved(value)
@@ -188,7 +188,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     }
     finally{guard.current=false;if(!abort.current.signal.aborted)setSaving(false)}
   }
-  const saveLabel = locked ? '서버 확인 중…' : submitted ? '고정된 저장 요청 다시 확인' : editing ? '변경 사항 저장' : '루틴 생성'
+  const saveLabel = submitted && !saving ? '고정된 저장 요청 다시 확인' : editing ? '변경 사항 저장' : '루틴 생성'
   const title = editing ? '루틴 편집' : '루틴 생성'
   const cardClass = `stack ${editStyles.exercise}`
   return <form ref={form} className={`${styles.editor} stack online-routine ${editStyles.form}${editing ? '' : ' ' + editStyles.create}`} data-keyboard-editor data-picking={picker !== null} aria-label={title} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
@@ -276,7 +276,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     </div>}
     <footer className={editStyles.footer}>
       <button type="button" className="outline" disabled={locked} onClick={close}>취소</button>
-      <button className="primary full" disabled={locked || managementBlocked}>{saveLabel}</button>
+      <Button type="submit" variant="primary" className="full" disabled={locked || managementBlocked} loading={saving}>{saveLabel}</Button>
     </footer>
   </form>
 }

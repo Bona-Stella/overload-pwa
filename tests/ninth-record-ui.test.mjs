@@ -43,7 +43,7 @@ test('shared record cards show compact actual/planned counts without changing re
  assert.match(recent,/웨이트 1\/1종목 · 유산소 1\/1종목/);assert.match(recent,/전체 완료/)
  assert.doesNotMatch(recent,/00:40|00:20|총 3세트|2.5km|750kg|총중량/)
  const unavailable=render(SessionRecordCard,{row,onOpen(){}})
- assert.match(unavailable,/종목 완료 수 · 상세 조회 필요/);assert.doesNotMatch(unavailable,/0\/0종목/);assert.deepEqual(s,before)
+ assert.doesNotMatch(unavailable,/상세 조회 필요|달성 확인 중|0\/0종목|총 1시간/);assert.deepEqual(s,before)
 })
 test('unknown coverage and inconsistent durations cannot manufacture nonperformance time',()=>{
  const s=mixedRecord();delete s.snapshot.state.weightTiming

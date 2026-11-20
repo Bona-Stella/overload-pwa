@@ -71,11 +71,19 @@ export class AuthController {
   private localWorkoutLocked = false
   private sessionRejected = false
   private readSessionCheck: { generation: number; result: Promise<ServerSession | null> } | null = null
+  private accountDetailsCache: Pick<AccountState, 'identities' | 'contact'> | null = null
   private readonly boundary?: AuthBoundary
   constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route: (path: string) => void = () => {}, boundary?: AuthBoundary) { this.api = api; this.now = now; this.navigate = navigate; this.route = route; this.boundary = boundary }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
-  private set(patch: Partial<AuthState>) { this.state = { ...this.state, ...patch, updatedAt: this.now() }; this.listeners.forEach(listener => listener()) }
+  private set(patch: Partial<AuthState>) {
+    const previous = this.state
+    this.state = { ...previous, ...patch, updatedAt: this.now() }
+    const { status, userId, pending, account } = this.state
+    if (status !== 'authenticated' || pending === 'logout' || previous.userId !== userId) this.accountDetailsCache = null
+    else if (account.loaded && account.contact) this.accountDetailsCache = { identities: account.identities, contact: account.contact }
+    this.listeners.forEach(listener => listener())
+  }
   start(flow: ReturnFlow = 'none') {
     if (this.started) return
     this.started = true
@@ -325,7 +333,8 @@ export class AuthController {
     const entering = !this.state.accountOpen
     this.running = true
     const expected = this.state.userId, generation = ++this.generation
-    this.set({ accountOpen: true, account: { ...emptyAccount(), resendAt: this.state.account.resendAt }, issue: null, notice: '', pending: 'account' })
+    const cached = this.accountDetailsCache
+    this.set({ accountOpen: true, account: { ...emptyAccount(), ...cached, loaded: !!cached, resendAt: this.state.account.resendAt }, issue: null, notice: '', pending: 'account' })
     if (entering && updateRoute) this.route('/account')
     try { await this.readAccount(expected, generation) }
     catch (error) { this.accountFailure(error) }

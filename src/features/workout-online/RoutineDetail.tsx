@@ -110,7 +110,7 @@ export function RoutineDetail({ routine, exercises, activities, manufacturers, p
             {days.toSorted((a, b) => a - b).map(day => <span key={day}>{dayNames[day - 1]}</span>)}
           </span>
         </li>)}</ol>
-      </Card> : <p className={styles.empty}>{entries ? '배정된 주간 일정 없음' : scheduleLoading ? '주간 일정 확인 중' : '주간 일정을 확인하지 못했습니다.'}</p>}
+      </Card> : <p className={styles.empty} aria-busy={!entries && scheduleLoading}>{entries ? '배정된 주간 일정 없음' : scheduleLoading ? '' : '주간 일정을 확인하지 못했습니다.'}</p>}
     </section>
     <div className={styles.actions}>
       {start}

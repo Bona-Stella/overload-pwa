@@ -30,7 +30,7 @@ export function activeWorkoutProgress(session: Session, candidate: LocalWorkout 
   })
   const cardio = snapshot.appliedPlan.cardioActivities.map(c => ({ id: c.sessionActivityId, plan: c.plan }))
   const status = (now: number) => {
-    if (!local) return '현재 종목 확인 필요'
+    if (!local) return ''
     if (local.finish) return '운동 종료 확인 중'
     if (local.warmupCompleted === false) return '준비운동 중'
     const weight = weights.find(e => e.id === local.currentExerciseId)

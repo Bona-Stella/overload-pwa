@@ -13,8 +13,8 @@ export function SearchResults({options,onSelect,onDetail,disabled=false,label='�
   {o.exerciseId&&<button type="button" className={searchStyles.detail} aria-label={o.name+' 상세 보기'} disabled={disabled||!detail&&!onDetail} onClick={e=>onDetail?onDetail(o.id,e):detail?.(o)}><span aria-hidden="true">›</span></button>}
  </li>)}</ul>
 }
-export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,onDetail,query,onQuery,options,onSelect,selected,onClear,disabled,issue,resultsFooter,onCloseSearch,onSearchOpenChange,autoFocus=false,defaultOpen=false,closeOnSelect=true,resultsLabel='검색 결과',label='이름 검색'}:{
- scopes?:{id:string;name:string}[];scope?:string;onScope?:(value:string)=>void;renderScope?:(control:SearchScopeControl)=>ReactNode;tags?:SearchTags;onDetail?:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;query:string;onQuery:(value:string)=>void;options:SearchOption[];onSelect:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;selected?:string;onClear:()=>void;disabled?:boolean;issue?:string;resultsFooter?:ReactNode;onCloseSearch?:()=>void;onSearchOpenChange?:(open:boolean)=>void;autoFocus?:boolean;defaultOpen?:boolean;closeOnSelect?:boolean;resultsLabel?:string;label?:string
+export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,onDetail,query,onQuery,options,onSelect,selected,onClear,disabled,issue,loading=false,resultsFooter,onCloseSearch,onSearchOpenChange,autoFocus=false,defaultOpen=false,closeOnSelect=true,resultsLabel='검색 결과',label='이름 검색'}:{
+ scopes?:{id:string;name:string}[];scope?:string;onScope?:(value:string)=>void;renderScope?:(control:SearchScopeControl)=>ReactNode;tags?:SearchTags;onDetail?:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;query:string;onQuery:(value:string)=>void;options:SearchOption[];onSelect:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;selected?:string;onClear:()=>void;disabled?:boolean;issue?:string;loading?:boolean;resultsFooter?:ReactNode;onCloseSearch?:()=>void;onSearchOpenChange?:(open:boolean)=>void;autoFocus?:boolean;defaultOpen?:boolean;closeOnSelect?:boolean;resultsLabel?:string;label?:string
 }){
  const [state,setState]=useState<{mode:'IDLE'|'EDITING'|'SELECTED';hideScope:boolean}>(()=>({mode:autoFocus||defaultOpen?'EDITING':selected?'SELECTED':'IDLE',hideScope:autoFocus}))
  const mode=state.mode==='SELECTED'&&!selected?'IDLE':state.mode,open=mode==='EDITING',id=useId(),region=useRef<HTMLDivElement>(null)
@@ -54,6 +54,6 @@ export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,
     if(closeOnSelect)region.current?.querySelector('input')?.blur()
     onSelect(id,event)
     if(closeOnSelect)setState({mode:'SELECTED',hideScope:false})
-  }}/>{!options.length&&<p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
+  }}/>{loading ? <div aria-busy="true" /> : !options.length && <p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
  </div>
 }

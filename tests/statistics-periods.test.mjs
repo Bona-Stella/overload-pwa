@@ -48,13 +48,17 @@ function setup(t, owner = scope, freezeTime = true) {
       respond(count, responseOwner = owner) { this.settled=true; resolve({ status: 200, data: overview(responseOwner, Object.fromEntries(query), count) }) },
     }) })
   })
-  const panel = mountPanel(StatisticsPanel, { api, scope: owner, refreshKey: 'home', onOpen() {}, onInvalid: error => invalid.push(error) })
+  const props = { api, scope: owner, refreshKey: 'home', onOpen() {}, onInvalid: error => invalid.push(error) }
+  const panel = mountPanel(StatisticsPanel, props)
   t.after(() => { panel.unmount(); delete globalThis.window })
   let tree = panel.render()
   const view = () => nodes(tree).find(node => node.type === StatisticsView)
+  const control = () => nodes(tree).find(node => node.type?.name === 'PeriodControls')?.props
   return {
-    panel, requests, invalid, view,
+    panel, requests, invalid, view, control,
     render() { tree = panel.render(); return tree },
+    refresh(refreshKey) { props.refreshKey = refreshKey; tree = panel.render() },
+    update(changes) { Object.assign(props, changes); tree = panel.render() },
     click(label) {
       const button = nodes(tree).find(node => node.props?.children === label && typeof node.props?.onClick === 'function')
       assert.ok(button, `missing button ${label}`); button.props.onClick(); tree = panel.render()
@@ -75,8 +79,7 @@ function setup(t, owner = scope, freezeTime = true) {
     },
     open(screen) { assert.ok(view()); view().props.onScreen(screen); tree = panel.render() },
     period(value) {
-      const control=nodes(tree).find(n=>n.type?.name==='PeriodControls')
-      assert.ok(control,'activity period control');control.props.onChange(value);tree=panel.render()
+      assert.ok(control(), 'activity period control'); control().onChange(value); tree = panel.render()
     },
     pressed(label) { return nodes(tree).find(node => node.type === 'button' && node.props.children === label)?.props['aria-pressed'] },
     async respond(count) { requests.filter(r=>!r.settled&&!r.signal.aborted).forEach(r=>r.respond(count)); await flush(); tree = panel.render() },
@@ -105,8 +108,116 @@ test('activity period is retained and muscle statistics reuses the matching curr
   assert(!nodes(f.render()).some(n=>n.type?.name==='PeriodControls'))
   f.back('주간 근육 통계');await f.respond(6);assert.equal(f.view().props.screen,'summary')
   const beforeReturn=f.requests.length
-  f.open('activity');requested(f,'month',-1,beforeReturn)
-  await f.respond(7);assert.equal(f.view().props.data.summary.completedSets,'7')
+  f.open('activity')
+  assert.equal(f.requests.slice(beforeReturn).some(request => request.period.fromDate === '2026-10-01'), false)
+  assert.equal(f.view().props.data.summary.completedSets,'3')
+})
+
+test('first mode switch retains the committed mode and data, then cached switches send no requests', async t => {
+  const f = setup(t)
+  f.open('activity')
+  assert.equal(f.requests.length, 1, 'the initial week shares the summary read and does not preload the month')
+  await f.respond(7)
+  const week = f.control().value, month = { ...week, mode: 'month' }
+  f.period(month)
+  assert.deepEqual(f.control().value, week)
+  assert.equal(f.control().pendingMode, 'month')
+  assert.equal(f.view().props.data.summary.completedSets, '7')
+  assert.equal(f.view().props.activityState, undefined)
+  assert.equal(f.requests.length, 2, 'only the month needs a read')
+  await f.respond(37)
+  assert.deepEqual(f.control().value, month)
+  assert.equal(f.control().pendingMode, undefined)
+  assert.equal(f.view().props.data.summary.completedSets, '37')
+  f.period(week)
+  assert.equal(f.view().props.data.summary.completedSets, '7')
+  f.period(month)
+  assert.equal(f.view().props.data.summary.completedSets, '37')
+  assert.equal(f.requests.length, 2)
+})
+
+test('switching from a month to a new week shares the pending weekly achievement read', async t => {
+  const f = setup(t)
+  f.open('activity'); await f.respond(7)
+  f.period({ ...f.control().value, mode: 'month' }); await f.respond(37)
+  const month = { mode: 'month', anchor: '2026-11-20' }, week = { ...month, mode: 'week' }
+  const before = f.requests.length
+  f.period(month)
+  const request = f.requests.at(-1)
+  assert.equal(f.requests.length, before + 1)
+  f.period(week)
+  assert.equal(f.control().pendingMode, 'week')
+  assert.deepEqual(f.control().value, month)
+  assert.equal(f.view().props.data.summary.completedSets, '37')
+  assert.equal(request.signal.aborted, false)
+  assert.equal(f.requests.length, before + 1)
+  await f.respond(13)
+  assert.deepEqual(f.control().value, week)
+  assert.equal(f.view().props.data.summary.completedSets, '13')
+})
+
+test('failed and canceled mode switches cannot replace the committed period', async t => {
+  const f = setup(t)
+  f.open('activity'); await f.respond(7)
+  const week = f.control().value, month = { ...week, mode: 'month' }
+  f.period(month)
+  const earlier = f.requests.at(-1)
+  f.period(week)
+  assert.equal(earlier.signal.aborted, true)
+  f.period(month)
+  const failed = f.requests.at(-1)
+  failed.settled = true; failed.reject(Error('offline')); await flush(); f.render()
+  earlier.respond(99); await flush(); f.render()
+  assert.deepEqual(f.control().value, week)
+  assert.equal(f.control().pendingMode, undefined)
+  assert.equal(f.view().props.data.summary.completedSets, '7')
+  const beforeRetry = f.requests.length
+  f.click('다시 조회')
+  assert.equal(f.requests.length, beforeRetry + 1)
+  assert.equal(f.control().pendingMode, 'month')
+  assert.equal(f.view().props.data.summary.completedSets, '7')
+  await f.respond(0)
+  assert.deepEqual(f.control().value, month)
+  assert.equal(f.view().props.data.summary.completedSets, '0')
+})
+
+test('record changes revalidate the current week and revalidate cached months when next selected', async t => {
+  const f = setup(t)
+  f.open('activity'); await f.respond(7)
+  const week = f.control().value, month = { ...week, mode: 'month' }
+  f.period(month); await f.respond(37); f.period(week)
+  const before = f.requests.length
+  f.refresh('records-edited')
+  assert.equal(f.requests.length, before + 1)
+  assert.equal(f.view().props.data.summary.completedSets, '7')
+  await f.respond(8)
+  f.period(month)
+  assert.equal(f.requests.length, before + 2)
+  assert.equal(f.control().pendingMode, undefined)
+  assert.equal(f.view().props.data.summary.completedSets, '37')
+  await f.respond(38)
+  assert.equal(f.view().props.data.summary.completedSets, '38')
+})
+
+test('initial schedule metadata after reload does not restart an in-flight month; applied changes and record edits still refresh', async t => {
+  const f = setup(t)
+  f.update({ dataRevision: 'records-0' })
+  f.open('activity'); await f.respond(7)
+  const week = f.control().value
+  f.period({ ...week, mode: 'month' })
+  const inFlight = f.requests.at(-1), count = f.requests.length
+  f.update({ schedule: { appliedVersion: '1' }, refreshKey: 'records-0:1' })
+  assert.equal(inFlight.signal.aborted, false)
+  assert.equal(f.requests.length, count)
+  await f.respond(37)
+  f.update({ schedule: { appliedVersion: '2' }, refreshKey: 'records-0:2' })
+  assert.equal(f.requests.length, count + 2)
+  assert.equal(f.view().props.data.summary.completedSets, '37')
+  await f.respond(38)
+  f.update({ dataRevision: 'records-1', refreshKey: 'records-1:2' })
+  assert.equal(f.requests.length, count + 4)
+  await f.respond(39)
+  assert.equal(f.view().props.data.summary.completedSets, '39')
 })
 test('calendar period changes abort old reads and late responses cannot replace the selected range',async t=>{
   const f=setup(t);await f.respond(1);f.open('activity');await f.respond(2)
@@ -114,6 +225,7 @@ test('calendar period changes abort old reads and late responses cannot replace 
   f.period({mode:'month',anchor:'2026-09-20'});const selected=f.requests.findLast(r=>r.period.fromDate==='2026-09-01')
   assert.equal(earlier.signal.aborted,true)
   assert.equal(f.view().props.activityState,'loading','the activity view stays mounted with scoped placeholders')
+  assert.equal(f.view().props.data,null,'a previous period cannot fill the selected period shell')
   assert(nodes(f.render()).some(n=>n.props?.['data-activity-state']==='loading'))
   selected.respond(20);await flush();f.render();earlier.respond(99);await flush();f.render()
   assert.equal(f.view().props.data.summary.completedSets,'20')
@@ -134,7 +246,7 @@ test('a forbidden revalidation discards previously displayed statistics',async t
   const f=setup(t);await f.respond(3)
   f.open('growth');f.back('성장 추적')
   f.requests.at(-1).reject({ status:403 });await flush();f.render()
-  assert.equal(f.view(),undefined)
+  assert.equal(f.view().props.data,null)
   assert(nodes(f.render()).some(n=>n.props?.role==='alert'))
 })
 test('failed requests offer a retry and retain the selected activity period',async t=>{
@@ -165,7 +277,7 @@ for(const [name,owner] of [['account',{...scope,userId:OTHER}],['generation',{..
 }
 test('owner and generation validation still invalidates the current account scope',async t=>{
   const f=setup(t);f.requests.at(-1).respond(1,{...scope,userId:OTHER});await flush();f.render()
-  assert.equal(f.invalid.at(-1).code,'OWNER_MISMATCH');assert.equal(f.view(),undefined)
+  assert.equal(f.invalid.at(-1).code,'OWNER_MISMATCH');assert.equal(f.view().props.data,null)
   f.click('다시 조회');f.requests.at(-1).respond(1,{...scope,dataGeneration:'0'});await flush();f.render()
   assert.equal(f.invalid.at(-1).code,'DATA_GENERATION_MISMATCH')
 })
