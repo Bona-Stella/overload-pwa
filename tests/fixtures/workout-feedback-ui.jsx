@@ -9,6 +9,7 @@ import {createLocalWorkout,editDraft,exerciseRest} from '../../src/features/work
 import {WorkoutFrame,WeightRecommendation} from '../../src/features/workout-flow/WorkoutFrame.tsx'
 import {Button} from '../../src/components/ui.tsx'
 import {ClosedWorkoutView} from '../../src/features/workout-online/ClosedWorkout.tsx'
+import {SavedWeightReview} from '../../src/features/workout-online/SavedWeightReview.tsx'
 import {LocalWorkoutView} from '../../src/features/workout-local/LocalWorkoutFlow.tsx'
 import {RestAlertSettings} from '../../src/features/settings/RestAlertSettings.tsx'
 import {useRestAlertPreferences} from '../../src/features/workout-flow/useRestAlertPreferences.ts'
@@ -72,6 +73,29 @@ frozenServer.snapshot.state.performedSets=frozenServer.snapshot.state.performedS
 const frozenSets=structuredClone(frozenServer.snapshot.state.performedSets)
 frozenServer.completionAssessment={schemaVersion:2,ruleVersion:'task009-completion-v1',sessionVersion:'0',assessedAt:frozenServer.closedAt,overallWeightPlanComplete:true,exercises:[{sessionExerciseId:first.sessionExerciseId,eligible:true,reasonCodes:[],comparisonContext:{routineId:frozenServer.initialPlan.routineId,sourcePlacementId:first.sourcePlacementId,standardExerciseId:first.standardExerciseId,approvedWeightKg:first.approvedWeightKg,plannedSetCount:3,minReps:first.minReps,maxReps:first.maxReps,unit:'KG'},evaluatedPerformedSetIds:frozenSets.map(s=>s.id),evaluatedReps:frozenSets.map(s=>s.reps),repsSum:'37',benchmarkEvidence:null,advice:'INCREASE',adviceReason:'ALL_AT_OR_ABOVE_MAX_REPS'}]}
 frozenServer.snapshot.state.performedSets[0].reps=5
+const savedReviewItem = {
+ sessionExerciseId:first.sessionExerciseId, sourcePlacementId:first.sourcePlacementId, name:first.exerciseName,
+ loadType:first.loadType, recommendedWeightKg:'50', guidance:reviewExercises[0],
+}
+const savedReviewNegative = ['MAINTAIN','UNAVAILABLE'].map(advice=>({
+ ...savedReviewItem, name:'표시하면 안 되는 '+advice, sessionExerciseId:crypto.randomUUID(), recommendedWeightKg:null,
+ guidance:{...savedReviewItem.guidance,advice},
+}))
+function SavedReviewFixture({ mode }) {
+ const [api]=useState(()=>{
+  let attempts=0
+  return {weightReview:async()=>{
+   if(mode==='failure'&&attempts++===0)throw Error('Read failed')
+   const exercises=mode==='candidate'?[savedReviewItem,...savedReviewNegative]:savedReviewNegative
+   return {userId:frozenServer.userId,dataGeneration:frozenServer.dataGeneration,sessionId:frozenServer.id,
+    version:frozenServer.version,current:[],frozen:mode==='legacy-event'?null:{sessionVersion:'0',exercises},
+    approvals:mode==='legacy-event'?[{id:'saved-approval',sessionExerciseId:first.sessionExerciseId,source:'WORKOUT',previousWeightKg:'45',nextWeightKg:'50'}]:[],
+   }
+  }}
+ })
+ return <ClosedWorkoutView state={frozenRecordState} controller={recordController}
+  reviewContent={<SavedWeightReview api={api} session={frozenServer} readOnly disabled authorized={()=>true} onChanged={async()=>{}}/>}/>
+}
 const growthApi={
  search:async()=>({exercises:[{standardExerciseId:bootstrap.exercises[0].id,name:'승인 이력 검증을 위한 매우 긴 운동명',lastPerformedAt:recordServer.endedAt,lastApprovalAt:recordServer.endedAt}],nextOffset:null}),
  options:async()=>({placements:[{placementId:'placement',routineId:'routine',routineName:'검토 루틴',deleted:false}]}),
@@ -81,7 +105,7 @@ function Preferences({ owner, onBack }) {
  const [alerts, save] = useRestAlertPreferences(owner)
  return <RestAlertSettings alerts={alerts} onChange={save} onBack={onBack}/>
 }
-function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={e=>{throw e}} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
+function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={e=>{throw e}} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record?.startsWith('saved-review:') ? <SavedReviewFixture key={record} mode={record.split(':')[1]}/> : record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
 const authInput = new URLSearchParams(location.search).get('input')
 const now = Date.now()
 const challenge = authInput === 'otp' ? { id:'fixture', email:'sample@example.invalid', expiresAt:now+300000 } : null

@@ -34,6 +34,14 @@ const formatKg = (value: bigint) => {
   return (value / 1000000n).toLocaleString('ko-KR') + (fraction ? '.' + fraction : '') + 'kg'
 }
 
+export function WeightApprovalHistory({ children }: { children: ReactNode }) {
+  return <Card className={detailStyles.review}>
+    <details open><summary><h2>중량 변경 승인 이력</h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div>{children}</div>
+    </details>
+  </Card>
+}
+
 export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, backLabel, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent, recordFacts, recordRange, achievementReasons = {}, takeInitialScroll }: {
   recordFacts?:RecordSummary;recordRange?:string;achievementReasons?:Record<string,string[]>
   routine: string; date: string; recordTime?:string; elapsed?: number; deload: boolean; weights: WeightSummary[]; dataNote?: string
@@ -90,11 +98,9 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
       {!detail&&timing && <dl className={styles.recordTimes}><div><dt>운동 시작</dt><dd>{timing.start}</dd></div><div><dt>운동 종료</dt><dd>{timing.end}</dd></div></dl>}
       {unknown > 0 && <small>볼륨 미확인 {unknown}세트</small>}
     </Card>
-    {detail?(reviewContent!==undefined||historicalWeights.length>0)&&<Card className={detailStyles.review}>
-      <details open><summary><h2>중량 변경 승인 이력</h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
-        <div>{reviewContent??<WeightReview weights={historicalWeights} readOnly preview={previewApproval}/>}</div>
-      </details>
-    </Card>:reviewContent}
+    {reviewContent === undefined && detail && historicalWeights.some(w => w.review)
+      ? <WeightApprovalHistory><WeightReview weights={historicalWeights} readOnly preview={previewApproval}/></WeightApprovalHistory>
+      : reviewContent}
     {reviewContent===undefined && !detail && !deload && !reviewExcluded && (reviewIssue
       ? <p role="alert">{reviewIssue}</p>
       : reviewState === 'ready' && reviews.length > 0 && <WeightReview key={JSON.stringify(reviews)} weights={reviews} preview={previewApproval} onApprove={onPreviewApprove} />)}
