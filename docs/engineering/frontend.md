@@ -630,7 +630,7 @@ iPhone의 화면 구조를 고려합니다.
 
 **상세·이력 UI 현황 갱신(2026-11-18):** `3bd64a4`의 운동 기록 상세·전체 운동 이력·최근 카드 수행/계획 표기는 **UI 구현 A / 사용자 승인 B / 코드 커밋 완료**다. 공통 헤더는 상세와 전체 이력까지 6개 기록 하위 화면에 적용했다. [아래 최종 기록](#운동-기록-상세전체-이력최근-카드-최종-ui-승인--2026-11-18)을 따른다. 실제 계정의 전체 과거 운동명 검색은 기존 서버 연결 대기다.
 
-**홈 운동 프로세스 현황 갱신(2026-11-18).** `4607d99`에 운동 진행과 종료 직후 요약 UI가 반영됐고, `44300ab`에서 전체 테스트가 통과했다. 최신 UI·검증 범위와 미완료 정책은 [아래 구현 기록](#홈-운동-프로세스-리디자인-현황--2026-11-18)을 따른다.
+**홈 운동 프로세스 구현 이력(2026-11-18).** `4607d99`에 운동 진행과 종료 직후 요약 UI가 반영됐고, `44300ab`에서 전체 테스트가 통과했다. [당시 구현 기록](#홈-운동-프로세스-리디자인-현황--2026-11-18)과 [P1 후속 구현 및 검증](#p1-01부터-05까지-구현과-검증)을 구분한다.
 
 **루틴 탭 현황 갱신(2026-11-18).** 상세는 `9cd2684`, 편집·생성은 `3f761b2`에 반영했다. [컴포넌트와 검증 이력](#루틴-탭-리디자인-현황--2026-11-18)을 따른다.
 
@@ -651,6 +651,23 @@ iPhone의 화면 구조를 고려합니다.
 
 사용자 조작의 세부 상태 전환과 실패 처리는 [UI/UX 현행 기능 흐름](../product/ui-ux.md#1차-기능의-실제-동작과-연결-범위--2026-11-16), DTO·원자 처리·DB 근거는 [세션 API](../../../overload-server/docs/api/workout-sessions.md), [통계](../../../overload-server/docs/api/statistics.md), [성장](../../../overload-server/docs/api/approved-weight-growth.md)을 참조한다.
 
+#### P1 01부터 05까지 구현과 검증
+
+확정 정책과 06~20의 원래 순서는 [Decision Log 10.40절](../product/Overload_UI_Decision_Log_v0.9.md#1040--p1-개선-정책과-순서)에 기록한다. 아래는 커밋과 현재 프론트엔드 구현 및 확인 범위다.
+
+| 순서 | 구현 근거 | 승인·검증 범위 |
+|---|---|---|
+| 01 UI-16 | `1e4e4a7`의 [HomePanel](../../src/features/home/HomePanel.tsx)·[RecentWorkout](../../src/features/home/RecentWorkout.tsx)에서 세션 ID를 [WorkoutWorkspace](../../src/features/workout-online/WorkoutWorkspace.tsx)에 넘긴다. 기존 상세를 재사용하고 전체 보기는 기록 탭의 전체 이력으로 연다. [상세 이력 훅](../../src/features/history/useRecordDetailHistory.ts)이 홈·기록의 원래 위치 복원을 담당한다. | 완료. 기존 상세/이력 조회 계약을 재사용한다. 격리 브라우저에서 개별 상세·전체 보기와 이력 복귀를 검증한다. |
+| 02 UI-13 | `b8d5e1b`의 [useEditorKeyboard](../../src/components/useEditorKeyboard.ts)·[editorViewport](../../src/components/editorViewport.ts)를 [AppShell](../../src/app/AppShell.tsx)에서 공유한다. [SearchList](../../src/components/SearchList.tsx)·[Dialog](../../src/components/Dialog.tsx)·루틴 편집·운동/메모의 실제 렌더링과 스크롤을 조정한다. | 완료. 사용자 iPhone Safari에서 입력 확대 방지와 메모·검색의 왕복 스크롤 개선을 확인했다. 격리 Chrome은 뷰포트·키보드 시뮬레이션과 공간 복원 회귀를 검사한다. 설치형 PWA의 전체 입력 조합 검증은 별도다. |
+| 03 UI-02·11·20 | `38f0bfa`의 [useRestAudio](../../src/features/workout-flow/useRestAudio.ts)에서 사용자 상호작용으로 활성화한 Web Audio 상태를 복귀 때 재개한다. [로컬 알림 설정](../../src/features/workout-flow/useRestAlertPreferences.ts)과 기존 일부 효과를 사용한다. | UI-11 완료. 사용자 iPhone 실기기에서 마지막 5초 효과음을 확인했다. UI-02·20은 보류이며 사용자별 서버 저장·기기 간 동기화는 없다. 상·하단 점멸 일치는 05의 부분 수정이다. |
+| 04 UI-24 | `af1046f`의 [navigation.ts](../../src/app/navigation.ts)는 탭·하위 화면을 선형 이력으로 관리한다. [ExerciseSwipe](../../src/features/workout-flow/ExerciseSwipe.tsx)와 [WorkoutFrame](../../src/features/workout-flow/WorkoutFrame.tsx)은 읽기 전용 인접 콘텐츠, 전환과 세로 위치 보정을 담당한다. | 완료. 이전 iPhone 스와이프 피드백과 Chrome 320·375·393·430px의 드래그·취소·경계·위치·이력 회귀를 반영했다. 현재 통합 결과의 설치형 PWA 재검수는 별도다. |
+| 05 UI-07·10·19 및 UI-09 | `0331dab`의 [홈 진행 카드 계산](../../src/features/home/active-workout.ts), [LocalWorkoutFlow](../../src/features/workout-local/LocalWorkoutFlow.tsx), [model](../../src/features/workout-local/model.ts), [weight-timing](../../src/features/workout-local/weight-timing.ts)와 [WorkoutSummary](../../src/features/workout-flow/WorkoutSummary.tsx)를 사용한다. UI-09의 편집 명칭·닫기 색·완료 수치 표현을 함께 반영했다. | 구현과 2차 피드백 반영. 기존 브랜치 검증은 자동 테스트 660건, Chrome 모바일 전환/종료/요약, 실제 IndexedDB를 사용한 격리 Edge의 롤백·새로고침 복원·편집 잠금이다. 기존 세션 API 연결과 이 검증을 운영 계정의 실제 저장 검수로 간주하지 않는다. |
+
+- **진행 저장과 시간.** 준비운동 완료 시각, 시작한 웨이트, 준비의 원인이 된 완료 ID와 종목별 휴식은 같은 기기의 로컬 문서에 보존한다. 완료와 자동 이동은 [IndexedDB](#12-진행-운동의-로컬-보호-및-복원)의 한 트랜잭션을 사용한다. 스와이프와 표시 갱신은 서버 쓰기를 발생시키지 않는다. 관찰 구간의 로컬 체크포인트를 이후 완료 스냅샷 또는 FINISH에 포함하며, [V37 DTO와 서버 저장 계약](../../../overload-server/docs/api/workout-sessions.md#웨이트-시간-구간--v37)은 유지한다. 실행 조건은 [UI/UX 시간 의미](../product/ui-ux.md#시간수행-합계의-의미)를 따른다. 메모 입력은 기존 마운트 메모리 초안이며 영속 저장이 추가되지 않았다.
+- **요약 최상단 진입.** FINISH ACK를 보존하면 `WorkoutWorkspace`는 세션별 첫 진입을 표시하고 활성 운동 항목을 기록 요약으로 전환한다. `WorkoutSummary` 본문을 렌더링한 직후 첫 프레임에서 그 표시를 한 번 소비해 실제 스크롤 루트인 `document.scrollingElement`를 최상단에 맞춘다. 이후 뒤로가기·앞으로가기는 기존 History 복원 정책을 따른다. [검수의 ProcessSession](../../src/review/RestAudioPreview.tsx)도 요약 경로가 선택된 뒤 같은 컴포넌트를 사용한다.
+- **검수 환경.** [4173 운동 검수 경로](http://127.0.0.1:4173/rest-audio-preview?process=1)는 합성 세션과 메모리 응답을 사용한다. 운영 운동 화면·동기화 제어와 요약 표시를 재사용하며 운영 계정·IndexedDB·서버 평가에는 쓰지 않는다. iPhone Safari와 설치형 PWA에서 요약 최상단 진입 및 운영 계정 저장의 재검수는 남아 있다.
+- **이번 동기화 검증.** 4173 Chrome에서는 운동 화면의 상단·중간·하단에서 종료한 뒤 요약 최상단과 홈 복귀, 뒤로가기·앞으로가기, 요약 내 수동 스크롤을 확인했다. 운동 기록 상세는 기존 홈 최근 운동 카드와 기록 탭에서 연다. 격리된 운영 컴포넌트 테스트에서는 종료 기록을 지연 로드해 요약 본문이 나타날 때의 초기화와 종료 세션의 이력 복귀를 확인했다. 전체 자동 테스트 660/660, TypeScript, ESLint, 프로덕션 빌드와 `git diff --check`가 통과했다.
+
 #### 2026-11-16 확정 정책별 구현 점검
 
 [사용자 확정 3-1~3-8](../product/Overload_UI_Decision_Log_v0.9.md#1025--2026-11-16-최신-정책-확정과-구현-경계)과 현행 코드를 대조한 상태다. ‘구현 확인’은 소스·테스트 assertion 확인이며 이번 문서 작업의 실행 검증·실제 DB 적용/실기기 승인이 아니다.
@@ -659,7 +676,7 @@ iPhone의 화면 구조를 고려합니다.
 |---|---|---|
 | 3-1 원계획·거리 미입력 | **정책 확정 / 일부 구현.** sessionAchievement는 InitialPlan이나 목표거리+실제null을 unknown 처리. partialAchievement/achievementReasons도 전환 필요. summaryData는 AppliedPlan 분모·별도 whole 조건으로 통일 필요 | **정책 확정 / 일부 구현.** InitialPlanCompletion·PlanningCalculator는 원계획 기준이나 거리null을 unknown 처리. 날짜 검사와 G4 공통 완료 입력도 전환 영향 확인 |
 | 3-2 Benchmark | **정책 확정 / 구현 확인.** reference-reminder는 총 반복·최신 종료·UUID 순. 공식 판정 원본은 서버 | **정책 확정 / 구현 확인.** WorkoutAssessment.benchmarkOrder가 같은 순서. 초기 동점 유지 설명은 대체됨 |
-| 3-3 웨이트 시간 A안 | **정책 확정 / 구현 확인.** weight-timing은 보이는 수행 화면 구간만 측정, 불완전은 null. 백그라운드 추정 요구 없음 | **정책 확정 / 구현 확인.** V37 parser/서비스·종료 불변 구간 보존. 실제 동작 감지나 미관찰 시간 복원 아님 |
+| 3-3 웨이트 시간 A안 | **정책 확정 / 구현 확인.** weight-timing은 보이는 수행 화면 구간만 측정하며 기록 집계에서 불완전은 null이다. [P1 이후 시작·준비·휴식 처리](#p1-01부터-05까지-구현과-검증)를 적용한다. | **정책 확정 / 구현 확인.** V37 parser/서비스·종료 불변 구간 보존. 실제 동작 감지나 미관찰 시간 복원 아님 |
 | 3-4 조합 변경 NEW | **정책 확정 / 일부 구현.** RoutineForm의 교체/장비 변경은 NEW 처리. 조합 왕복 편집·취소 등 전체 경계 실행 검증은 별도 | **정책 확정 / 구현 필요.** 기존 EDIT가 같은 배치 장비 변경을 수용하므로 서버 강제가 미완성 |
 | 3-5 오늘만 대체 | **정책 확정 / 일부 구현.** 조합 변경 감지·검토 제외 일부. 원슬롯 완료 연결 없음 | **정책 확정 / 일부 구현.** V36 봉인 권고 제외와 공식 evaluate의 전체 제외는 다름. 원슬롯·홈/통계/G4 연결 필요 |
 | 3-6 최근 실제·메모 | **정책 확정 / 구현 필요.** NEW 중량 수동 입력. CombinationMemo는 메모리만 있으며 blur/LWW/온라인 서버 저장 없음 | **정책 확정 / 구현 필요.** FINISHED 전용 최근 마지막 세트·조합별 최신 메모 API 없음. 저장 시점·동시 수정은 이제 확정 정책 |
@@ -915,7 +932,7 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 #### 홈 운동 프로세스 리디자인 현황 — 2026-11-18
 
-**UI 구현·코드 커밋 완료(`4607d99`).** 화면은 [UI/UX와 상태 전환](../product/ui-ux.md#35-스트레칭워밍업--warmup), 스타일은 [시각 규칙](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#10-홈-운동-진행과-종료-직후-요약--2026-11-18)을 따른다.
+**`4607d99` 당시의 UI 구현 및 검증 이력.** 현행 홈 ACTIVE·준비·전환·고정 시간 바와 종료 요약은 [P1 개선](#p1-01부터-05까지-구현과-검증)과 [현재 UI/UX](../product/ui-ux.md#35-스트레칭워밍업--warmup)를 따른다.
 
 | 구간 | 실제 경로 |
 |---|---|
@@ -1297,7 +1314,7 @@ Service Worker 업데이트 과정에서
 현행 정책은 [Task 009 v1.0](../../../overload-server/docs/tasks/task-009-redesign-v1.0.md) 6·7·11절을 따릅니다.
 5A의 온라인 관리·START/조회·고정 START/서버 사본, 5B의 로컬 입력·타이머·Web Locks, 5C의 고정 snapshot·승인 해결·takeover를 유지합니다. 5D에서 명시 FINISH·종료 상세/평가/이력·사후 정정/삭제·선택 복구와 최소 종료 목록을 연결했습니다. [5A](../tasks/task-009-frontend-5a-report.md), [5B](../tasks/task-009-frontend-5b-report.md), [5C](../tasks/task-009-frontend-5c-report.md), [5D 저장·검증](../tasks/task-009-frontend-5d-report.md)을 따릅니다. [5E](../tasks/task-009-frontend-5e-report.md)에서 설치용 Manifest, 정적 앱 셸 Service Worker 및 기존 진행 운동의 명시적 오프라인 이어가기를 연결했습니다. localStorage 개발 데모는 운영 계정과 분리합니다.
 
-5B의 완료·취소·계획·승인 의도 변경은 확정 snapshot의 localRevision을 증가시킵니다. 입력 초안·작업 중량 선택·타이머 시작/정지/확인·휴식 조절·종목 이동은 로컬 editVersion만 증가시키고 타이머 tick은 저장하지 않습니다. 완료 사실·휴식·revision·미전송 메타는 한 트랜잭션으로 저장합니다. 명시 로그아웃/계정 설정 전에는 대기 초안 저장을 기다리며 실패하면 화면을 유지합니다. 이미 열린 운동의 인증 만료는 메모리에서만 같은 계정의 로컬 입력을 허용하고, 재인증 시 세대·현재 세션을 다시 확인합니다. Web Locks 미지원·다른 탭 보유 시 쓰기 우회는 없습니다.
+완료·취소·계획·승인 의도 변경은 확정 snapshot의 localRevision을 증가시킵니다. 입력 초안·작업 중량 선택·준비/시작 앵커·타이머 시작/정지/확인·종목별 휴식 조절·종목 탐색·시간 체크포인트만 바뀌면 로컬 editVersion만 증가시키고 타이머 tick은 저장하지 않습니다. 완료 사실·해당 휴식·다음 종목의 준비 및 자동 이동·revision·미전송 메타는 한 트랜잭션으로 저장합니다. 명시 로그아웃/계정 설정 전에는 대기 초안 저장을 기다리며 실패하면 화면을 유지합니다. 이미 열린 운동의 인증 만료는 메모리에서만 같은 계정의 로컬 입력을 허용하고, 재인증 시 세대·현재 세션을 다시 확인합니다. Web Locks 미지원·다른 탭 보유 시 쓰기 우회는 없습니다.
 
 오프라인 재실행은 마지막 인증 계정의 기존 진행 운동에 대한 명시 선택으로만 허용합니다. 명시 로그아웃 뒤에는 재인증 전 로컬 운동을 표시/편집하지 않으며 서버 인증 미확인 동안 전송하지 않습니다. 로컬 잠금을 실제 인증/암호화로 표현하지 않습니다. 현재 종료 목록 범위와 정정·복구 조건은 [세션 계약](../../../overload-server/docs/api/workout-sessions.md)을 따릅니다.
 
