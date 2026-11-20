@@ -1,4 +1,5 @@
 import { partialAchievement } from '../statistics/display-achievement.ts'
+import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
@@ -93,9 +94,12 @@ export function HomePanel(props: Props) {
   useEffect(() => {
     const abort = new AbortController(), current = inputs.current
     if (!current.schedule) return
+    recordLifecycle?.('home:start')
     void loadHome(current.scope, api, current.schedule, statistics, cache, current.clock, current.zone, abort.signal).then(data => {
+      recordLifecycle?.('home:end', { result: abort.signal.aborted ? 'cancelled' : 'ok' })
       if (!abort.signal.aborted) setResult({ key: requestKey, data })
     }).catch(error => {
+      recordLifecycle?.('home:end', { result: abort.signal.aborted ? 'cancelled' : 'error' })
       if (abort.signal.aborted) return
       if (boundaryError(error)) invalid.current(error)
       setResult({ key: requestKey, data: null })

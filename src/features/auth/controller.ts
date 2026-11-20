@@ -2,6 +2,7 @@ import { AuthApi, AuthError } from './api.ts'
 import { emptyAccount } from './account.ts'
 import type { AccountState } from './account.ts'
 import type { Identity } from './api.ts'
+import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
 import type { AuthBoundary } from '../workout-local/offline-access.ts'
 
 export type AuthIssue = { code: string; message: string }
@@ -105,6 +106,7 @@ export class AuthController {
   }
   async restore(flow: ReturnFlow = this.state.accountOpen ? 'account' : 'none') {
     if (this.running) return
+    recordLifecycle?.('auth:start', { reason: this.state.status === 'checking' ? 'initial' : 'revalidate' })
     this.sessionRejected = false
     // Keep the chosen local screen mounted during a connection check; pending still fences sending.
     this.running = true; this.set({ pending: 'restore', issue: null })
@@ -126,7 +128,10 @@ export class AuthController {
       if (error instanceof AuthError && error.status === 401 && error.code !== 'OTP_INVALID') this.accountFailure(error)
       else this.set({ status: 'unavailable', offlineNetworkFailure: !this.sessionRejected && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code), issue: authIssue(error), challenge: null, account: emptyAccount() })
     }
-    finally { await this.finish() }
+    finally {
+      recordLifecycle?.('auth:end', { auth: this.state.status })
+      await this.finish()
+    }
   }
   async requestOtp(email: string) {
     if (this.running || this.state.status !== 'anonymous' || this.now() < this.state.resendAt) return
@@ -265,6 +270,7 @@ export class AuthController {
   }
   networkUnavailable() {
     if (this.state.pending !== null || this.state.status !== 'authenticated') return
+    recordLifecycle?.('auth:unavailable')
     this.set({ status: 'unavailable', offlineNetworkFailure: true, localWorkoutUserId: this.state.userId, account: emptyAccount(), accountOpen: false, issue: authIssue(new AuthError('NETWORK')) })
   }
   private denyLocalRestart() {

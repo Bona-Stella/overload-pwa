@@ -1,4 +1,5 @@
 import {settleWeightClock,resumeWeightClock,weightVisibility,recoverWeightClock} from './weight-timing.ts'
+import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
 import { LocalStoreError, LocalWriteBlocked, WorkoutStore } from '../workout-online/storage.ts'
 import type { Session } from '../workout-online/types.ts'
 import { applyLocalChange, editDraft, emptyTimer, migrateRest } from './model.ts'
@@ -41,6 +42,7 @@ export class LocalWorkoutController {
     await previousOpening
     if (generation !== this.generation || this.stopped) { opened(); return }
     const key: LocalKey = { userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, editorDeviceId: server.editorDeviceId, writerEpoch: server.writerEpoch }
+    recordLifecycle?.('workout-recovery:start')
     try {
       const lease = await this.acquire(key)
       if (this.stopped || generation !== this.generation) { lease?.release(); return }
@@ -67,7 +69,11 @@ export class LocalWorkoutController {
         void this.synchronizer.retry()
       }
     } catch (error) { if (generation === this.generation) { this.set({ loading: false, writable: false, issue: error instanceof Error ? error.message : new LocalStoreError().message }); this.lease?.release() } }
-    finally { opened() }
+    finally {
+      recordLifecycle?.('workout-recovery:end', { result: generation !== this.generation ? 'cancelled' :
+        this.state.writable ? 'ok' : this.state.workout ? 'read-only' : 'error' })
+      opened()
+    }
   }
   change = (transform: (workout: LocalWorkout, now: number) => void): Promise<boolean> => {
     return this.update(transform, false, Date.now())

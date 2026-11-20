@@ -1,4 +1,5 @@
 import { routineMatches } from './routine-match.ts'
+import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
 import type { AuthController, AuthState } from '../auth/controller.ts'
 import { WorkoutApi, WorkoutApiError } from './api.ts'
 import { WorkoutStore, LocalStoreError } from './storage.ts'
@@ -95,6 +96,7 @@ export class WorkoutOnlineController {
   }
   refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
+    recordLifecycle?.('workout-data:start')
     const keepActive = this.state.detail?.status === 'ACTIVE'
     this.set({ ...(keepActive || keepDraftScope ? {} : empty()), userId: context.userId, status: 'loading', busy: true, issue: null })
     try {
@@ -129,7 +131,10 @@ export class WorkoutOnlineController {
         this.failure(error)
       }
     }
-    finally { if (context.current()) this.set({ status: 'ready', busy: false }) }
+    finally {
+      recordLifecycle?.('workout-data:end', { result: !context.current() ? 'cancelled' : this.state.issue ? 'error' : 'ok' })
+      if (context.current()) this.set({ status: 'ready', busy: false })
+    }
   }
   select = async (id: string) => {
     const scope = this.state.scope, context = this.context(); if (!scope || !context) return

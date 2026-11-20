@@ -217,11 +217,11 @@ function WorkoutProcessPreview({ plan, withRecommendation }: { plan: ProcessPlan
   </CombinationMemoProvider>
 }
 
-export default function RestAudioPreview() {
+export default function RestAudioPreview({ process = false }: { process?: boolean }) {
   const [attempt, setAttempt] = useState(0)
   const query = new URLSearchParams(location.search)
   const plan = query.get('plan')
-  if (query.get('process') === '1') return <WorkoutProcessPreview plan={plan === 'weight' || plan === 'cardio' ? plan : 'mixed'} withRecommendation={query.get('review') === '1'} />
+  if (process || query.get('process') === '1') return <WorkoutProcessPreview plan={plan === 'weight' || plan === 'cardio' ? plan : 'mixed'} withRecommendation={query.get('review') === '1'} />
   const swipe = query.get('swipe') === '1'
   return <AppShell authenticated focused tab="home" onNavigate={() => {}}>
     <CombinationMemoProvider key={attempt}><ReviewWorkout reset={() => setAttempt(value => value + 1)} swipe={swipe} matrix={swipe && query.get('matrix') === '1'} /></CombinationMemoProvider>

@@ -51,6 +51,9 @@ export default defineConfig(({ command, mode, isPreview }) => {
         host: lanIp ? '0.0.0.0' : '127.0.0.1',
         port: 4173,
         strictPort: true,
+        // A disconnected Vite client reloads the document once its socket server responds again.
+        hmr: false,
+        ws: false,
         watch: { ignored: ['**/logs/**'] },
       },
     };

@@ -97,7 +97,25 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   })()`)
   assert.deepEqual(completed.slice(0, 3), [rgb(completed[3]), rgb(completed[3]), rgb(completed[4])])
   await homeStatus('1/3세트 · 휴식 중')
-  await evaluate("window.reviewOriginalNow = Date.now; Date.now = () => window.reviewOriginalNow() + 6500")
+  await scrollWorkout(0.5)
+  const restBeforeBackground = await timer()
+  const resumedInPlace = await evaluate(`(() => {
+    const workout = document.querySelector('${frame}'), historyEntry = history.state, scroll = scrollY
+    const set = workout.querySelector('[role="row"][data-done]').textContent
+    const markVisibility = () => document.dispatchEvent(new Event('visibilitychange'))
+    window.reviewOriginalNow = Date.now
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+    markVisibility()
+    Date.now = () => window.reviewOriginalNow() + 3500
+    Reflect.deleteProperty(document, 'visibilityState')
+    markVisibility()
+    return document.querySelector('${frame}') === workout && history.state === historyEntry && scrollY === scroll
+      && workout.querySelectorAll('[role="row"][data-done]').length === 1
+      && workout.querySelector('[role="row"][data-done]').textContent === set
+  })()`)
+  assert.equal(resumedInPlace, true, 'visibility return keeps the workout, completed input, scroll and History entry')
+  await wait(async () => (await timer()) < restBeforeBackground, 'rest clock reflects elapsed time while hidden')
+  await evaluate("Date.now = () => window.reviewOriginalNow() + 6500")
   await wait(() => evaluate(`document.querySelector('${clock}[data-flash]') && !!document.querySelector('${frame} footer [data-flash]')`), 'both rest alerts')
   const animation = await wait(() => evaluate(`(() => {
     const alerts = ['${clock}[data-flash]', '${frame} footer [data-flash]'].map(selector => {
