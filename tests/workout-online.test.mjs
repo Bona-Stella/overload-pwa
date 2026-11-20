@@ -25,6 +25,22 @@ function setup(options={}) {
   const controller=new WorkoutOnlineController(api,store),disconnect=controller.connect(auth)
   return {controller,disconnect,change,store,api,starts,getAttempt:()=>attempt,getCopies:()=>copies,setFailSave:v=>{failSave=v},setFailPrepare:v=>{failPrepare=v}}
 }
+test('a pending or failed same-account bootstrap retains the verified exercise workspace', async () => {
+  const s = setup()
+  try {
+    await settle()
+    const verified = s.controller.getSnapshot()
+    const read = gate()
+    s.api.bootstrap = async () => { await read.promise; throw Error('transient read failure') }
+    const refreshing = s.controller.refresh()
+    assert.equal(s.controller.getSnapshot().busy, true)
+    assert.equal(s.controller.getSnapshot().data, verified.data)
+    read.resolve()
+    await refreshing
+    assert.equal(s.controller.getSnapshot().data, verified.data)
+    assert.ok(s.controller.getSnapshot().issue)
+  } finally { s.disconnect() }
+})
 test('public and selectable catalogs are separate and normalized aliases keep independent IDs', async () => {
   const treadmill = { id: OTHER, activityId: DEVICE, category: 'RUNNING', name: '트레드밀 러닝', kind: 'TREADMILL', aliases: ['treadmill run'] }
   const stretch = { id: ROUTINE, name: '스트레칭', aliases: ['stretch'], muscles: [], exerciseType: 'STRETCH',

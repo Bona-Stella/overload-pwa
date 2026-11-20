@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import type { RestPolicy } from '../workout-local/types.ts'
 import { countDraft } from '../workout-online/validation.ts'
@@ -149,7 +150,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
           {saving ? (reloading ? '확인 중…' : '저장 중…') : (reloading ? '최신 설정 다시 확인' : '변경 사항 저장')}
         </Button>
       </>}
-    </form> : <StatusNotice error={!!loadIssue}>{loadIssue ?? '휴식 정보를 확인하고 있습니다.'}</StatusNotice>}
+    </form> : loadIssue ? <StatusNotice error>{loadIssue}</StatusNotice> : <LoadingSkeleton layout="settings" label="휴식 정보를 확인하고 있습니다." />}
     {review && <p className="muted small">검토용 예시 휴식 시간입니다.</p>}
   </section>
 }

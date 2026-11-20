@@ -1,0 +1,88 @@
+.region { display: grid; gap: 12px; min-width: 0; --radius-card: 5px; }
+.region[data-loading-skeleton="summary"] > .region { gap: 22px; }
+.region .card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border-radius: 5px;
+}
+.line {
+  display: block;
+  width: 64%;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--surface-input, #25282E);
+}
+.line:first-child { width: 34%; }
+.line:last-child { width: 48%; }
+.card[data-skeleton-block="row"] { min-height: 48px; }
+.card[data-skeleton-block="row"] .line:not(:first-child) { display: none; }
+.card[data-skeleton-block="hero"] { min-height: 180px; }
+.card[data-skeleton-block="hero"] .line:nth-child(2) { height: 28px; margin-block: 8px; }
+.card[data-skeleton-block="week"] { min-height: 118px; }
+.card[data-skeleton-block="week"] .line:nth-child(2) {
+  width: 100%;
+  height: 34px;
+  background: repeating-linear-gradient(90deg, var(--surface-input, #25282E) 0 12%, transparent 12% calc(100% / 7));
+}
+.card[data-skeleton-block="summary"] { min-height: 272px; padding: 16px 14px 14px; }
+.card[data-skeleton-block="summary"] .line:nth-child(2) { height: 38px; margin-top: 8px; }
+.card[data-skeleton-block="summary"] .line:nth-child(3) { width: 100%; height: 7px; }
+.summaryMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: end;
+  gap: 7px;
+  padding-top: 16px;
+  margin-top: 28px;
+  border-top: 1px solid var(--border-subtle);
+}
+.summaryMetrics > span { height: 76px; border-radius: 5px; background: var(--surface-input, #25282E); }
+.region .card[data-skeleton-block="menu"] {
+  min-height: 258px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.card[data-skeleton-block="menu"] .line:first-child { grid-column: span 2; height: 20px; margin-bottom: 8px; }
+.card[data-skeleton-block="menu"] .line:not(:first-child) { width: 100%; height: 107px; background: var(--surface-card, #1B1D22); }
+.card[data-skeleton-block="metrics"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.card[data-skeleton-block="metrics"] .line:first-child { grid-column: span 2; }
+.card[data-skeleton-block="metrics"] .line:not(:first-child) { width: 100%; height: 44px; }
+.card[data-skeleton-block="chart"] .line:nth-child(2) { width: 100%; height: 180px; margin-top: 12px; }
+.card[data-skeleton-block="list"] .line,
+.card[data-skeleton-block="settings"] .line { width: 100%; height: 36px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .line,
+  .summaryMetrics > span {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .line::after,
+  .summaryMetrics > span::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 12%, rgb(89 96 108 / 20%) 50%, transparent 88%);
+    animation: skeleton-shimmer 1.8s linear infinite;
+  }
+
+  /* Keep the gaps between the seven schedule tiles clear during the sweep. */
+  .card[data-skeleton-block="week"] .line:nth-child(2) {
+    --week-mask: repeating-linear-gradient(90deg, #000 0 12%, transparent 12% calc(100% / 7));
+    -webkit-mask-image: var(--week-mask);
+    mask-image: var(--week-mask);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}

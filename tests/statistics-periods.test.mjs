@@ -92,16 +92,16 @@ function requested(f, mode = 'week', offset = 0, since = 0) {
 }
 
 
-test('activity period is retained but muscle statistics always requests the current week with no controls',async t=>{
+test('activity period is retained and muscle statistics reuses the matching current week without another request',async t=>{
   const f=setup(t);requested(f);await f.respond(1)
   f.open('activity');await f.respond(2)
   const beforeMonth=f.requests.length
   f.period({mode:'month',anchor:'2026-10-20'});requested(f,'month',-1,beforeMonth);await f.respond(3)
   f.back('운동 현황');await f.respond(4);assert.equal(f.view().props.screen,'summary')
   const beforeMuscles=f.requests.length
-  f.open('muscles');assert.equal(f.requests.length,beforeMuscles+1);requested(f,'week',0,beforeMuscles);await f.respond(5)
+  f.open('muscles');assert.equal(f.requests.length,beforeMuscles)
   assert.equal(f.view().props.screen,'muscles')
-  assert.equal(f.view().props.data.summary.completedSets,'5')
+  assert.equal(f.view().props.data.summary.completedSets,'4')
   assert(!nodes(f.render()).some(n=>n.type?.name==='PeriodControls'))
   f.back('주간 근육 통계');await f.respond(6);assert.equal(f.view().props.screen,'summary')
   const beforeReturn=f.requests.length
@@ -112,10 +112,28 @@ test('calendar period changes abort old reads and late responses cannot replace 
   const f=setup(t);await f.respond(1);f.open('activity');await f.respond(2)
   f.period({mode:'week',anchor:'2026-10-20'});const earlier=f.requests.at(-1)
   f.period({mode:'month',anchor:'2026-09-20'});const selected=f.requests.findLast(r=>r.period.fromDate==='2026-09-01')
-  assert.equal(earlier.signal.aborted,true);assert.equal(f.view().props.data.summary.completedSets,'2')
-  assert(nodes(f.render()).some(n=>n.props?.['aria-busy']===true))
+  assert.equal(earlier.signal.aborted,true);assert.equal(f.view(),undefined)
+  assert(nodes(f.render()).some(n=>n.type?.name==='LoadingSkeleton'))
   selected.respond(20);await flush();f.render();earlier.respond(99);await flush();f.render()
   assert.equal(f.view().props.data.summary.completedSets,'20')
+})
+test('revisiting a period renders its own ready snapshot through refresh and a transient failure',async t=>{
+  const f=setup(t);await f.respond(3);f.open('activity')
+  f.period({mode:'month',anchor:'2026-10-20'});await f.respond(12)
+  f.back('운동 현황')
+  assert.equal(f.view().props.data.summary.completedSets,'3')
+  f.requests.at(-1).reject(Error('temporary failure'));await flush();f.render()
+  assert.equal(f.view().props.data.summary.completedSets,'3')
+  assert(nodes(f.render()).some(n=>n.props?.role==='alert'))
+  f.open('activity')
+  assert.equal(f.view().props.data.summary.completedSets,'12')
+})
+test('a forbidden revalidation discards previously displayed statistics',async t=>{
+  const f=setup(t);await f.respond(3)
+  f.open('growth');f.back('성장 추적')
+  f.requests.at(-1).reject({ status:403 });await flush();f.render()
+  assert.equal(f.view(),undefined)
+  assert(nodes(f.render()).some(n=>n.props?.role==='alert'))
 })
 test('failed requests offer a retry and retain the selected activity period',async t=>{
   const f=setup(t);await f.respond(1);f.open('activity');await f.respond(2)

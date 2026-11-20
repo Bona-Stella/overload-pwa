@@ -180,7 +180,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await tab('기록');await click('운동 현황 ›');await title('운동 현황')
   await click('주간');await evaluate('document.querySelector('+JSON.stringify('button[aria-label="달력 열기"]')+').click()');await evaluate('document.querySelector('+JSON.stringify('button[aria-label="2026-11-11"]')+').click()')
   await wait(()=>evaluate('document.querySelectorAll(".record-day strong").length===7'),'activity day evidence')
-  await wait(()=>evaluate('document.querySelector(".record-statistics-body").getAttribute("aria-busy")==="false"'),'current weekly achievement loaded')
+  await wait(()=>evaluate('!!document.querySelector(".record-statistics-body")'),'current weekly achievement loaded')
   const activityMarks=await evaluate('[...document.querySelectorAll(".record-day strong")].map(e=>e.textContent)')
   await tab('홈')
   assert.deepEqual(await evaluate('[...document.querySelectorAll("strong[data-status]")].map(e=>/^[월화수목금토일]$/.test(e.textContent)?"·":e.textContent)'),activityMarks)

@@ -4,11 +4,12 @@ import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
 import {recordTime} from '../../components/record-time.ts'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { SearchList } from '../../components/SearchList.tsx'
 import { useScreenHistory } from '../../app/navigation.ts'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { ClosedPage, Scope, StandardExercise } from '../workout-online/types.ts'
-import { boundaryError } from '../home/load.ts'
+import { boundaryError, readAccessDenied } from '../home/load.ts'
 import { addDays } from '../home/model.ts'
 import { PeriodControls } from '../statistics/PeriodControls.tsx'
 import { selectedPeriod } from '../statistics/period-selection.ts'
@@ -42,13 +43,14 @@ export function SessionRecordCard({row,session,onOpen,timeZone=Intl.DateTimeForm
   </button>
 }
 
-export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true, onViewAll }: { enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage)=>void}; onViewAll?:()=>void }) {
+export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true, onViewAll }: { enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage|null)=>void}; onViewAll?:()=>void }) {
   const preview=useRecordPreview()
   const zone=timeZone??Intl.DateTimeFormat().resolvedOptions().timeZone
   const today = preview?.today??new Intl.DateTimeFormat('sv-SE',{timeZone:zone}).format(new Date()), { userId, dataGeneration } = scope
   const [period, setPeriod] = useScreenHistory<PeriodSelection>('history-month:' + scope.userId + ':' + scope.dataGeneration, { mode: 'month', anchor: today })
   const [search, setSearch] = useScreenHistory('history-search:' + scope.userId + ':' + scope.dataGeneration, { scope: 'routine', query: '', selected: '',tag:'ALL' })
-  const [page, setPage] = useState<ClosedPage | null>(()=>cache?.page??null), [busy, setBusy] = useState(false), [issue, setIssue] = useState(false)
+  const [loadedPage, setPage] = useState<ClosedPage | null>(()=>cache?.page??null), [busy, setBusy] = useState(false), [issue, setIssue] = useState(false)
+  const page = loadedPage?.userId === userId && loadedPage.dataGeneration === dataGeneration ? loadedPage : null
   const pageRef=useRef(page),cacheRef=useRef(cache)
   useEffect(()=>{cacheRef.current=cache},[cache])
   const flight = useRef<AbortController | null>(null), failure = useRef(onInvalid)
@@ -59,11 +61,18 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
     await Promise.resolve(); if (abort.signal.aborted) return
     setBusy(true); setIssue(false)
     try {
-      const next = await api.closed(scope, cursor, abort.signal)
+      const next = await api.closed({ userId, dataGeneration }, cursor, abort.signal)
       if(!abort.signal.aborted){const old=pageRef.current,merged=cursor&&old?{...next,sessions:[...old.sessions,...next.sessions.filter(s=>!old.sessions.some(o=>o.id===s.id))]}:next;pageRef.current=merged;setPage(merged);cacheRef.current?.set(merged)}
-    } catch (error) { if (!abort.signal.aborted) { setIssue(true); if (boundaryError(error)) failure.current(error) } }
+    } catch (error) {
+      if (abort.signal.aborted) return
+      if (boundaryError(error) || readAccessDenied(error)) {
+        pageRef.current = null; setPage(null); cacheRef.current?.set(null)
+      }
+      setIssue(true)
+      if (boundaryError(error)) failure.current(error)
+    }
     finally { if (!abort.signal.aborted) setBusy(false) }
-  }, [api, scope, enabled])
+  }, [api, userId, dataGeneration, enabled])
   useEffect(() => { let cancelled = false; void Promise.resolve().then(() => { if (!cancelled) void load() }); return () => { cancelled = true; flight.current?.abort() } }, [load, refreshKey])
   const range = recent ? { fromDate: addDays(today, -6), toDateExclusive: addDays(today, 1) } : selectedPeriod(period)
   const appliedTerm=search.selected||search.query.trim()
@@ -74,7 +83,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const options = search.scope === 'exercise' ? (preview ? [...new Set(preview.sessions.flatMap(s=>[...s.initialPlan.weightExercises.map(e=>e.exerciseName),...s.initialPlan.cardioActivities.map(c=>c.plan.name)]))].map(name=>({id:name,exerciseId:preview.definitions.find(e=>e.name===name)?.id,name,description:'실제 세션 포함 운동 · 합성 기록'})) : definitions.map(e => ({ id: e.id, exerciseId:e.id, name: e.name, description: '실제 포함 운동 검색 · 서버 연결 대기' })))
     : [...new Set(source.map(s => s.routineName))].map(name => ({ id: name, name, description: '루틴명 · 불러온 종료 기록' }))
   const [details,setDetails]=useState<{key:string;rows:Map<string,Session>}|null>(null)
-  const detailIds=JSON.stringify(rows.map(r=>r.id)),detailKey=JSON.stringify([userId,dataGeneration,refreshKey,rows.map(r=>[r.id,r.version])])
+  const detailIds=JSON.stringify(rows.map(r=>r.id)),detailKey=JSON.stringify([userId,dataGeneration,rows.map(r=>[r.id,r.version])])
   useEffect(()=>{
     if(preview||!enabled)return
     const abort=new AbortController(),ids:string[]=JSON.parse(detailIds),loaded=new Map<string,Session>()
@@ -85,9 +94,9 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
         try{loaded.set(id,await api.detail(scope,id,abort.signal))}
         catch(error){if(!abort.signal.aborted&&boundaryError(error))failure.current(error)}
       }
-    })).then(()=>{if(!abort.signal.aborted)setDetails({key:detailKey,rows:loaded})})
+    })).then(()=>{if(!abort.signal.aborted)setDetails(previous=>({key:detailKey,rows:new Map([...(previous?.key===detailKey ? previous.rows : []), ...loaded])}))})
     return()=>abort.abort()
-  },[api,scope,detailIds,detailKey,preview,enabled])
+  },[api,scope,detailIds,detailKey,refreshKey,preview,enabled])
   const tag=search.tag??'ALL'
   const matchingNames=new Set(browseExercises(preview?.definitions??definitions,'',tag as CatalogGroup|'ALL').map(e=>e.name))
   if(tag==='CARDIO')for(const session of preview?.sessions??[])for(const c of session.initialPlan.cardioActivities)matchingNames.add(c.plan.name)
@@ -104,14 +113,14 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
     {searching && <p role="status" className="muted small">전체 과거 기간 검색 · 월 필터를 적용하지 않습니다.</p>}
     {exerciseSearch && !preview && <p className="notice" role="status">실제 세션에 포함된 운동명으로 검색하는 기능은 서버 연결을 기다리고 있습니다. 루틴별 검색은 불러온 기록에서 사용할 수 있습니다.</p>}
     {issue && <p role="alert">기록을 조회하지 못했습니다. 표시된 목록이 최신인지 확인할 수 없습니다.</p>}
-    {busy && !page && !preview && <p role="status">운동 기록을 불러오는 중입니다.</p>}
+    {!page && !preview && !issue && <LoadingSkeleton layout="list" label="운동 기록을 불러오는 중입니다." />}
     {page?.next && <p className="muted small" role="status">불러온 기록만 표시합니다. 기간·전체 검색 결과가 완전하지 않을 수 있습니다. 이전 기록을 더 불러올 수 있습니다.</p>}
-    {!busy && !issue && (!exerciseSearch || !!preview) && page && !rows.length && <p>{page.next ? '불러온 기록에서 조건에 맞는 운동을 찾지 못했습니다.' : recent ? '최근 7일 운동 기록이 없습니다.' : '조건에 맞는 운동 기록이 없습니다.'}</p>}
+    {(!exerciseSearch || !!preview) && page && !rows.length && <p>{page.next ? '불러온 기록에서 조건에 맞는 운동을 찾지 못했습니다.' : recent ? '최근 7일 운동 기록이 없습니다.' : '조건에 맞는 운동 기록이 없습니다.'}</p>}
     <div className="stack">{rows.map((row, index) => {
       const week = recordWeek(row.workoutDate), header = !recent && (index === 0 || week.key !== recordWeek(rows[index - 1].workoutDate).key)
       return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={preview?.sessions.find(s=>s.id===row.id)??(details?.key===detailKey?details.rows.get(row.id):undefined)} onOpen={onOpen} timeZone={zone}/></Fragment>
     })}</div>
     {page?.next && <Button disabled={busy} onClick={() => void load(page.next)}>이전 기록 더 불러오기</Button>}
-    {issue && <Button disabled={busy} onClick={() => void load()}>다시 조회</Button>}
+    {issue && <Button disabled={!enabled || busy} onClick={() => void load()}>다시 조회</Button>}
   </section>
 }

@@ -3,6 +3,7 @@ import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import type { Ref } from 'react'
 import { ReviewExerciseMediaContext } from '../../review/context.ts'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import type { WorkoutApi } from './api.ts'
 import { catalogDetailView, primaryMuscles } from './catalog-browse.ts'
 import type { CatalogBrowseExercise, CatalogMuscle } from './catalog-browse.ts'
@@ -10,8 +11,9 @@ import { groupNames } from './catalog-label.ts'
 import { ExerciseSearch } from './ExerciseSearch.tsx'
 import styles from './PublicCatalog.module.css'
 
-export function PublicCatalog({ api, userId, onInvalid, onBack }: {
+export function PublicCatalog({ api, userId, onInvalid, onBack, active = true, enabled = true }: {
   api: WorkoutApi; userId: string | null; onInvalid: (error: unknown) => void; onBack: () => void
+  active?: boolean; enabled?: boolean
 }) {
   const mediaSources = useContext(ReviewExerciseMediaContext)
   const [result, setResult] = useState<{ userId: string; items: CatalogBrowseExercise[] | null; failed: boolean } | null>(null)
@@ -20,21 +22,26 @@ export function PublicCatalog({ api, userId, onInvalid, onBack }: {
       && ['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED'].includes(String(error.code))) onInvalid(error)
   }, [onInvalid])
   useEffect(() => {
-    if (!userId) return
+    if (!active || !enabled || !userId) return
     const abort = new AbortController()
     void api.publicCatalog(userId, abort.signal).then(value => {
       if (!abort.signal.aborted) setResult({ userId, items: value, failed: false })
     }).catch(error => {
-      if (!abort.signal.aborted) { setResult({ userId, items: null, failed: true }); invalidate(error) }
+      if (!abort.signal.aborted) {
+        const denied = error && typeof error === 'object' && 'status' in error && [401, 403, 404, 409].includes(Number(error.status))
+        setResult(previous => ({ userId, items: !denied && previous?.userId === userId ? previous.items : null, failed: true }))
+        invalidate(error)
+      }
     })
     return () => abort.abort()
-  }, [api, userId, invalidate])
+  }, [api, userId, invalidate, active, enabled])
 
   const loadDetail = useCallback(async (id: string, signal: AbortSignal) => {
     try { return catalogDetailView(await api.exerciseDetail(userId ?? '', id, signal)) }
     catch (error) { if (!signal.aborted) invalidate(error); throw error }
   }, [api, userId, invalidate])
   const current = result?.userId === userId ? result : null
+  if (!active) return null
   return <CatalogView key={userId} items={current?.items ?? null} failed={current?.failed} loadDetail={loadDetail} mediaSources={mediaSources} onBack={onBack} historyScope={userId ?? 'unavailable'} />
 }
 
@@ -80,14 +87,16 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
       <Card className={styles.catalogCard}>
         <div className={styles.sectionHeader}><h2>표준 운동 DB</h2><span className={styles.tag}>조회 전용</span></div>
         <p className={styles.description}>등록·편집·삭제는 관리자가 수행합니다. 사용자는 이름·별칭으로 검색하고 정보를 확인합니다.</p>
-        <ExerciseSearch exercises={items ?? []} loading={items === null && !failed} failed={failed} resetOnSelect={false} defaultOpen
-          onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item.id) }} />
+        {items === null && !failed ? <LoadingSkeleton layout="list" label="운동 정보를 불러오고 있어요." /> :
+          <ExerciseSearch exercises={items ?? []} failed={failed && !items} resetOnSelect={false} defaultOpen
+            onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item.id) }} />}
+        {failed && items && <StatusNotice error>운동 목록을 갱신하지 못했습니다. 마지막으로 확인한 내용을 표시합니다.</StatusNotice>}
         {reviewNote && <p className={styles.description}>{reviewNote}</p>}
       </Card>
     </div>
     {selected ? <CatalogDetail exercise={selected} onBack={back} headingRef={detailTitle} loadDetail={loadDetail} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} reviewNote={reviewNote}/>
       : selectedId && <div className={styles.screen}><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={back} headingRef={detailTitle} />
-        <p role="status">{items === null && !failed ? '운동 정보를 불러오고 있어요.' : '운동 정보를 찾을 수 없어요.'}</p></div>}
+        {items === null && !failed ? <LoadingSkeleton layout="detail" label="운동 정보를 불러오고 있어요." /> : <p role="status">운동 정보를 찾을 수 없어요.</p>}</div>}
   </>
 }
 
@@ -111,7 +120,7 @@ export function SelectedExercise({ exercise, loadDetail, instructionNote, mediaS
   }, [exercise.id, loadDetail, attempt])
   if (!loadDetail) return <ExerciseDetail exercise={exercise} instructionNote={instructionNote} mediaSource={mediaSource} />
   if (result?.detail) return <ExerciseDetail exercise={result.detail} mediaSource={mediaSource} protectedMedia />
-  if (!result) return <StatusNotice>운동 정보를 불러오는 중입니다.</StatusNotice>
+  if (!result) return <LoadingSkeleton layout="detail" label="운동 정보를 불러오는 중입니다." />
   const status = result.error && typeof result.error === 'object' && 'status' in result.error ? result.error.status : null
   return <Card><StatusNotice error>{status === 404 ? '운동 정보를 찾을 수 없습니다.'
     : status === 403 ? '운동 정보를 조회할 권한이 없습니다.' : '운동 정보를 불러오지 못했습니다.'}</StatusNotice>

@@ -19,7 +19,7 @@ type Snapshot = {
   scheduleVerified: boolean
 }
 
-export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | null, revision: string, onInvalid: (error: unknown) => void) {
+export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | null, revision: string, onInvalid: (error: unknown) => void, enabled = true) {
   const [api] = useState(() => new WeeklyScheduleApi(transport))
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [reload, setReload] = useState(0)
@@ -40,7 +40,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     writeFlight.current = null
   }, [owner])
   useEffect(() => {
-    if (!owner || !userId || dataGeneration === undefined || busy) return
+    if (!enabled || !owner || !userId || dataGeneration === undefined || busy) return
     const abort = new AbortController()
     readFlight.current = abort
     const scope = { userId, dataGeneration }
@@ -67,7 +67,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
       }))
     })
     return () => abort.abort()
-  }, [owner, userId, dataGeneration, request, api, transport, onInvalid, busy])
+  }, [owner, userId, dataGeneration, request, api, transport, onInvalid, busy, enabled])
 
   // Returning to the app can cross a server-side rotation or deload boundary.
   useEffect(() => {
@@ -80,7 +80,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     }
   }, [refresh])
 
-  const canWrite = !!current?.schedule && current.scheduleVerified && !loading && current.protection === null && !busy
+  const canWrite = enabled && !!current?.schedule && current.scheduleVerified && !loading && current.protection === null && !busy
   async function write(command: ScheduleCommand, base = current?.schedule) {
     if (!scope || !owner || !canWrite || !base || writeFlight.current) return null
     const abort = new AbortController()

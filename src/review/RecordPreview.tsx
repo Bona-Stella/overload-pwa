@@ -14,8 +14,8 @@ import { RecordDisplayContext } from '../features/statistics/RecordDisplayContex
 import { recordPreviewData, reviewRecordSession } from './record-data.ts'
 import { activitySample } from './activity-sample.ts'
 
-export function RecordPreview({ routines, schedule, sessions, days, records = [], selected, onOpen, onBack, backLabel, initialPreset }: { routines: Routine[]; schedule: PresetSchedule; sessions: Session[]; days: PlannedDay[]; records?: ReviewRecord[]; selected?: string; onOpen: (id: string) => void; onBack: () => void; backLabel?: string; initialPreset?: string }) {
- const [fault,setFault]=useState('normal')
+export function RecordPreview({ routines, schedule, sessions, days, records = [], selected, onOpen, onBack, backLabel, initialPreset, enabled = true }: { routines: Routine[]; schedule: PresetSchedule; sessions: Session[]; days: PlannedDay[]; records?: ReviewRecord[]; selected?: string; onOpen: (id: string) => void; onBack: () => void; backLabel?: string; initialPreset?: string; enabled?: boolean }) {
+ const [fault,setFault]=useState(() => new URLSearchParams(location.search).get('record-loading') === '1' ? 'loading' : 'normal')
  const fixture=useMemo(()=>recordPreviewData(routines,schedule,sessions,days,fault==='empty',records.map(reviewRecordSession)),[routines,schedule,sessions,days,fault,records])
  const preview=useMemo(()=>fault==='normal'&&new URLSearchParams(window.location.search).get('activity-demo')==='states'
   ? {...fixture,activity:activitySample(fixture,routines)} : fixture,[fixture,routines,fault])
@@ -36,6 +36,6 @@ export function RecordPreview({ routines, schedule, sessions, days, records = []
  const record=fixture.sessions.find(s=>s.id===selected) ?? fixture.evidence.find(s=>s.id===selected)
  return <RecordDisplayContext value={preview}>{record?<WorkoutSummary {...summaryData(record,null,fixture.definitions)} detail dataNote="UI 검토 · 합성 수행 기록. 실제 저장·정정·승인 요청 없음." manufacturers={manufacturers} onBack={onBack} backLabel={backLabel} />:<>
   <details className="record-preview-controls"><summary>합성 데이터 시연 설정</summary><label>기록 조회 시연<select value={fault} onChange={e=>setFault(e.target.value)}><option value="normal">정상</option><option value="empty">빈 기록</option><option value="loading">느린 조회</option><option value="error">조회 오류</option></select></label></details>
-  <StatisticsPanel initialPreset={initialPreset} api={statistics} workoutApi={workout} scope={scope} schedule={{...schedule,timeZone:'Asia/Seoul',appliedVersion:'1',appliedAt:reviewToday+'T00:00:00Z',nextRotationAt:null,renameSupported:true}} definitions={fixture.definitions} refreshKey={fault} onOpen={onOpen} onInvalid={()=>{}} />
+  <StatisticsPanel enabled={enabled} initialPreset={initialPreset} api={statistics} workoutApi={workout} scope={scope} schedule={{...schedule,timeZone:'Asia/Seoul',appliedVersion:'1',appliedAt:reviewToday+'T00:00:00Z',nextRotationAt:null,renameSupported:true}} definitions={fixture.definitions} refreshKey={fault} onOpen={onOpen} onInvalid={()=>{}} />
  </>}</RecordDisplayContext>
 }

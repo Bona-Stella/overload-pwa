@@ -1,5 +1,6 @@
 import { partialAchievement } from '../statistics/display-achievement.ts'
 import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
@@ -10,7 +11,7 @@ import type { StatisticsApi } from '../statistics/api.ts'
 import type { TrainingSchedule } from '../workout-online/useTrainingSchedule.ts'
 import { HomeTrainingHeader } from './HomeTrainingHeader.tsx'
 import { activeCardio, activeWeights, cardioPlanLabel, dateInZone, dayOfWeek, dayStatus, representativeExercises, weekdays, weekDates } from './model.ts'
-import { boundaryError, loadHome } from './load.ts'
+import { boundaryError, loadHome, readAccessDenied } from './load.ts'
 import type { HomeData } from './load.ts'
 import { HomeReviewContext } from '../../review/context.ts'
 import { RecentWorkout } from './RecentWorkout.tsx'
@@ -60,6 +61,7 @@ function ActiveRoutine({ routineName, progress, busy, onResume }: {
   </Card>
 }
 type Props = {
+  enabled?: boolean
   scope: Scope; routines: RoutineList['routines']; api: WorkoutApi; training: TrainingSchedule; statistics: StatisticsApi; visit: number;
   refreshKey: string; active: Session | null; attempt: boolean; busy: boolean; localReady: boolean; issue: string | null;
   progress?: ActiveWorkoutProgress
@@ -73,7 +75,8 @@ export function HomePanel(props: Props) {
   const { schedule, protection, analysis, refresh } = training
   const [clock, setClock] = useState(() => new Date())
   const [reload, setReload] = useState(0)
-  const [result, setResult] = useState<{ key: string; data: HomeData | null } | null>(null)
+  const [result, setResult] = useState<{ key: string; context: string; data: HomeData } | null>(null)
+  const [failed, setFailed] = useState<string | null>(null)
   const [cache] = useState(() => new Map<string, Routine>())
   const invalid = useRef(props.onInvalid)
   useEffect(() => { invalid.current = props.onInvalid }, [props.onInvalid])
@@ -87,33 +90,35 @@ export function HomePanel(props: Props) {
   const today = dateInZone(clock, zone)
   const activeVersion = schedule?.presets.find(p => p.id === schedule.activeId)?.version
   const summaryKey = routines.map(r => r.id + ':' + r.version).join(',')
-  const requestKey = [scope.userId, scope.dataGeneration, summaryKey, schedule?.activeId, activeVersion,
-    schedule?.appliedVersion, zone, refreshKey, props.visit, today, reload].join('|')
+  const context = [scope.userId, scope.dataGeneration, schedule?.activeId, schedule?.appliedVersion, zone, today, routines.map(r => r.id).join(',')].join('|')
+  const requestKey = [context, summaryKey, activeVersion, refreshKey, props.visit, reload].join('|')
   const inputs = useRef({ scope, schedule, clock, zone })
   useEffect(() => { inputs.current = { scope, schedule, clock, zone } }, [scope, schedule, clock, zone])
   useEffect(() => {
     const abort = new AbortController(), current = inputs.current
-    if (!current.schedule) return
+    if (props.enabled === false || !current.schedule) return
     recordLifecycle?.('home:start')
     void loadHome(current.scope, api, current.schedule, statistics, cache, current.clock, current.zone, abort.signal).then(data => {
       recordLifecycle?.('home:end', { result: abort.signal.aborted ? 'cancelled' : 'ok' })
-      if (!abort.signal.aborted) setResult({ key: requestKey, data })
+      if (!abort.signal.aborted) { setResult({ key: requestKey, context, data }); setFailed(null) }
     }).catch(error => {
       recordLifecycle?.('home:end', { result: abort.signal.aborted ? 'cancelled' : 'error' })
       if (abort.signal.aborted) return
+      if (boundaryError(error) || readAccessDenied(error)) { cache.clear(); setResult(null) }
       if (boundaryError(error)) invalid.current(error)
-      setResult({ key: requestKey, data: null })
+      setFailed(requestKey)
     })
     return () => abort.abort()
-  }, [requestKey, api, statistics, cache])
-  const loading = schedule ? result?.key !== requestKey : training.loading
-  const data = loading || !schedule ? null : result?.data
+  }, [context, requestKey, props.enabled, api, statistics, cache])
+  const refreshFailed = failed === requestKey
+  const loading = !refreshFailed && (schedule ? result?.key !== requestKey : training.loading)
+  const data = schedule && result?.context === context ? result.data : null
   const protectedView = protection !== null
   const protectionNotice = protection === 'ACTIVE' ? '일반 보기 · 디로딩 진행 중에는 일반 운동과 루틴을 변경할 수 없습니다.'
     : protection === 'COMPLETED' ? '디로딩 완료 당일 · 일반 운동은 다음 날부터 시작할 수 있습니다.' : null
   return <HomeView {...props} data={data} today={today} loading={loading}
-    canStart={editingSupported && props.localReady && !training.loading && !training.issue && !training.busy}
-    protectedView={protectedView} issue={props.issue ?? training.issue ?? protectionNotice}
+    canStart={editingSupported && props.localReady && !loading && !refreshFailed && !training.loading && !training.issue && !training.busy}
+    protectedView={protectedView} issue={props.issue ?? training.issue ?? (data && refreshFailed ? '홈 정보를 갱신하지 못했습니다. 마지막으로 확인한 내용을 표시합니다.' : protectionNotice)}
     header={<HomeTrainingHeader analysis={analysis} protection={protection} />}
     presetFilter={schedule ? { presets: schedule.presets, activeId: schedule.activeId, visit: props.visit } : undefined}
     showHttpNote={!!review && !editingSupported} onRefresh={() => { refresh(); cache.clear(); setReload(n => n + 1) }} />
@@ -174,7 +179,7 @@ export function HomeView(props: HomeViewProps) {
     {props.headerActions}
     {props.issue && <StatusNotice error>{props.issue}</StatusNotice>}
     {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy} onResume={props.onResume} />}
-    {loading ? <StatusNotice>오늘의 루틴과 일정을 불러오고 있습니다.</StatusNotice> : !data ? <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
+    {!data ? loading ? <LoadingSkeleton layout="home" label="오늘의 루틴과 일정을 불러오는 중입니다." /> : <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
       {!active && <Card hero className={styles.today} aria-label="오늘의 루틴">
         <div className={styles.kicker}><span>TODAY'S ROUTINE</span><time dateTime={today}>{today.slice(5).replace('-', '.')} {weekdays[dayOfWeek(today) - 1]}</time></div>
         <h2>{props.todayNotice ?? chosen?.name ?? (chosenId ? '루틴 확인 필요' : data.schedule.version !== '0' ? '오늘은 쉬어가는 날' : '첫 루틴을 준비해 보세요')}</h2>

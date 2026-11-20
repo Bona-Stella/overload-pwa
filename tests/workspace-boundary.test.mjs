@@ -14,7 +14,7 @@ test('real React reconciliation removes statistics across workout, account, gene
     import {SavedWeightReview} from '/src/features/workout-online/SavedWeightReview.tsx';
     import {summaryData} from '/src/features/workout-online/summary-data.ts';
     const reviewApi = {weightReview: (...args) => window.boundaryWeightReview(...args)};
-    export class WorkoutApi {cardioActivities=async()=>[];closed=async()=>({sessions:[]});};
+    export class WorkoutApi {cardioActivities=async()=>[];closed=async scope=>({...scope,sessions:[],next:null});};
     export class WorkoutOnlineController { getSnapshot=()=>window.boundaryState; subscribe=()=>()=>{}; connect=()=>()=>{}; invalidateScope=()=>{}; }
     export class StatisticsApi { overview=(scope,period,signal)=>window.boundaryOverview(scope,period,signal); }
     export function useTrainingSchedule(){return {loading:false,canWrite:false,refresh:()=>{}}};
@@ -57,6 +57,12 @@ test('real React reconciliation removes statistics across workout, account, gene
     ws.onclose = () => { for (const p of pending.values()) p.reject(Error('Browser closed')); pending.clear() }
     await send('Page.enable'); await send('Page.navigate', { url: origin + '/boundary' })
     await wait(() => evaluate(`typeof window.renderBoundary==="function"&&!!document.querySelector('[aria-label="운동 분석 메뉴"]')`))
+    await evaluate(`window.loadedRecordCard=document.querySelector('.record-statistics-body');window.renderBoundary('A','0',false,false,'home')`)
+    await wait(() => evaluate("!!document.querySelector('[aria-label=홈]')"))
+    await evaluate(`window.renderBoundary('A','0',false,false,'history',true);new Promise(requestAnimationFrame)`)
+    assert.equal(await evaluate("document.querySelector('.record-statistics-body') === window.loadedRecordCard && document.body.innerText.includes('이번 주 요약')"), true,
+      'returning to Records during a same-account refresh keeps the existing cards mounted and visible')
+    await evaluate(`window.renderBoundary('A','0');new Promise(requestAnimationFrame)`)
     await activity()
     await wait(() => evaluate('document.querySelector(".statistics")?.innerText.includes("7세트")'))
     for (let i = 0; i < 3; i++) {

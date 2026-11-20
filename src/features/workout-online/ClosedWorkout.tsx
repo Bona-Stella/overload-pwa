@@ -3,6 +3,8 @@ import type {ReactNode} from 'react'
 import { durationLabel } from '../../components/duration.ts'
 import { DurationWheel } from '../../components/DurationWheel.tsx'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
+import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 import { Dialog } from '../../components/Dialog.tsx'
@@ -109,7 +111,11 @@ export function ClosedWorkout({ api, session, authorized, onServer, onInvalid, m
     void c.open()
     return () => { unsubscribe(); c.stop(); void store.close() }
   }, [api, initial, canOpen])
-  return canOpen && view ? <ClosedWorkoutView {...view} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} takeInitialScroll={takeInitialScroll} reviewContent={<SavedWeightReview api={api} session={view.state.server??session} readOnly={!summary} disabled={view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh}/>} /> : <p role="status">종료 기록을 확인 중입니다.</p>
+  if (!canOpen || !view || (!view.state.server && view.state.busy)) return <>
+    <RecordSubpageHeader title={summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={onBack} backLabel={backLabel} />
+    <LoadingSkeleton layout="detail" label="종료 기록을 확인 중입니다." />
+  </>
+  return <ClosedWorkoutView {...view} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} takeInitialScroll={takeInitialScroll} reviewContent={<SavedWeightReview api={api} session={view.state.server??session} readOnly={!summary} disabled={view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh}/>} />
 }
 type EditTarget = { kind: 'SET'; record: PerformedSet } | { kind: 'CARDIO'; record: Extract<CardioResult, { status: 'COMPLETED' }> } | { kind: 'SKIPPED'; record: Extract<CardioResult, { status: 'SKIPPED' }> }
 export function ClosedWorkoutView({ state, controller, manufacturers = [], definitions = [], onBack = () => {}, backLabel, summary = false, reviewContent, takeInitialScroll }: { reviewContent?:ReactNode; summary?: boolean; takeInitialScroll?: () => boolean; state: ClosedState; controller: ClosedWorkoutController; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string }) {

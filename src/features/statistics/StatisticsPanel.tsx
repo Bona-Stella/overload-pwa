@@ -30,6 +30,8 @@ import styles from './RecordMain.module.css'
 import activityStyles from './Activity.module.css'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { SearchScopePopover } from './SearchScopePopover.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
+import { boundaryError, readAccessDenied } from '../home/load.ts'
 
 function RecordMainIcon({ kind }: { kind: 'activity' | 'growth' | 'plan' | 'muscles' | 'clock' | 'weight' | 'footprints' }) {
   const paths = {
@@ -205,23 +207,33 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
   const [screen, setScreen] = useScreenHistory<RecordScreen>('records:' + identity + (initialPreset ? ':preset:' + initialPreset : ''), initialPreset ? 'plan' : 'summary')
   useEffect(() => { window.scrollTo?.(0,0) }, [screen])
   const [activityPeriod, setActivityPeriod] = useScreenHistory<PeriodSelection>('activity-period:' + identity + (preview?.activity ? ':sample' : ''), { mode:'week', anchor:preview?.activity?.period.fromDate??preview?.today??localToday() })
-  const [state, setState] = useState<{ data: Overview | null; issue: boolean }>({ data:null, issue:false })
+  const [overviews, setOverviews] = useState<{ key: string; data: Overview }[]>([])
+  const [failed, setFailed] = useState<string | null>(null)
   const [reload, setReload] = useState(0), invalid = useRef(onInvalid)
   useEffect(() => { invalid.current = onInvalid }, [onInvalid])
   const range = screen === 'activity' ? selectedPeriod(activityPeriod) : periodFor(new Date((preview?.today??localToday())+'T12:00:00'), 'week', 0)
   const { fromDate, toDateExclusive } = range
+  const { userId, dataGeneration } = scope
+  const overviewKey = [identity, fromDate, toDateExclusive].join(':')
+  const requestKey = [overviewKey, refreshKey, reload].join('|')
+  const current = overviews.find(item => item.key === overviewKey)?.data
+  const issue = failed === requestKey
+  const readOverview = !['growth','plan','history'].includes(screen)
   useEffect(() => {
-    if (!enabled||['growth','plan','history'].includes(screen)) return
+    if (!enabled || !readOverview) return
     const abort = new AbortController()
-    void api.overview(scope, { fromDate, toDateExclusive }, abort.signal).then(data => {
-      if (!abort.signal.aborted) setState({ data, issue:false })
+    void api.overview({ userId, dataGeneration }, { fromDate, toDateExclusive }, abort.signal).then(data => {
+      if (abort.signal.aborted) return
+      setFailed(null)
+      setOverviews(previous => [{ key: overviewKey, data }, ...previous.filter(item => item.key !== overviewKey && item.key.startsWith(identity + ':'))].slice(0, 4))
     }).catch(error => {
-      if (!abort.signal.aborted) { if (error && typeof error === 'object' && 'code' in error && ['OWNER_MISMATCH','DATA_GENERATION_MISMATCH'].includes(String(error.code))) invalid.current(error); setState(previous=>({ data:previous.data, issue:true })) }
+      if (abort.signal.aborted) return
+      if (boundaryError(error) || readAccessDenied(error)) setOverviews([])
+      if (boundaryError(error)) invalid.current(error)
+      setFailed(requestKey)
     })
     return () => abort.abort()
-  }, [api, scope, scope.userId, scope.dataGeneration, fromDate, toDateExclusive, refreshKey, reload, screen, enabled])
-  const current = state.data?.statistics.userId===scope.userId&&state.data.statistics.dataGeneration===scope.dataGeneration&&state.data.statistics.fromDate === fromDate && state.data.statistics.toDateExclusive === toDateExclusive ? state.data : null
-  const display=current??(screen==='activity'&&state.data?.statistics.userId===scope.userId&&state.data.statistics.dataGeneration===scope.dataGeneration?state.data:null)
+  }, [api, userId, dataGeneration, fromDate, toDateExclusive, identity, overviewKey, requestKey, readOverview, enabled])
   const weekRange=periodFor(new Date(activityPeriod.anchor+'T12:00:00'),'week',0)
   const weekFrom=weekRange.fromDate,weekTo=weekRange.toDateExclusive
   const [weekLoaded,setWeekLoaded]=useState<Overview|null>(null)
@@ -235,7 +247,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
   const [evidence,setEvidence]=useState<{key:string;rows:Session[]}|null>(null)
   const evidenceKey=[identity,weekFrom,weekTo].join(':')
   useEffect(()=>{
-    if(!workoutApi||preview||screen!=='activity'||!weekly)return
+    if(!enabled||!workoutApi||preview||screen!=='activity'||!weekly)return
     const abort=new AbortController(),ids=[...new Set(weekly.plannedDays.flatMap(d=>d.selectedSessionId?[d.selectedSessionId]:[]))]
     let at=0;const rows:Session[]=[]
     void Promise.all(Array.from({length:Math.min(4,ids.length)},async()=>{
@@ -245,7 +257,7 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
       }
     })).then(()=>{if(!abort.signal.aborted)setEvidence({key:evidenceKey,rows})})
     return()=>abort.abort()
-  },[workoutApi,preview,screen,weekly,evidenceKey,scope])
+  },[workoutApi,preview,screen,weekly,evidenceKey,scope,enabled])
   const back = () => navigateBack(() => setScreen('summary', true))
   return <section className={`stack statistics record-screen ${screen==='summary'?styles.main:''} ${screen==='activity'?activityStyles.page:''}`} aria-label="운동 기록·분석">
     {screen === 'activity' || screen === 'plan' || screen === 'muscles' || screen === 'history' ? <RecordSubpageHeader title={screen==='activity'?'운동 현황':screen==='plan'?'주간 근육 계획':screen==='muscles'?'주간 근육 통계':'전체 운동 이력'} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} /> : null}
@@ -253,12 +265,10 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
     {screen === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} />
       : screen === 'plan' ? workoutApi ? <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} /> : <p role="status">주간 계획 데이터 연결을 기다리고 있습니다.</p>
       : screen === 'history' ? workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
-      : <>{state.issue&&<Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>}
-        {!current&&!display&&<p role="status" className="muted small">통계 불러오는 중…</p>}
-        {display&&<div className="stack record-statistics-body" aria-busy={!current}>
-          {screen==='activity'&&!current&&<p className="muted small record-data-range">표시 데이터 · {display.statistics.fromDate} ~ {addDays(display.statistics.toDateExclusive,-1)}</p>}
-          <StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={display.statistics} planning={display} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions}/>
-        </div>}
+      : <>{current ? <div className="stack record-statistics-body">
+          <StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={current.statistics} planning={current} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions}/>
+        </div> : !issue && <LoadingSkeleton layout={screen === 'activity' ? 'activity' : screen === 'muscles' ? 'detail' : 'summary'} label="운동 통계를 불러오는 중입니다." />}
+        {issue&&<Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>}
         {screen === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>setScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
     {preview&&screen!=='plan'&&screen!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
   </section>

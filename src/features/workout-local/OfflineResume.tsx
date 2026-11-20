@@ -7,10 +7,11 @@ import type { OfflineSource } from './offline-access.ts'
 import { OFFLINE_FENCE } from './offline-access.ts'
 import { offlineAccess } from './offline.ts'
 import { LocalWorkoutScreen } from './LocalWorkoutScreen.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 
 export function OfflineResume({ onExitGuard }: { onExitGuard: ExitGuardRegistration }) {
   const { state, controller } = useAuth()
-  const [source, setSource] = useState<OfflineSource | null>(null)
+  const [source, setSource] = useState<OfflineSource | null>()
   const [selected, setSelected] = useScreenHistory<string | null>('workout-view:offline', null)
   const [issue, setIssue] = useState(false)
   const [api] = useState(() => new WorkoutApi(controller))
@@ -25,6 +26,7 @@ export function OfflineResume({ onExitGuard }: { onExitGuard: ExitGuardRegistrat
     const load = () => {
       void offlineAccess.source().then(value => {
         if (!current) return
+        setIssue(false)
         setSource(value)
         if (!value) choice.current = false
       }).catch(() => { if (current) { setIssue(true); setSource(null); choice.current = false } })
@@ -40,7 +42,8 @@ export function OfflineResume({ onExitGuard }: { onExitGuard: ExitGuardRegistrat
   }
   return <section className="stack" aria-label="오프라인 운동 이어가기">
     {issue && <p className="notice error">로컬 운동의 접근 허용 또는 저장소를 확인하지 못했습니다. 원본은 보존했습니다.</p>}
-    {!source ? <p className="muted small">이 환경에서 이어갈 수 있는 로컬 운동을 확인하지 못했습니다. 온라인에서 로그인하고 운동을 연 기기에서만 이어갈 수 있습니다.</p>
+    {source === undefined ? <LoadingSkeleton layout="workout" label="이 기기에 저장된 운동을 확인하는 중입니다." />
+      : !source ? !issue && <p className="muted small">이 환경에서 이어갈 수 있는 로컬 운동을 확인하지 못했습니다. 온라인에서 로그인하고 운동을 연 기기에서만 이어갈 수 있습니다.</p>
       : !chosen ? <div className="card stack"><h2>이 기기의 운동 이어가기</h2><p>마지막으로 서버 인증을 확인한 계정의 기존 진행 운동만 엽니다. 현재 서버 로그인과 운동 상태가 확인된 것은 아닙니다.</p><p className="muted small">이 브라우저의 로컬 접근 제한은 인증이나 암호화가 아닙니다. 기기를 공유할 때는 온라인에서 로그아웃하세요.</p><button className="primary" disabled={state.pending !== null} onClick={async () => {
         const origin = window.history.state?.overloadNavigation
         try { const latest = await offlineAccess.source(), a = controller.getSnapshot(); if (latest && a.status === 'unavailable' && a.offlineNetworkFailure && !a.localWorkoutUserId && a.pending === null && window.history.state?.overloadNavigation === origin) { setSource(latest); setSelected(latest.permit.sessionId) } }

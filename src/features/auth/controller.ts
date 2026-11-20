@@ -83,11 +83,17 @@ export class AuthController {
   }
   resume(flow: ReturnFlow = 'none') {
     this.generation++
-    this.set({ account: emptyAccount(), challenge: null, notice: '', issue: null })
+    this.set({ account: this.accountDuringRestore(flow), challenge: null, notice: '', issue: null })
     this.api.clearCsrf?.()
     if (['google', 'contact-navigation', 'link-navigation'].includes(this.state.pending ?? '')) { this.running = false; this.set({ pending: null }) }
     if (this.running) { this.resumePending = true; this.resumeFlow = flow; return }
     return this.restore(flow)
+  }
+  private accountDuringRestore(flow: ReturnFlow): AccountState {
+    const { account, accountOpen, status } = this.state
+    return flow === 'account' && accountOpen && status === 'authenticated' && account.loaded
+      ? { ...emptyAccount(), loaded: true, identities: account.identities, contact: account.contact }
+      : emptyAccount()
   }
   private async loadSession(flow: ReturnFlow = 'none', notice = '') {
     const generation = this.generation
@@ -102,7 +108,9 @@ export class AuthController {
       : flow === 'link-complete' && !session ? authIssue(new AuthError('AUTHENTICATION_REQUIRED', 401))
       : flow === 'complete' && !session ? authIssue(new AuthError('GOOGLE_NOT_CONFIRMED')) : null
     this.set({ status: session ? 'authenticated' : 'anonymous', userId: session?.userId ?? null, offlineNetworkFailure: false,
-      localWorkoutUserId: session || this.localWorkoutLocked ? null : this.state.localWorkoutUserId ?? this.state.userId, challenge: null, account: emptyAccount(), accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed', 'link-complete', 'link-failed'].includes(flow)), issue, notice })
+      localWorkoutUserId: session || this.localWorkoutLocked ? null : this.state.localWorkoutUserId ?? this.state.userId, challenge: null,
+      account: session?.userId === this.state.userId ? this.accountDuringRestore(flow) : emptyAccount(),
+      accountOpen: Boolean(session && ['account', 'contact-complete', 'contact-failed', 'link-complete', 'link-failed'].includes(flow)), issue, notice })
   }
   async restore(flow: ReturnFlow = this.state.accountOpen ? 'account' : 'none') {
     if (this.running) return
@@ -110,7 +118,7 @@ export class AuthController {
     this.sessionRejected = false
     // Keep the chosen local screen mounted during a connection check; pending still fences sending.
     this.running = true; this.set({ pending: 'restore', issue: null })
-    this.generation++; this.set({ account: emptyAccount() })
+    this.generation++; this.set({ account: this.accountDuringRestore(flow) })
     try {
       await this.loadSession(flow)
       if (this.state.accountOpen && this.state.userId) {

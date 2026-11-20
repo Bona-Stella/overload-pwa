@@ -53,16 +53,16 @@ function FinishRouteHarness() {
     }} />
   </>
 }
-window.renderBoundary = (owner = 'A', generation = '0', active = false, finishFlow = false) => {
+window.renderBoundary = (owner = 'A', generation = '0', active = false, finishFlow = false, tab = 'history', refreshing = false) => {
   const userId = owner === 'A' ? USER : OTHER, scope = { userId, dataGeneration: generation }
   window.boundaryAuth = { status: owner === 'logout' ? 'anonymous' : owner === 'expired' ? 'unavailable' : 'authenticated', pending: null, userId, accountOpen: false, localWorkoutUserId: null }
   const detail = active ? session({ ...scope, editorDeviceId: DEVICE, ...(active === 'finished'
     ? { status: 'FINISHED', endedAt: '2026-10-31T12:30:00Z', closedAt: '2026-10-31T12:30:01Z' } : {}) }) : null
   window.boundaryState = { userId, scope, data: { ...bootstrap, scope, routines: [] }, selected: null,
     active: detail?.status === 'ACTIVE' ? detail : null, detail, deviceId: DEVICE,
-    attempt: null, status: 'ready', busy: false, localReady: true, copySaved: false, issue: null, notice: '' }
+    attempt: null, status: refreshing ? 'loading' : 'ready', busy: refreshing, localReady: true, copySaved: false, issue: null, notice: '' }
   root.render(<AuthContext value={{ state: window.boundaryAuth, controller: authentication }}>
-    {finishFlow ? <FinishRouteHarness /> : <WorkoutWorkspace tab="history" />}
+    {finishFlow ? <FinishRouteHarness /> : <WorkoutWorkspace tab={tab} />}
   </AuthContext>)
 }
 window.resetBoundary = () => { root.unmount(); host.replaceChildren(); root = createRoot(host); window.boundaryRequests.length = 0; held.length = 0 }

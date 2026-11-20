@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { useScreenHistory, useNavigationGuard, navigateBack, navigateTabRoot, navigateToCurrentTabRoot } from '../../app/navigation.ts'
 import { Dialog } from '../../components/Dialog'
 import { useAuth } from './context.ts'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { LoginScreens } from './LoginScreens'
 import { AccountSettings } from './AccountSettings'
 import { WorkoutWorkspace } from '../workout-online/WorkoutWorkspace'
@@ -105,7 +106,7 @@ export function AuthApp() {
       {state.issue && <div className="notice error" role="alert">{state.issue.message}</div>}
       {state.notice && !state.challenge && <p className="notice" role="status">{state.notice}</p>}
     </div>
-    {state.status === 'checking' ? <section className="card stack" role="status"><p className="eyebrow">WELCOME BACK</p><h1>로그인 상태를<br />확인하고 있어요<span className="brand-dot">.</span></h1><p className="muted">잠시만 기다려 주세요.</p></section>
+    {state.status === 'checking' ? <LoadingSkeleton layout="auth" label="로그인 상태를 확인하고 있어요." />
       : state.status === 'unavailable' ? <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}

@@ -36,3 +36,7 @@ export async function loadHome(scope: Scope, api: WorkoutApi, schedule: LiveSche
 export function boundaryError(error: unknown) {
   return error instanceof Error && 'code' in error && ['OWNER_MISMATCH', 'DATA_GENERATION_MISMATCH', 'AUTHENTICATION_REQUIRED'].includes(String(error.code))
 }
+
+export function readAccessDenied(error: unknown) {
+  return !!error && typeof error === 'object' && 'status' in error && (error.status === 401 || error.status === 403)
+}

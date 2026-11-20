@@ -97,13 +97,20 @@ export class WorkoutOnlineController {
   refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
     recordLifecycle?.('workout-data:start')
-    const keepActive = this.state.detail?.status === 'ACTIVE'
-    this.set({ ...(keepActive || keepDraftScope ? {} : empty()), userId: context.userId, status: 'loading', busy: true, issue: null })
+    const previous = this.state
+    this.set({ userId: context.userId, status: 'loading', busy: true, issue: null })
     try {
       const data = await this.api.bootstrap(context.userId, context.signal)
+      if (!context.current()) return
+      const sameScope = previous.scope?.userId === data.scope.userId && previous.scope.dataGeneration === data.scope.dataGeneration
+      if (previous.scope && !sameScope) this.set({ ...empty(), userId: context.userId, status: 'loading', busy: true })
       const active = (await this.api.active(data.scope, context.signal)).session
       if (!context.current()) return
-      this.set({ scope: data.scope, data, active, detail: active })
+      const detail = active ?? (sameScope && previous.detail?.status !== 'ACTIVE' ? previous.detail : null)
+      const copySaved = sameScope && previous.copySaved && previous.detail?.id === detail?.id
+        && previous.detail?.writerEpoch === detail?.writerEpoch && previous.detail?.editorDeviceId === detail?.editorDeviceId
+      const selected = sameScope && data.routines.some(r => r.id === previous.selected?.id && r.version === previous.selected.version) ? previous.selected : null
+      this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected })
       let deviceId: string | null = null, attempt: StartAttempt | null = null, copies: SessionCopy[] = []
       try {
         deviceId = await this.store.deviceId()
@@ -114,12 +121,14 @@ export class WorkoutOnlineController {
         if (active) {
           await this.store.saveSession(data.scope, active)
           if (context.current()) this.set({ copySaved: true })
-        } else if (copies.length) {
-          const latest = copies.sort((a, b) => b.server.startedAt.localeCompare(a.server.startedAt))[0]
-          const detail = await this.api.detail(data.scope, latest.sessionId, context.signal)
-          if (!context.current()) return
-          await this.store.saveSession(data.scope, detail)
-          if (context.current()) this.set({ detail, copySaved: true })
+        } else {
+          const latest = detail ? copies.find(copy => copy.sessionId === detail.id) : copies.sort((a, b) => b.server.startedAt.localeCompare(a.server.startedAt))[0]
+          if (latest) {
+            const verified = await this.api.detail(data.scope, latest.sessionId, context.signal)
+            if (!context.current()) return
+            await this.store.saveSession(data.scope, verified)
+            if (context.current()) this.set({ detail: verified, copySaved: true })
+          }
         }
       } catch (error) {
         if (!(error instanceof LocalStoreError)) throw error
@@ -127,7 +136,8 @@ export class WorkoutOnlineController {
       }
     } catch (error) {
       if (context.current()) {
-        if (keepDraftScope && !keepActive) this.set({ ...empty(), userId: context.userId })
+        // Recovery after an outage must verify the prior scope before showing it again.
+        if (keepDraftScope && previous.detail?.status !== 'ACTIVE') this.set({ ...empty(), userId: context.userId })
         this.failure(error)
       }
     }

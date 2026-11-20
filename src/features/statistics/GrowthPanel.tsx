@@ -8,13 +8,14 @@ import type { RecordPreviewData } from './RecordDisplayContext.ts'
 import { SearchList } from '../../components/SearchList.tsx'
 import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import { Card, Button } from '../../components/ui.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { useEffect, useRef, useState } from 'react'
 import type { Scope } from '../workout-online/types.ts'
 import type { GrowthApi, GrowthExercise, GrowthOptions, GrowthPeriod, GrowthPlacement, GrowthPoint } from './growth.ts'
 import styles from './Growth.module.css'
 
-type Context = { controls?:ReactNode; api: GrowthApi; scope: Scope; period: GrowthPeriod; zone: string; onInvalid: (error: unknown) => void; onOpen: (id: string) => void }
+type Context = { controls?:ReactNode; api: GrowthApi; scope: Scope; period: GrowthPeriod; zone: string; refreshKey: string; onInvalid: (error: unknown) => void; onOpen: (id: string) => void }
 const amount = (text: string) => { const [whole, part = ''] = text.split('.'); return BigInt(whole) * 1000000n + BigInt(part.padEnd(6, '0')) }
 const periods = ['1', '3', '6', 'all'] as const
 
@@ -89,7 +90,7 @@ export function GrowthGraph({ points, zone }: { points: GrowthPoint[]; zone: str
     <p className="sr-only">승인된 변경값만 표시합니다. 점 사이의 연결 근거가 없으면 선을 이어 그리지 않습니다.</p></>
 }
 function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context }: Context & { query: string; onQuery:(value:string)=>void; selected?:string; onClear:()=>void; onSelect: (value: GrowthExercise) => void }) {
-  const { api, scope, period, zone, onInvalid } = context
+  const { api, scope, period, zone, onInvalid, refreshKey } = context
   const [tag,setTag]=useState('ALL')
   const [searchOpen,setSearchOpen]=useState(false)
   const [loadedQuery,setLoadedQuery]=useState<string|null>(null)
@@ -101,7 +102,7 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
     void Promise.resolve().then(()=>{if(abort.signal.aborted)return null;setBusy(true);setIssue('');return api.search(scope, period, zone, query, 0, abort.signal,tag)}).then(page => { if (page&&!abort.signal.aborted) { setRows(page.exercises); setNext(page.nextOffset);setLoadedQuery(query+'|'+tag) } })
       .catch((error: unknown) => { if (!abort.signal.aborted) { onInvalid(error); setIssue('과거 운동을 불러오지 못했습니다. 다시 검색해 주세요.') } }).finally(() => { if (!abort.signal.aborted) setBusy(false) })
     return () => { abort.abort(); flight.current?.abort() }
-  }, [api, scope, period, zone, query, onInvalid,searchOpen,tag])
+  }, [api, scope, period, zone, query, onInvalid,searchOpen,tag,refreshKey])
   async function more() {
     if (busy || next === null) return
     const abort = new AbortController(); flight.current = abort; setBusy(true); setIssue('')
@@ -110,18 +111,19 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
     finally { if (!abort.signal.aborted) setBusy(false) }
   }
   return <div className="stack"><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>{setTag(tag);onClear()}}} onSearchOpenChange={setSearchOpen} scopes={[{id:'exercise',name:'운동별'}]} scope="exercise" onScope={()=>{}} query={query} onQuery={onQuery} selected={selected} onClear={onClear} label="과거 운동 검색" issue={issue} options={(loadedQuery===query+'|'+tag?rows:[]).map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))} onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row)onSelect(row)}} resultsFooter={next!==null?<button className="outline full" disabled={busy} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
-    {searchOpen&&busy&&<p role="status">과거 운동 확인 중…</p>}</div>
+    {searchOpen&&busy&&loadedQuery!==query+'|'+tag&&<LoadingSkeleton layout="list" label="과거 운동 확인 중…" />}</div>
 }
 function History({ standardId, placement, exerciseName, ...context }: Context & { standardId: string; placement: GrowthPlacement; exerciseName:string }) {
-  const { api, scope, period, zone, onInvalid, onOpen, controls } = context
+  const { api, scope, period, zone, onInvalid, onOpen, controls, refreshKey } = context
   const [points, setPoints] = useState<GrowthPoint[]>([]), [next, setNext] = useState<number | null>(null), [busy, setBusy] = useState(true), [issue, setIssue] = useState('')
+  const [known, setKnown] = useState(false)
   const flight = useRef<AbortController | null>(null)
   useEffect(() => {
     const abort = new AbortController(); flight.current = abort
-    void api.history(scope, standardId, placement, period, zone, 0, abort.signal).then(page => { if (!abort.signal.aborted) { setPoints(page.points); setNext(page.nextOffset) } })
+    void api.history(scope, standardId, placement, period, zone, 0, abort.signal).then(page => { if (!abort.signal.aborted) { setKnown(true); setIssue(''); setPoints(page.points); setNext(page.nextOffset) } })
       .catch((error: unknown) => { if (!abort.signal.aborted) { onInvalid(error); setIssue('승인 이력을 불러오지 못했습니다. 배치를 다시 선택해 주세요.') } }).finally(() => { if (!abort.signal.aborted) setBusy(false) })
     return () => { abort.abort(); flight.current?.abort() }
-  }, [api, scope, period, zone, standardId, placement, onInvalid])
+  }, [api, scope, period, zone, standardId, placement, onInvalid, refreshKey])
   async function more() {
     if (busy || next === null) return
     const abort = new AbortController(); flight.current = abort; setBusy(true); setIssue('')
@@ -130,36 +132,35 @@ function History({ standardId, placement, exerciseName, ...context }: Context & 
     finally { if (!abort.signal.aborted) setBusy(false) }
   }
   // History pages arrive latest-first and append older points. Keep the existing event list order.
-  const known = points.length>0||!busy&&!issue
   return <><GrowthAnalysis controls={controls} latest={points[0]} count={known?points.length:undefined} partial={next!==null} zone={zone}>
-    {issue&&<p role="alert">{issue}</p>}{busy&&<p role="status">승인 이력 확인 중…</p>}
-    {!busy&&!issue&&<GrowthChartSection points={points} zone={zone} />}
+    {known ? <GrowthChartSection points={points} zone={zone} /> : !issue && <LoadingSkeleton layout="activity" label="승인 이력 확인 중…" />}
+    {issue&&<p role="alert">{issue}</p>}
     {next!==null&&<><p className="muted small">일부 승인 이력입니다. 이전 이력을 더 불러올 수 있습니다.</p><Button disabled={busy} onClick={()=>void more()}>이전 승인 더 보기</Button></>}
   </GrowthAnalysis><GrowthHistoryCard points={points} name={exerciseName} zone={zone} onOpen={onOpen} busy={busy} known={known} partial={next!==null} /></>
 }
 function Selected({ exercise, ...context }: Context & { exercise: GrowthExercise }) {
-  const { api, scope, period, zone, onInvalid } = context
+  const { api, scope, period, zone, onInvalid, refreshKey } = context
   const [options, setOptions] = useState<GrowthOptions | null>(null), [selected, setSelected] = useState(''), [issue, setIssue] = useState('')
   useEffect(() => {
     const abort = new AbortController()
-    void api.options(scope, exercise.standardExerciseId, period, zone, abort.signal).then(value => { if (!abort.signal.aborted) { setOptions(value); setSelected(value.placements[0]?.placementId ?? '') } })
+    void api.options(scope, exercise.standardExerciseId, period, zone, abort.signal).then(value => { if (!abort.signal.aborted) { setOptions(value); setIssue(''); setSelected(previous => value.placements.some(p => p.placementId === previous) ? previous : value.placements[0]?.placementId ?? '') } })
       .catch((error: unknown) => { if (!abort.signal.aborted) { onInvalid(error); setIssue('운동의 승인 배치를 확인하지 못했습니다. 다시 선택해 주세요.') } })
     return () => abort.abort()
-  }, [api, scope, period, zone, exercise, onInvalid])
+  }, [api, scope, period, zone, exercise, onInvalid, refreshKey])
   const current = options?.placements.find(p => p.placementId === selected)
   const controls = <>{context.controls}{options&&options.placements.length>1&&<label className={styles.placement}>추적할 루틴 배치<select value={selected} onChange={e=>setSelected(e.target.value)}>{options.placements.map((p,i)=><option key={p.placementId} value={p.placementId}>{p.routineName} · 배치 {i+1}{p.deleted?' · 삭제됨':''}</option>)}</select></label>}</>
-  if(current)return <History key={current.placementId} {...context} controls={controls} standardId={exercise.standardExerciseId} exerciseName={exercise.name} placement={current} />
+  if(current)return <>{issue && <p role="alert">{issue}</p>}<History key={current.placementId} {...context} controls={controls} standardId={exercise.standardExerciseId} exerciseName={exercise.name} placement={current} /></>
   return <GrowthAnalysis controls={issue?undefined:controls} count={options?0:undefined} zone={zone}>
-    {issue?<p role="alert">{issue}</p>:options?<p>이 기간의 승인 중량 변경 기록이 없습니다. 최초·현재 중량으로 과거 값을 만들지 않습니다.</p>:<p role="status">승인 배치 확인 중…</p>}
+    {issue?<p role="alert">{issue}</p>:options?<p>이 기간의 승인 중량 변경 기록이 없습니다. 최초·현재 중량으로 과거 값을 만들지 않습니다.</p>:<LoadingSkeleton layout="settings" label="승인 배치 확인 중…" />}
   </GrowthAnalysis>
 }
-export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack, backLabel }: Omit<Context, 'period' | 'zone'> & { refreshKey: string; onBack?: () => void; backLabel?: string }) {
+export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack, backLabel }: Omit<Context, 'period' | 'zone'> & { onBack?: () => void; backLabel?: string }) {
   const preview=useRecordPreview()
   const [period, setPeriod] = useState<GrowthPeriod>('3'), [query, setQuery] = useState(''), [selected, setSelected] = useState<GrowthExercise | null>(null)
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
   const controls=<GrowthPeriods period={period} onChange={setPeriod} />
-  const context = { api, scope, period, zone, onInvalid, onOpen, controls }
-  const key = [scope.userId, scope.dataGeneration, period, refreshKey].join(':')
+  const context = { api, scope, period, zone, onInvalid, onOpen, controls, refreshKey }
+  const key = [scope.userId, scope.dataGeneration, period].join(':')
   return <div className={`stack growth-screen ${styles.screen}`}>
     <RecordSubpageHeader title="성장 추적" onBack={onBack} backLabel={backLabel} />
     {preview?<PreviewGrowth data={preview} onOpen={onOpen} />:<>

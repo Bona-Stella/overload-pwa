@@ -2,6 +2,7 @@ import type { ReferenceRecord } from '../workout-online/reference-reminder.ts'
 import type { Routine } from '../workout-online/types.ts'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { StatusNotice, Button } from '../../components/ui.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { WorkoutStore } from '../workout-online/storage.ts'
 import type { CardioActivity, Manufacturer, StandardExercise, Session } from '../workout-online/types.ts'
 import { LocalWorkoutController } from './controller.ts'
@@ -46,7 +47,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   }, [state.pending, state.unsavedDrafts])
   useEffect(() => { if (state.workout) onWorkoutChange?.(state.workout) }, [state.workout, onWorkoutChange])
   if (!state.workout) return <section hidden={!visible} className="stack" aria-label="실제 운동 로컬 기록">
-    {state.loading && <p role="status">로컬 운동과 편집 잠금을 확인하고 있습니다.</p>}
+    {state.loading && <LoadingSkeleton layout="workout" label="로컬 운동과 편집 잠금을 확인하고 있습니다." />}
     {state.issue && <StatusNotice error>{state.issue}</StatusNotice>}
   </section>
   const notices = [

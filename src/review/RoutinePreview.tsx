@@ -6,7 +6,7 @@ import { hasActualPerformance } from '../features/home/achievement.ts'
 import { RecordPreview } from './RecordPreview.tsx'
 import { useScreenHistory, useNavigationGuard, navigateBack, navigateTabRoot, navigateToCurrentTabRoot } from '../app/navigation.ts'
 import { useRecordDetailHistory } from '../features/history/useRecordDetailHistory.ts'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AppShell } from '../app/AppShell.tsx'
 import type { AppTab } from '../app/types.ts'
 import { Dialog } from '../components/Dialog.tsx'
@@ -113,14 +113,15 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   const deloadView = scenario === 'active' && !normalView
   const viewed = schedule.presets.find(preset => preset.id === viewedId) ?? schedule.presets.find(preset => preset.id === schedule.activeId)!
   const details = new Map(routines.map(r => [r.id, { ...r, weightPlacements: activeWeights(r), cardioPlacements: activeCardio(r) }]))
-  const home = reviewHome(data)
-  if(records.length){
-    const extra=records.map(reviewRecordSession),details=new Map([...home.recent,...extra.map(s=>[s.id,s] as const)])
-    const rows=[...new Map([...home.recentRows,...extra.map(s=>({...s,routineName:s.initialPlan.routineName,status:'FINISHED' as const,closedAt:s.closedAt!}))].map(r=>[r.id,r])).values()]
+  const home = useMemo(() => {
+    const base = reviewHome(data)
+    if (!records.length) return base
+    const extra=records.map(reviewRecordSession),details=new Map([...base.recent,...extra.map(s=>[s.id,s] as const)])
+    const rows=[...new Map([...base.recentRows,...extra.map(s=>({...s,routineName:s.initialPlan.routineName,status:'FINISHED' as const,closedAt:s.closedAt!}))].map(r=>[r.id,r])).values()]
       .filter(r=>!r.deletedAt&&(!details.has(r.id)||hasActualPerformance(details.get(r.id)!)))
       .toSorted((a,b)=>(b.endedAt??b.closedAt).localeCompare(a.endedAt??a.closedAt)||b.id.localeCompare(a.id)).slice(0,3)
-    home.recentRows=rows;home.recent=new Map(rows.flatMap(r=>details.has(r.id)?[[r.id,details.get(r.id)!] as const]:[]))
-  }
+    return { ...base, recentRows: rows, recent: new Map(rows.flatMap(r=>details.has(r.id)?[[r.id,details.get(r.id)!] as const]:[])) }
+  }, [data, records])
   const recoveryHome = deloadView ? reviewHome({ ...data, sessions: [], pastPreset: null, routines: [recoveryRoutine],
     schedule: { ...schedule, presets: [{ ...viewed, id: schedule.activeId, assignments: [{ dayOfWeek: dayOfWeek(reviewToday), routineId: recoveryRoutine.id }] }] },
   }) : null
@@ -189,6 +190,9 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   const reviewRecord = records.find(record => record.session.id === (recordRoute?.id ?? summaryId))
   const { markSummaryEntry, takeInitialScroll } = useWorkoutSummaryEntry(reviewRecord?.session.id)
   const homeRecordOpen = tab === 'home' && !!recordRoute && home.recent.has(recordRoute.id)
+  const showRecords = tab === 'history' || homeRecordOpen
+  const [visitedRecords, setVisitedRecords] = useState(false)
+  if (showRecords && !visitedRecords) setVisitedRecords(true)
   const backLabel = homeRecordOpen ? '홈으로' : undefined
 
   const start = async (routine: Routine) => {
@@ -307,9 +311,9 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
         }}
         onClose={closeEditor} navigationKey="routine-editor:review" backLabel={editorRoute?.fromDetail ? '루틴 상세로' : undefined} onSaved={editor.type === 'new' ? (id, name) => setCreated({ id, name }) : undefined} />}
     </>}
-    {(tab === 'history' || homeRecordOpen) && <RecordPreview days={home.overview.plannedDays} initialPreset={planPreset??undefined}
+    {visitedRecords && <div hidden={!showRecords}><RecordPreview enabled={showRecords} days={home.overview.plannedDays} initialPreset={planPreset??undefined}
       routines={routines} schedule={schedule} sessions={data.sessions} records={records} selected={recordRoute?.id}
-      onOpen={id => openRecord(id)} onBack={backFromRecord} backLabel={backLabel} />}
+      onOpen={id => openRecord(id)} onBack={backFromRecord} backLabel={backLabel} /></div>}
     {tab === 'settings' && <SettingsReview alerts={alerts} onAlerts={setAlerts} onRestExitGuard={registerRestExit} takeRestSaveFailure={() => {
       if (fault !== 'network') return false
       setFault('none')

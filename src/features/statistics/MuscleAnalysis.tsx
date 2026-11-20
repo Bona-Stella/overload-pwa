@@ -12,6 +12,7 @@ import { boundaryError } from '../home/load.ts'
 import { addDays } from '../home/model.ts'
 import { useScreenHistory } from '../../app/navigation.ts'
 import { useRecordPreview } from './RecordDisplayContext.ts'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import './statistics.css'
 import planStyles from './WeeklyMusclePlan.module.css'
 import statisticsStyles from './WeeklyMuscleStatistics.module.css'
@@ -98,12 +99,13 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
   const stateKey = scope.userId + ':' + scope.dataGeneration + ':plan:' + (initialPreset ?? 'records')
   const [selected, setSelected] = useScreenHistory(stateKey, initialPreset ?? schedule?.activeId ?? '')
   const preset = schedule?.presets.find(p => p.id === selected) ?? schedule?.presets.find(p => p.id === schedule.activeId)
+  const hasPreset = !!preset
   const [loaded, setLoaded] = useState<{ key: string; routines: Map<string, Routine>; catalog: StandardExerciseDetail[] } | null>(null)
   const [issue, setIssue] = useState(false), [reload, setReload] = useState(0)
   const ids = JSON.stringify([...new Set(preset?.assignments.map(a => a.routineId) ?? [])])
-  const key = [scope.userId, scope.dataGeneration, ids, refreshKey, reload].join(':')
+  const key = [scope.userId, scope.dataGeneration, preset?.id, preset?.version, ids].join(':')
   useEffect(() => {
-    if (preview) return
+    if (preview || !hasPreset) return
     const abort = new AbortController()
     const routineIds: string[] = JSON.parse(ids)
     void (async () => {
@@ -117,11 +119,12 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
       if (!abort.signal.aborted) { setLoaded({ key, routines, catalog }); setIssue(false) }
     })().catch(error => { if (!abort.signal.aborted) { setIssue(true); if (boundaryError(error)) onInvalid(error) } })
     return () => abort.abort()
-  }, [api, scope.userId, scope.dataGeneration, ids, key, onInvalid, preview])
+  }, [api, scope.userId, scope.dataGeneration, ids, key, onInvalid, preview, hasPreset, refreshKey, reload])
   if (!preset) return <Card><p>분석할 주간 프리셋이 없습니다.</p></Card>
-  if (issue && loaded?.key !== key) return <Card><p role="alert">계획을 조회하지 못했습니다. 0세트로 표시하지 않습니다.</p><Button onClick={() => { setIssue(false); setReload(n => n + 1) }}>다시 조회</Button></Card>
   const data = preview ? preview.plan(preset.id) : loaded?.key === key ? plannedAnalysis(preset, loaded.routines, loaded.catalog, definitions.flatMap(e => e.muscles ?? [])) : null
-  return <>{!data && <p role="status">현재 계획과 검수 분류를 확인 중입니다.</p>}<MuscleAnalysisView stateKey={stateKey} data={data ?? { muscles: [], frontBack: [], ppl: [], groups: [], total: '—', issues: [] }} plan presets={schedule!.presets} selected={preset.id} onSelect={id => setSelected(id,true)} /></>
+  return <>{data ? <MuscleAnalysisView stateKey={stateKey} data={data} plan presets={schedule!.presets} selected={preset.id} onSelect={id => setSelected(id,true)} />
+    : !issue && <LoadingSkeleton layout="detail" label="현재 계획과 검수 분류를 확인 중입니다." />}
+    {issue && <Card><p role="alert">계획을 조회하지 못했습니다.</p><Button onClick={() => { setIssue(false); setReload(n => n + 1) }}>다시 조회</Button></Card>}</>
 }
 
 export function WeeklyMuscleStatistics({ data }: { data: Statistics }) { const preview=useRecordPreview(); return <MuscleAnalysisView stateKey={data.userId + ':' + data.dataGeneration + ':actual'} data={preview?.actual??actualAnalysis(data)} plan={false} period={data} /> }

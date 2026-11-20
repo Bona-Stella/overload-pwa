@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import type { ComponentType, ReactNode, Ref } from 'react'
 import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { AccountIcon, AccountItem, AccountNote, AccountStatus } from './AccountDetailUi.tsx'
 import type { AuthController, AuthState } from './controller.ts'
@@ -42,7 +43,7 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
   return <><section className={styles.page} aria-label="계정 설정" aria-busy={busy}>
     <RecordSubpageHeader title="계정 설정" backLabel="설정으로" backDisabled={busy} headingRef={headingRef}
       onBack={() => { clear(); if (onBack) onBack(); else controller?.closeAccount() }} />
-    {!account.loaded ? <Card className={styles.card} role="status"><p>{busy ? '계정 정보를 확인하고 있어요.' : '계정 정보를 불러오지 못했습니다.'}</p></Card> : <>
+    {!account.loaded ? busy ? <LoadingSkeleton layout="settings" label="계정 정보를 확인하고 있어요." /> : <Card className={styles.card} role="status"><p>계정 정보를 불러오지 못했습니다.</p></Card> : <>
       <IdentityManagement state={state} controller={controller} />
       <Card className={styles.card} id="account-email-proof">
         <div className={styles.heading}><h2>대표 재인증 이메일</h2>
