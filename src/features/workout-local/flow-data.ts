@@ -71,7 +71,8 @@ export function flowCardio(state: EditorState, now: number): (CardioFocusData & 
     const id = activity.sessionActivityId, timer = { ...(w.timers[id] ?? emptyTimer()), ...state.cardioDrafts[id] }
     const result = w.snapshot.cardioResults.find(r => r.sessionActivityId === id)
     return { id, plan: activity.plan, phase: cardioPhase(result, timer),
-      draft: { distance: timer.distance, speed: timer.speed ?? '', bpm: timer.bpm, correctedSeconds: timer.correctedSeconds },
+      draft: { distance: timer.distance, speed: timer.speed ?? '', bpm: timer.bpm, correctedSeconds: timer.correctedSeconds,
+        distanceSource: timer.distanceSource, speedSource: timer.speedSource },
       // A committed START may be newer than this render's 250ms display tick.
       // Clamp display only; timer mutations still reject an actual clock reversal.
       result: result?.result ?? undefined, activeMs: result?.result?.activeMs ?? elapsed(timer, Math.max(now, timer.runningSince ? Date.parse(timer.runningSince) : now)) }

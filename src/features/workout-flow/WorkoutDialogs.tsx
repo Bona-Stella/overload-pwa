@@ -1,17 +1,20 @@
 
 import { useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Button } from '../../components/ui.tsx'
+import { Button, Card } from '../../components/ui.tsx'
 import { Dialog } from '../../components/Dialog.tsx'
 import { useDragOrder } from '../../components/useDragOrder.ts'
 import { CardioPlanFields } from '../workout-online/CardioPlanFields.tsx'
-import { cardioPlan, emptyCardio } from '../workout-online/cardio-draft.ts'
+import { ExerciseEditHeading } from '../workout-online/ExerciseEditHeading.tsx'
+import { CardioSearch } from '../workout-online/CardioSearch.tsx'
+import { cardioPlan, draftCardio, emptyCardio, selectCardio } from '../workout-online/cardio-draft.ts'
 import { ExerciseSearch } from '../workout-online/ExerciseSearch.tsx'
 import { decimalDraft } from '../workout-online/validation.ts'
 import type { CardioActivity, CardioPlan, StandardExercise } from '../workout-online/types.ts'
 import { KgWheel } from './WeightFocus.tsx'
 import type { WeightFocusData } from './types.ts'
 import styles from './WorkoutFlow.module.css'
+import editStyles from '../workout-online/RoutineEdit.module.css'
 import orderStyles from '../workout-online/Presets.module.css'
 
 export function ConfirmWorkoutAction({ title, action, message, onClose, onConfirm, saveIssue }: {
@@ -123,22 +126,33 @@ export function SessionExerciseSearch({ replace, exercises, onSelect, onClose, s
   </Dialog>
 }
 
-export function AddCardio({ activities, onSave, onClose, saveIssue }: { saveIssue?: ReactNode; activities: CardioActivity[]; onSave: (plan: CardioPlan) => void; onClose: () => void }) {
-  const [draft, setDraft] = useState(emptyCardio)
+export function SessionCardioPlan({ activities, index, plan, canReplace = true, onSave, onClose, saveIssue }: {
+  saveIssue?: ReactNode; activities: CardioActivity[]; index: number; plan?: CardioPlan; canReplace?: boolean
+  onSave: (plan: CardioPlan) => void; onClose: () => void
+}) {
+  const [draft, setDraft] = useState(() => plan ? draftCardio(plan) : emptyCardio())
+  const [picking, setPicking] = useState(!plan)
   const [issue, setIssue] = useState('')
-  return <Dialog title="이번 운동에 유산소 추가" onClose={onClose}>
+  const action = plan ? '유산소 변경 적용' : '유산소 추가'
+  return <Dialog title={plan ? '유산소 계획 편집' : '이번 운동에 유산소 추가'} onClose={onClose}>
     <form className="stack" onSubmit={event => {
       event.preventDefault()
+      if (picking) return
       try {
-        if (!draft.standardExerciseId) throw Error('유산소 종목을 선택해 주세요.')
         onSave(cardioPlan(draft))
       } catch (error) { setIssue(error instanceof Error ? error.message : '유산소 계획을 확인해 주세요.') }
     }}>
       {saveIssue}
-      <p className="muted small">원본 루틴은 유지됩니다. 유산소는 웨이트 뒤에 추가됩니다.</p>
-      <CardioPlanFields value={draft} onChange={next => { setDraft(next); setIssue('') }} activities={activities} />
+      <p className="muted small">이번 운동에만 적용됩니다.</p>
+      {picking ? <CardioSearch activities={activities} onSelect={activity => {
+        setDraft(selectCardio(draft, activity)); setPicking(false); setIssue('')
+      }} /> : <Card className={editStyles.exercise}>
+        <ExerciseEditHeading index={index} name={draft.name} picking={picking} disabled={!canReplace} onChange={() => setPicking(true)} />
+        <CardioPlanFields key={draft.standardExerciseId ?? draft.name} value={draft} onChange={next => { setDraft(next); setIssue('') }} />
+        {!canReplace && <small className="muted">종목 교체는 측정을 시작하기 전에 할 수 있습니다.</small>}
+      </Card>}
       {issue && <p role="alert" className="notice error">{issue}</p>}
-      <div className={styles.actions}><Button onClick={onClose}>취소</Button><Button variant="primary" type="submit">유산소 추가</Button></div>
+      <div className={styles.actions}><Button onClick={onClose}>취소</Button>{!picking && <Button variant="primary" type="submit">{action}</Button>}</div>
     </form>
   </Dialog>
 }

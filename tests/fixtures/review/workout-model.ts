@@ -3,7 +3,7 @@ import {suggestedApproval} from '../../../src/features/workout-online/approval-w
 import type { WeightSummary } from '../../../src/features/workout-flow/WorkoutSummary.tsx'
 import { activeCardio, activeWeights } from '../../../src/features/home/model.ts'
 import { additionalLoadInput } from '../../../src/features/workout-online/bodyweight-load.ts'
-import { measuredCardio } from '../../../src/features/workout-online/cardio-measurement.ts'
+import { actualCardioMeasurement } from '../../../src/features/workout-online/cardio-measurement.ts'
 import type { CardioPlan, Equipment, InitialPlan, Routine, Session, StandardExercise } from '../../../src/features/workout-online/types.ts'
 import { countDraft, decimalDraft } from '../../../src/features/workout-online/validation.ts'
 import { restSeconds } from '../../../src/features/workout-local/model.ts'
@@ -137,7 +137,7 @@ export function recordCardio(cardio: ReviewCardio): ActualCardio {
   if (activeMs < 1 || activeMs > 86400000) throw Error('실제 활동 시간은 0초 초과, 24시간 이하여야 합니다.')
   const averageBpm = draft.bpm.trim() ? countDraft(draft.bpm) : null
   if (averageBpm !== null && (averageBpm < 20 || averageBpm > 300)) throw Error('평균 심박수는 20~300 BPM을 입력해 주세요.')
-  return { timerMs, activeMs, corrected, averageBpm, ...measuredCardio(draft.speed, draft.distance, activeMs) }
+  return { timerMs, activeMs, corrected, averageBpm, ...actualCardioMeasurement(draft, activeMs) }
 }
 
 export function sessionAdvice(session: ReviewSession, weight: ReviewWeight, final = false): WeightAdvice {

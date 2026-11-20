@@ -2,7 +2,8 @@ import type { ActiveWeightContext, CardioPlan, Equipment, Session } from '../wor
 import { count, countDraft, counter, decimalDraft, snapshot, targets, cardioPlan, uuid, equipment } from '../workout-online/validation.ts'
 import type { CardioTimer, LocalWorkout, RestPolicy, SetDraft } from './types.ts'
 import { slotKey } from './types.ts'
-import { measuredCardio } from '../workout-online/cardio-measurement.ts'
+import { actualCardioMeasurement, estimatedCardioDistance } from '../workout-online/cardio-measurement.ts'
+import { supportsCardioMotion } from '../workout-online/cardio-draft.ts'
 
 export function increment(value: string) {
   const next = (BigInt(value) + 1n).toString()
@@ -222,17 +223,34 @@ export function replaceWeight(workout: LocalWorkout, id: string, standardExercis
   const addition = plan.splice(plan.findIndex(e => e.sessionExerciseId === added),1)[0]
   plan.splice(index,0,addition); workout.currentExerciseId = added
 }
-export function updateCardioPlan(workout: LocalWorkout, id: string, plan: CardioPlan) {
+export function updateCardioPlan(workout: LocalWorkout, id: string, plan: CardioPlan, estimate = false) {
   if (!cardioPlan(plan) || plan.name.length > 100) throw new Error('유산소 이름(100자 이내)과 계획을 확인해 주세요.')
   const activity = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)
   if (!activity) throw new Error('현재 적용 계획에 없는 유산소입니다.')
+  if (workout.snapshot.cardioResults.some(result => result.sessionActivityId === id)) throw new Error('확정된 유산소 기록의 계획은 편집할 수 없습니다.')
+  const previous = activity.plan
+  if (plan.standardExerciseId !== previous.standardExerciseId || plan.activityId !== previous.activityId
+    || plan.kind !== previous.kind || plan.name !== previous.name) throw new Error('다른 유산소는 종목 교체로 적용해 주세요.')
   activity.plan = structuredClone(plan)
+  const timer = workout.timers[id]
+  if (timer?.reviewing) applyCardioEstimate(timer, plan, estimate)
 }
-export function addCardio(workout: LocalWorkout, plan: CardioPlan, randomId = () => crypto.randomUUID()) {
+export function addCardio(workout: LocalWorkout, plan: CardioPlan, randomId: () => string = () => crypto.randomUUID()) {
   if (!cardioPlan(plan) || plan.name.length > 100) throw new Error('유산소 이름(100자 이내)과 계획을 확인해 주세요.')
   const id = freshId(workout, randomId)
   workout.snapshot.sessionExercises.push({ id, kind: 'CARDIO', standardExerciseId: plan.standardExerciseId ?? null })
   workout.snapshot.appliedPlan.cardioActivities.push({ sessionActivityId: id, plan: structuredClone(plan) }); workout.currentExerciseId = id
+}
+export function replaceCardio(workout: LocalWorkout, id: string, plan: CardioPlan, randomId: () => string = () => crypto.randomUUID()) {
+  const activities = workout.snapshot.appliedPlan.cardioActivities
+  const index = activities.findIndex(activity => activity.sessionActivityId === id)
+  if (index < 0 || workout.timers[id]?.startedAt || workout.snapshot.cardioResults.some(result => result.sessionActivityId === id)) {
+    throw new Error('측정 시작 전의 유산소만 교체할 수 있습니다.')
+  }
+  if (!plan.standardExerciseId || !plan.activityId) throw new Error('표준 유산소 종목을 선택해 주세요.')
+  addCardio(workout, plan, randomId)
+  activities.splice(index, 1, activities.pop()!)
+  delete workout.timers[id]
 }
 export function removeExercise(workout: LocalWorkout, id: string) {
   if (workout.snapshot.performedSets.some(x => x.sessionExerciseId === id) || workout.snapshot.cardioResults.some(x => x.sessionActivityId === id)) throw new Error('완료 기록을 먼저 취소해 주세요.')
@@ -261,10 +279,18 @@ export function timerAction(workout: LocalWorkout, id: string, action: 'start' |
     timer.accumulatedMs = elapsed(timer, now); timer.segments.push({ startedAt: timer.runningSince, stoppedAt: at }); timer.runningSince = null
   }
 }
-export function reviewCardio(workout: LocalWorkout, id: string, now: number) {
+function applyCardioEstimate(timer: CardioTimer, plan: CardioPlan, enabled: boolean) {
+  if (!supportsCardioMotion(plan.kind)) return
+  const activeMs = timer.correctedSeconds === null ? timer.accumulatedMs : Number(timer.correctedSeconds) * 1000
+  Object.assign(timer, estimatedCardioDistance({ ...timer, speed: timer.speed ?? '' }, plan.targetDistanceKm, activeMs, enabled))
+}
+export function reviewCardio(workout: LocalWorkout, id: string, now: number, estimate = false) {
   timerAction(workout, id, 'pause', now)
-  if (!workout.timers[id].startedAt) throw new Error('유산소를 먼저 시작해 주세요.')
-  workout.timers[id].reviewing = true
+  const timer = workout.timers[id]
+  if (!timer.startedAt) throw new Error('유산소를 먼저 시작해 주세요.')
+  const plan = workout.snapshot.appliedPlan.cardioActivities.find(activity => activity.sessionActivityId === id)!.plan
+  applyCardioEstimate(timer, plan, estimate)
+  timer.reviewing = true
 }
 export function completeCardio(workout: LocalWorkout, id: string, now: number, randomId: () => string = () => crypto.randomUUID()) {
   timerAction(workout, id, 'pause', now)
@@ -273,8 +299,8 @@ export function completeCardio(workout: LocalWorkout, id: string, now: number, r
   const timerMs = timer.accumulatedMs, corrected = timer.correctedSeconds !== null
   const activeMs = corrected ? countDraft(timer.correctedSeconds!) * 1000 : timerMs
   if (activeMs < 1 || activeMs > 86400000 || timerMs > now - Date.parse(timer.startedAt)) throw new Error('실제 활동 시간은 1ms~24시간이어야 합니다. 타이머와 정정값을 확인해 주세요.')
-  const measured = measuredCardio(timer.speed ?? '', timer.distance, activeMs), { distanceKm, measurement } = measured
-  if ((distanceKm !== null || measurement.actualSpeedKmh !== null) && !['TREADMILL', 'BIKE', 'OUTDOOR'].includes(activity.plan.kind)) throw new Error('거리와 속도는 러닝머신·자전거·야외 운동에만 입력할 수 있습니다.')
+  const { distanceKm, measurement } = actualCardioMeasurement({ ...timer, speed: timer.speed ?? '' }, activeMs)
+  if ((distanceKm !== null || measurement.actualSpeedKmh !== null) && !supportsCardioMotion(activity.plan.kind)) throw new Error('거리와 속도는 러닝머신·자전거·야외 운동에만 입력할 수 있습니다.')
   const averageBpm = timer.bpm.trim() ? countDraft(timer.bpm) : null
   if (averageBpm !== null && (averageBpm < 20 || averageBpm > 300)) throw new Error('평균 심박수는 20~300 BPM을 입력해 주세요.')
   const result = { id: freshId(workout, randomId), sessionActivityId: id, status: 'COMPLETED' as const, startedAt: timer.startedAt, occurredAt: eventTime(workout, now),

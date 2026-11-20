@@ -433,10 +433,11 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(() => evaluate('document.querySelector("[aria-label=\'표준 운동 목록\'] button")?.click() || !!document.querySelector("[aria-label=\'웨이트 1\']")'), 'choose weight')
     await click('설정 중량', 'ariaLabel'); await click('직접 입력'); await set('dialog[open] input', '20'); await click('확인', 'textContent', 'dialog[open] button')
     await click('+ 유산소 종목 추가'); await click('달리기')
-    const treadmill = await evaluate(`document.querySelector('[aria-label="유산소 종목 추가 선택"] select').options[1].value`)
-    await set('[aria-label="유산소 종목 추가 선택"] select',treadmill)
-    const cardioFields = '[aria-label="유산소 1"] label'
-    for (const [index,value] of [[1,'20'],[2,'2.5'],[4,'8'],[5,'0']]) await set(`${cardioFields}:nth-of-type(${index}) input`,value)
+    await click('러닝머신', 'textContent', '[aria-label="표준 유산소 목록"] strong')
+    await click('추가 목표 설정', 'textContent', '[aria-label="유산소 1"] summary')
+    const cardioFields = '[aria-label="유산소 1"] input'
+    for (const [label,value] of [['목표 시간 (분)','20'],['목표 거리 (km)','2.5'],['목표 속도 (km/h)','8'],['목표 경사도 (%)','0']]) await set(`${cardioFields}[aria-label="${label}"]`,value)
+    await click('추가 목표 설정', 'textContent', '[aria-label="유산소 1"] summary')
     await set(fault, 'network'); await click('루틴 생성')
     await wait(async () => (await body()).includes('연결이 끊겼습니다'), 'routine creation failure')
     assert.equal(await evaluate(`document.querySelector('form[aria-label="루틴 생성"] input[placeholder="나의 루틴"]').value`),createdName)
@@ -530,7 +531,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(() => evaluate(`!!document.querySelector('${settingsPage}')`), 'full settings')
     assert.equal(await evaluate(`document.querySelectorAll('${settingsPage} h1, ${settingsPage} h2').length`), 0)
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button strong, ${settingsPage} summary strong')].map(e => e.textContent)`),
-      ['내 계정', '세트 사이 휴식', '휴식 타이머 알림', '운동 종목 보기', '디로딩 설정', '운동 데이터 상태',
+      ['내 계정', '세트 사이 휴식', '휴식 타이머 알림', '유산소 거리 자동 추정', '운동 종목 보기', '디로딩 설정', '운동 데이터 상태',
         '운동 데이터 내보내기', '앱 설치 · 오프라인 준비', '전체 운동 데이터 초기화', '회원 탈퇴'])
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${settingsPage} button:disabled strong')].map(e => e.textContent)`),
       ['디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴'])

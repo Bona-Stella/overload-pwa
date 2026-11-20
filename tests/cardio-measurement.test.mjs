@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { calculatedDistance, measuredCardio, distanceLabel } from '../src/features/workout-online/cardio-measurement.ts'
+import { actualCardioMeasurement, calculatedDistance, calculatedSpeed, cardioMeasurementDraft, editCardioSpeed, estimatedCardioDistance, measuredCardio, distanceLabel } from '../src/features/workout-online/cardio-measurement.ts'
 import * as m from '../src/features/workout-local/model.ts'
 import * as sync from '../src/features/workout-local/sync-state.ts'
 import { localWorkout } from '../src/features/workout-local/validation.ts'
@@ -61,4 +61,60 @@ test('manual calculated and unknown distances have distinct labels, including ze
   assert.match(distanceLabel({distanceKm:'3.8'}),/출처 미확인/)
   assert.match(distanceLabel(measuredCardio('0','',1800000)),/계산 거리 0 km/)
   assert.equal(distanceLabel({distanceKm:null}),'거리 미입력')
+})
+
+test('goal distance estimates use elapsed time only and stay inside the resumable draft', () => {
+  let w = local(), id = w.currentExerciseId
+  w = m.applyLocalChange(w, x => {
+    m.updateCardioPlan(x, id, { ...plan, targetDistanceKm: '5', targetSeconds: 2400 })
+    m.timerAction(x, id, 'start', at)
+    m.reviewCardio(x, id, at + 1800000, true)
+  })
+  const restored = structuredClone(w)
+  assert.ok(localWorkout(restored))
+  assert.equal(restored.timers[id].distance, '5')
+  assert.equal(restored.timers[id].distanceSource, 'estimated')
+  assert.equal(calculatedSpeed(restored.timers[id].distance, 1800000), '10')
+  const completed = m.applyLocalChange(restored, x => m.completeCardio(x, id, at + 1800000))
+  assert.equal(completed.snapshot.cardioResults[0].result.distanceKm, null)
+  assert.equal(completed.snapshot.cardioResults[0].result.measurement, undefined)
+  assert.equal(completed.snapshot.cardioResults[0].result.activeMs, 1800000)
+  sync.sealSnapshot(completed)
+  assert.doesNotMatch(completed.pendingSnapshot.requestJson, /distanceSource|estimated|actualSpeedKmh/)
+})
+
+test('OFF, missing goals, invalid time and deliberate deletion never seed an estimate', () => {
+  const blank = { distance: '', speed: '' }
+  for (const [goal, time, enabled] of [['5', 1800000, false], [null, 1800000, true], ['5', 0, true], ['Infinity', 1800000, true]]) {
+    assert.deepEqual(estimatedCardioDistance(blank, goal, time, enabled), {})
+  }
+  assert.deepEqual(estimatedCardioDistance({ ...blank, distanceSource: 'manual' }, '5', 1800000, true), {})
+  assert.deepEqual(estimatedCardioDistance({ ...blank, distance: '5', distanceSource: 'estimated' }, '6', 1800000, true),
+    { distance: '6', distanceSource: 'estimated' })
+  assert.equal(calculatedSpeed('5', 0), '')
+  assert.equal(calculatedSpeed('5', NaN), '')
+  assert.equal(calculatedSpeed('invalid', 1800000), '')
+  assert.equal(calculatedSpeed('0', 1800000), '0')
+})
+
+test('manual values and deletions are protected through recalculation and server serialization', () => {
+  const manualDistance = { distance: '4', speed: '', distanceSource: 'manual' }
+  assert.equal(calculatedSpeed(manualDistance.distance, 1800000), '8')
+  assert.equal(calculatedSpeed(manualDistance.distance, 2400000), '6')
+  const manualBoth = { ...manualDistance, ...editCardioSpeed(manualDistance, '9.5', 1800000) }
+  for (const time of [1800000, 2400000]) {
+    assert.deepEqual(actualCardioMeasurement(manualBoth, time), {
+      distanceKm: '4', measurement: { actualSpeedKmh: '9.5', distanceSource: 'MANUAL' },
+    })
+  }
+  assert.throws(() => actualCardioMeasurement({ ...manualBoth, distance: '' }, 2400000), /속도만 저장/)
+  const cleared = { ...manualDistance, ...editCardioSpeed(manualDistance, '', 1800000) }
+  assert.equal(actualCardioMeasurement(cleared, 1800000).measurement.actualSpeedKmh, null)
+  const estimate = { distance: '5', speed: '', distanceSource: 'estimated' }
+  const derived = { ...estimate, ...editCardioSpeed(estimate, '9.5', 1800000) }
+  assert.equal(derived.distance, '4.75')
+  assert.equal(actualCardioMeasurement(derived, 1800000).measurement.distanceSource, 'CALCULATED')
+  assert.throws(() => actualCardioMeasurement(derived, 2400000), /계산 거리를 저장/)
+  const legacy = cardioMeasurementDraft({ distanceKm: '3.8' })
+  assert.equal(actualCardioMeasurement(legacy, 1800000).measurement.distanceSource, null)
 })

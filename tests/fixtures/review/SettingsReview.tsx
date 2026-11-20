@@ -31,9 +31,10 @@ function accountExample(example: keyof typeof accountProviders): AuthState {
   }
 }
 
-export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSaveFailure }: {
+export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSaveFailure, estimate, onEstimate }: {
   alerts?: RestAlerts; onAlerts?: (value: RestAlerts) => void; onRestExitGuard?: (guard: (() => boolean) | null) => void
   takeRestSaveFailure?: () => boolean
+  estimate?: boolean; onEstimate?: (value: boolean) => void
 }) {
   const mediaSources = useReviewMedia()
   const [view, setView] = useScreenHistory<View | null>('review-settings', null)
@@ -64,7 +65,7 @@ export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSave
   }
 
   return <>
-    <SettingsMain hidden={view !== null} review account={{ email: 'review@example.test', loginMethod: 'email', deviceCount: 2 }}
+    <SettingsMain hidden={view !== null} review reviewEstimate={onEstimate && { value: !!estimate, onChange: onEstimate }} account={{ email: 'review@example.test', loginMethod: 'email', deviceCount: 2 }}
       onAccount={event => open('account', event.currentTarget)} onRest={event => open('rest', event.currentTarget)}
       onRestAlerts={alerts && onAlerts ? event => open('alerts', event.currentTarget) : undefined}
       onCatalog={event => open('catalog', event.currentTarget)} onLogout={() => setLogoutOpen(true)} />

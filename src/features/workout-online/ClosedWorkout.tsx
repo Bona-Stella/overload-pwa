@@ -18,7 +18,9 @@ import { equipment, cardioMeasurement } from './validation.ts'
 import { countDraft, decimalDraft } from './validation.ts'
 import { recoveryRows, RECOVERY_LABEL } from './closed-model.ts'
 import { onlineIssue } from './controller.ts'
-import { distanceLabel, measuredCardio } from './cardio-measurement.ts'
+import { actualCardioMeasurement, cardioMeasurementDraft, distanceLabel } from './cardio-measurement.ts'
+import { CardioActualFields } from './CardioActualFields.tsx'
+import { supportsCardioMotion } from './cardio-draft.ts'
 import { additionalLoadInput, bodyweightLoadLabel } from './bodyweight-load.ts'
 import { WorkoutSummary } from '../workout-flow/WorkoutSummary.tsx'
 import { summaryData } from './summary-data.ts'
@@ -221,12 +223,10 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
   const [additionalWeight, setAdditionalWeight] = useState(target.kind === 'SET' ? target.record.bodyweightLoad?.additionalWeightKg ?? '' : ''), [additionalTouched, setAdditionalTouched] = useState(false)
   const cardio = target.kind === 'CARDIO' ? target.record.result : null
   const [seconds, setSeconds] = useState(cardio ? String(cardio.activeMs / 1000) : ''), [corrected, setCorrected] = useState(cardio?.corrected ?? false)
-  const [distance, setDistance] = useState(cardio?.measurement?.distanceSource === 'CALCULATED' ? '' : cardio?.distanceKm ?? ''), [bpm, setBpm] = useState(cardio?.averageBpm == null ? '' : String(cardio.averageBpm)), [issue, setIssue] = useState('')
-  const [speed, setSpeed] = useState(cardio?.measurement?.actualSpeedKmh ?? ''), [distanceTouched, setDistanceTouched] = useState(false)
+  const [measurements, setMeasurements] = useState(() => cardio ? cardioMeasurementDraft(cardio) : { distance: '', speed: '' })
+  const [bpm, setBpm] = useState(cardio?.averageBpm == null ? '' : String(cardio.averageBpm)), [issue, setIssue] = useState('')
   const kind = target.kind === 'CARDIO' ? initial.snapshot.state.appliedPlan.cardioActivities.find(p => p.sessionActivityId === target.record.sessionActivityId)?.plan.kind ?? initial.initialPlan.cardioActivities.find(p => p.sessionActivityId === target.record.sessionActivityId)?.plan.kind : undefined
-  const supportsDistance = kind !== undefined && ['TREADMILL', 'BIKE', 'OUTDOOR'].includes(kind)
-  let preview = ''
-  try { preview = distanceLabel(measuredCardio(speed, distance, corrected ? Number(seconds) * 1000 : cardio?.timerMs ?? 0, cardio?.measurement?.distanceSource == null && !distanceTouched)) } catch { /* Invalid draft remains available for correction. */ }
+  const supportsDistance = kind !== undefined && supportsCardioMotion(kind)
   const submit = async (remove: boolean) => {
     try {
       const body: RecordEdit = { dataGeneration: initial.dataGeneration, expectedVersion: initial.version, setCorrections: [], cardioCorrections: [], deletedPerformedSetIds: [], deletedCardioResultIds: [] }
@@ -239,9 +239,9 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
         if (activeMs < 1 || activeMs > 86400000) throw Error('활동 시간은 0.001초~24시간이어야 합니다.')
         const averageBpm = bpm.trim() ? countDraft(bpm) : null
         if (averageBpm !== null && (averageBpm < 20 || averageBpm > 300)) throw Error('심박수는 20~300 BPM입니다.')
-        const measured = measuredCardio(speed, distance, activeMs, cardio?.measurement?.distanceSource == null && !distanceTouched)
+        const measured = actualCardioMeasurement(measurements, activeMs)
         body.cardioCorrections.push({ id: target.record.id, activeMs, corrected, distanceKm: measured.distanceKm, averageBpm,
-          ...(cardio?.measurement !== undefined || speed.trim() || distanceTouched ? { measurement: measured.measurement } : {}) })
+          ...(cardio?.measurement !== undefined || measurements.speedSource !== undefined || measurements.distanceSource === 'manual' ? { measurement: measured.measurement } : {}) })
       }
       if (window.confirm(remove ? '이 수행을 삭제할까요? 기록과 통계에서 제외됩니다.' : '입력한 실제 수행값으로 변경할까요? 운동 계획과 수행 시각은 유지됩니다.')) {
         if (await controller.edit(body)) onClose()
@@ -255,7 +255,14 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
       <RecordFacts record={target.record} server={initial} manufacturers={manufacturers}/></Card>
     <fieldset disabled={busy} className="online-fieldset stack">
     {target.kind === 'SET' ? <><label>실제 중량 kg<input inputMode="decimal" value={weight} onChange={e => { setWeight(e.target.value); setIssue('') }} /></label><label>실제 반복 횟수<input inputMode="numeric" value={reps} onChange={e => { setReps(e.target.value); setIssue('') }} /></label>{target.record.loadType === 'BODYWEIGHT' && <><label>추가 중량 kg · 선택<input inputMode="decimal" value={additionalWeight} placeholder="추가 중량 없음" onChange={e => { setAdditionalWeight(e.target.value); setAdditionalTouched(true); setIssue('') }} /></label><p className="muted small">총중량에는 명시적 추가 중량만 사용합니다. 비우면 추가 중량을 제거합니다. 체중과 기존 중량을 자동 합산하지 않습니다.</p></>}</>
-      : target.kind === 'CARDIO' ? <><p>원본 타이머 {durationLabel(target.record.result.timerMs)}</p><label><input type="checkbox" checked={corrected} onChange={e => { setCorrected(e.target.checked); setIssue('') }} />활동 시간 정정</label><DurationWheel seconds={seconds} disabled={!corrected} onChange={value=>{setSeconds(value);setIssue('')}}/>{supportsDistance && <><label>직접 입력 거리 km · 선택<input inputMode="decimal" value={distance} onChange={e => { setDistance(e.target.value); setDistanceTouched(true); setIssue('') }} /></label><label>실제 속도 km/h · 선택<input inputMode="decimal" value={speed} onChange={e => { setSpeed(e.target.value); setIssue('') }} /></label><p className="muted small">{preview} · 직접 입력 거리를 우선하며 목표 속도는 실제값으로 사용하지 않습니다.</p></>}<label>평균 심박수 BPM · 선택<input inputMode="numeric" value={bpm} onChange={e => { setBpm(e.target.value); setIssue('') }} /></label></> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
+      : target.kind === 'CARDIO' ? <>
+        <p>원본 타이머 {durationLabel(target.record.result.timerMs)}</p>
+        <label><input type="checkbox" checked={corrected} onChange={e => { setCorrected(e.target.checked); setIssue('') }} />활동 시간 정정</label>
+        <DurationWheel seconds={seconds} disabled={!corrected} onChange={value => { setSeconds(value); setIssue('') }} />
+        <CardioActualFields draft={measurements} bpm={bpm} activeMs={corrected ? Math.round(Number(seconds) * 1000) : target.record.result.timerMs}
+          motion={supportsDistance} incline={kind === 'TREADMILL'} onChange={patch => { setMeasurements(value => ({ ...value, ...patch })); setIssue('') }}
+          onBpm={value => { setBpm(value); setIssue('') }} />
+      </> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
     </fieldset>
     {issue && <StatusNotice error>{issue}</StatusNotice>}
     <div className={styles.actions}><Button disabled={busy} onClick={onClose}>취소</Button>{target.kind!=='SKIPPED'&&<Button variant="primary" disabled={busy} onClick={()=>void submit(false)}>{busy?'저장 중':'변경 저장'}</Button>}</div>

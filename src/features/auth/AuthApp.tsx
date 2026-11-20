@@ -128,7 +128,7 @@ export function AuthApp() {
       : state.status === 'unavailable' ? <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}
-    {authenticated && tab === 'settings' && <SettingsMain hidden={!settingsMain} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary}
+    {authenticated && tab === 'settings' && <SettingsMain userId={state.userId} hidden={!settingsMain} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary}
       onRetryAccount={settingsSummary?.failed ? () => { setSettingsAccount(null); setSettingsAccountRetry(value => value + 1) } : undefined}
       onAccount={async event => { rememberSettings(event.currentTarget); if (await flushLocal()) void controller.openAccount() }}
       onRest={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'rest' }) }}

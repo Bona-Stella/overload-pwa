@@ -5,7 +5,9 @@ import { DurationWheel } from '../../components/DurationWheel.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { roundedDurationMs } from '../../components/duration.ts'
 import { formatDuration } from '../workout/model.ts'
-import { distanceLabel } from '../workout-online/cardio-measurement.ts'
+import { distanceLabel, estimatedCardioDistance } from '../workout-online/cardio-measurement.ts'
+import { CardioActualFields } from '../workout-online/CardioActualFields.tsx'
+import { supportsCardioMotion } from '../workout-online/cardio-draft.ts'
 import { cardioPhaseLabel } from './types.ts'
 import type { ActualCardio, CardioDraft, CardioFocusData } from './types.ts'
 import styles from './WorkoutFlow.module.css'
@@ -20,14 +22,14 @@ export function CardioActual({ result }: { result: ActualCardio }) {
   </div>
 }
 
-function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel, preview }: {
-  draft: CardioDraft; activeMs: number; motion: boolean; issue: ReactNode
+function CardioReview({ draft, activeMs, plan, estimate, issue, onDraft, onCancel, preview }: {
+  draft: CardioDraft; activeMs: number; plan: CardioFocusData['plan']; estimate: boolean; issue: ReactNode
   onDraft: (value: Partial<CardioDraft>) => void; onCancel: () => void; preview: boolean
 }) {
   const [seconds, setSeconds] = useState<string | null>(null)
   const editButton = useRef<HTMLButtonElement>(null)
   const editorId = useId()
-  const measurementNoteId = useId()
+  const motion = supportsCardioMotion(plan.kind)
   const measuredSeconds = String(roundedDurationMs(activeMs))
   const recordMs = draft.correctedSeconds === null ? activeMs : Number(draft.correctedSeconds) * 1000
   const modified = draft.correctedSeconds !== null && Number(draft.correctedSeconds) !== Number(measuredSeconds)
@@ -59,23 +61,17 @@ function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel, previ
       <div className={styles.actions}>
         <Button onClick={closeEditor}>시간 수정 취소</Button>
         <Button variant="primary" onClick={() => {
-          onDraft({ correctedSeconds: seconds === measuredSeconds ? null : seconds })
+          const correctedSeconds = seconds === measuredSeconds ? null : seconds
+          const correctedMs = correctedSeconds === null ? activeMs : Number(correctedSeconds) * 1000
+          onDraft({ correctedSeconds, ...(motion ? estimatedCardioDistance(draft, plan.targetDistanceKm, correctedMs, estimate) : {}) })
           closeEditor()
         }}>시간 적용</Button>
       </div>
     </div>}
     <div className={cardioStyles.measurements}>
-      <label>실제 거리 (km)<input inputMode="decimal" placeholder={motion ? '선택 입력' : '지원하지 않음'} disabled={!motion} aria-describedby={measurementNoteId}
-        value={draft.distance} readOnly={preview} onChange={preview ? undefined : event => onDraft({ distance: event.target.value })} /></label>
-      <label>실제 평균 속도 (km/h)<input inputMode="decimal" placeholder={motion ? '선택 입력' : '지원하지 않음'} disabled={!motion} aria-describedby={measurementNoteId}
-        value={draft.speed} readOnly={preview} onChange={preview ? undefined : event => onDraft({ speed: event.target.value })} /></label>
-      <label>평균 심박수 (BPM)<input inputMode="numeric" placeholder="선택 입력"
-        value={draft.bpm} readOnly={preview} onChange={preview ? undefined : event => onDraft({ bpm: event.target.value })} /></label>
-      <label>실제 경사도 (%)<input inputMode="decimal" placeholder="저장 미지원" disabled /></label>
+      <CardioActualFields draft={draft} activeMs={recordMs} bpm={draft.bpm} motion={motion} incline={plan.kind === 'TREADMILL'}
+        onChange={preview ? undefined : onDraft} onBpm={preview ? undefined : bpm => onDraft({ bpm })} />
     </div>
-    <small className={cardioStyles.measurementNote} id={measurementNoteId}>{motion
-      ? '평균 속도를 입력하고 거리를 비우면 활동 시간을 기준으로 거리를 계산합니다.'
-      : '이 종목은 거리와 평균 속도 기록을 지원하지 않습니다.'}</small>
     {issue}
     <div className={cardioStyles.reviewActions}>
       <Button onClick={preview ? undefined : onCancel}>완료 취소 · 일시정지로 돌아가기</Button>
@@ -83,13 +79,12 @@ function CardioReview({ draft, activeMs, motion, issue, onDraft, onCancel, previ
   </Card>
 }
 
-export function CardioFocus({ cardio, activeMs, navigation, issue, editing, editTools, onEdit, onDraft, onCancelReview, onUndo, preview = false }: {
+export function CardioFocus({ cardio, activeMs, estimate = false, navigation, issue, editing, editTools, onEdit, onDraft, onCancelReview, onUndo, preview = false }: {
   cardio: CardioFocusData; activeMs: number; navigation: ReactNode; issue: ReactNode
   editing: boolean; editTools: ReactNode; onEdit: () => void; onDraft: (value: Partial<CardioDraft>) => void
-  onCancelReview: () => void; onUndo: () => void; preview?: boolean
+  onCancelReview: () => void; onUndo: () => void; preview?: boolean; estimate?: boolean
 }) {
   const { plan, phase, draft, result } = cardio
-  const motion = ['TREADMILL', 'BIKE', 'OUTDOOR'].includes(plan.kind)
   const pace = plan.intensity?.mode === 'PACE'
   const wholeMinutes = plan.targetSeconds % 60 === 0
   const goals = [
@@ -127,7 +122,7 @@ export function CardioFocus({ cardio, activeMs, navigation, issue, editing, edit
       <strong>{phase === 'skipped' ? '—' : formatDuration(result?.activeMs ?? activeMs)}</strong>
       <small className={cardioStyles.timerStatus} data-phase={phase}>{measurementStatus}</small>
     </Card>
-    {phase === 'review' && <CardioReview key={cardio.id} draft={draft} activeMs={activeMs} motion={motion}
+    {phase === 'review' && <CardioReview key={cardio.id} draft={draft} activeMs={activeMs} plan={plan} estimate={estimate}
       issue={issue} onDraft={onDraft} onCancel={onCancelReview} preview={preview} />}
     {result && <Card className={cardioStyles.card}><h2>실제 완료 기록</h2><CardioActual result={result} />
       <Button onClick={preview ? undefined : onUndo}>유산소 완료 취소</Button></Card>}

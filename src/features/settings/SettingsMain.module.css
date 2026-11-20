@@ -46,6 +46,9 @@
 .row[data-danger] .text strong { color: #c6b0b7; }
 .accountLink > svg, .row > svg, .install summary > svg { width: 15px; height: 15px; color: #8e9caf; }
 .status { color: var(--text-muted); font-size: 11px; white-space: nowrap; }
+.estimateStatus { color: var(--text-muted); font-size: 12px; }
+.row[aria-checked='true'] .estimateStatus { color: var(--accent); }
+.row[role='switch'] .text small { white-space: normal; }
 .page .install { margin-top: -8px; }
 .install > summary { cursor: pointer; list-style: none; }
 .install > summary::-webkit-details-marker { display: none; }

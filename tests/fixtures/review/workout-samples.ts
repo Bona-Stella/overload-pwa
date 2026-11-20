@@ -25,6 +25,7 @@ export function exerciseEquipment(exercise: StandardExercise): Equipment {
 export const workoutScenarios = {
   'workout-complete': '완료 요약 · 중량 승인 검토',
   'workout-mixed': '운동 검토 · 웨이트 + 유산소',
+  'workout-cardio': '운동 검토 · 유산소',
   'workout-weight': '운동 검토 · 웨이트만',
   'workout-edited': '운동 검토 · 장비·세트 편집 후 이어가기',
   'workout-rest-day': '운동 검토 · 휴식일',
@@ -39,6 +40,14 @@ export function workoutSample(scenario: WorkoutScenario) {
     return data
   }
   const routine = data.routines[0]
+  if (scenario === 'workout-cardio') {
+    routine.name = '유산소 검수'
+    routine.weightPlacements = []
+    const today = dayOfWeek(reviewToday)
+    const active = data.schedule.presets.find(preset => preset.id === data.schedule.activeId)!
+    active.assignments = [...active.assignments.filter(assignment => assignment.dayOfWeek !== today), { dayOfWeek: today, routineId: routine.id }]
+    return data
+  }
   const first = routine.weightPlacements[0]
   const second: WeightPlacement = {
     ...first, id: '20100000-0000-4000-8000-000000000005',

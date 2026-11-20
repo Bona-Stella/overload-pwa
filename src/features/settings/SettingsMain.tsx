@@ -1,21 +1,27 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import type { MouseEventHandler, ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { SkeletonSlot } from '../../components/common-ui/ContentFeedback.tsx'
 import { PwaStatus } from '../../pwa/PwaStatus.tsx'
+import { useCardioEstimate } from './useCardioEstimate.ts'
 import styles from './SettingsMain.module.css'
 
 type Click = MouseEventHandler<HTMLButtonElement>
 type LoginMethod = 'email' | 'google'
 type AccountSummary = { email?: string; loginMethod?: LoginMethod; loginMethods?: LoginMethod[]; deviceCount?: number }
 
-export function SettingsMain({ hidden = false, busy = false, review = false, account, accountLoading = false, onRetryAccount, onAccount, onRest, onRestAlerts, onCatalog, onLogout }: {
+export function SettingsMain({ hidden = false, busy = false, review = false, account, accountLoading = false, onRetryAccount, onAccount, onRest, onRestAlerts, onCatalog, onLogout, userId, reviewEstimate }: {
   hidden?: boolean; busy?: boolean; review?: boolean; account?: AccountSummary; accountLoading?: boolean; onRetryAccount?: () => void
   onAccount: Click; onRest: Click; onRestAlerts?: Click; onCatalog: Click; onLogout: () => void
+  userId?: string | null
+  reviewEstimate?: { value: boolean; onChange: (value: boolean) => void }
 }) {
   const email = account?.email?.trim() ?? ''
   const [initial] = email
   const emailId = useId()
+  const [storedEstimate, saveEstimate] = useCardioEstimate(userId ?? null)
+  const estimate = reviewEstimate?.value ?? storedEstimate
+  const [estimateError, setEstimateError] = useState(false)
   const methods = account?.loginMethods ?? (account?.loginMethod ? [account.loginMethod] : [])
   const loginMethod = methods.map(method => method === 'google' ? 'Google SSO' : '이메일').join(' · ') || '확인 불가'
   const devices = account?.deviceCount === undefined ? '조회 미지원' : account.deviceCount + '대'
@@ -38,6 +44,12 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
     <Card className={styles.rows} aria-label="운동 설정">
       <SettingsRow icon="timer" title="세트 사이 휴식" description="반복 상한별 3개 구간 · 휴식 시간 설정" onClick={onRest} busy={busy} />
       <SettingsRow icon="bell" title="휴식 타이머 알림" description="화면 깜빡임 · 효과음" onClick={onRestAlerts} busy={busy} />
+      {(userId || reviewEstimate) && <button type="button" className={styles.row} role="switch" aria-checked={estimate} aria-label="유산소 거리 자동 추정"
+        disabled={busy} onClick={() => reviewEstimate ? reviewEstimate.onChange(!estimate) : setEstimateError(!saveEstimate(!estimate))}>
+        <RowContent icon="sliders" title="유산소 거리 자동 추정" description="완료 확인에 목표 거리 표시 · 이 기기" />
+        <span className={styles.estimateStatus} aria-hidden="true">{estimate ? '켜짐' : '꺼짐'}</span>
+      </button>}
+      {estimateError && <p className="notice error" role="alert">이 기기에 자동 추정 설정을 저장하지 못했습니다.</p>}
       <SettingsRow icon="weight" title="운동 종목 보기" description="관리자 표준 운동 DB · 조회 전용" onClick={onCatalog} busy={busy} />
       <SettingsRow icon="sliders" title="디로딩 설정" description="추천 분석 설정 · 적용률 안내" />
     </Card>

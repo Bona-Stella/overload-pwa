@@ -19,7 +19,7 @@ export type StandardExerciseDetail = Pick<CatalogExercise, 'id' | 'name' | 'alia
   frontBackSplit: 'FRONT' | 'BACK' | null;
   instructionSteps: string[]; selectableForRoutine: boolean;
 }
-export type CardioActivity = { id: UUID; activityId: UUID; aliases: string[]; category: 'RUNNING'|'WALKING'|'CYCLING'; name:string; kind:CardioPlan['kind'] }
+export type CardioActivity = { id: UUID; activityId: UUID; aliases: string[]; category: 'RUNNING'|'WALKING'|'CYCLING'|'OTHER'; name:string; kind:CardioPlan['kind'] }
 export type CardioPlan = { activityId?:UUID; standardExerciseId?:UUID; kind: 'TREADMILL' | 'BIKE' | 'OUTDOOR' | 'STAIRS' | 'OTHER'; name: string; targetSeconds: number;
   targetDistanceKm: Decimal | null; intensity: { mode: 'SPEED' | 'PACE'; value: Decimal } | null; inclinePercent: Decimal | null; resistance: Decimal | null }
 export type LoadType = 'PLATE' | 'STACK' | 'DUMBBELL' | 'BODYWEIGHT'

@@ -23,17 +23,16 @@
   gap: 8px; margin: 8px 0 0; padding-inline: 4px; color: var(--accent); font-size: 14px;
 }
 .group small { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
-.form .exercise {
+.exercise:global(.app-card) {
   grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px; border-radius: 5px;
 }
 .form > fieldset { gap: 12px; }
 .exerciseHeading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .exerciseHeading > b { color: var(--accent); font-size: 13px; font-variant-numeric: tabular-nums; }
 .exerciseName { min-width: 0; }
-.form .exerciseName h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; font-size: 17px; line-height: 1.4; }
+.exerciseHeading .exerciseName h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; font-size: 17px; line-height: 1.4; }
 .exerciseName small { display: block; color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
-.form .exercise > :global(.form-grid),
-.form .exercise > [data-routine-cardio-fields] {
+.form .exercise > :global(.form-grid) {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
   padding-top: 12px; border-top: 1px solid var(--border-subtle);
 }
@@ -55,6 +54,7 @@
 .form .exerciseActions button:global(.danger) {
   margin-inline-start: auto; border-color: var(--status-missed); color: var(--status-danger-text);
 }
+.exerciseHeading > button.cardAction,
 .form .exercise .cardAction {
   display: flex; align-items: center; justify-content: center; gap: 5px;
   width: 78px; height: 32px; min-height: 32px; flex: none;

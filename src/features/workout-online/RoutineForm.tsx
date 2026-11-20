@@ -8,7 +8,9 @@ import { newId } from '../../id.ts'
 import { TagPicker } from './TagPicker.tsx'
 import { cardioDescription, exerciseDescription } from './catalog-label.ts'
 import { CardioPlanFields } from './CardioPlanFields.tsx'
-import { cardioPlan, draftCardio, emptyCardio } from './cardio-draft.ts'
+import { ExerciseEditHeading } from './ExerciseEditHeading.tsx'
+import { CardioSearch } from './CardioSearch.tsx'
+import { cardioPlan, draftCardio, emptyCardio, selectCardio } from './cardio-draft.ts'
 import type { CardioDraft as PlanDraft } from './cardio-draft.ts'
 import { scheduleIssue } from '../statistics/weekly-schedule.ts'
 import type { RoutineTag } from '../home/tags.ts'
@@ -25,19 +27,6 @@ import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 import { newWeights, updatedWeights } from './routine-weights.ts'
 import type { WeightDraft } from './routine-weights.ts'
 type CardioDraft = PlanDraft & {id:string;existing:boolean;restore?:boolean}
-
-function ExerciseHeading({ index, name, description, picking, onChange }: {
-  index: number; name: string; description?: string; picking: boolean; onChange: () => void
-}) {
-  return <div className={editStyles.exerciseHeading}>
-    <b>{String(index + 1).padStart(2, '0')}</b>
-    <div className={editStyles.exerciseName}>
-      <h3 title={name}>{name}</h3>
-      {description && <small>{description}</small>}
-    </div>
-    <button type="button" className={`outline ${editStyles.cardAction}`} onClick={onChange} aria-expanded={picking}>변경</button>
-  </div>
-}
 
 function ExerciseActions({ index, count, onMove, onRemove }: {
   index: number; count: number; onMove: (delta: number) => void; onRemove: () => void
@@ -120,7 +109,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   useEffect(() => {
     if (!saving && (error || submitted)) feedback.current?.scrollIntoView({ block: 'center' })
   }, [error, saving, submitted])
-  const chosenCardio = editing ? cardio : cardio.filter(c => c.standardExerciseId)
+  const chosenCardio = cardio.filter(c => c.existing || c.standardExerciseId)
   const draft = JSON.stringify({ name, weights, cardio: chosenCardio, tag })
   const [initialDraft] = useState(draft)
   const saved = useRef(false)
@@ -217,7 +206,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
         const description = definition ? exerciseDescription(definition) : '부위·근육 미분류'
         const step = w.loadType === 'PLATE' || w.loadType === 'STACK' ? 2.5 : 1
         return <Card className={cardClass} key={w.id} aria-label={`웨이트 ${index + 1}`} ref={addedCardId === w.id ? addedCard : undefined}>
-          <ExerciseHeading index={index} name={w.exerciseName} description={description} picking={picker === w.id} onChange={() => showPicker(w.id)} />
+          <ExerciseEditHeading index={index} name={w.exerciseName} description={description} picking={picker === w.id} onChange={() => showPicker(w.id)} />
           <EquipmentFields value={w} manufacturers={manufacturers} onChange={value => {
             if (value.manufacturerId === w.manufacturerId && value.loadType === w.loadType) return
             changeWeight(w.id, { ...value, ...(w.approvedWeightKg !== null ? { id:newId(), approvedWeightKg:null, initialWeightKg:'', approve:false, nextWeightKg:'', restore:false } : {}) })
@@ -253,18 +242,18 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       {!editing && !chosenCardio.length && <EmptyExerciseList />}
       {cardio.map((c, index) => {
         const picking = cardioPicker === c.id
-        const selectionOnly = !editing && !c.standardExerciseId
-        const fields = <CardioPlanFields value={c} onChange={v=>changeCardio(c.id,v)} activities={activities} existing={c.existing}
-          routineEdit={{ picking, selectionOnly, onPick: next => chooseCardio(c, next) }} />
+        const selectionOnly = !c.existing && !c.standardExerciseId
+        const search = <CardioSearch activities={activities} onCancel={() => openCardioPicker(null)}
+          onSelect={activity => chooseCardio(c, selectCardio(c, activity))} />
         if (selectionOnly) return <section key={c.id} ref={cardioSearchRegion} data-edit-picker className={styles.formbox} aria-label="유산소 종목 추가 선택">
-          {fields}
+          {search}
           <button type="button" className="outline" data-close-text onClick={() => openCardioPicker(null)}>유산소 종목 선택 닫기</button>
         </section>
         return <Card className={cardClass} key={c.id} aria-label={`유산소 ${index + 1}`}
           data-edit-picker={picking || undefined} ref={addedCardId === c.id ? addedCard : picking ? cardioSearchRegion : undefined}>
-          <ExerciseHeading index={index} name={c.name || '유산소 종목 선택'} description={editing ? undefined : cardioDescription(c, activities)}
+          <ExerciseEditHeading index={index} name={c.name || '유산소 종목 선택'} description={editing ? undefined : cardioDescription(c, activities)}
             picking={picking} onChange={() => openCardioPicker(picking ? null : c.id)} />
-          {fields}
+          {picking ? search : <CardioPlanFields value={c} onChange={v => changeCardio(c.id, v)} />}
           <ExerciseActions index={index} count={chosenCardio.length} onMove={delta => setCardio(v => move(v, index, delta))} onRemove={() => {
             setCardio(values => values.filter(x => x.id !== c.id))
             if (picking) setCardioPicker(null)

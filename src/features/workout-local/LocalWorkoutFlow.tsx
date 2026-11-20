@@ -10,7 +10,7 @@ import { WorkoutFrame, Warmup, RestActions, ExerciseNavigation, WeightRecommenda
 import type { ExerciseScrollPosition } from '../workout-flow/WorkoutFrame.tsx'
 import { WeightFocus, EquipmentEditor } from '../workout-flow/WeightFocus.tsx'
 import { CardioFocus } from '../workout-flow/CardioFocus.tsx'
-import { ExerciseList, WeightChange, ConfirmWorkoutAction, SessionExerciseSearch, AddCardio } from '../workout-flow/WorkoutDialogs.tsx'
+import { ExerciseList, WeightChange, ConfirmWorkoutAction, SessionExerciseSearch, SessionCardioPlan } from '../workout-flow/WorkoutDialogs.tsx'
 import { exerciseDescription } from '../workout-online/catalog-label.ts'
 import { equipmentLabel } from '../workout-online/equipment.ts'
 import type { CardioActivity, Manufacturer, ProgressAssessment, Session, StandardExercise } from '../workout-online/types.ts'
@@ -24,10 +24,11 @@ import { observedWeightMs } from './weight-timing.ts'
 import { SYNC_LABEL } from './sync.ts'
 import { useRestAudio, useRestTimerAudio } from '../workout-flow/useRestAudio.ts'
 import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
+import { useCardioEstimate } from '../settings/useCardioEstimate.ts'
 import { restAlertVisual } from '../workout-flow/rest-alerts.ts'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 
-type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'remove' | 'undo-cardio' | { undo: number }
+type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'edit-cardio' | 'remove' | 'undo-cardio' | { undo: number }
 const restKey = (rest: LocalWorkout['rest']) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
 export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, referenceRecords = [], referenceRoutine = null, createSetId }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
@@ -44,6 +45,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const manualRest = useRef<string | null>(null)
   const action = useRef(false), clock = useRef<HTMLDivElement>(null), working = useRef<HTMLElement>(null)
   const [alerts] = useRestAlertPreferences(state.workout?.userId ?? null)
+  const [estimateCardio] = useCardioEstimate(state.workout?.userId ?? null)
   const audio = useRestAudio(alerts.sound, alerts.volume)
   const { silence, unlock } = audio
   const workout = state.workout
@@ -200,7 +202,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   else if (activity?.phase === 'completed' || activity?.phase === 'skipped') actions = finalActions
   else actions = <div className={styles.actions}>
     <Button onClick={() => void act(w => model.timerAction(w, id, activity?.phase === 'running' ? 'pause' : 'start', Date.now()))}>{activity?.phase === 'running' ? '일시정지' : '재개'}</Button>
-    <Button variant="primary" onClick={() => void act(w => model.reviewCardio(w, id, Date.now()))}>유산소 완료</Button>
+    <Button variant="primary" onClick={() => void act((w, at) => model.reviewCardio(w, id, at, estimateCardio))}>유산소 완료</Button>
   </div>
   if(weight&&!warmup&&!editing&&!blocked&&recommendation)actions=<>{recommendation}{actions}</>
   const preparedFrom = preparing ? model.exercisePreparationStartedAt(workout, id) : undefined
@@ -256,12 +258,13 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
             <Button disabled={weight.sets.some(s => !!s.result)} onClick={() => setModal('replace')}>현재 종목 교체</Button>
             <Button variant="danger" disabled={weight.sets.some(s => !!s.result) || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
           </Card></>} />}
-      {activity && <CardioFocus preview={preview} cardio={activity} activeMs={activity.activeMs} navigation={navigation} issue={preview ? null : issue} editing={!preview && editing}
+      {activity && <CardioFocus preview={preview} cardio={activity} activeMs={activity.activeMs} estimate={estimateCardio} navigation={navigation} issue={preview ? null : issue} editing={!preview && editing}
         onEdit={() => setEditing(v => !v)} onUndo={() => setModal('undo-cardio')}
         onDraft={patch => controller.cardioDraft(id, patch)}
         onCancelReview={() => void act(w => { if (w.timers[id]) w.timers[id].reviewing = false })}
         editTools={<Card><p className="muted small">이번 운동에만 적용됩니다. 제외하려면 진행 중인 측정을 멈추고, 완료한 기록은 먼저 취소해 주세요.</p>
           <Button onClick={() => setModal('add')}>+ 종목 추가</Button><Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
+          <Button disabled={activity.phase === 'completed' || activity.phase === 'skipped'} onClick={() => setModal('edit-cardio')}>유산소 계획 편집</Button>
           <Button variant="danger" disabled={!!workout.snapshot.cardioResults.find(c => c.sessionActivityId === id) || activity.phase === 'running' || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button></Card>} />}
     </>
   }
@@ -305,7 +308,12 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
           }
         }
       }, true)} />}
-    {modal === 'cardio' && <AddCardio saveIssue={issue} activities={activities} onClose={() => setModal(null)} onSave={plan => void act(w => model.addCardio(w, plan), true)} />}
+    {modal === 'cardio' && <SessionCardioPlan saveIssue={issue} activities={activities} index={cardio.length} onClose={() => setModal(null)} onSave={plan => void act(w => model.addCardio(w, plan), true)} />}
+    {modal === 'edit-cardio' && activity && <SessionCardioPlan saveIssue={issue} activities={activities} index={index - weights.length} plan={activity.plan}
+      canReplace={activity.phase === 'ready' && !workout.timers[id]?.startedAt} onClose={() => setModal(null)} onSave={plan => void act(w => {
+        if (plan.standardExerciseId !== activity.plan.standardExerciseId || plan.activityId !== activity.plan.activityId) model.replaceCardio(w, id, plan, createSetId)
+        else model.updateCardioPlan(w, id, plan, estimateCardio)
+      }, true)} />}
     {modal === 'remove' && <ConfirmWorkoutAction saveIssue={issue} title="현재 종목 제외" message="완료 기록은 먼저 취소해야 합니다. 원래 계획은 보존됩니다." action="종목 제외"
       onClose={() => setModal(null)} onConfirm={() => void act(w => model.removeExercise(w, id), true)} />}
     {typeof modal === 'object' && modal && <ConfirmWorkoutAction saveIssue={issue} title="완료를 취소할까요?" message="완료 기록을 취소하고 입력값을 복원합니다." action="완료 취소 확인"

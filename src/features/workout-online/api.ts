@@ -88,7 +88,7 @@ export class WorkoutApi {
   async cardioActivities(userId: string, signal: AbortSignal): Promise<CardioActivity[]> {
     const { status, data } = await this.transport.workoutRequest(userId, '/api/v1/standard-exercises/cardio-choices', 'GET', undefined, signal)
     if (status !== 200 || !v.object(data) || !v.array(data.activities, a => v.object(a) && v.uuid(a.id) && v.uuid(a.activityId)
-      && v.array(a.aliases, v.name) && ['RUNNING', 'WALKING', 'CYCLING'].includes(String(a.category)) && v.name(a.name)
+      && v.array(a.aliases, v.name) && ['RUNNING', 'WALKING', 'CYCLING', 'OTHER'].includes(String(a.category)) && v.name(a.name)
       && ['TREADMILL', 'BIKE', 'OUTDOOR', 'STAIRS', 'OTHER'].includes(String(a.kind)))) throw new WorkoutApiError('RESPONSE_INVALID')
     return data.activities as CardioActivity[]
   }

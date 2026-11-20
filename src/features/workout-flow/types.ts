@@ -1,5 +1,6 @@
 
 import type { CardioPlan, CardioResult, Equipment } from '../workout-online/types.ts'
+import type { CardioMeasurementDraft } from '../workout-online/cardio-measurement.ts'
 
 export type WeightMode = 'approved' | 'today' | 'progression'
 export type SetDraft = { kg: string; reps: string; additional: string }
@@ -10,7 +11,7 @@ export type WeightFocusData = Equipment & {
   working: string; approved: string | null; mode: WeightMode; sets: SetRow[]; memo: string
   plannedCount?: number
 }
-export type CardioDraft = { distance: string; speed: string; bpm: string; correctedSeconds: string | null }
+export type CardioDraft = CardioMeasurementDraft & { bpm: string; correctedSeconds: string | null }
 export type ActualCardio = Extract<CardioResult, { status: 'COMPLETED' }>['result']
 export type CardioFocusData = {
   id: string; plan: CardioPlan; phase: 'ready' | 'running' | 'paused' | 'review' | 'completed' | 'skipped'

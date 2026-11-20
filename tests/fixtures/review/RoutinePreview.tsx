@@ -51,12 +51,14 @@ type Fault = 'none' | 'network' | 'conflict'
 type ReviewScenario = Scenario | WorkoutScenario
 const isWorkoutScenario = (scenario: ReviewScenario): scenario is WorkoutScenario => Object.hasOwn(workoutScenarios, scenario)
 
-export default function RoutinePreview() {
+export default function RoutinePreview({ defaultScenario = 'normal', defaultTab = 'routines' }: {
+  defaultScenario?: ReviewScenario; defaultTab?: AppTab
+} = {}) {
   const [scenario, setScenario] = useState<ReviewScenario>(() =>
-    new URLSearchParams(location.search).get('review') === 'approval' ? 'workout-complete' : new URLSearchParams(location.search).get('review') === 'workout' ? 'workout-mixed' : 'normal')
+    new URLSearchParams(location.search).get('review') === 'approval' ? 'workout-complete' : new URLSearchParams(location.search).get('review') === 'workout' ? 'workout-mixed' : defaultScenario)
   const [initialTab] = useState<AppTab>(() => {
     const requested = new URLSearchParams(location.search).get('tab')
-    return requested === 'home' || requested === 'settings' || requested === 'history' ? requested : 'routines'
+    return requested === 'home' || requested === 'settings' || requested === 'history' || requested === 'routines' ? requested : defaultTab
   })
   const [tab] = useScreenHistory<AppTab>('review-tab', initialTab)
   const [epoch, setEpoch] = useState(0)
@@ -103,6 +105,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   const [summaryId] = useScreenHistory<string | null>('review-record-summary', initialSummary)
   const { route: recordRoute, open: openRecord, back: backFromRecord } = useRecordDetailHistory('review-record', tab)
   const [alerts, setAlerts] = useState(defaultRestAlerts)
+  const [estimate, setEstimate] = useState(false)
   const audio = useRestAudio(alerts.sound, alerts.volume)
   const [shortRest, setShortRest] = useState(() => isWorkoutScenario(scenario) || scenario === 'active')
   const inFlight = useRef(false)
@@ -205,7 +208,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   }
 
   if (session && workoutId === session.id) return <ReviewShell authenticated tab={tab} focused displayTheme={session.deload ? 'deload' : 'normal'} onNavigate={navigate}>
-    <WorkoutReview hiddenRecommendations={hiddenRecommendations} onDismissRecommendation={key=>setHiddenRecommendations(ids=>new Set(ids).add(key))} records={records} session={session} onChange={setSession} history={data.sessions} alerts={alerts} shortRest={shortRest} audio={audio}
+    <WorkoutReview estimate={estimate} hiddenRecommendations={hiddenRecommendations} onDismissRecommendation={key=>setHiddenRecommendations(ids=>new Set(ids).add(key))} records={records} session={session} onChange={setSession} history={data.sessions} alerts={alerts} shortRest={shortRest} audio={audio}
       onHome={() => navigateBack(() => setWorkoutId(null, true))}
       onEnd={endedAt => {
         markSummaryEntry(session.id)
@@ -314,7 +317,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
     {visitedRecords && <div hidden={!showRecords}><RecordPreview enabled={showRecords} days={home.overview.plannedDays} initialPreset={planPreset??undefined}
       routines={routines} schedule={schedule} sessions={data.sessions} records={records} selected={recordRoute?.id}
       onOpen={id => openRecord(id)} onBack={backFromRecord} backLabel={backLabel} /></div>}
-    {tab === 'settings' && <SettingsReview alerts={alerts} onAlerts={setAlerts} onRestExitGuard={registerRestExit} takeRestSaveFailure={() => {
+    {tab === 'settings' && <SettingsReview estimate={estimate} onEstimate={setEstimate} alerts={alerts} onAlerts={setAlerts} onRestExitGuard={registerRestExit} takeRestSaveFailure={() => {
       if (fault !== 'network') return false
       setFault('none')
       return true

@@ -116,7 +116,7 @@ export class LocalWorkoutController {
       }
     })
   }
-  cardioDraft(id: string, patch: Pick<Partial<CardioTimer>, 'distance' | 'speed' | 'bpm' | 'correctedSeconds'>) {
+  cardioDraft(id: string, patch: Pick<Partial<CardioTimer>, 'distance' | 'distanceSource' | 'speed' | 'speedSource' | 'bpm' | 'correctedSeconds'>) {
     if (!this.allowed() || !this.state.writable || this.state.workout?.finish) return
     this.draftSerial++
     const value = { ...this.state.cardioDrafts[id], ...patch }

@@ -10,8 +10,9 @@ import type { Session, StandardExercise } from '../../../src/features/workout-on
 import { WorkoutFrame, ExerciseNavigation, RestActions, Warmup, WeightRecommendation } from '../../../src/features/workout-flow/WorkoutFrame.tsx'
 import type { ExerciseScrollPosition } from '../../../src/features/workout-flow/WorkoutFrame.tsx'
 import { WeightFocus, EquipmentEditor } from '../../../src/features/workout-flow/WeightFocus.tsx'
-import { AddCardio, ConfirmWorkoutAction, ExerciseList, SessionExerciseSearch, WeightChange } from '../../../src/features/workout-flow/WorkoutDialogs.tsx'
+import { ConfirmWorkoutAction, ExerciseList, SessionCardioPlan, SessionExerciseSearch, WeightChange } from '../../../src/features/workout-flow/WorkoutDialogs.tsx'
 import { CardioFocus } from '../../../src/features/workout-flow/CardioFocus.tsx'
+import { estimatedCardioDistance } from '../../../src/features/workout-online/cardio-measurement.ts'
 import { cardioPhaseLabel } from '../../../src/features/workout-flow/types.ts'
 import { restAlertVisual } from '../../../src/features/workout-flow/rest-alerts.ts'
 import type { RestAlerts } from '../../../src/features/workout-flow/rest-alerts.ts'
@@ -29,8 +30,9 @@ import type { ReviewCardio, ReviewRecord, ReviewSession, ReviewWeight } from './
 
 type Modal = 'weight' | 'list' | 'add' | 'replace' | 'cardio' | 'end' | 'remove' | 'undo-cardio' | { undo: number }
 
-export function WorkoutReview({ session, onChange, onHome, onEnd, history, alerts, shortRest, audio, records = [], hiddenRecommendations, onDismissRecommendation }: {
+export function WorkoutReview({ session, onChange, onHome, onEnd, history, alerts, shortRest, audio, records = [], hiddenRecommendations, onDismissRecommendation, estimate = false }: {
   session: ReviewSession; onChange: (session: ReviewSession) => void; onHome: () => void
+  estimate?: boolean
   onEnd: (endedAt: number) => void; history: Session[]; records?: ReviewRecord[]; hiddenRecommendations:ReadonlySet<string>; onDismissRecommendation:(key:string)=>void; alerts: RestAlerts; shortRest: boolean; audio: ReturnType<typeof useRestAudio>
 }) {
   const [modal, setModal] = useState<Modal | null>(null)
@@ -140,7 +142,10 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
       setIssue('측정 중인 다른 유산소를 먼저 일시정지하거나 완료해 주세요.')
       return
     }
-    updateCardio({ ...activity, phase, accumulated: cardioElapsed(activity, at), runningSince: phase === 'running' ? at : null })
+    const accumulated = cardioElapsed(activity, at)
+    const activeMs = activity.draft.correctedSeconds === null ? accumulated : Number(activity.draft.correctedSeconds) * 1000
+    const patch = phase === 'review' ? estimatedCardioDistance(activity.draft, activity.plan.targetDistanceKm, activeMs, estimate) : {}
+    updateCardio({ ...activity, phase, accumulated, runningSince: phase === 'running' ? at : null, draft: { ...activity.draft, ...patch } })
     setIssue(''); setNow(at)
   }
   const completeCardio = () => {
@@ -234,7 +239,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
             <Button variant="danger" disabled={doneCount(weight) > 0 || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
           </Card>
         </>} />}
-      {activity && <CardioFocus preview={preview} cardio={activity} activeMs={cardioElapsed(activity, now)}
+      {activity && <CardioFocus preview={preview} estimate={estimate} cardio={activity} activeMs={cardioElapsed(activity, now)}
         navigation={navigation} issue={preview ? null : issueView} editing={!preview && editing} onEdit={() => setEditing(value => !value)}
         onDraft={draft => { updateCardio({ ...activity, draft: { ...activity.draft, ...draft } }); setIssue('') }}
         editTools={<Card>
@@ -279,7 +284,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
         close()
       }} />}
     {(modal === 'add' || modal === 'replace') && <SessionExerciseSearch replace={modal === 'replace'} exercises={sessionExercises} onSelect={addExercise} onClose={close} />}
-    {modal === 'cardio' && <AddCardio activities={[...activities, ...sessionActivities]} onSave={addActivity} onClose={close} />}
+    {modal === 'cardio' && <SessionCardioPlan activities={[...activities, ...sessionActivities]} index={cardio.length} onSave={addActivity} onClose={close} />}
     {modal && typeof modal === 'object' && <ConfirmWorkoutAction title="세트 완료를 취소할까요?" action="완료 취소 확인"
       message="이 세트가 미완료 상태로 돌아갑니다. 입력을 수정한 뒤 다시 완료할 수 있습니다." onClose={close} onConfirm={() => undoSet(modal.undo)} />}
     {modal === 'remove' && <ConfirmWorkoutAction title="현재 종목을 제외할까요?" action="종목 제외"

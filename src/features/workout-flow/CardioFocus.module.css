@@ -77,9 +77,6 @@
 .timeEditor { display: grid; gap: 8px; }
 .timeEditor button { font-size: 13px; }
 .measurements {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
   padding-top: 12px;
   border-top: 1px solid var(--line);
 }
@@ -91,8 +88,6 @@
   padding: 6px 9px;
   scroll-margin-block: calc(var(--workout-clock-height, 0px) + 12px) calc(var(--workout-footer-height, 0px) + 12px);
 }
-.measurements input:disabled { background: var(--surface-input); }
-.measurementNote { color: var(--text-muted); font-size: 11px; }
 .reviewActions { border-top: 1px solid var(--line); padding-top: 12px; }
 .reviewActions button { width: 100%; font-size: 13px; }
 .editSession:global(.outline) { min-height: 44px; padding-block: 8px; font-size: 13px; }
