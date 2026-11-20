@@ -1,35 +1,39 @@
 import { useId } from 'react'
 import type { MouseEventHandler, ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
+import { SkeletonSlot } from '../../components/common-ui/ContentFeedback.tsx'
 import { PwaStatus } from '../../pwa/PwaStatus.tsx'
 import styles from './SettingsMain.module.css'
 
 type Click = MouseEventHandler<HTMLButtonElement>
-type AccountSummary = { email?: string; loginMethod?: 'email' | 'google'; deviceCount?: number }
+type LoginMethod = 'email' | 'google'
+type AccountSummary = { email?: string; loginMethod?: LoginMethod; loginMethods?: LoginMethod[]; deviceCount?: number }
 
-export function SettingsMain({ hidden = false, busy = false, review = false, account, onAccount, onRest, onRestAlerts, onCatalog, onLogout }: {
-  hidden?: boolean; busy?: boolean; review?: boolean; account?: AccountSummary
+export function SettingsMain({ hidden = false, busy = false, review = false, account, accountLoading = false, onRetryAccount, onAccount, onRest, onRestAlerts, onCatalog, onLogout }: {
+  hidden?: boolean; busy?: boolean; review?: boolean; account?: AccountSummary; accountLoading?: boolean; onRetryAccount?: () => void
   onAccount: Click; onRest: Click; onRestAlerts?: Click; onCatalog: Click; onLogout: () => void
 }) {
   const email = account?.email?.trim() ?? ''
   const [initial] = email
   const emailId = useId()
-  const loginMethod = account?.loginMethod === 'google' ? 'Google SSO' : account?.loginMethod === 'email' ? '이메일' : '확인 불가'
-  const devices = account?.deviceCount === undefined ? '확인 불가' : account.deviceCount + '대'
+  const methods = account?.loginMethods ?? (account?.loginMethod ? [account.loginMethod] : [])
+  const loginMethod = methods.map(method => method === 'google' ? 'Google SSO' : '이메일').join(' · ') || '확인 불가'
+  const devices = account?.deviceCount === undefined ? '조회 미지원' : account.deviceCount + '대'
   return <section aria-label="설정" className={styles.page} hidden={hidden}>
-    <Card className={styles.account}>
+    <Card className={styles.account} aria-busy={accountLoading}>
       <button type="button" className={styles.accountLink} onClick={onAccount} disabled={busy} aria-label="내 계정" aria-describedby={emailId}>
         <span className={styles.avatar} aria-hidden="true">{initial?.toUpperCase() ?? '—'}</span>
         <span className={styles.text}>
           <strong>내 계정</strong>
-          <small id={emailId} title={email || undefined}>{email || '이메일 확인 불가'}</small>
+          <small id={emailId} title={email || undefined}><SkeletonSlot loading={accountLoading}>{email || '이메일 확인 불가'}</SkeletonSlot></small>
         </span>
         <SettingsIcon name="forward" />
       </button>
       <dl className={styles.accountStats}>
-        <div><dt>로그인 방식</dt><dd><SettingsIcon name="shield" />{loginMethod}</dd></div>
+        <div><dt>로그인 방식</dt><dd><SettingsIcon name="shield" /><SkeletonSlot loading={accountLoading}>{loginMethod}</SkeletonSlot></dd></div>
         <div><dt>로그인된 기기</dt><dd><SettingsIcon name="devices" />{devices}</dd></div>
       </dl>
+      {onRetryAccount && <div role="status">계정 정보를 확인하지 못했습니다. <Button variant="quiet" onClick={onRetryAccount}>다시 조회</Button></div>}
     </Card>
     <Card className={styles.rows} aria-label="운동 설정">
       <SettingsRow icon="timer" title="세트 사이 휴식" description="반복 상한별 3개 구간 · 휴식 시간 설정" onClick={onRest} busy={busy} />

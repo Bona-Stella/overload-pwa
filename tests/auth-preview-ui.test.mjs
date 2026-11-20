@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import ts from 'typescript'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import * as m from '../src/features/auth-preview/model.ts'
+import * as m from './fixtures/auth-preview/model.ts'
 
 // Same lightweight TSX loader as existing components.test.mjs; no new dependencies.
 registerHooks({
@@ -25,9 +25,9 @@ registerHooks({
     return nextLoad(url, context)
   },
 })
-const { AuthScreens } = await import('../src/features/auth-preview/AuthScreens.tsx')
-const { AccountScreens } = await import('../src/features/auth-preview/AccountScreens.tsx')
-const { default: AuthPreview } = await import('../src/features/auth-preview/AuthPreview.tsx')
+const { AuthScreens } = await import('./fixtures/auth-preview/AuthScreens.tsx')
+const { AccountScreens } = await import('./fixtures/auth-preview/AccountScreens.tsx')
+const { default: AuthPreview } = await import('./fixtures/auth-preview/AuthPreview.tsx')
 const NOW = 1_800_000_000_000
 const html = (Component, state) => renderToStaticMarkup(React.createElement(Component, { state, dispatch: () => {}, now: NOW, onLegal: () => {}, onDialog: () => {} }))
 

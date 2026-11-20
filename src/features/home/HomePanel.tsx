@@ -1,5 +1,4 @@
 import { partialAchievement } from '../statistics/display-achievement.ts'
-import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
@@ -13,7 +12,7 @@ import { HomeTrainingHeader } from './HomeTrainingHeader.tsx'
 import { activeCardio, activeWeights, cardioPlanLabel, dateInZone, dayOfWeek, dayStatus, representativeExercises, weekdays, weekDates } from './model.ts'
 import { boundaryError, loadHome, readAccessDenied } from './load.ts'
 import type { HomeData } from './load.ts'
-import { HomeReviewContext } from '../../review/context.ts'
+import { HomeReviewContext } from '../../app/review-context.ts'
 import { RecentWorkout } from './RecentWorkout.tsx'
 import { DeloadMoon } from '../../components/DeloadMoon.tsx'
 import { scheduleRoutineLabel } from './tags.ts'
@@ -97,12 +96,9 @@ export function HomePanel(props: Props) {
   useEffect(() => {
     const abort = new AbortController(), current = inputs.current
     if (props.enabled === false || !current.schedule) return
-    recordLifecycle?.('home:start')
     void loadHome(current.scope, api, current.schedule, statistics, cache, current.clock, current.zone, abort.signal).then(data => {
-      recordLifecycle?.('home:end', { result: abort.signal.aborted ? 'cancelled' : 'ok' })
       if (!abort.signal.aborted) { setResult({ key: requestKey, context, data }); setFailed(null) }
     }).catch(error => {
-      recordLifecycle?.('home:end', { result: abort.signal.aborted ? 'cancelled' : 'error' })
       if (abort.signal.aborted) return
       if (boundaryError(error) || readAccessDenied(error)) { cache.clear(); setResult(null) }
       if (boundaryError(error)) invalid.current(error)

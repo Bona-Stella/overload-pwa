@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { durationParts, durationSeconds } from '../src/components/duration.ts'
 import { referenceIncrease } from '../src/features/workout-online/reference-reminder.ts'
-import { reviewIncreaseReminder, startReview, sessionAdvice } from '../src/review/workout-model.ts'
+import { reviewIncreaseReminder, startReview, sessionAdvice } from './fixtures/review/workout-model.ts'
 import { routine, session, scope, SESSION_EXERCISE, OTHER } from './fixtures/workout-online-data.mjs'
 
 test('duration wheels round-trip milliseconds, zero, minutes, hours and the existing 24-hour limit',()=>{

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { recordPreviewData } from '../src/review/record-data.ts'
-import { reviewSample, reviewHome, reviewToday } from '../src/review/routine-samples.ts'
+import { recordPreviewData } from './fixtures/review/record-data.ts'
+import { reviewSample, reviewHome, reviewToday } from './fixtures/review/routine-samples.ts'
 import { overview, periodFor } from '../src/features/statistics/api.ts'
 const seed=reviewSample('normal')
 const data=recordPreviewData(seed.routines,seed.schedule,seed.sessions,reviewHome(seed).overview.plannedDays)

@@ -7,8 +7,6 @@ import { WeeklyScheduleApi, scheduleIssue } from '../statistics/weekly-schedule.
 import { readHomeAnalysis, readHomeProtection } from '../statistics/deload-home.ts'
 import type { HomeAnalysis, HomeProtection } from '../statistics/deload-home.ts'
 import { boundaryError } from '../home/load.ts'
-import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
-
 type Snapshot = {
   owner: string
   request: string
@@ -44,14 +42,11 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     const abort = new AbortController()
     readFlight.current = abort
     const scope = { userId, dataGeneration }
-    recordLifecycle?.('schedule:start')
     void Promise.allSettled([
       api.read(scope, abort.signal),
       readHomeProtection(transport, scope, abort.signal),
       readHomeAnalysis(transport, scope, abort.signal),
     ]).then(([schedule, protection, analysis]) => {
-      recordLifecycle?.('schedule:end', { result: abort.signal.aborted ? 'cancelled' :
-        [schedule, protection, analysis].some(result => result.status === 'rejected') ? 'error' : 'ok' })
       if (abort.signal.aborted) return
       for (const result of [schedule, protection, analysis]) {
         if (result.status === 'rejected' && boundaryError(result.reason)) { onInvalid(result.reason); return }

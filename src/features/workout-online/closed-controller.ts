@@ -47,22 +47,25 @@ export class ClosedWorkoutController {
     this.set({ issue: error instanceof Error && (error instanceof LocalStoreError || error.name === 'ClosedConflict') ? error.message : onlineIssue(error) })
   }
   private conflict(message: string): never { const error = new Error(message); error.name = 'ClosedConflict'; throw error }
-  async open() {
+  async open(initial?: Session) {
     try {
       const device = await this.store.deviceId()
       if (!this.current()) return
       this.lease = await this.acquire({ ...this.scope, sessionId: this.id, editorDeviceId: device, writerEpoch: '0' })
       if (!this.current()) { this.lease?.release(); return }
       this.set({ writable: !!this.lease, issue: null })
-      await this.read()
+      await this.read(initial)
       if (!this.lease) this.set({ issue: '다른 탭이 운동을 편집 중이거나 편집 잠금을 지원하지 않습니다. 읽기 전용입니다.' })
     } catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
   }
-  private async read() {
-    const [server, assessment, changes, copies, pending] = await Promise.all([
-      this.api.detail(this.scope, this.id, this.abort.signal), this.api.assessment(this.scope, this.id, this.abort.signal), this.api.changes(this.scope, this.id, this.abort.signal),
+  private async read(initial?: Session) {
+    const [candidate, assessment, changes, copies, pending] = await Promise.all([
+      initial ?? this.api.detail(this.scope, this.id, this.abort.signal), this.api.assessment(this.scope, this.id, this.abort.signal), this.api.changes(this.scope, this.id, this.abort.signal),
       this.store.localCopies(this.scope, this.id), this.store.closedWrite(this.scope, this.id),
     ])
+    if (!this.current()) return
+    const server = initial && (candidate.version !== assessment.version || candidate.version !== changes.version)
+      ? await this.api.detail(this.scope, this.id, this.abort.signal) : candidate
     if (!this.current()) return
     if (server.status === 'ACTIVE' || server.version !== assessment.version || server.version !== changes.version) this.conflict('조회 중 기록이 바뀌었습니다. 최신 기록을 다시 확인해 주세요.')
     await this.store.saveSession(this.scope, server)

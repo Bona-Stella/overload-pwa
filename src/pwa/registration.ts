@@ -1,5 +1,3 @@
-import { recordLifecycle } from '../app/lifecycle-diagnostics.ts'
-
 type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 type State = { ready: boolean; waiting: boolean; failed: boolean; installable: boolean }
 let state: State = { ready: false, waiting: false, failed: false, installable: false }
@@ -16,25 +14,19 @@ export function registerPwa() {
   if (!('serviceWorker' in navigator) || !window.isSecureContext) { set({ failed: true }); return }
   window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); prompt = event as InstallPrompt; set({ installable: true }) })
   window.addEventListener('appinstalled', () => { prompt = null; set({ installable: false }) })
-  recordLifecycle?.('worker:registration-start')
   void navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).then(value => {
     registration = value
-    recordLifecycle?.('worker:registration-end', { result: 'ok', waiting: !!value.waiting,
-      workerState: (value.installing ?? value.waiting ?? value.active)?.state })
     const update = () => set({ ready: !!value.active, waiting: !!value.waiting })
     update()
     value.addEventListener('updatefound', () => {
       const installing = value.installing
-      recordLifecycle?.('worker:update-found')
       installing?.addEventListener('statechange', () => {
-        recordLifecycle?.('worker:state', { workerState: installing.state, waiting: !!value.waiting })
         update()
         if (installing.state === 'redundant') set({ failed: true })
       })
     })
     void navigator.serviceWorker.ready.then(update)
   }).catch(() => {
-    recordLifecycle?.('worker:registration-end', { result: 'error' })
     set({ failed: true })
   })
 }

@@ -1,0 +1,11 @@
+.gauge { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; font-size: 12px; }
+.gauge b { white-space: nowrap; font-size: 12px; font-weight: 500; }
+.off { justify-content: flex-end; }
+.track { flex: 1; min-width: 20px; height: 5px; background: #353941; border-radius: 20px; overflow: hidden; }
+.track i { display: block; height: 100%; border-radius: 20px; }
+.controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; margin-bottom:14px; padding:10px; border:1px solid var(--border-subtle); border-radius:var(--radius-control); background:var(--surface-card); font-size:12px; }
+.controls b,.controls small { grid-column:1 / -1; }
+.controls small { color:var(--text-muted); }
+.controls label { display:grid; gap:3px; min-width:0; }
+.controls select { width:100%; min-height:44px; min-width:0; padding:4px; font-size:13px; }
+.period { color:var(--status-done); font-size:12px; }

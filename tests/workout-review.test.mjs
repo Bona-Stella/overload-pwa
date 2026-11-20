@@ -1,9 +1,9 @@
 
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import * as model from '../src/review/workout-model.ts'
-import { exercises, reviewSample } from '../src/review/routine-samples.ts'
-import { exerciseEquipment, workoutSample } from '../src/review/workout-samples.ts'
+import * as model from './fixtures/review/workout-model.ts'
+import { exercises, reviewSample } from './fixtures/review/routine-samples.ts'
+import { exerciseEquipment, workoutSample } from './fixtures/review/workout-samples.ts'
 
 const initial = () => {
   const data = workoutSample('workout-mixed')

@@ -73,12 +73,11 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       }
     }
     await viewport(320)
-    for (const mode of ['app', 'native']) {
+    {
       const result = await evaluate(`(async () => {
-        const root=document.documentElement, field=document.querySelector('[data-workout-memo]'), vv=visualViewport
+        const field=document.querySelector('[data-workout-memo]'), vv=visualViewport
         const original=window.scrollTo, calls=[]
         const settle=()=>new Promise(resolve=>setTimeout(resolve,250))
-        root.dataset.keyboardDiagnostic=${JSON.stringify(mode)}
         window.scrollTo=(...args)=>{calls.push(args);original.apply(window,args)}
         try {
           const end=document.scrollingElement.scrollHeight-innerHeight
@@ -95,9 +94,9 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           field.blur();delete vv.height;delete vv.offsetTop;delete vv.pageTop;vv.dispatchEvent(new Event('resize'))
           await settle()
           return {calls,opened,closed:scrollY,end}
-        } finally { window.scrollTo=original;delete root.dataset.keyboardDiagnostic }
+        } finally { window.scrollTo=original }
       })()`)
-      assert.deepEqual(result, {calls:[],opened:result.end,closed:result.end,end:result.end}, mode+' keeps a visible memo in place through dismissal')
+      assert.deepEqual(result, {calls:[],opened:result.end,closed:result.end,end:result.end}, 'the app keeps a visible memo in place through dismissal')
     }
     const memoRunway = []
     for (const width of [320, 375, 393, 430]) {

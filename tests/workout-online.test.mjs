@@ -41,6 +41,21 @@ test('a pending or failed same-account bootstrap retains the verified exercise w
     assert.ok(s.controller.getSnapshot().issue)
   } finally { s.disconnect() }
 })
+test('opening a different closed record does not invalidate summary data; observing a saved revision does', async () => {
+  const s = setup({detail: async (_scope, id) => session({id, status:'FINISHED'})})
+  try {
+    await settle()
+    const before = s.controller.getSnapshot().recordsRevision
+    await s.controller.showDetail(start.id)
+    await s.controller.showDetail(OTHER)
+    assert.equal(s.controller.getSnapshot().recordsRevision, before)
+    const detail = s.controller.getSnapshot().detail
+    s.controller.observeSession(detail)
+    assert.equal(s.controller.getSnapshot().recordsRevision, before)
+    s.controller.observeSession({...detail, version:'1'})
+    assert.equal(s.controller.getSnapshot().recordsRevision, before + 1)
+  } finally { s.disconnect() }
+})
 test('public and selectable catalogs are separate and normalized aliases keep independent IDs', async () => {
   const treadmill = { id: OTHER, activityId: DEVICE, category: 'RUNNING', name: '트레드밀 러닝', kind: 'TREADMILL', aliases: ['treadmill run'] }
   const stretch = { id: ROUTINE, name: '스트레칭', aliases: ['stretch'], muscles: [], exerciseType: 'STRETCH',

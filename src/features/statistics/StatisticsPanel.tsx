@@ -31,6 +31,7 @@ import activityStyles from './Activity.module.css'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { SearchScopePopover } from './SearchScopePopover.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
+import { Skeleton } from '../../components/common-ui/ContentFeedback.tsx'
 import { boundaryError, readAccessDenied } from '../home/load.ts'
 
 function RecordMainIcon({ kind }: { kind: 'activity' | 'growth' | 'plan' | 'muscles' | 'clock' | 'weight' | 'footprints' }) {
@@ -74,8 +75,9 @@ export function WeightChart({ rows }: { rows: Row[] }) {
 }
 
 type RecordScreen = 'summary' | 'activity' | 'muscles' | 'growth' | 'plan' | 'history'
-export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHistory, definitions = [], evidence = [], achievementPlanning, achievementAnchor }: {
+export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHistory, definitions = [], evidence = [], achievementPlanning, achievementAnchor, activityState }: {
   data: Statistics; planning: Overview; screen: string; onScreen: (screen: RecordScreen) => void; onOpen: (id: string) => void; onHistory: () => void; definitions?: StandardExercise[]; evidence?: Session[]; achievementPlanning?:Overview|null; achievementAnchor?:string
+  activityState?: 'loading' | 'error'
 }) {
   const preview = useRecordPreview()
   const [cardioDetail,setCardioDetail] = useState(false)
@@ -122,9 +124,10 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   const sampleAchievement=sample?.period.fromDate===achievementRange.fromDate?sample:undefined
   const sampleCardio=sample?.period.fromDate===range.fromDate&&sample.period.toDateExclusive===range.toDateExclusive?sample.cardio:undefined
   const activeCardioMs=sampleCardio?.activeMs??data.cardioActiveMs
-  const cardioTotals=sampleCardio?.totals??planning.cardioByKind
+  const cardioTotals=activityState ? [] : sampleCardio?.totals??planning.cardioByKind
+  const periodLoading = activityState === 'loading'
   const weeklyPlanning=achievementPlanning??planning
-  const dayPlans=sampleAchievement?.achievement.plannedDays??weeklyPlanning.plannedDays
+  const dayPlans=sampleAchievement?.achievement.plannedDays??(achievementPlanning === null ? [] : weeklyPlanning.plannedDays)
   const weekDays=Array.from({length:7},(_,i)=>{const date=addDays(achievementRange.fromDate,i);return dayPlans.find(d=>d.date===date)??{date,status:'UNKNOWN' as const,scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}})
   const weekStatistics=weeklyPlanning.statistics
   const plannedDays = sampleAchievement?.achievement.plannedWorkoutDays??(achievementPlanning === null ? null : weekStatistics.plannedWorkoutDays)
@@ -132,11 +135,11 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   const completedDays = sampleAchievement?.achievement.effectiveWorkoutDays??weeklyPlanning.effectiveWorkoutDays
 
   return <>
-    <section className={activityStyles.summary} aria-label="운동량 요약">
+    <section className={activityStyles.summary} aria-label="운동량 요약" aria-busy={periodLoading}>
       <div className={activityStyles.sectionHeading}><h2>운동량 요약</h2><span>선택 기간 전체</span></div>
       <div className={activityStyles.summaryGrid}>
-        <Card><span>완료 세트</span><strong>{format(data.summary.completedSets)}<small>세트</small></strong></Card>
-        <Card><span>총중량</span><strong>{format(data.summary.volumeLoadKg)}<small>kg</small></strong></Card>
+        <Card><span>완료 세트</span><strong>{periodLoading ? <Skeleton width="65%" /> : <>{format(activityState ? null : data.summary.completedSets)}<small>세트</small></>}</strong></Card>
+        <Card><span>총중량</span><strong>{periodLoading ? <Skeleton width="65%" /> : <>{format(activityState ? null : data.summary.volumeLoadKg)}<small>kg</small></>}</strong></Card>
       </div>
     </section>
     <Card className={activityStyles.trend}><div className={activityStyles.sectionHeading}><h2>운동량 추이</h2><span>완료 기록 기준</span></div>
@@ -147,8 +150,12 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
         tags={search.scope==='exercise'?{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:search.scope==='muscle'?{label:'근육 분류',options:[{id:'ALL',name:'전체'},...[...new Set(muscles.map(m=>m.groupCode))].map(id=>({id,name:muscleGroups[id]??id}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:undefined}
         options={options} onSelect={id=>setSearch({...search,selected:id,query:''},true)} selected={selected?.name}
         onClear={()=>setSearch({...search,tag:'ALL',query:'',selected:''},true)} label="운동·분류·근육 검색" />{preview&&<p className="muted small">준비된 합성 마스터 검색 · 후보 검색과 선택 후 통계 조회는 별개입니다.</p>}
-      <div className={`record-pair ${activityStyles.chartHeading}`}><span>{selected?.name??'전체 운동'} · 선택한 기간</span><b>{format(values.some(v=>v===null)?null:sumDecimals(values as string[]))}{metric==='sets'?'세트':'kg'}</b></div>
-      {!preview&&selected?<p role="status" className="muted small">선택 항목의 날짜별 집계 API 연결이 필요합니다. 전체 추이는 선택 해제 후 확인할 수 있습니다.</p>:<RecordChart data={values.map((v,i)=>({id:String(i),label:labels[i],value:v}))} unit={metric==='sets'?'세트':'kg'} label={(selected?.name??'전체 운동')+' '+(metric==='sets'?'완료 세트':'총중량')+' 추이'}/>}
+      <div className={`record-pair ${activityStyles.chartHeading}`}><span>{selected?.name??'전체 운동'} · 선택한 기간</span><b>{periodLoading ? <Skeleton width={55} /> : format(activityState || values.some(v=>v===null)?null:sumDecimals(values as string[])) + (metric==='sets'?'세트':'kg')}</b></div>
+      {!preview&&selected ? <p role="status" className="muted small">선택 항목의 날짜별 집계 API 연결이 필요합니다. 전체 추이는 선택 해제 후 확인할 수 있습니다.</p>
+        : <div className={activityStyles.chartContent} aria-busy={periodLoading}>
+          {periodLoading ? <Skeleton shape="block" width="100%" height={220} />
+            : !activityState && <RecordChart data={values.map((v,i)=>({id:String(i),label:labels[i],value:v}))} unit={metric==='sets'?'세트':'kg'} label={(selected?.name??'전체 운동')+' '+(metric==='sets'?'완료 세트':'총중량')+' 추이'}/>}
+        </div>}
       <p className="muted small">{metric==='sets'?'세부 근육만 기여 세트 · 분류/전체는 원본 세트':'실제 중량 × 실제 반복 합계 · 기여 계수 미적용'}</p>
     </Card>
     <Card className={activityStyles.achievement}>
@@ -167,19 +174,19 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
       })}</div>
       <p className={`muted small ${activityStyles.legend}`}><span>– 휴식</span><span>· 미수행</span><span>? 미확인</span></p>
     </Card>
-    <Card className={activityStyles.cardio}><div className={activityStyles.sectionHeading}><h2>유산소 현황</h2><Button variant="quiet" onClick={()=>setCardioDetail(!cardioDetail)} aria-expanded={cardioDetail}>{cardioDetail?'상세 닫기':'상세 보기 ›'}</Button></div>
+    <Card className={activityStyles.cardio} aria-busy={periodLoading}><div className={activityStyles.sectionHeading}><h2>유산소 현황</h2><Button variant="quiet" onClick={()=>setCardioDetail(!cardioDetail)} aria-expanded={cardioDetail}>{cardioDetail?'상세 닫기':'상세 보기 ›'}</Button></div>
       <div className={activityStyles.cardioMetrics}>
-        <div><span><RecordMainIcon kind="clock" />누적 유산소 시간</span><strong>{cardioTime(activeCardioMs)}</strong></div>
-        <div><span><RecordMainIcon kind="plan" />누적 일수</span><strong>{sampleCardio?sampleCardio.days+'일':'미확인'}</strong></div>
+        <div><span><RecordMainIcon kind="clock" />누적 유산소 시간</span><strong>{periodLoading ? <Skeleton width="65%" /> : activityState ? '—' : cardioTime(activeCardioMs)}</strong></div>
+        <div><span><RecordMainIcon kind="plan" />누적 일수</span><strong>{periodLoading ? <Skeleton width="65%" /> : !activityState&&sampleCardio?sampleCardio.days+'일':'미확인'}</strong></div>
       </div>
       <section className={activityStyles.cardioKinds}><h3>종류별 누적 거리</h3>
         {cardioTotals.map(c=><div className={activityStyles.cardioKind} key={c.kind}><span><ExerciseIcon kind={c.kind==='BIKE'?'cycling':c.kind==='TREADMILL'||c.kind==='OUTDOOR'?'running':'other'} />{cardioKinds[c.kind]??c.kind}</span>
           <strong>{sampleCardio&&<small>{sampleCardio.weekdays.get(c.kind)??'요일 미확인'}</small>}{c.distanceKm!==null?format(c.distanceKm)+' km':'거리 미입력'}</strong></div>)}
-        {!cardioTotals.length&&<p className="muted small">선택 기간에 유산소 기록이 없습니다.</p>}
+        {periodLoading ? <Skeleton width="70%" /> : !activityState&&!cardioTotals.length&&<p className="muted small">선택 기간에 유산소 기록이 없습니다.</p>}
       </section>
       <p className="muted small">{sampleCardio?'UI 검토용 합성 유산소 기록':<>선택 기간 실제 기록 기준 · 계획 외 유산소도 포함{!preview&&'. 미전송 기록은 포함되지 않습니다.'}</>}</p>
       <div className={`stack ${activityStyles.cardioDetails}`} hidden={!cardioDetail}>
-        <div className="record-pair"><p className="muted small">{sampleCardio?'시연':'실제'} 누적 {cardioTime(activeCardioMs)}{sampleCardio?' · 계획 없음':plannedMs===null?' · 계획 시간 확인 불가':plannedMs===0n?' · 계획 없음':' / 계획 '+cardioTime(plannedMs.toString())}</p><Button variant="quiet" onClick={onHistory}>운동 이력 ›</Button></div>
+        <div className="record-pair">{!activityState&&<p className="muted small">{sampleCardio?'시연':'실제'} 누적 {cardioTime(activeCardioMs)}{sampleCardio?' · 계획 없음':plannedMs===null?' · 계획 시간 확인 불가':plannedMs===0n?' · 계획 없음':' / 계획 '+cardioTime(plannedMs.toString())}</p>}<Button variant="quiet" onClick={onHistory}>운동 이력 ›</Button></div>
         {cardioTotals.map(c=><section key={c.kind}>
           <p className="muted small">{cardioKinds[c.kind]??c.kind} · {cardioTime(c.activeMs)}{c.distanceKm!==null&&' · '+c.distanceKm+' km'}</p>
           <small className="muted">{[
@@ -189,7 +196,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
             c.recordsWithoutDistance!=='0'?'거리 미입력 기록 포함':null,
           ].filter(Boolean).join(' · ')||'거리 미입력'}</small>
         </section>)}
-        {cardioDetail&&!sampleCardio&&preview?.sessions.filter(s=>s.workoutDate>=data.fromDate&&s.workoutDate<data.toDateExclusive).flatMap(s=>s.snapshot.state.cardioResults.filter(c=>c.status==='COMPLETED').map(c=><div className="record-pair" key={c.id}><span>{s.workoutDate} · {c.status==='COMPLETED'?cardioTime(String(c.result.activeMs)):''}</span><Button variant="quiet" onClick={()=>onOpen(s.id)}>상세 ›</Button></div>))}
+        {!activityState&&cardioDetail&&!sampleCardio&&preview?.sessions.filter(s=>s.workoutDate>=data.fromDate&&s.workoutDate<data.toDateExclusive).flatMap(s=>s.snapshot.state.cardioResults.filter(c=>c.status==='COMPLETED').map(c=><div className="record-pair" key={c.id}><span>{s.workoutDate} · {c.status==='COMPLETED'?cardioTime(String(c.result.activeMs)):''}</span><Button variant="quiet" onClick={()=>onOpen(s.id)}>상세 ›</Button></div>))}
       </div>
     </Card>
   </>
@@ -218,6 +225,8 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
   const requestKey = [overviewKey, refreshKey, reload].join('|')
   const current = overviews.find(item => item.key === overviewKey)?.data
   const issue = failed === requestKey
+  const displayed = current ?? (screen === 'activity' ? overviews.find(item => item.key.startsWith(identity + ':'))?.data : undefined)
+  const activityState = screen === 'activity' && !current ? issue ? 'error' : 'loading' : undefined
   const readOverview = !['growth','plan','history'].includes(screen)
   useEffect(() => {
     if (!enabled || !readOverview) return
@@ -243,7 +252,8 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
     void api.overview({userId:scope.userId,dataGeneration:scope.dataGeneration},{fromDate:weekFrom,toDateExclusive:weekTo},abort.signal).then(data=>{if(!abort.signal.aborted)setWeekLoaded(data)}).catch(error=>{if(!abort.signal.aborted&&error&&typeof error==='object'&&'code' in error&&['OWNER_MISMATCH','DATA_GENERATION_MISMATCH'].includes(String(error.code)))invalid.current(error)})
     return()=>abort.abort()
   },[api,scope,scope.userId,scope.dataGeneration,screen,activityPeriod.mode,weekFrom,weekTo,refreshKey,reload,enabled])
-  const weekly=current&&activityPeriod.mode==='week'?current:weekLoaded?.statistics.userId===scope.userId&&weekLoaded.statistics.dataGeneration===scope.dataGeneration&&weekLoaded.statistics.fromDate===weekFrom&&weekLoaded.statistics.toDateExclusive===weekTo?weekLoaded:null
+  const cachedWeek = overviews.find(item => item.key === [identity, weekFrom, weekTo].join(':'))?.data
+  const weekly = cachedWeek ?? (weekLoaded?.statistics.userId===scope.userId&&weekLoaded.statistics.dataGeneration===scope.dataGeneration&&weekLoaded.statistics.fromDate===weekFrom&&weekLoaded.statistics.toDateExclusive===weekTo?weekLoaded:null)
   const [evidence,setEvidence]=useState<{key:string;rows:Session[]}|null>(null)
   const evidenceKey=[identity,weekFrom,weekTo].join(':')
   useEffect(()=>{
@@ -265,8 +275,9 @@ export function StatisticsPanel({ api, scope, refreshKey, onOpen, onInvalid, wor
     {screen === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} />
       : screen === 'plan' ? workoutApi ? <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} /> : <p role="status">주간 계획 데이터 연결을 기다리고 있습니다.</p>
       : screen === 'history' ? workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
-      : <>{current ? <div className="stack record-statistics-body">
-          <StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={current.statistics} planning={current} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions}/>
+      : <>{displayed ? <div className="stack record-statistics-body" data-activity-state={activityState}>
+          {activityState === 'loading' && <span role="status" className="sr-only">선택 기간의 운동 통계를 불러오는 중입니다.</span>}
+          <StatisticsView achievementPlanning={weekly} achievementAnchor={activityPeriod.anchor} evidence={evidence?.key===evidenceKey?evidence.rows:[]} data={displayed.statistics} planning={displayed} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions} activityState={activityState}/>
         </div> : !issue && <LoadingSkeleton layout={screen === 'activity' ? 'activity' : screen === 'muscles' ? 'detail' : 'summary'} label="운동 통계를 불러오는 중입니다." />}
         {issue&&<Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>}
         {screen === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>setScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}

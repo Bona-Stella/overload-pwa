@@ -25,15 +25,20 @@ const overview = () => ({ statistics: {
 // Only the network is substituted: feature API -> AuthController -> AuthApi -> fetch.
 async function connected(handler, { userId = USER, boundary } = {}) {
   const calls = []
+  let sessionUnavailable = false
   const api = new AuthApi(async (path, init) => {
     calls.push({ path, init })
-    if (path === '/api/v1/auth/session') return userId ? json({ userId }) : json({ code: 'AUTHENTICATION_REQUIRED' }, 401)
+    if (path === '/api/v1/auth/session') {
+      if (sessionUnavailable) throw new TypeError('offline')
+      return userId ? json({ userId }) : json({ code: 'AUTHENTICATION_REQUIRED' }, 401)
+    }
     if (path === '/api/v1/auth/csrf') return json(csrf)
     return handler(path, init)
   })
   const controller = new AuthController(api, undefined, () => {}, () => {}, boundary)
   await controller.start()
-  return { api, controller, calls, statistics: new StatisticsApi(controller), weekly: new WeeklyScheduleApi(controller), setUser: value => { userId = value } }
+  return { api, controller, calls, statistics: new StatisticsApi(controller), weekly: new WeeklyScheduleApi(controller),
+    setUser: value => { userId = value }, loseSessionConnection: () => { sessionUnavailable = true } }
 }
 
 test('overview reaches real authenticated transport with its date query and credential/cache policy', async () => {
@@ -204,6 +209,7 @@ test('anonymous and offline states cannot send statistics or schedule requests',
   await assert.rejects(anonymous.weekly.write(scope, {version:'0',timeZone:zone}, {type:'add'}, signal()), { code: 'REQUEST_SUPERSEDED' })
   assert.equal(anonymous.calls.length, count)
   const offline = await connected(() => { throw new TypeError('offline') })
+  offline.loseSessionConnection()
   await assert.rejects(offline.statistics.overview(scope, period, signal()), { code: 'NETWORK' })
   assert.equal(offline.controller.getSnapshot().offlineNetworkFailure, true)
   const offlineCount = offline.calls.length

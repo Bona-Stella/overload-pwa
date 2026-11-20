@@ -1,7 +1,7 @@
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import type { Ref } from 'react'
-import { ReviewExerciseMediaContext } from '../../review/context.ts'
+import { ReviewExerciseMediaContext } from '../../app/review-context.ts'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import type { WorkoutApi } from './api.ts'

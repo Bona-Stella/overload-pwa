@@ -829,7 +829,7 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 #### 설정 메인과 계정 설정 리디자인 현황 — 2026-11-18
 
-- [SettingsMain](../../src/features/settings/SettingsMain.tsx)은 요약·그룹·독립 로그아웃을 공통 Card/Button과 페이지 CSS로 구성한다. 전달된 이메일의 첫 글자를 대문자로 만드는 표현 컴포넌트다. `AuthApp`은 운영에서 요약용 이메일·현재 로그인 방식·기기 수를 주입하지 않는다. `SettingsReview`의 합성 요약과 운영 대체 상태를 구분한다.
+- [SettingsMain](../../src/features/settings/SettingsMain.tsx)은 요약·그룹·독립 로그아웃을 공통 Card/Button과 페이지 CSS로 구성한다. `AuthApp`은 기존 계정 조회로 확인한 마스킹 대표 이메일과 연결된 로그인 수단을 전달한다. 고유 기기 수는 조회 미지원으로 표시한다. 값 조회 중에는 계정 카드 안의 스켈레톤을 사용한다.
 - `AuthApp`이 계정·휴식 조회·카탈로그 이동과 현재 브라우저 로그아웃을 연결하고 설정 복귀 시 초점과 스크롤을 유지한다. 알림 조작은 개발 검토에만 연결한다. 디로딩 설정·데이터 상태·내보내기·초기화·탈퇴는 기존 비활성 행이다. [PwaStatus](../../src/pwa/PwaStatus.tsx)는 네이티브 접이식 영역에서 설치 가능 여부·준비·실패·업데이트와 오프라인 안내를 표시한다. 기존 로컬 운동 저장·이어가기와 서버 ACK는 [12절](#12-진행-운동의-로컬-보호-및-복원)을 따른다.
 - [AccountSettings](../../src/features/auth/AccountSettings.tsx)는 공통 `RecordSubpageHeader`, `AccountDetailUi`와 페이지 CSS를 사용한다. `IdentityManagement`는 서버의 연결 목록, 이메일 연결·Google 폼·해제 확인을 표현한다. `AuthController`가 사용자·세대와 CSRF, OTP·조회·쓰기 경계를 관리한다. 최근 OTP 성공 표시는 마운트 상태의 `confirmedAt`으로 표시하는 피드백이며 권한 판정과 서버 이력 조회와 구분한다. [계정 API 범위](backend-ui-v0.9.md#설정-메인과-계정-설정-연동)
 - `/routine-preview?tab=settings`의 [SettingsReview](../../src/review/SettingsReview.tsx)는 합성 계정과 세 로그인 수단 조합을 같은 상세 레이아웃에 주입한다. 운영의 컨트롤러와 쓰기 권한은 주입하지 않는다. 기기 관리로의 분기와 복귀는 다음 절을 따른다.

@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { FeedbackIcon } from './FeedbackIcon'
+import { FeedbackIcon } from './FeedbackIcon.tsx'
 import styles from './ContentFeedback.module.css'
 
 export function Skeleton({ shape = 'line', width, height }: {

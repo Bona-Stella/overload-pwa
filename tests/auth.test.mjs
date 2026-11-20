@@ -25,6 +25,20 @@ function fake() {
   return { api, calls, controller, navigations, setSession: value => { session = value }, advance: ms => { now += ms } }
 }
 
+test('settings account summary uses verified masked contact and linked methods without opening account settings', async () => {
+  const { api, controller, setSession } = fake()
+  setSession({ userId: USER })
+  await controller.start()
+  const signal = new AbortController().signal
+  api.identities = async received => { assert.equal(received, signal); return [{id: CHALLENGE, provider: 'email'}] }
+  api.contact = async received => { assert.equal(received, signal); return {status: 'VERIFIED', maskedEmail: 'a***@***'} }
+  assert.deepEqual(await controller.readSettingsAccount(USER, signal), {email:'a***@***',loginMethods:['email']})
+  assert.equal(controller.getSnapshot().accountOpen, false)
+  const stale = new AbortController()
+  stale.abort()
+  await assert.rejects(controller.readSettingsAccount(USER, stale.signal), {code:'SESSION_CHANGED'})
+})
+
 test('session 401 is anonymous with credentialed uncached fetch, not a fabricated local login', async () => {
   let options
   const api = new AuthApi(async (path, init) => { assert.equal(path, '/api/v1/auth/session'); options = init; return json({ code: 'AUTHENTICATION_REQUIRED' }, 401) })

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync, readdirSync } from 'node:fs'
 import { test } from 'node:test'
-import * as m from '../src/features/auth-preview/model.ts'
+import * as m from './fixtures/auth-preview/model.ts'
 
 const NOW = 1_800_000_000_000
 const reduce = m.previewReducer
@@ -206,8 +206,8 @@ test('all developer scenarios are independent and preview modules have no persis
     const s = m.scenarioState(scenario, NOW)
     assert.ok(s.screen); assert.ok(m.SYNC_LABELS[s.sync]); assert.notEqual(s.accounts, m.createPreview().accounts)
   }
-  for (const filename of readdirSync(new URL('../src/features/auth-preview/', import.meta.url)).filter(name => /\.(ts|tsx)$/.test(name))) {
-    const source = readFileSync(new URL(`../src/features/auth-preview/${filename}`, import.meta.url), 'utf8')
+  for (const filename of readdirSync(new URL('./fixtures/auth-preview/', import.meta.url)).filter(name => /\.(ts|tsx)$/.test(name))) {
+    const source = readFileSync(new URL(`./fixtures/auth-preview/${filename}`, import.meta.url), 'utf8')
     assert.doesNotMatch(source, /localStorage|sessionStorage|indexedDB|fetch\(|XMLHttpRequest|document\.cookie|features\/workout|\.\.\/workout/)
   }
 })

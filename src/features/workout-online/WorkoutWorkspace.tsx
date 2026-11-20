@@ -304,7 +304,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   const [visit, setVisit] = useState({ tab, home: 0, schedule: 0 })
   if (visit.tab !== tab) setVisit({ tab, home: visit.home + Number(tab === 'home'),
     schedule: visit.schedule + Number(tab === 'home' || tab === 'routines') })
-  const dataRevision = [state.detail?.id, state.detail?.version, state.data?.routines.map(r => r.id + ':' + r.version).join(',')].join('|')
+  const dataRevision = [state.recordsRevision, state.data?.routines.map(r => r.id + ':' + r.version).join(',')].join('|')
   const training = useTrainingSchedule(authentication, cardioScope, [visit.schedule, dataRevision].join('|'), controller.invalidateScope, accountReady)
   const [permissionIssue, setPermissionIssue] = useState(false)
   const [workoutRoute, setWorkoutRoute] = useScreenHistory<string | null>('workout-view:' + state.scope?.userId + ':' + state.scope?.dataGeneration, null)
@@ -435,13 +435,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     const entry = window.history.state?.overloadNavigation
     const returnScroll = window.scrollY
     if (!accountReady || !await flush() || controller.getSnapshot().busy) return
-    const stillAtOrigin = () => window.history.state?.overloadNavigation === entry
-    if (!stillAtOrigin()) return
-    await controller.showDetail(id)
-    const { detail, issue } = controller.getSnapshot()
-    if (stillAtOrigin() && !issue && detail?.id === id && detail.status !== 'ACTIVE') {
-      openRecordRoute(id, returnScroll)
-    }
+    if (window.history.state?.overloadNavigation === entry) openRecordRoute(id, returnScroll)
   }
   const resume = async () => {
     const origin = window.history.state?.overloadNavigation
@@ -500,8 +494,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
 
     <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'history'}>{visible && !localOnly &&
       (session?.status === 'ACTIVE' ? <StatusNotice>진행 중인 운동을 마치면 기록을 확인할 수 있습니다.</StatusNotice>
-        : state.scope ? <StatisticsPanel enabled={accountReady&&!state.busy&&tab==='history'&&!recordFocused} key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
-          workoutApi={api} schedule={training.schedule} definitions={state.data?.exercises} refreshKey={[dataRevision,training.schedule?.appliedVersion,session?.deletedAt].join(':')} onInvalid={controller.invalidateScope} onOpen={id => void openRecord(id)} />
+        : state.scope ? <StatisticsPanel enabled={accountReady&&tab==='history'} key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
+          workoutApi={api} schedule={training.schedule} definitions={state.data?.exercises} refreshKey={[dataRevision,training.schedule?.appliedVersion].join(':')} onInvalid={controller.invalidateScope} onOpen={id => void openRecord(id)} />
           : state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : <LoadingSkeleton layout="summary" label="운동 기록을 불러오는 중입니다." />)}</div>
     {workoutLoading && <><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" /><LoadingSkeleton layout="workout" label="운동 정보를 확인하는 중입니다." /></>}
     {session && session.status === 'ACTIVE' && !editable && <div hidden={!focused}><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" /><details open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={() => void controller.takeover()} /></details></div>}
@@ -513,12 +507,14 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       referenceRecords={referenceHistory?.key===referenceKey?referenceHistory.references:[]} referenceRoutine={referenceHistory?.key===referenceKey?referenceHistory.routine:null}
       server={session} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline} onWorkoutChange={setHomeWorkout}
       sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
-    <div hidden={!visible || focused || !recordFocused}>{visible && !localOnly && recordFocused && (session?.id !== recordId || session.status === 'ACTIVE') &&
-      <><RecordSubpageHeader title={recordRoute?.summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={backFromRecord} backLabel={tab === 'home' ? '홈으로' : '기록으로'} />{state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : <LoadingSkeleton layout="detail" label="운동 기록을 확인하는 중입니다." />}</>}
-      {visible && !localOnly && recordFocused && state.scope && session && session.id === recordId && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} accountReady={accountReady} summary={recordRoute?.summary === true} takeInitialScroll={takeInitialScroll} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions} backLabel={recordRoute?.backLabel ?? (tab === 'home' ? '홈으로' : undefined)}
+    <div hidden={!visible || focused || !recordFocused}>
+      {visible && !localOnly && recordId && state.scope && <ClosedWorkout key={[recordKey, recordId].join(':')} api={api}
+      session={session?.id === recordId && session.status !== 'ACTIVE' ? session : null}
+      loadIssue={!state.busy ? state.issue : undefined} onReload={() => void controller.showDetail(recordId)}
+      accountReady={accountReady} summary={recordRoute?.summary === true} takeInitialScroll={takeInitialScroll} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions} backLabel={recordRoute?.backLabel ?? (tab === 'home' ? '홈으로' : '기록으로')}
       onBack={backFromRecord} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
-      return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
+      return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session?.userId && s.scope?.dataGeneration === session?.dataGeneration && s.detail?.id === recordId
     }} />}</div>
     {settingsDetail}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}

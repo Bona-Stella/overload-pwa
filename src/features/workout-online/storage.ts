@@ -3,7 +3,7 @@ import { newId } from '../../id.ts'
 import { counter, object, session, uuid, instant } from './validation.ts'
 import type { LocalKey, LocalWorkout, RestPolicy } from '../workout-local/types.ts'
 import { localKey } from '../workout-local/types.ts'
-import { createLocalWorkout } from '../workout-local/model.ts'
+import { advancesLocalRevision, createLocalWorkout } from '../workout-local/model.ts'
 import { localWorkout } from '../workout-local/validation.ts'
 import type { ClosedWrite } from './closed-model.ts'
 import { offlinePermit } from '../workout-local/offline-access.ts'
@@ -262,8 +262,7 @@ export class WorkoutStore {
           || previous.finish.requestJson && value.finish?.requestJson !== previous.finish.requestJson)
         || !sync && (value.serverRevision !== previous.serverRevision || value.serverVersion !== previous.serverVersion
           || JSON.stringify(value.pendingSnapshot) !== JSON.stringify(previous.pendingSnapshot) || JSON.stringify(value.pendingResolution) !== JSON.stringify(previous.pendingResolution))) throw new LocalWriteBlocked()
-      const snapshotChanged = JSON.stringify(value.snapshot) !== JSON.stringify(previous.snapshot)
-      const meaningful = snapshotChanged || !previous.finish && !!value.finish
+      const meaningful = advancesLocalRevision(previous, value, !sync)
       if (BigInt(value.localRevision) !== BigInt(previous.localRevision) + (meaningful ? 1n : 0n)
         || meaningful && value.syncState === 'CLEAN') throw new LocalWriteBlocked()
       const bound = previous.finish?.request?.localRevision ?? (previous.pendingSnapshot && !previous.pendingSnapshot.rejected ? previous.pendingSnapshot.request.localRevision : previous.serverRevision)

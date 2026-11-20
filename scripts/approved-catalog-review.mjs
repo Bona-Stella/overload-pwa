@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { networkInterfaces } from 'node:os'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
+import { reviewFixtureEntry } from '../tests/fixtures/review-server.mjs'
 import { isRunId, validateV22Ready, verifyV22Ownership } from '../tests/fixtures/v22-environment.mjs'
 import { allowedAddress, reviewAccess } from './home-review-access.mjs'
 import { approvedCatalogMedia, highRowGifPath } from './approved-catalog-media.mjs'
@@ -33,8 +34,8 @@ const server = await createServer({
   envDir: false,
   cacheDir: resolve('.cache/approved-catalog-review', runId),
   optimizeDeps: { noDiscovery: true, include: ['react', 'react-dom/client', 'react/jsx-runtime', 'react/jsx-dev-runtime', 'recharts', 'react-is'] },
-  define: { 'import.meta.env.VITE_HOME_REVIEW': JSON.stringify('true'), 'import.meta.env.VITE_APPROVED_HIGH_ROW_GIF': JSON.stringify(media ? 'true' : 'false') },
-  plugins: [react(), {
+  define: { 'import.meta.env.VITE_APPROVED_HIGH_ROW_GIF': JSON.stringify(media ? 'true' : 'false') },
+  plugins: [react(), reviewFixtureEntry('/scripts/review/account-entry.tsx'), {
     name: 'approved-catalog-review',
     configureServer(vite) {
       vite.middlewares.use((req, res, next) => {
@@ -59,7 +60,7 @@ const server = await createServer({
       })
     },
   }],
-  server: { host: lan ? '0.0.0.0' : '127.0.0.1', port: 4180, strictPort: true, watch: { ignored: ['**/logs/**'] }, warmup: { clientFiles: ['./src/main.tsx', './src/review/ReviewApp.tsx'] } },
+  server: { host: lan ? '0.0.0.0' : '127.0.0.1', port: 4180, strictPort: true, watch: { ignored: ['**/logs/**'] }, warmup: { clientFiles: ['./scripts/review/account-entry.tsx'] } },
 })
 await server.listen()
 const lease = setInterval(() => { void verifyV22Ownership(ready).catch(stop) }, 3000)

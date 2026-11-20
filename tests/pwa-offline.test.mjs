@@ -103,10 +103,22 @@ test('logout revokes local access BEFORE a failing network request; no fake logo
 })
 test('warm transport loss suspends authenticated sending and requires a fresh session before resume',async()=>{
   let count=0
-  const c=auth({session:async()=>{count++;return{userId:USER}},workoutRequest:async()=>{throw new AuthError('NETWORK')}},{identity:async()=>{},deny:async()=>{}})
+  const c=auth({session:async()=>{if(++count===2)throw new AuthError('NETWORK');return{userId:USER}},workoutRequest:async()=>{throw new AuthError('NETWORK')}},{identity:async()=>{},deny:async()=>{}})
   await c.start();await assert.rejects(c.workoutRequest(USER,'/api/v1/workout-settings','GET',undefined,new AbortController().signal))
   assert.equal(c.getSnapshot().status,'unavailable');assert.equal(c.getSnapshot().localWorkoutUserId,USER)
-  await c.restore();assert.equal(count,2);assert.equal(c.getSnapshot().status,'authenticated')
+  await c.restore();assert.equal(count,3);assert.equal(c.getSnapshot().status,'authenticated')
+})
+test('simultaneous tab read failures share a session check and keep the authenticated shell when it succeeds',async()=>{
+  const gate=deferred(), calls=[]
+  const c=auth({session:async()=>{calls.push('session');if(calls.length>1)await gate.promise;return{userId:USER}},
+    workoutRequest:async()=>{throw new AuthError('TIMEOUT')}},{identity:async()=>{},deny:async()=>{}})
+  await c.start()
+  const read=()=>c.workoutRequest(USER,'/api/v1/workout-settings','GET',undefined,new AbortController().signal)
+  const errors=Promise.all([assert.rejects(read(),{code:'TIMEOUT'}),assert.rejects(read(),{code:'TIMEOUT'})])
+  await new Promise(done=>setImmediate(done))
+  assert.equal(c.getSnapshot().status,'authenticated');assert.equal(calls.length,2)
+  gate.resolve();await errors
+  assert.equal(c.getSnapshot().status,'authenticated');assert.equal(calls.length,2)
 })
 test('401 revokes durable cold permission while existing in-memory workout policy stays explicit',async()=>{
   const calls=[],c=auth({session:async()=>({userId:USER}),workoutRequest:async()=>{throw new AuthError('AUTHENTICATION_REQUIRED',401)}},{identity:async()=>{},deny:async()=>{calls.push('deny')}})

@@ -1,8 +1,7 @@
 import { AuthApi, AuthError } from './api.ts'
 import { emptyAccount } from './account.ts'
 import type { AccountState } from './account.ts'
-import type { Identity } from './api.ts'
-import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
+import type { Identity, ServerSession } from './api.ts'
 import type { AuthBoundary } from '../workout-local/offline-access.ts'
 
 export type AuthIssue = { code: string; message: string }
@@ -71,6 +70,7 @@ export class AuthController {
   private resumeFlow: ReturnFlow = 'none'
   private localWorkoutLocked = false
   private sessionRejected = false
+  private readSessionCheck: { generation: number; result: Promise<ServerSession | null> } | null = null
   private readonly boundary?: AuthBoundary
   constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route: (path: string) => void = () => {}, boundary?: AuthBoundary) { this.api = api; this.now = now; this.navigate = navigate; this.route = route; this.boundary = boundary }
   getSnapshot = () => this.state
@@ -114,7 +114,6 @@ export class AuthController {
   }
   async restore(flow: ReturnFlow = this.state.accountOpen ? 'account' : 'none') {
     if (this.running) return
-    recordLifecycle?.('auth:start', { reason: this.state.status === 'checking' ? 'initial' : 'revalidate' })
     this.sessionRejected = false
     // Keep the chosen local screen mounted during a connection check; pending still fences sending.
     this.running = true; this.set({ pending: 'restore', issue: null })
@@ -137,7 +136,6 @@ export class AuthController {
       else this.set({ status: 'unavailable', offlineNetworkFailure: !this.sessionRejected && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code), issue: authIssue(error), challenge: null, account: emptyAccount() })
     }
     finally {
-      recordLifecycle?.('auth:end', { auth: this.state.status })
       await this.finish()
     }
   }
@@ -218,22 +216,45 @@ export class AuthController {
     this.running = false; this.set({ pending: null })
     if (this.resumePending) { this.resumePending = false; await this.restore(this.resumeFlow) }
   }
-  private async owner(expected: string, generation: number) {
-    const session = await this.api.session()
-    if (generation !== this.generation) throw new AuthError('SESSION_CHANGED', 409)
+  private async owner(expected: string, generation: number, signal?: AbortSignal) {
+    const session = await this.api.session(signal)
+    if (generation !== this.generation || signal?.aborted) throw new AuthError('SESSION_CHANGED', 409)
     if (!session) throw new AuthError('AUTHENTICATION_REQUIRED', 401)
     if (session.userId !== expected) throw new AuthError('SESSION_CHANGED', 409)
   }
+  private async accountDetails(expected: string, generation: number, signal?: AbortSignal) {
+    await this.owner(expected, generation, signal)
+    const [identities, contact] = await Promise.all([this.api.identities(signal), this.api.contact(signal)])
+    await this.owner(expected, generation, signal)
+    return { identities, contact }
+  }
   private async readAccount(expected: string, generation: number) {
-    await this.owner(expected, generation)
-    const [identities, contact] = await Promise.all([this.api.identities(), this.api.contact()])
-    await this.owner(expected, generation)
-    this.accountPatch({ identities, contact, loaded: true, form: null, linkForm: null, unlink: null })
+    const details = await this.accountDetails(expected, generation)
+    this.accountPatch({ ...details, loaded: true, form: null, linkForm: null, unlink: null })
+  }
+  async readSettingsAccount(expected: string, signal: AbortSignal) {
+    if (this.state.status !== 'authenticated' || this.state.pending !== null || this.state.userId !== expected) {
+      throw new AuthError('SESSION_CHANGED', 409)
+    }
+    const { identities, contact } = await this.accountDetails(expected, this.generation, signal)
+    return { email: contact.status === 'VERIFIED' ? contact.maskedEmail : undefined,
+      loginMethods: [...new Set(identities.map(identity => identity.provider))] }
   }
   private async prepareWrite(expected: string, generation: number) {
     await this.owner(expected, generation)
     await this.api.refreshCsrf()
     await this.owner(expected, generation)
+  }
+  private async checkSessionAfterReadFailure(generation: number, expected: string) {
+    if (this.readSessionCheck?.generation !== generation) {
+      const result = this.api.session()
+      this.readSessionCheck = { generation, result }
+      const clear = () => { if (this.readSessionCheck?.result === result) this.readSessionCheck = null }
+      void result.then(clear, clear)
+    }
+    const session = await this.readSessionCheck.result
+    if (!session) throw new AuthError('AUTHENTICATION_REQUIRED', 401)
+    if (session.userId !== expected) throw new AuthError('SESSION_CHANGED', 409)
   }
   async workoutRequest(expected: string, path: string, method: string, body: unknown, signal: AbortSignal) {
     const generation = this.generation
@@ -254,13 +275,28 @@ export class AuthController {
       return result
     } catch (error) {
       if (signal.aborted || this.generation !== generation) throw obsolete()
-      if (current() && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code)) this.networkUnavailable()
+      let failure = error
+      if (current() && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code)) {
+        // The tab can show its own read error if the authenticated session is still reachable.
+        if (method !== 'GET' || globalThis.navigator?.onLine === false) this.networkUnavailable()
+        else {
+          try { await this.checkSessionAfterReadFailure(generation, expected) }
+          catch (sessionError) {
+            if (sessionError instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(sessionError.code)) {
+              if (current()) this.networkUnavailable()
+            } else if (sessionError instanceof AuthError && (sessionError.status === 401 || sessionError.code === 'SESSION_CHANGED')) failure = sessionError
+          }
+        }
+      }
+      if (signal.aborted || this.generation !== generation) throw obsolete()
       // A stale request cancelled by a transport outage is not evidence of another account.
-      if (current() && error instanceof AuthError && error.code === 'SESSION_CHANGED') this.localWorkoutLocked = true
-      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) await this.boundary?.deny()
-      if (current() && error instanceof AuthError && (error.status === 401 || error.code === 'SESSION_CHANGED')) this.set({ status: 'unavailable', offlineNetworkFailure: false, account: emptyAccount(), challenge: null,
-        localWorkoutUserId: !this.localWorkoutLocked && error.status === 401 && error.code !== 'SESSION_CHANGED' ? expected : null, issue: authIssue(error) })
-      throw error
+      if (current() && failure instanceof AuthError && (failure.status === 401 || failure.code === 'SESSION_CHANGED')) {
+        if (failure.code === 'SESSION_CHANGED') this.localWorkoutLocked = true
+        await this.boundary?.deny()
+        if (current()) this.set({ status: 'unavailable', offlineNetworkFailure: false, account: emptyAccount(), challenge: null,
+          localWorkoutUserId: !this.localWorkoutLocked && failure.status === 401 && failure.code !== 'SESSION_CHANGED' ? expected : null, issue: authIssue(failure) })
+      }
+      throw failure
     }
   }
   private accountFailure(error: unknown) {
@@ -278,7 +314,6 @@ export class AuthController {
   }
   networkUnavailable() {
     if (this.state.pending !== null || this.state.status !== 'authenticated') return
-    recordLifecycle?.('auth:unavailable')
     this.set({ status: 'unavailable', offlineNetworkFailure: true, localWorkoutUserId: this.state.userId, account: emptyAccount(), accountOpen: false, issue: authIssue(new AuthError('NETWORK')) })
   }
   private denyLocalRestart() {

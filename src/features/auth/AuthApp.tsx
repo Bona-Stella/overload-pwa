@@ -13,18 +13,22 @@ import { RestAlertSettings } from '../settings/RestAlertSettings.tsx'
 import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
 import { AppShell } from '../../app/AppShell.tsx'
 import type { AppTab } from '../../app/types.ts'
+import type { AuthController } from './controller.ts'
 import '../../App.css'
 import './auth.css'
 
 export function AuthApp() {
   const { state, controller } = useAuth()
-  const [now, setNow] = useState(() => Date.now())
+  const [clock, setClock] = useState(() => Date.now())
+  const now = Math.max(clock, state.updatedAt)
   const [dialog, setDialog] = useState<string | null>(null)
   const [localExitIssue, setLocalExitIssue] = useState(false)
   const [selection, setSelection] = useScreenHistory<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' | 'alerts' } | null>('app:' + state.userId, null)
   const [restAlerts, saveRestAlerts] = useRestAlertPreferences(state.status === 'authenticated' ? state.userId : null)
   const [focused, setFocused] = useState(false)
   const [navigating, setNavigating] = useState(false)
+  const [settingsAccount, setSettingsAccount] = useState<{ userId: string; data: Awaited<ReturnType<AuthController['readSettingsAccount']>> | null; failed?: boolean } | null>(null)
+  const [settingsAccountRetry, setSettingsAccountRetry] = useState(0)
   const navigationPending = useRef(false)
   const localExitGuard = useRef<(() => Promise<boolean>) | null>(null)
   const restExitGuard = useRef<(() => boolean) | null>(null)
@@ -63,10 +67,12 @@ export function AuthApp() {
     return saved && controller.getSnapshot().userId === before.userId && localExitGuard.current === guard
   }, [controller]))
   const flushLocal = async () => { const saved = await (localExitGuard.current?.() ?? Promise.resolve(true)); setLocalExitIssue(!saved); return saved }
+  const showAuthTimer = !!state.challenge || state.accountOpen
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    if (!showAuthTimer) return
+    const timer = window.setInterval(() => setClock(Date.now()), 1000)
     return () => window.clearInterval(timer)
-  }, [])
+  }, [showAuthTimer])
   useEffect(() => {
     let checking = false
     const reconnect = async () => {
@@ -88,6 +94,18 @@ export function AuthApp() {
   const restAlertsOpen = settingsVisible && selection?.settingsView === 'alerts' && !focused
   const restOpen = tab === 'settings' && !state.accountOpen && (authenticated || state.offlineNetworkFailure) && selection?.settingsView === 'rest' && !focused
   const settingsMain = settingsVisible && !catalogOpen && !restOpen && !restAlertsOpen && !focused
+  const settingsUser = settingsMain && !busy ? state.userId : null
+  useEffect(() => {
+    if (!settingsUser) return
+    const abort = new AbortController()
+    void controller.readSettingsAccount(settingsUser, abort.signal).then(data => {
+      if (!abort.signal.aborted) setSettingsAccount({ userId: settingsUser, data })
+    }).catch(() => {
+      if (!abort.signal.aborted) setSettingsAccount({ userId: settingsUser, data: null, failed: true })
+    })
+    return () => abort.abort()
+  }, [controller, settingsUser, settingsAccountRetry])
+  const settingsSummary = settingsAccount?.userId === state.userId ? settingsAccount : null
   useLayoutEffect(() => {
     if (settingsMain && settingsTrigger.current?.isConnected) {
       settingsTrigger.current.focus({ preventScroll: true }); window.scrollTo(0, settingsScroll.current)
@@ -110,7 +128,8 @@ export function AuthApp() {
       : state.status === 'unavailable' ? <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}
-    {authenticated && tab === 'settings' && <SettingsMain hidden={!settingsMain} busy={busy}
+    {authenticated && tab === 'settings' && <SettingsMain hidden={!settingsMain} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary}
+      onRetryAccount={settingsSummary?.failed ? () => { setSettingsAccount(null); setSettingsAccountRetry(value => value + 1) } : undefined}
       onAccount={async event => { rememberSettings(event.currentTarget); if (await flushLocal()) void controller.openAccount() }}
       onRest={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'rest' }) }}
       onRestAlerts={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'alerts' }) }}

@@ -114,9 +114,9 @@ export class AuthApi {
     if (!csrf) throw new AuthError('RESPONSE_INVALID')
     return this.call(path, 'POST', body, csrf)
   }
-  async session(): Promise<ServerSession | null> {
+  async session(signal?: AbortSignal): Promise<ServerSession | null> {
     try {
-      const { status, data } = await this.call('/api/v1/auth/session')
+      const { status, data } = await this.call('/api/v1/auth/session', 'GET', undefined, undefined, signal)
       if (status !== 200 || !object(data) || !uuid(data.userId)) throw new AuthError('RESPONSE_INVALID')
       return { userId: data.userId }
     } catch (error) {
@@ -139,8 +139,8 @@ export class AuthApi {
     if (status !== 204) throw new AuthError('RESPONSE_INVALID')
     this.clearCsrf()
   }
-  async identities(): Promise<Identity[]> {
-    const { status, data } = await this.call('/api/v1/auth/identities')
+  async identities(signal?: AbortSignal): Promise<Identity[]> {
+    const { status, data } = await this.call('/api/v1/auth/identities', 'GET', undefined, undefined, signal)
     if (status !== 200 || !object(data) || !Array.isArray(data.identities) || data.identities.length > 20) throw new AuthError('RESPONSE_INVALID')
     const identities = data.identities.map(value => {
       if (!object(value) || !uuid(value.id) || (value.provider !== 'email' && value.provider !== 'google')) throw new AuthError('RESPONSE_INVALID')
@@ -149,8 +149,8 @@ export class AuthApi {
     if (new Set(identities.map(value => value.id)).size !== identities.length) throw new AuthError('RESPONSE_INVALID')
     return identities
   }
-  async contact(): Promise<Contact> {
-    const { status, data } = await this.call('/api/v1/auth/reauth/email/contact')
+  async contact(signal?: AbortSignal): Promise<Contact> {
+    const { status, data } = await this.call('/api/v1/auth/reauth/email/contact', 'GET', undefined, undefined, signal)
     // The current server returns first-character + ***@*** only. Never accept a raw address as a display label.
     const masked = (v: unknown): v is string => typeof v === 'string' && /^[^\s@<>]\*{3}@\*{3}$/.test(v)
     if (status !== 200 || !object(data)) throw new AuthError('RESPONSE_INVALID')

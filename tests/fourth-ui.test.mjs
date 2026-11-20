@@ -1,11 +1,11 @@
 import {addDays} from '../src/features/home/model.ts'
 import assert from 'node:assert/strict'
 import {test} from 'node:test'
-import {captureReview,startReview} from '../src/review/workout-model.ts'
-import {reviewRecordSession,recordPreviewData} from '../src/review/record-data.ts'
+import {captureReview,startReview} from './fixtures/review/workout-model.ts'
+import {reviewRecordSession,recordPreviewData} from './fixtures/review/record-data.ts'
 import {recordRows} from '../src/features/history/record-feed.ts'
 import {historicalReviews} from '../src/features/workout-online/summary-data.ts'
-import {reviewSample,reviewToday} from '../src/review/routine-samples.ts'
+import {reviewSample,reviewToday} from './fixtures/review/routine-samples.ts'
 import {session,SESSION_EXERCISE} from './fixtures/workout-online-data.mjs'
 
 function finished(){

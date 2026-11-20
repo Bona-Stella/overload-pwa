@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import { resolve, relative, isAbsolute, extname } from 'node:path'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
+import { reviewFixtureEntry } from './review-server.mjs'
 
 // Dedicated ports/profile, no developer env, proxy, real Backend, or personal DB.
 const directory = resolve('logs/ui-v09-t01'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
@@ -26,7 +27,7 @@ class Cdp {
   send(method, params = {}) { return new Promise((resolve, reject) => { const id = ++this.id; this.pending.set(id, { resolve, reject }); this.ws.send(JSON.stringify({ id, method, params })) }) }
   async eval(expression) { const result = await this.send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true }); if (result.exceptionDetails) throw Error(result.exceptionDetails.exception?.description ?? 'Browser evaluation failed'); return result.result.value }
 }
-const dev = await createServer({ configFile: false, envDir: false, plugins: [react(), { name: 't01-account-fixture', configureServer(vite) {
+const dev = await createServer({ configFile: false, envDir: false, plugins: [react(), reviewFixtureEntry(), { name: 't01-account-fixture', configureServer(vite) {
   vite.middlewares.use('/t01', async (_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(await vite.transformIndexHtml('/t01', '<!doctype html><html lang="ko"><head><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body><div id="root"></div><script type="module" src="/tests/fixtures/t01-app.jsx"></script></body></html>')) })
 } }], server: { host: '127.0.0.1', port: 0, watch: { ignored: ['**/logs/**'] } } })
 const production = httpServer(async (req, res) => {

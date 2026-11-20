@@ -16,7 +16,7 @@ registerHooks({ load(url, context, next) {
 } })
 const { RoutinePlan } = await import('../src/features/home/HomePanel.tsx')
 const { RecentWorkout } = await import('../src/features/home/RecentWorkout.tsx')
-const { ReviewHeader } = await import('../src/review/ReviewHeader.tsx')
+const { ReviewHeader } = await import('./fixtures/review/ReviewHeader.tsx')
 const cardio = { kind: 'TREADMILL', name: '러닝머신', targetSeconds: 1200, targetDistanceKm: null, intensity: { mode: 'SPEED', value: '8.123456' }, inclinePercent: null, resistance: null }
 test('schedule timezone determines today across local midnight and international date line', () => {
   const instant = new Date('2026-11-01T15:30:00Z')

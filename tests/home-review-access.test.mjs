@@ -68,3 +68,42 @@ test('review clients share the Backend Retry-After without repeating OTP request
   assert.equal((await post('/api/v1/auth/email-otp/verify', 'SESSION=second')).status, 401)
   assert.equal(verifications, 1)
 })
+
+test('isolated immediate OTP prepares each same-origin issuance, and verification keeps its server response', async t => {
+  const evidence = { reviewEmail: 'review@example.test', runId: 'unit-run', instanceId: 'unit-instance', backendPid: 123 }
+  let prepared = 0, requested = 0
+  const upstream = createServer(async (req, res) => {
+    for await (const _chunk of req) { /* Drain the request. */ }
+    if (req.url === '/__v22_identity') {
+      res.writeHead(204, { 'X-V22-Run': evidence.runId, 'X-V22-Instance': evidence.instanceId, 'X-V22-Pid': '123', 'X-V22-Backend': evidence.backendOrigin }).end()
+    } else if (req.url.endsWith('/request')) {
+      requested++
+      res.writeHead(202, { 'Content-Type': 'application/json' }).end(JSON.stringify({ challengeId: String(requested) }))
+    } else {
+      res.writeHead(429, { 'Retry-After': '120' }).end('{"code":"OTP_RATE_LIMITED"}')
+    }
+  })
+  await new Promise(done => upstream.listen(0, '127.0.0.1', done))
+  evidence.backendOrigin = evidence.browserControlOrigin = 'http://127.0.0.1:' + upstream.address().port
+  const origins = []
+  const handler = reviewAccess(evidence, origins, null, async () => { prepared++ })
+  const server = createServer((req, res) => { void handler(req, res, () => res.writeHead(404).end()).catch(() => res.writeHead(500).end()) })
+  await new Promise(done => server.listen(0, '127.0.0.1', done))
+  const origin = 'http://127.0.0.1:' + server.address().port
+  origins.push(origin)
+  t.after(() => { server.close(); server.closeAllConnections(); upstream.close(); upstream.closeAllConnections() })
+  const post = (action, email, headers = {}) => fetch(origin + '/api/v1/auth/email-otp/' + action, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ email }),
+  })
+  assert.equal((await fetch(origin + '/__review/config').then(r => r.json())).immediateOtp, true)
+  const optIn = { 'X-Overload-Review-Otp': '1', 'X-CSRF-TOKEN': 'test' }
+  assert.equal((await post('request', evidence.reviewEmail, optIn)).status, 403)
+  assert.equal((await post('request', 'other@example.test', { ...optIn, Origin: origin })).status, 403)
+  assert.equal((await post('request', evidence.reviewEmail, { Origin: origin })).status, 202)
+  assert.equal(prepared, 0)
+  for (let i = 0; i < 2; i++) assert.equal((await post('request', evidence.reviewEmail, { ...optIn, Origin: origin })).status, 202)
+  assert.equal(prepared, 2)
+  assert.equal(requested, 3)
+  assert.equal((await post('verify', evidence.reviewEmail, { Origin: origin })).headers.get('Retry-After'), '120')
+  assert.equal(prepared, 2)
+})

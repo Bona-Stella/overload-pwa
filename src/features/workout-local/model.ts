@@ -296,6 +296,12 @@ export function exerciseList(workout: LocalWorkout) {
     priority: initial.has(x.sessionExerciseId) && workout.snapshot.performedSets.filter(s => s.sessionExerciseId === x.sessionExerciseId).length < x.setCount ? 0 : 1 }))
   return [...weights.sort((a, b) => a.priority - b.priority), ...workout.snapshot.appliedPlan.cardioActivities.map(x => ({ id: x.sessionActivityId, name: x.plan.name, kind: 'CARDIO' as const, priority: 2 }))]
 }
+// Clock checkpoints stay durable locally. The next record edit or FINISH carries them with its snapshot.
+export function advancesLocalRevision(previous: LocalWorkout, next: LocalWorkout, deferWeightTiming: boolean) {
+  const snapshotJson = (state: LocalWorkout['snapshot']) => JSON.stringify(deferWeightTiming ? { ...state, weightTiming: undefined } : state)
+  return snapshotJson(previous.snapshot) !== snapshotJson(next.snapshot) || !previous.finish && !!next.finish
+}
+
 export function applyLocalChange(previous: LocalWorkout, transform: (next: LocalWorkout) => void, deferWeightTiming = false): LocalWorkout {
   const next = structuredClone(previous); transform(next)
   for (const record of previous.snapshot.performedSets) {
@@ -303,9 +309,7 @@ export function applyLocalChange(previous: LocalWorkout, transform: (next: Local
     if (current && (current.manufacturerId !== record.manufacturerId || current.loadType !== record.loadType)) throw new Error('완료 당시 장비는 변경할 수 없습니다.')
   }
   if (!snapshot(next.snapshot)) throw new Error('운동 저장 형식을 확인하지 못했습니다.')
-  // Clock checkpoints stay durable locally. The next record edit or FINISH carries them with its snapshot.
-  const snapshotJson = (state: LocalWorkout['snapshot']) => JSON.stringify(deferWeightTiming ? { ...state, weightTiming: undefined } : state)
-  if (snapshotJson(previous.snapshot) !== snapshotJson(next.snapshot) || !previous.finish && next.finish) {
+  if (advancesLocalRevision(previous, next, deferWeightTiming)) {
     next.localRevision = increment(previous.localRevision)
     next.syncState = next.syncState === 'UNKNOWN' ? 'UNKNOWN' : 'UNSENT'
   }

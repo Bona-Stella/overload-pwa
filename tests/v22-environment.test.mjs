@@ -25,6 +25,15 @@ test('ongoing approved catalog can reconnect without resetting its DB; default f
     assert.throws(() => validateV22Ready({ ...value, ...patch }, run, now, { existingApprovedCatalog: true }))
   }
 })
+test('explicit local OTP review can reuse an older run only with complete isolation evidence', () => {
+  const value = { ...ready(), startedAt: '2026-11-03T22:00:00Z', readyAt: '2026-11-03T22:00:30Z' }
+  const options = { existingOtpReview: true }
+  assert.throws(() => validateV22Ready(value, run, now))
+  assert.equal(validateV22Ready(value, run, now, options), value)
+  for (const patch of [{ fakeEmailSender: false }, { externalAuthDisabled: false }, { tmpfsOnly: false }, { browserControlOrigin: 'https://example.invalid' }]) {
+    assert.throws(() => validateV22Ready({ ...value, ...patch }, run, now, options))
+  }
+})
 test('V22 harness accepts current, complete evidence bound to this explicit run', () => {
   const value = ready(); assert.equal(validateV22Ready(value, run, now), value)
 })

@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
-import { createServer } from 'vite'
+import { createReviewFixtureServer } from './fixtures/review-server.mjs'
 
 async function waitFor(check, label, timeout = 12000) {
   const deadline = Date.now() + timeout
@@ -98,7 +98,7 @@ test('independent common UI preview renders reusable controls and handles intera
   })()`), title)
 
   try {
-    vite = await createServer({ mode: 'ui-review', server: { port: 0 } })
+    vite = await createReviewFixtureServer()
     await vite.listen()
     const origin = 'http://127.0.0.1:' + vite.httpServer.address().port
     chrome = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [

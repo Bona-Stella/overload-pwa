@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { networkInterfaces } from 'node:os'
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
+import { reviewFixtureEntry } from '../tests/fixtures/review-server.mjs'
 import { createServer } from 'vite'
 import { reviewAccess } from './home-review-access.mjs'
 import { verifyV22Ownership } from '../tests/fixtures/v22-environment.mjs'
@@ -27,8 +28,7 @@ const origins = ['http://localhost:' + port, 'http://127.0.0.1:' + port, ...(lan
 const access = reviewAccess(evidence, origins, lan)
 const server = await createServer({
   configFile: false, envDir: false, cacheDir: 'node_modules/.vite-v' + version + '-review',
-  define: { 'import.meta.env.VITE_HOME_REVIEW': JSON.stringify('true') },
-  plugins: [react(), {
+  plugins: [react(), reviewFixtureEntry('/scripts/review/account-entry.tsx'), {
     name: 'weekly-schedule-review-access',
     configureServer(vite) {
       vite.middlewares.use((req, res, next) => {

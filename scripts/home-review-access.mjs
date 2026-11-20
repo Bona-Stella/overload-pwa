@@ -9,7 +9,7 @@ export function reviewAccountRequest(path, method, body, email) {
   if (method !== 'POST' || !['/api/v1/auth/email-otp/request', '/api/v1/auth/email-otp/verify'].includes(path)) return true
   try { return JSON.parse(body.toString()).email === email } catch { return false }
 }
-export function reviewAccess(evidence, origins, lan) {
+export function reviewAccess(evidence, origins, lan, prepareOtpRequest) {
   const issued = new Set()
   let requestBlockedUntil = 0, lastLoginResponse = null
   const remaining = () => Math.max(0, Math.ceil((requestBlockedUntil - Date.now()) / 1000))
@@ -18,7 +18,10 @@ export function reviewAccess(evidence, origins, lan) {
     const origin = 'http://' + req.headers.host
     if (!origins.includes(origin) || !allowedAddress(req.socket.remoteAddress, lan)) { json(res, 403, { code: 'REVIEW_LOCAL_NETWORK_ONLY' }); return }
     const path = new URL(req.url, origin).pathname
-    if (path === '/__review/config') { json(res, 200, { email: evidence.reviewEmail, retryAfter: remaining(), lastLoginResponse }); return }
+    if (path === '/__review/config') {
+      json(res, 200, { email: evidence.reviewEmail, retryAfter: remaining(), lastLoginResponse, ...(prepareOtpRequest ? { immediateOtp: true } : {}) })
+      return
+    }
     if (path !== '/__review/otp' && !/^\/(api|oauth2)(\/|$)/.test(path)) { next(); return }
     const chunks = []; let size = 0
     for await (const chunk of req) { size += chunk.length; if (size > 2097152) { json(res, 413, { code: 'REVIEW_REQUEST_TOO_LARGE' }); return } chunks.push(chunk) }
@@ -30,7 +33,7 @@ export function reviewAccess(evidence, origins, lan) {
       try { id = JSON.parse(body.toString()).challengeId } catch { json(res, 400, { code: 'INVALID_REQUEST' }); return }
       if (!issued.has(id)) { json(res, 403, { code: 'REVIEW_DELIVERY_DENIED' }); return }
       await withV22Connection(evidence, 'backend'); await withV22Connection(evidence, 'control')
-      if ([30, 31].includes(evidence.migrations) || evidence.approvedCatalogReview?.approvedExercises === 30) {
+      if ([30, 31, 37].includes(evidence.migrations) || evidence.approvedCatalogReview?.approvedExercises === 30) {
         const delivery = await withV22Connection(evidence, 'control', async send => {
           const response = await send('/otp', { method: 'POST', headers: { 'Content-Type': 'application/json' } }, JSON.stringify({ issuanceId: id }))
           const bytes = Buffer.concat(await Array.fromAsync(response))
@@ -46,12 +49,16 @@ export function reviewAccess(evidence, origins, lan) {
       issued.delete(id); json(res, 200, { code: message.code }); return
     }
     if (req.headers.origin && req.headers.origin !== origin || !reviewAccountRequest(path, req.method, body, evidence.reviewEmail)) { json(res, 403, { code: 'REVIEW_ACCOUNT_ONLY' }); return }
-    if (path === '/api/v1/auth/email-otp/request' && req.method === 'POST' && remaining() > 0) {
+    const requestingOtp = path === '/api/v1/auth/email-otp/request' && req.method === 'POST'
+    const immediateOtp = Boolean(requestingOtp && prepareOtpRequest && req.headers['x-overload-review-otp'] === '1')
+    if (immediateOtp && (req.headers.origin !== origin || !req.headers['x-csrf-token'])) { json(res, 403, { code: 'REVIEW_ACCOUNT_ONLY' }); return }
+    if (requestingOtp && !immediateOtp && remaining() > 0) {
       res.setHeader('Retry-After', String(remaining()))
       json(res, 429, { code: 'OTP_RATE_LIMITED' }); return
     }
     await withV22Connection(evidence, 'control')
     await withV22Connection(evidence, 'backend', async send => {
+      if (immediateOtp) await prepareOtpRequest()
       const upstream = await send(req.url, { method: req.method, headers: { ...req.headers, connection: 'keep-alive' } }, body)
       const bytes = Buffer.concat(await Array.fromAsync(upstream))
       if (['/api/v1/auth/email-otp/request', '/api/v1/auth/email-otp/verify'].includes(path)) {
@@ -61,7 +68,7 @@ export function reviewAccess(evidence, origins, lan) {
         const retryAfter = /^\d+$/.test(header) ? Math.min(86400, Number(header)) : 0
         lastLoginResponse = { stage: path.endsWith('/request') ? 'request' : 'verify', status: upstream.statusCode, code, retryAfter,
           client: /iPhone|iPad/.test(req.headers['user-agent'] ?? '') ? 'iOS' : 'other', at: new Date().toISOString() }
-        if (path.endsWith('/request') && upstream.statusCode === 429 && code === 'OTP_RATE_LIMITED' && retryAfter > 0) requestBlockedUntil = Date.now() + retryAfter * 1000
+        if (requestingOtp && !immediateOtp && upstream.statusCode === 429 && code === 'OTP_RATE_LIMITED' && retryAfter > 0) requestBlockedUntil = Date.now() + retryAfter * 1000
       }
       if (path === '/api/v1/auth/email-otp/request' && upstream.statusCode === 202) {
         const value = JSON.parse(bytes.toString())

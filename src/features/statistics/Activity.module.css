@@ -53,6 +53,7 @@
 .page .chartHeading { padding-top: 12px; border-top: 1px solid var(--border-subtle); }
 .chartHeading > span { min-width: 0; }
 .chartHeading > b { flex: none; }
+.chartContent { min-height: 220px; }
 .progress { height: 6px; background: var(--border-subtle); border-radius: 4px; overflow: hidden; }
 .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .achievementSummary { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--text-muted); }

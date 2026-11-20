@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
+import { reviewFixtureEntry } from '../tests/fixtures/review-server.mjs'
 import { networkInterfaces } from 'node:os'
 import { verifyV22Ownership } from '../tests/fixtures/v22-environment.mjs'
 import { reviewAccess } from './home-review-access.mjs'
@@ -19,7 +20,7 @@ const lan = Object.values(networkInterfaces()).flat().find(n => n.family === 'IP
 if (lanAddress && (!lan || !/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(lanAddress))) throw Error('Explicit private LAN interface required')
 const origins = ['http://127.0.0.1:3000', 'http://localhost:3000', ...(lan ? ['http://' + lan.address + ':3000'] : [])]
 const access = reviewAccess(evidence, origins, lan)
-const server = await createServer({ configFile: false, envDir: false, define: { 'import.meta.env.VITE_HOME_REVIEW': JSON.stringify('true') }, plugins: [react(), { name: 'home-review-identity', configureServer(vite) {
+const server = await createServer({ configFile: false, envDir: false, plugins: [react(), reviewFixtureEntry('/scripts/review/account-entry.tsx'), { name: 'home-review-identity', configureServer(vite) {
   vite.middlewares.use((req, res, next) => {
     if (req.url === '/__review/shutdown') {
       if (req.method !== 'POST' || req.headers.origin || !['127.0.0.1','::1','::ffff:127.0.0.1'].includes(req.socket.remoteAddress) || req.headers['x-review-run'] !== runId) { res.writeHead(403).end(); return }

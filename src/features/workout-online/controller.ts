@@ -1,5 +1,4 @@
 import { routineMatches } from './routine-match.ts'
-import { recordLifecycle } from '../../app/lifecycle-diagnostics.ts'
 import type { AuthController, AuthState } from '../auth/controller.ts'
 import { WorkoutApi, WorkoutApiError } from './api.ts'
 import { WorkoutStore, LocalStoreError } from './storage.ts'
@@ -13,9 +12,9 @@ type AuthSource = Pick<AuthController, 'getSnapshot' | 'subscribe'>
 type Store = Pick<WorkoutStore, 'deviceId' | 'attempt' | 'prepareStart' | 'saveSession' | 'copies'> & Partial<Pick<WorkoutStore, 'prepareTakeover' | 'rejectTakeover'>>
 export type OnlineState = { userId: string | null; scope: Scope | null; data: Bootstrap | null; selected: Routine | null;
   active: Session | null; detail: Session | null; deviceId: string | null; attempt: StartAttempt | null;
-  status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string }
+  status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string; recordsRevision: number }
 const empty = (): OnlineState => ({ userId: null, scope: null, data: null, selected: null, active: null, detail: null, deviceId: null, attempt: null,
-  status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '' })
+  status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '', recordsRevision: 0 })
 const eligible = (state: AuthState) => state.status === 'authenticated' && state.pending === null ? state.userId : null
 export function onlineIssue(error: unknown): string {
   if (error instanceof LocalStoreError) return error.message
@@ -96,7 +95,6 @@ export class WorkoutOnlineController {
   }
   refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
-    recordLifecycle?.('workout-data:start')
     const previous = this.state
     this.set({ userId: context.userId, status: 'loading', busy: true, issue: null })
     try {
@@ -110,7 +108,8 @@ export class WorkoutOnlineController {
       const copySaved = sameScope && previous.copySaved && previous.detail?.id === detail?.id
         && previous.detail?.writerEpoch === detail?.writerEpoch && previous.detail?.editorDeviceId === detail?.editorDeviceId
       const selected = sameScope && data.routines.some(r => r.id === previous.selected?.id && r.version === previous.selected.version) ? previous.selected : null
-      this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected })
+      this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected,
+        recordsRevision: sameScope ? previous.recordsRevision + 1 : 0 })
       let deviceId: string | null = null, attempt: StartAttempt | null = null, copies: SessionCopy[] = []
       try {
         deviceId = await this.store.deviceId()
@@ -142,7 +141,6 @@ export class WorkoutOnlineController {
       }
     }
     finally {
-      recordLifecycle?.('workout-data:end', { result: !context.current() ? 'cancelled' : this.state.issue ? 'error' : 'ok' })
       if (context.current()) this.set({ status: 'ready', busy: false })
     }
   }
@@ -180,7 +178,8 @@ export class WorkoutOnlineController {
     try {
       const detail = await this.api.detail(scope, id, context.signal)
       if (!context.current()) return
-      this.set({ detail, active: detail.status === 'ACTIVE' ? detail : this.state.active?.id === detail.id ? null : this.state.active })
+      if (this.state.detail?.id === id) this.observeSession(detail)
+      else this.set({ detail, active: detail.status === 'ACTIVE' ? detail : this.state.active?.id === detail.id ? null : this.state.active })
       await this.store.saveSession(scope, detail)
       if (context.current()) this.set({ copySaved: true })
     } catch (error) { if (context.current()) this.failure(error) }
@@ -190,7 +189,9 @@ export class WorkoutOnlineController {
     const current = this.state.detail
     if (!current || !this.owner || detail.userId !== this.owner || detail.dataGeneration !== this.state.scope?.dataGeneration || detail.id !== current.id
       || BigInt(detail.version) < BigInt(current.version)) return
-    this.set({ detail, active: detail.status === 'ACTIVE' ? detail : this.state.active?.id === detail.id ? null : this.state.active })
+    const recordsChanged = detail.status !== 'ACTIVE' && (current.version !== detail.version || current.status !== detail.status || current.deletedAt !== detail.deletedAt)
+    this.set({ detail, active: detail.status === 'ACTIVE' ? detail : this.state.active?.id === detail.id ? null : this.state.active,
+      recordsRevision: this.state.recordsRevision + Number(recordsChanged) })
   }
   invalidateScope = (error: unknown) => this.failure(error)
   takeover = async () => {

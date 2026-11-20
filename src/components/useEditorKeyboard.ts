@@ -121,7 +121,6 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
       scale <= 1.01 && occlusion > (recovering && (memoEditing || memoSpace) ? 2 : 100)
 
     const place = (input: HTMLElement, scope: HTMLElement, withKeyboard: boolean) => {
-      if (import.meta.env.DEV && document.documentElement.dataset.keyboardDiagnostic === 'native') return
       revealEditorField(input, {
         header: scope.querySelector(':scope > [data-keyboard-header], :scope > header'),
         footer: withKeyboard ? null : scope.querySelector(':scope > footer'),

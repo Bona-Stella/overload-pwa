@@ -11,7 +11,7 @@ function loopbackOrigin(value) {
   } catch { return false }
 }
 
-export function validateV22Ready(value, expectedRunId, now = Date.now(), { existingApprovedCatalog = false } = {}) {
+export function validateV22Ready(value, expectedRunId, now = Date.now(), { existingApprovedCatalog = false, existingOtpReview = false } = {}) {
   const reject = () => { throw new Error('Fresh V22 isolated backend evidence required') }
   if (!isRunId(expectedRunId) || !value || value.runId !== expectedRunId) reject()
   if (!isRunId(value.instanceId) || !loopbackOrigin(value.backendOrigin) || !loopbackOrigin(value.browserControlOrigin)
@@ -21,7 +21,8 @@ export function validateV22Ready(value, expectedRunId, now = Date.now(), { exist
   if (value.jdbcUrl !== `jdbc:postgresql://127.0.0.1:${value.databasePort}/${value.database}`) reject()
   const started = Date.parse(value.startedAt), ready = Date.parse(value.readyAt)
   const ongoingCatalog = existingApprovedCatalog === true && value.approvedCatalogReview?.approvedExercises === 30 && value.approvedCatalogReview?.gifAccessGranted === true
-  if (!Number.isFinite(started) || !Number.isFinite(ready) || started > ready || ready > now || !ongoingCatalog && now - started > 30 * 60000) reject()
+  if (!Number.isFinite(started) || !Number.isFinite(ready) || started > ready || ready > now
+    || !ongoingCatalog && existingOtpReview !== true && now - started > 30 * 60000) reject()
   if (value.initialUsers !== 0 || value.preparedUsers !== 1 || value.accountFlow !== 'EMAIL_OTP' || value.migrations !== 37
     || JSON.stringify(value.migrationVersions) !== JSON.stringify(Array.from({ length: 37 }, (_, i) => String(i + 1)))) reject()
   for (const field of ['freshDatabase', 'loopbackDatabase', 'tmpfsOnly', 'schemaValidated', 'noDeveloperEnv', 'springSessionTables', 'fakeEmailSender', 'externalAuthDisabled', 'httpSmokePassed']) {

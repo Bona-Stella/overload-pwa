@@ -4,18 +4,16 @@ import { spawn } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
-import { createServer } from 'vite'
+import { createReviewFixtureServer } from './fixtures/review-server.mjs'
 import { verifyWorkoutReview } from './fixtures/workout-review-checks.mjs'
 import { verifyExerciseSwipe } from './fixtures/workout-swipe-checks.mjs'
 import { verifyWorkoutProcess } from './fixtures/workout-process-checks.mjs'
 
 test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support their workflows', { timeout: 150000 }, async () => {
-  const liveOrigin = process.env.OVERLOAD_WORKOUT_REVIEW_ORIGIN
-  assert.ok(!liveOrigin || liveOrigin === 'http://127.0.0.1:4173', 'live review uses the known isolated ui-review origin')
   const root = resolve('logs/preset-review')
   await mkdir(root, { recursive: true })
   const profile = await mkdtemp(resolve(root, 'browser-'))
-  const vite = liveOrigin ? null : await createServer({ mode: 'ui-review', server: { port: 0, host: '127.0.0.1', watch: { ignored: ['**/logs/**'] } } })
+  const vite = await createReviewFixtureServer()
   let browser, socket, next = 0
   const pending = new Map(), apiRequests = [], errors = [], responses = new Map()
   async function wait(check, label) {
@@ -49,7 +47,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   }
   const set = (selector, value) => evaluate(
     '(() => { const e = document.querySelector(' + JSON.stringify(selector) + '); Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), "value").set.call(e, ' + JSON.stringify(value) + '); e.dispatchEvent(new Event(e.tagName === "SELECT" ? "change" : "input", {bubbles:true})); })()')
-  const body = () => evaluate('document.body.innerText')
+  const body = () => evaluate("document.body?.innerText ?? ''")
   const scenario = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(1) select'
   const fault = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(2) select'
   const chooser = '[aria-label="홈"] details'
@@ -97,7 +95,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   }
   try {
     await vite?.listen()
-    const origin = liveOrigin ?? 'http://127.0.0.1:' + vite.httpServer.address().port
+    const origin = 'http://127.0.0.1:' + vite.httpServer.address().port
     browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',
       ['--headless', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0', '--no-first-run',
         '--disable-background-networking', '--no-proxy-server', '--disable-extensions', '--no-default-browser-check', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })

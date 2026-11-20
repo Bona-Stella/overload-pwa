@@ -4,9 +4,9 @@ import {test} from 'node:test'
 import {durationLabel,durationParts,durationSeconds} from '../src/components/duration.ts'
 import {formatDuration} from '../src/features/workout/model.ts'
 import {completionDate,recentRecordRows} from '../src/features/history/record-feed.ts'
-import {recordPreviewData,reviewRecordSession} from '../src/review/record-data.ts'
-import {completedReview,workoutSample} from '../src/review/workout-samples.ts'
-import {reviewToday} from '../src/review/routine-samples.ts'
+import {recordPreviewData,reviewRecordSession} from './fixtures/review/record-data.ts'
+import {completedReview,workoutSample} from './fixtures/review/workout-samples.ts'
+import {reviewToday} from './fixtures/review/routine-samples.ts'
 
 test('time displays round once and normalize minute/hour boundaries without decimal seconds',()=>{
  for(const [ms,label,clock] of [[400,'0초','00:00:00'],[600,'1초','00:00:01'],[60600,'1분 1초','00:01:01'],[59999,'1분','00:01:00'],[3599600,'1시간','01:00:00'],[6600598,'1시간 50분 1초','01:50:01']]){

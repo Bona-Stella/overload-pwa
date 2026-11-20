@@ -94,27 +94,37 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
     {page?.next && <button className="outline" disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</button>}
   </section>
 }
-export function ClosedWorkout({ api, session, authorized, onServer, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, takeInitialScroll }: { summary?: boolean; takeInitialScroll?: () => boolean; api: WorkoutApi; session: Session; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session) => void; onInvalid?: (error: unknown) => void }) {
-  const [initial] = useState(() => ({ session, authorized, onServer, onInvalid })) // The parent keys this panel by account/generation/session, not version.
+export function ClosedWorkout({ api, session, loadIssue, onReload, authorized, onServer, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, takeInitialScroll }: { summary?: boolean; takeInitialScroll?: () => boolean; api: WorkoutApi; session: Session | null; loadIssue?: string | null; onReload?: () => void; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session) => void; onInvalid?: (error: unknown) => void }) {
+  const latest = useRef({ session, authorized, onServer, onInvalid })
+  useEffect(() => { latest.current = { session, authorized, onServer, onInvalid } }, [session, authorized, onServer, onInvalid])
   const [opened, setOpened] = useState(false)
   // A session check can interrupt the first read after restoring a history entry.
   const canOpen = accountReady || opened
+  const hasSession = !!session
   const [view, setView] = useState<{ controller: ClosedWorkoutController; state: ClosedState } | null>(null)
   useEffect(() => {
-    if (!canOpen) return
-    const store = new WorkoutStore(), c = new ClosedWorkoutController(api, store, initial.session, initial.session.id, initial.authorized, initial.onServer, undefined, initial.onInvalid)
+    const initial = latest.current.session
+    if (!canOpen || !hasSession || !initial) return
+    const store = new WorkoutStore()
+    const c = new ClosedWorkoutController(api, store, initial, initial.id, () => latest.current.authorized(),
+      server => latest.current.onServer(server), undefined, error => latest.current.onInvalid?.(error))
     const unsubscribe = c.subscribe(() => {
       const state = c.getSnapshot()
       if (!state.busy) setOpened(true)
       setView({ controller: c, state })
     })
-    void c.open()
+    void c.open(initial)
     return () => { unsubscribe(); c.stop(); void store.close() }
-  }, [api, initial, canOpen])
-  if (!canOpen || !view || (!view.state.server && view.state.busy)) return <>
-    <RecordSubpageHeader title={summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={onBack} backLabel={backLabel} />
-    <LoadingSkeleton layout="detail" label="종료 기록을 확인 중입니다." />
-  </>
+  }, [api, canOpen, hasSession])
+  if (!session || !canOpen || !view?.state.server) {
+    const issue = session ? !view?.state.busy && view?.state.issue : loadIssue
+    return <>
+      <RecordSubpageHeader title={summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={onBack} backLabel={backLabel} />
+      {issue ? <Card><StatusNotice error>{issue}</StatusNotice>
+        <Button onClick={session && view ? () => void view.controller.refresh() : onReload}>다시 조회</Button></Card>
+        : <LoadingSkeleton layout="detail" label="운동 기록을 확인하는 중입니다." />}
+    </>
+  }
   return <ClosedWorkoutView {...view} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} takeInitialScroll={takeInitialScroll} reviewContent={<SavedWeightReview api={api} session={view.state.server??session} readOnly={!summary} disabled={view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh}/>} />
 }
 type EditTarget = { kind: 'SET'; record: PerformedSet } | { kind: 'CARDIO'; record: Extract<CardioResult, { status: 'COMPLETED' }> } | { kind: 'SKIPPED'; record: Extract<CardioResult, { status: 'SKIPPED' }> }

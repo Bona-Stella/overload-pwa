@@ -10,12 +10,12 @@ import { spawn } from 'node:child_process'
 import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import { resolve, dirname } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
-import { createServer } from 'vite'
+import { createReviewFixtureServer } from './fixtures/review-server.mjs'
 
 test('record wireframe quality: navigation, complete isolated preview, responsive screenshot pairs', {timeout:180000}, async()=>{
  const root=resolve('logs/record-quality');await mkdir(root,{recursive:true})
  const profile=await mkdtemp(resolve(root,'browser-'))
- const vite=await createServer({mode:'ui-review',server:{port:0,host:'127.0.0.1',watch:{ignored:['**/logs/**']}}})
+ const vite=await createReviewFixtureServer()
  let acceptDialogs=false,dialogCount=0
  let browser,socket,serial=0;const pending=new Map(),errors=[],api=[],report={navigation:[],interactions:[],screens:[]}
  const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})

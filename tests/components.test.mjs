@@ -37,7 +37,7 @@ const { WeightInput } = await import('../src/components/WeightInput.tsx')
 const { RepsInput } = await import('../src/components/RepsInput.tsx')
 const { CardioPlanEditor } = await import('../src/features/routine/CardioPlanEditor.tsx')
 const c = await import('../src/features/workout/cardio.ts')
-const { default: App } = await import('../src/App.tsx')
+const { default: App } = await import('./fixtures/review/DemoApp.tsx')
 const m = await import('../src/features/workout/model.ts')
 const NOW = new Date(2026, 9, 26, 12).getTime()
 const noop = () => {}
@@ -45,7 +45,7 @@ const html = (Component, props) => renderToStaticMarkup(React.createElement(Comp
 
 test('settings main starts with the account summary and keeps unsupported actions disabled', () => {
   const markup = html(SettingsMain, { onAccount: noop, onRest: noop, onCatalog: noop, onLogout: noop })
-  assert.match(markup, /내 계정.*이메일 확인 불가.*로그인 방식.*확인 불가.*로그인된 기기.*확인 불가.*운동 설정.*데이터 및 앱.*계정 및 데이터 삭제/s)
+  assert.match(markup, /내 계정.*이메일 확인 불가.*로그인 방식.*확인 불가.*로그인된 기기.*조회 미지원.*운동 설정.*데이터 및 앱.*계정 및 데이터 삭제/s)
   assert.doesNotMatch(markup, /<h[1-6]>/)
   const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)
   for (const title of ['휴식 타이머 알림', '디로딩 설정', '운동 데이터 상태', '운동 데이터 내보내기', '전체 운동 데이터 초기화', '회원 탈퇴']) {
