@@ -9,15 +9,25 @@ import react from '@vitejs/plugin-react'
 test('real React reconciliation removes statistics across workout, account, generation and late-response boundaries', { timeout: 60000 }, async () => {
   const directory = resolve('logs/workspace-boundary'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
   await mkdir(profile, { recursive: true })
-  const stub = `import {createElement} from 'react';
+  const stub = `import {createElement, useState} from 'react';
+    import {WorkoutSummary} from '/src/features/workout-flow/WorkoutSummary.tsx';
+    import {SavedWeightReview} from '/src/features/workout-online/SavedWeightReview.tsx';
+    import {summaryData} from '/src/features/workout-online/summary-data.ts';
+    const reviewApi = {weightReview: (...args) => window.boundaryWeightReview(...args)};
     export class WorkoutApi {cardioActivities=async()=>[];closed=async()=>({sessions:[]});};
     export class WorkoutOnlineController { getSnapshot=()=>window.boundaryState; subscribe=()=>()=>{}; connect=()=>()=>{}; invalidateScope=()=>{}; }
     export class StatisticsApi { overview=(scope,period,signal)=>window.boundaryOverview(scope,period,signal); }
     export function useTrainingSchedule(){return {loading:false,canWrite:false,refresh:()=>{}}};
     export const PresetAssignmentEditor=()=>null,LocalWorkoutScreen=()=>null,WorkoutHistory=()=>null;
-    export function ClosedWorkout({session, summary, onBack}) {
-      return createElement('section', {'data-boundary-summary': String(summary)}, session.id,
-        createElement('button', {onClick:onBack}, '복귀'));
+    export function ClosedWorkout({session, summary, onBack, takeInitialScroll}) {
+      const [loaded, setLoaded] = useState(false);
+      const [reviewAttempt, setReviewAttempt] = useState(0);
+      return createElement('section', {'data-boundary-summary': String(summary), style: {minHeight: '200vh'}}, loaded
+        ? createElement(WorkoutSummary, {...summaryData(session, null), manufacturers: [], detail: !summary, onBack, takeInitialScroll,
+          reviewContent: createElement('div', {'data-boundary-review': true}, createElement(SavedWeightReview, {
+            key: reviewAttempt, api: reviewApi, session, readOnly: !summary, disabled: false, authorized: () => true}))},
+          createElement('button', {id: 'test-reopen-weight-review', onClick: () => setReviewAttempt(n => n + 1)}, '검토 다시 열기'))
+        : createElement('button', {id: 'test-load-finished-record', onClick: () => setLoaded(true)}, '종료 기록 로드'));
     }
     export const offlineAccess={scope:async()=>{},source:async()=>null};`
   const replaced = new Set(['./api.ts', './controller.ts', '../statistics/api.ts', './useTrainingSchedule.ts', '../statistics/WeeklySchedulePanel.tsx', '../workout-local/LocalWorkoutScreen.tsx', './ClosedWorkout.tsx', '../workout-local/offline.ts'])
@@ -75,6 +85,32 @@ test('real React reconciliation removes statistics across workout, account, gene
     const finishedEntry = await evaluate('history.state.overloadNavigation')
     assert.equal(finishedEntry.values['boundary-tab'], 'history')
     assert.equal(Object.keys(finishedEntry.values).some(key => key.startsWith('workout-view:')), false)
+    await evaluate('document.scrollingElement.scrollTo({top: 300, behavior: "instant"})')
+    assert.equal(await evaluate('document.scrollingElement.scrollTop'), 300)
+    await evaluate('document.querySelector("#test-load-finished-record").click()')
+    await wait(() => evaluate('document.querySelector("[data-boundary-summary=true] h1")?.textContent === "운동 기록 요약" && document.scrollingElement.scrollTop === 0'))
+    assert.equal(await evaluate('document.scrollingElement.scrollTop'), 0, 'the summary resets the inherited scroll after asynchronous record loading')
+    const review = '[data-boundary-review]'
+    const reviewText = () => evaluate(`document.querySelector('${review}').textContent`)
+    const finishReview = async scenario => {
+      await wait(() => evaluate('typeof window.finishBoundaryWeightReview === "function"'))
+      await evaluate(`window.finishBoundaryWeightReview(${JSON.stringify(scenario)})`)
+    }
+    await wait(async () => (await reviewText()).includes('당시 중량 검토 확인 중'))
+    await finishReview('error')
+    await wait(() => evaluate(`!!document.querySelector('${review} [role="alert"]')`))
+    assert.match(await reviewText(), /조회하지 못했습니다.*다시 조회/)
+    await evaluate(`document.querySelector('${review} button').click()`)
+    await finishReview('empty')
+    await wait(async () => (await reviewText()) === '')
+    for (const scenario of ['maintain', 'unavailable', 'blocked', 'candidate']) {
+      await evaluate('document.querySelector("#test-reopen-weight-review").click()')
+      await wait(async () => (await reviewText()).includes('당시 중량 검토 확인 중'))
+      await finishReview(scenario)
+      if (scenario === 'candidate') await wait(async () => /중량 검토.*벤치프레스.*25kg → 30kg/.test(await reviewText()))
+      else await wait(async () => (await reviewText()) === '')
+    }
+    assert.equal(await evaluate("[...document.querySelectorAll('[data-boundary-summary] button')].some(button => button.textContent.trim() === '운동 기록 상세')"), false)
     await evaluate('document.querySelector("[data-boundary-summary] button").click()')
     await wait(() => evaluate('!document.querySelector("[data-boundary-summary]")&&!!document.querySelector("[aria-label=홈]")'))
     assert.equal(await evaluate('document.body.innerText.includes("운동 이어가기")'), false)

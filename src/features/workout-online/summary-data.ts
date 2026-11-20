@@ -14,7 +14,9 @@ export function summaryData(server: Session, assessment: AssessmentView | null, 
   const current = assessment?.sessionId === server.id && assessment.version === server.version ? assessment : null
   const evaluation = current?.currentAssessment.evaluation
   const review = current?.weightReview?.sessionVersion === server.version ? current.weightReview : null
-  let reviewIssue: string | undefined
+  let reviewIssue = assessment && (!current || assessment.weightReview && !review)
+    ? '중량 검토 결과를 확인하지 못했습니다. 기록을 다시 조회해 주세요.'
+    : undefined
   const ids = [...new Set([...initial.weightExercises.map(e=>e.sessionExerciseId), ...snapshot.appliedPlan.weightExercises.map(e => e.sessionExerciseId), ...snapshot.performedSets.map(s => s.sessionExerciseId)])]
   const weights: WeightSummary[] = ids.map(id => {
     const planned = initial.weightExercises.find(e => e.sessionExerciseId === id)
@@ -45,7 +47,7 @@ export function summaryData(server: Session, assessment: AssessmentView | null, 
     return [{ id, plan, added: !original, phase: record?.status === 'COMPLETED' ? 'completed' : record?.status === 'SKIPPED' ? 'skipped' : 'ready',
       draft: { distance: '', speed: '', bpm: '', correctedSeconds: null }, result: record?.result ?? undefined }]
   })
-  return { recordFacts:recordSummary(server),achievementReasons:achievementReasons(server),recordRange:recordRange(server.startedAt,server.endedAt,server.startedTimeZone,server.workoutDate), historicalWeights: historicalReviews(server), reviewExcluded: localCombinationChanged || changedOriginalCombination(initial, snapshot), reviewUnavailable: review?.exercises.filter(e => e.advice === 'UNAVAILABLE').length ?? 0, reviewState: review ? 'ready' as const : 'unavailable' as const, reviewIssue, routine: initial.routineName, recordTime:formatRecordTime(server.startedAt,server.startedTimeZone,server.workoutDate), date: server.workoutDate, deload: false,
+  return { recordFacts:recordSummary(server),achievementReasons:achievementReasons(server),recordRange:recordRange(server.startedAt,server.endedAt,server.startedTimeZone,server.workoutDate), historicalWeights: historicalReviews(server), reviewExcluded: localCombinationChanged || changedOriginalCombination(initial, snapshot), reviewState: review ? 'ready' as const : 'unavailable' as const, reviewIssue, routine: initial.routineName, recordTime:formatRecordTime(server.startedAt,server.startedTimeZone,server.workoutDate), date: server.workoutDate, deload: false,
     elapsed: server.endedAt ? Math.max(0, Date.parse(server.endedAt) - Date.parse(server.startedAt)) : undefined,
     plannedSets: weights.reduce((sum, w) => sum + (w.planned ?? w.results.length), 0), weights, cardio,
     whole: evaluation?.overallWeightPlanComplete === true && cardio.every(c => c.phase === 'completed'),

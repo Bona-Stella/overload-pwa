@@ -25,6 +25,7 @@ import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import './online.css'
 import { ClosedWorkout } from './ClosedWorkout.tsx'
+import { useWorkoutSummaryEntry } from '../workout-flow/useWorkoutSummaryEntry.ts'
 import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import { useRecordDetailHistory } from '../history/useRecordDetailHistory.ts'
 import { WeeklyMusclePlan } from '../statistics/MuscleAnalysis.tsx'
@@ -354,6 +355,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   const { route: recordRoute, open: openRecordRoute, back: backFromRecord } = useRecordDetailHistory(recordKey, tab)
   const [,setRecordsScreen]=useScreenHistory('records:'+(state.scope?.userId??'')+':'+(state.scope?.dataGeneration??''),'summary')
   const recordId = !workoutRoute && (tab === 'home' || tab === 'history') ? recordRoute?.id : undefined
+  const { markSummaryEntry, takeInitialScroll } = useWorkoutSummaryEntry(recordId)
   const recordFocused = !!recordId
   const detailId = workoutRoute ?? recordId
   const detailAttempt = useRef<string | null>(null)
@@ -400,9 +402,10 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     if (focused && session?.status === 'ACTIVE') lastFocused.current = session.id
     else if (session?.status === 'FINISHED' && workoutRoute === session.id && lastFocused.current === session.id) {
       lastFocused.current = null
+      markSummaryEntry(session.id)
       void onNavigate?.('history', true, { [recordKey]: { id: session.id, summary: true, backLabel: tab === 'routines' ? '루틴으로' : '홈으로' } })
     }
-  }, [focused, session, workoutRoute, onNavigate, recordKey, tab])
+  }, [focused, session, workoutRoute, onNavigate, recordKey, tab, markSummaryEntry])
   useEffect(() => {
     onFocusChange?.(visible && (focused || workoutLoading || recordFocused || tab === 'routines' && editingRoutine))
     return () => onFocusChange?.(false)
@@ -508,7 +511,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === session.userId && s.status === 'ready' && !s.busy }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}
     <div hidden={!visible || focused || !recordFocused}>{visible && !localOnly && recordFocused && (session?.id !== recordId || session.status === 'ACTIVE') &&
       <><RecordSubpageHeader title="운동 기록 상세" onBack={backFromRecord} backLabel={tab === 'home' ? '홈으로' : '기록으로'} /><StatusNotice error={!!state.issue}>{state.issue ?? '운동 기록을 확인하고 있습니다.'}</StatusNotice></>}
-      {visible && !localOnly && recordFocused && state.scope && session && session.id === recordId && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} accountReady={accountReady} summary={recordRoute?.summary === true} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions} backLabel={recordRoute?.backLabel ?? (tab === 'home' ? '홈으로' : undefined)}
+      {visible && !localOnly && recordFocused && state.scope && session && session.id === recordId && session.status !== 'ACTIVE' && <ClosedWorkout key={[session.userId, session.dataGeneration, session.id].join(':')} api={api} session={session} accountReady={accountReady} summary={recordRoute?.summary === true} takeInitialScroll={takeInitialScroll} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions} backLabel={recordRoute?.backLabel ?? (tab === 'home' ? '홈으로' : undefined)}
       onBack={backFromRecord} onServer={controller.observeSession} onInvalid={controller.invalidateScope} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === session.userId && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id

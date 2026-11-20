@@ -14,8 +14,31 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   const timer = () => text(clock + ' > div:last-child strong')
   const expectTitle = title => wait(async () => (await text(frame + ' h1'))?.endsWith(title), title)
   const heading = label => wait(() => evaluate(`Array.from(document.querySelectorAll('h1')).some(e=>e.textContent===${JSON.stringify(label)})`), label)
-  const summary = async (sets, cardioCount) => {
+  const scrollWorkout = async position => {
+    await send('Emulation.setDeviceMetricsOverride', { width: 393, height: 520, deviceScaleFactor: 1, mobile: true })
+    const offsets = await evaluate(`(async () => {
+      await new Promise(resolve => requestAnimationFrame(resolve))
+      const root = document.scrollingElement, limit = root.scrollHeight - root.clientHeight
+      root.scrollTo({ top: limit * ${position}, behavior: 'instant' })
+      return [root.scrollTop, limit]
+    })()`)
+    if (position) assert.ok(offsets[0] > 0, 'the active workout is actually scrolled before FINISH')
+    assert.ok(Math.abs(offsets[0] - offsets[1] * position) < 1)
+  }
+  const summaryAtTop = () => wait(() => evaluate(`(() => {
+    const title = [...document.querySelectorAll('h1')].find(h => h.textContent === '운동 기록 요약')
+    return !!title && document.scrollingElement.scrollTop === 0 && title.getBoundingClientRect().top >= 0
+  })()`), 'the mounted workout summary starts at the top')
+  const reviewCard = '[aria-label="중량 검토 카드"]'
+  const summary = async (sets, cardioCount, recommendation = false) => {
     await heading('운동 기록 요약')
+    await wait(() => evaluate("!document.body.innerText.includes('당시 중량 검토 확인 중…')"), 'review lookup settled')
+    assert.equal(!!await text(reviewCard), recommendation)
+    assert.equal(await evaluate("[...document.querySelectorAll('h2, button, a')].some(e => e.textContent.trim() === '운동 기록 상세')"), false)
+    if (!recommendation) {
+      assert.equal(await evaluate("[...document.querySelectorAll('h2, [role=status], [role=alert]')].some(e => e.textContent.includes('중량 검토'))"), false)
+      assert.doesNotMatch(await text('article'), /저장된 종료 당시 중량 권고가 없습니다/)
+    }
     const view = '[aria-label="웨이트 수행"]'
     assert.equal(!!await text(view), sets)
     const cardio = await text('[aria-label="유산소 수행"]')
@@ -131,17 +154,32 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   await action('유산소 완료')
   await action('유산소 기록 확정')
   await wait(async () => (await text(clock))?.includes('모든 종목 완료'), 'last cardio completed without ending the session')
+  await scrollWorkout(0.5)
   await action('운동 종료 및 요약')
   await summary(true, '1/1')
-  await click('운동 기록 상세')
-  await heading('운동 기록 상세')
-  await evaluate('history.back()')
-  await heading('운동 기록 요약')
+  await summaryAtTop()
+  await evaluate("document.scrollingElement.scrollTo({top: 140, behavior: 'instant'})")
+  await delay(100)
+  assert.equal(await evaluate('document.scrollingElement.scrollTop'), 140, 'scrolling the summary does not trigger another reset')
+  await evaluate(`(() => {
+    const root = document.scrollingElement
+    const scrollTo = root.scrollTo
+    window.summaryTopResets = 0
+    root.scrollTo = function (options) {
+      if (options?.top === 0) window.summaryTopResets++
+      return scrollTo.call(this, options)
+    }
+  })()`)
   await evaluate('history.back()')
   await wait(async () => (await text('[aria-label="오늘의 루틴"]'))?.includes("TODAY'S ROUTINE"), 'finished home')
   assert.equal(await text(activeCard), undefined)
   await evaluate('history.forward()')
   await summary(true, '1/1')
+  await delay(100)
+  assert.equal(await evaluate('window.summaryTopResets'), 0, 'history revisits do not run the first-entry scroll reset')
+  await click('홈으로 돌아가기')
+  await wait(async () => !!await text('[aria-label="오늘의 루틴"]'), 'summary footer returns home')
+  assert.equal(await text(activeCard), undefined)
 
   const startPlan = async query => {
     await send('Page.navigate', { url: origin + '/rest-audio-preview?process=1&' + query })
@@ -161,11 +199,23 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   }
   await startPlan('case=skip')
   await completeWeights()
+  await scrollWorkout(1)
   await action('남은 유산소 건너뛰고 종료')
   await summary(true, '0/1')
-  await startPlan('plan=weight')
+  await summaryAtTop()
+  await startPlan('plan=weight&review=1')
   await completeWeights()
+  await scrollWorkout(0)
   await action('운동 종료 및 요약')
+  await summary(true, null, true)
+  await summaryAtTop()
+  assert.match(await text(reviewCard), /벤치 프레스.*kg.*→.*kg.*3\/3세트/s)
+  await click('수정', 'textContent', reviewCard + ' button')
+  assert.equal(await evaluate(`!!document.querySelector('${reviewCard} input[type="checkbox"]:checked')`), true)
+  await click('수정 완료', 'textContent', reviewCard + ' button')
+  await click('전체 승인', 'textContent', reviewCard + ' button')
+  await click('시연 확인', 'textContent', 'dialog[open] button')
+  await wait(() => evaluate(`!document.querySelector('dialog[open], ${reviewCard}')`), 'approved candidate disappears')
   await summary(true, null)
   await startPlan('plan=cardio')
   await expectTitle('러닝머신')
@@ -181,11 +231,14 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   await completeCardio()
   await action('운동 종료 및 요약')
   await summary(false, '2/2')
+  await summaryAtTop()
   await startPlan('case=early')
   await action('준비운동 완료')
   await action('운동 시작하기')
   await action('1세트 완료')
+  await scrollWorkout(1)
   await click('운동 종료', 'textContent', frame + ' button')
   await click('운동 종료 및 요약', 'textContent', 'dialog[open] button')
   await summary(true, '0/1')
+  await summaryAtTop()
 }

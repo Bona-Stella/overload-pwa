@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { AppShell } from '../app/AppShell.tsx'
 import { navigateBack, useScreenHistory } from '../app/navigation.ts'
 import { Button } from '../components/ui.tsx'
@@ -10,18 +10,20 @@ import { HomeView } from '../features/home/HomePanel.tsx'
 import { activeWorkoutProgress } from '../features/home/active-workout.ts'
 import { dayOfWeek } from '../features/home/model.ts'
 import { WorkoutSummary } from '../features/workout-flow/WorkoutSummary.tsx'
+import { SavedWeightReview } from '../features/workout-online/SavedWeightReview.tsx'
 import { summaryData } from '../features/workout-online/summary-data.ts'
 import type { Session, SnapshotRequest } from '../features/workout-online/types.ts'
 import type { SyncOptions } from '../features/workout-local/sync.ts'
 import { newId } from '../id.ts'
 import { activities, exercises, reviewHome, reviewSample, reviewToday } from './routine-samples.ts'
+import { processWeightReview } from './process-weight-review.ts'
 import '../features/workout-online/online.css'
 
 const restSeconds = 10
 const policy = { restLowSeconds: restSeconds, restMediumSeconds: restSeconds, restHighSeconds: restSeconds }
 
 type ProcessPlan = 'mixed' | 'weight' | 'cardio'
-function createReviewWorkout(swipe: boolean, matrix: boolean, process?: ProcessPlan) {
+function createReviewWorkout(swipe: boolean, matrix: boolean, process?: ProcessPlan, withRecommendation = false) {
   const sample = reviewSample('normal').sessions[0]
   const startedAt = new Date().toISOString()
   const first = { ...sample.initialPlan.weightExercises[0], ...(matrix ? { setCount: 10 } : {}) }
@@ -47,10 +49,12 @@ function createReviewWorkout(swipe: boolean, matrix: boolean, process?: ProcessP
   let stored = createLocalWorkout(server, policy)
   for (const exercise of weightExercises) {
     for (let ordinal = 1; ordinal <= exercise.setCount; ordinal++) {
-      editDraft(stored, exercise.sessionExerciseId, ordinal, { weight: exercise.approvedWeightKg ?? '0', reps: String(exercise.minReps) })
+      editDraft(stored, exercise.sessionExerciseId, ordinal, { weight: exercise.approvedWeightKg ?? '0',
+        reps: String(withRecommendation && exercise === first ? exercise.maxReps : exercise.minReps) })
     }
   }
   let remote: Session = server, finished: Session | null = null
+  let weightReview: ReturnType<typeof processWeightReview> | undefined
   const saveLocal = async (next: typeof stored, version: string, allowed: () => boolean) => {
     if (!allowed() || version !== stored.editVersion) throw new Error('검토 세션이 변경됐습니다.')
     stored = structuredClone(next)
@@ -81,12 +85,16 @@ function createReviewWorkout(swipe: boolean, matrix: boolean, process?: ProcessP
     openLocal: async () => structuredClone(stored),
     readLocal: async () => structuredClone(stored),
     saveLocal, saveSyncLocal: saveLocal,
-    saveSession: async (_scope, session) => { if (session.status === 'FINISHED') finished = session },
+    saveSession: async (_scope, session) => {
+      if (session.status !== 'FINISHED') return
+      finished = session
+      weightReview ??= processWeightReview(session, withRecommendation)
+    },
   }, () => true, async () => {
     let held = true
     return { held: () => held, release: () => { held = false } }
   }, sync)
-  return { server, controller, finished: () => finished }
+  return { server, controller, finished: () => finished, weightReview: () => weightReview }
 }
 
 type Trace = { event: string; seconds?: number; state?: string; audioTime?: number; hidden: boolean }
@@ -157,41 +165,47 @@ function ProcessHome({ data, onStart, editor, local, onResume }: {
     localReady canStart attempt={false} busy={false} issue={null} onStart={async () => onStart()} onResume={onResume ?? (() => {})}
     onRetry={() => {}} onNavigate={() => {}} onOpen={() => {}} onRefresh={() => {}} />
 }
-type ProcessScreen = 'home' | 'workout' | 'summary' | 'detail'
+type ProcessScreen = 'home' | 'workout' | 'summary'
 function ProcessSession({ editor, data, reset, screen, setScreen }: {
   editor: ReviewEditor; data: ReturnType<typeof processHomeData>; reset: () => void
   screen: ProcessScreen; setScreen: (next: ProcessScreen, replace?: boolean) => void
 }) {
   const state = useReviewEditor(editor)
-  const open = (next: ProcessScreen) => {
-    setScreen(next)
+  const pendingSummary = useRef(true)
+  const takeInitialScroll = useCallback(() => {
+    const pending = pendingSummary.current
+    pendingSummary.current = false
+    return pending
+  }, [])
+  const resume = () => {
+    setScreen('workout')
     window.scrollTo(0, 0)
   }
   const finished = editor.finished()
+  const weightReview = editor.weightReview()
   useEffect(() => {
     if (finished && screen === 'workout') setScreen('summary', true)
   }, [finished, screen, setScreen])
   const focused = screen === 'workout' && !finished
-  const detail = screen === 'detail'
-  const back = () => navigateBack(() => setScreen(detail ? 'summary' : 'home', true))
+  const back = () => navigateBack(() => setScreen('home', true))
   return <AppShell authenticated focused={screen !== 'home'} tab="home" onNavigate={() => {}}>
-    {screen === 'home' && <ProcessHome data={data} onStart={reset} editor={finished ? undefined : editor} local={state.workout} onResume={() => open('workout')} />}
-    {finished && screen !== 'home' && <WorkoutSummary {...summaryData(finished, null, exercises)}
-      detail={detail} manufacturers={[]} onBack={back} backLabel={detail ? '요약으로' : undefined}
-      dataNote="검토용 세션의 저장 결과입니다. 운영 계정 기록과 서버 중량 평가는 사용하지 않습니다.">
-      {!detail && <Button onClick={() => open('detail')}>운동 기록 상세</Button>}
-    </WorkoutSummary>}
+    {screen === 'home' && <ProcessHome data={data} onStart={reset} editor={finished ? undefined : editor} local={state.workout} onResume={resume} />}
+    {finished && weightReview && screen === 'summary' && <WorkoutSummary {...summaryData(finished, null, exercises)}
+      takeInitialScroll={takeInitialScroll} manufacturers={[]} onBack={back}
+      reviewContent={<SavedWeightReview api={weightReview} session={finished} readOnly={false} disabled={false} preview
+        authorized={() => true} onChanged={async () => {}} />}
+      dataNote="검토용 세션의 저장 결과입니다. 운영 계정 기록과 서버 중량 평가는 사용하지 않습니다." />}
     {!finished && (state.workout ? <LocalWorkoutView state={state} controller={editor.controller} definitions={exercises}
       visible={focused} createSetId={newId} onHome={back} /> : <p role="status">{state.issue ?? '운동 검토 준비 중…'}</p>)}
   </AppShell>
 }
-function WorkoutProcessPreview({ plan }: { plan: ProcessPlan }) {
+function WorkoutProcessPreview({ plan, withRecommendation }: { plan: ProcessPlan; withRecommendation: boolean }) {
   const [editor, setEditor] = useState<ReviewEditor | null>(null)
   const [data] = useState(() => processHomeData(plan))
   const [screen, setScreen] = useScreenHistory<ProcessScreen>('review-workout-process', 'home')
   const start = () => {
     if (screen !== 'home') setScreen('home', true)
-    const next = createReviewWorkout(true, false, plan)
+    const next = createReviewWorkout(true, false, plan, withRecommendation)
     setScreen('workout')
     setEditor(next)
     window.scrollTo(0, 0)
@@ -207,7 +221,7 @@ export default function RestAudioPreview() {
   const [attempt, setAttempt] = useState(0)
   const query = new URLSearchParams(location.search)
   const plan = query.get('plan')
-  if (query.get('process') === '1') return <WorkoutProcessPreview plan={plan === 'weight' || plan === 'cardio' ? plan : 'mixed'} />
+  if (query.get('process') === '1') return <WorkoutProcessPreview plan={plan === 'weight' || plan === 'cardio' ? plan : 'mixed'} withRecommendation={query.get('review') === '1'} />
   const swipe = query.get('swipe') === '1'
   return <AppShell authenticated focused tab="home" onNavigate={() => {}}>
     <CombinationMemoProvider key={attempt}><ReviewWorkout reset={() => setAttempt(value => value + 1)} swipe={swipe} matrix={swipe && query.get('matrix') === '1'} /></CombinationMemoProvider>

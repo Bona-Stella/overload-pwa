@@ -3,6 +3,7 @@ import {recordDuration,recordKg} from '../workout-online/record-summary.ts'
 import type {RecordSummary} from '../workout-online/record-summary.ts'
 
 import type { ReactNode } from 'react'
+import { useLayoutEffect } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { distanceLabel } from '../workout-online/cardio-measurement.ts'
@@ -33,12 +34,21 @@ const formatKg = (value: bigint) => {
   return (value / 1000000n).toLocaleString('ko-KR') + (fraction ? '.' + fraction : '') + 'kg'
 }
 
-export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, backLabel, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewUnavailable = 0, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent, recordFacts, recordRange, achievementReasons = {} }: {
+export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, weights, cardio, manufacturers, plannedSets, whole, onBack, backLabel, dataNote, detail = false, recordMenu, children, reviewState = 'ready', reviewIssue, timing, reviewExcluded = false, previewApproval = false, historicalWeights = [], onPreviewApprove, reviewContent, recordFacts, recordRange, achievementReasons = {}, takeInitialScroll }: {
   recordFacts?:RecordSummary;recordRange?:string;achievementReasons?:Record<string,string[]>
   routine: string; date: string; recordTime?:string; elapsed?: number; deload: boolean; weights: WeightSummary[]; dataNote?: string
-  onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>;reviewContent?:ReactNode; historicalWeights?: WeightSummary[]; previewApproval?: boolean; reviewExcluded?: boolean; timing?: { start: string; end: string }; detail?: boolean; recordMenu?: ReactNode; children?: ReactNode; reviewState?: 'ready' | 'unavailable'; reviewIssue?: string; reviewUnavailable?: number
+  onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>;reviewContent?:ReactNode; historicalWeights?: WeightSummary[]; previewApproval?: boolean; reviewExcluded?: boolean; timing?: { start: string; end: string }; detail?: boolean; recordMenu?: ReactNode; children?: ReactNode; reviewState?: 'ready' | 'unavailable'; reviewIssue?: string
   cardio: CardioSummary[]; manufacturers: Manufacturer[]; plannedSets: number; whole: boolean; onBack: () => void; backLabel?: string
+  takeInitialScroll?: () => boolean
 }) {
+  useLayoutEffect(() => {
+    if (detail || !takeInitialScroll) return
+    // The confirmation dialog's history entry can restore scroll during the transition.
+    const frame = requestAnimationFrame(() => {
+      if (takeInitialScroll()) document.scrollingElement?.scrollTo({ top: 0, behavior: 'instant' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [detail, takeInitialScroll])
   const results = weights.flatMap(weight => weight.results)
   const volume = sumVolume(results)
   const unknown = results.filter(set => set.volume === null).length
@@ -85,9 +95,9 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
         <div>{reviewContent??<WeightReview weights={historicalWeights} readOnly preview={previewApproval}/>}</div>
       </details>
     </Card>:reviewContent}
-    {reviewContent===undefined&&weights.length > 0 && !detail && !deload && !reviewExcluded && (reviewIssue || reviewState !== 'ready' || reviewUnavailable > 0 || reviews.length > 0) &&
-      (reviewIssue || reviewState !== 'ready' || !reviews.length ? <Card><h2>중량 검토</h2>{reviewIssue ? <p role="alert">{reviewIssue}</p> : reviewState !== 'ready' ? <p role="status">중량 검토 결과를 확인하지 못했습니다. 기록을 다시 조회해 주세요.</p> : <p className="muted small">수행·승인 정보가 부족해 중량을 검토할 수 없습니다.</p>}</Card>
-      : <WeightReview key={JSON.stringify(reviews)} weights={reviews} preview={previewApproval} onApprove={onPreviewApprove} />)}
+    {reviewContent===undefined && !detail && !deload && !reviewExcluded && (reviewIssue
+      ? <p role="alert">{reviewIssue}</p>
+      : reviewState === 'ready' && reviews.length > 0 && <WeightReview key={JSON.stringify(reviews)} weights={reviews} preview={previewApproval} onApprove={onPreviewApprove} />)}
     {(weights.length > 0 || cardio.length > 0) && <Card className={styles.performance}>
       {weights.length > 0 && <section aria-label="웨이트 수행">
         <div className={styles.performanceHeading}><h3 className={styles.eyebrow}>WEIGHT</h3><hr/>

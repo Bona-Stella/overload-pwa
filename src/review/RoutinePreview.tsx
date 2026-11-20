@@ -31,6 +31,7 @@ import { ReviewHeader } from './ReviewHeader.tsx'
 import { SettingsReview } from './SettingsReview.tsx'
 import { WorkoutReview } from './WorkoutReview.tsx'
 import { WorkoutRecordReview } from './WorkoutRecordReview.tsx'
+import { useWorkoutSummaryEntry } from '../features/workout-flow/useWorkoutSummaryEntry.ts'
 import { reviewResumeProgress } from './workout-resume-progress.ts'
 import { useRestAudio } from './useRestAudio.ts'
 import { captureReview, startReview } from './workout-model.ts'
@@ -186,6 +187,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   const editPreset = editor?.type === 'schedule' ? editor.base.presets.find(p => p.id === editor.id) : undefined
   const modalPreset = modal?.type === 'rename' || modal?.type === 'deletePreset' ? schedule.presets.find(p => p.id === modal.id) : undefined
   const reviewRecord = records.find(record => record.session.id === (recordRoute?.id ?? summaryId))
+  const { markSummaryEntry, takeInitialScroll } = useWorkoutSummaryEntry(reviewRecord?.session.id)
   const homeRecordOpen = tab === 'home' && !!recordRoute && home.recent.has(recordRoute.id)
   const backLabel = homeRecordOpen ? '홈으로' : undefined
 
@@ -202,6 +204,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
     <WorkoutReview hiddenRecommendations={hiddenRecommendations} onDismissRecommendation={key=>setHiddenRecommendations(ids=>new Set(ids).add(key))} records={records} session={session} onChange={setSession} history={data.sessions} alerts={alerts} shortRest={shortRest} audio={audio}
       onHome={() => navigateBack(() => setWorkoutId(null, true))}
       onEnd={endedAt => {
+        markSummaryEntry(session.id)
         setRecords(previous => [captureReview(session,endedAt,reviewToday), ...previous]); setSession(null)
         navigateTabRoot('review-tab', 'history', { 'review-record-summary': session.id }, undefined, true)
       }} />
@@ -209,7 +212,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
 
   if ((tab === 'history' || homeRecordOpen) && reviewRecord) return <ReviewShell authenticated tab={tab} onNavigate={navigate} focused={homeRecordOpen}
     displayTheme={reviewRecord.session.deload ? 'deload' : 'normal'}>
-    <WorkoutRecordReview onPreviewApprove={async choices=>{setRecords(previous=>previous.map(r=>r.session.id!==reviewRecord.session.id?r:{...r,judgments:r.judgments?.map(w=>{const choice=choices.find(c=>c.id===w.id);return choice&&w.review?{...w,review:{...w.review,previewApproval:{nextWeightKg:choice.nextKg,occurredAt:new Date().toISOString()}}}:w})}));return true}} detail={!!recordRoute} record={reviewRecord} backLabel={backLabel} onBack={recordRoute ? backFromRecord : () => navigateBack(() => navigate('home'))} />
+    <WorkoutRecordReview onPreviewApprove={async choices=>{setRecords(previous=>previous.map(r=>r.session.id!==reviewRecord.session.id?r:{...r,judgments:r.judgments?.map(w=>{const choice=choices.find(c=>c.id===w.id);return choice&&w.review?{...w,review:{...w.review,previewApproval:{nextWeightKg:choice.nextKg,occurredAt:new Date().toISOString()}}}:w})}));return true}} detail={!!recordRoute} takeInitialScroll={takeInitialScroll} record={reviewRecord} backLabel={backLabel} onBack={recordRoute ? backFromRecord : () => navigateBack(() => navigate('home'))} />
   </ReviewShell>
 
   return <ReviewShell authenticated tab={tab} focused={!!editor || homeRecordOpen} displayTheme={tab !== 'settings' && deloadView ? 'deload' : 'normal'} onNavigate={navigate}>

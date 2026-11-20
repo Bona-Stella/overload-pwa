@@ -111,7 +111,7 @@ test('immediate summary uses the applied set count and shows only saved cardio m
  assert.match(mixed,/총 1\/1종목/)
  assert.match(mixed,/직접 입력 거리 2.5 km/)
  assert.match(mixed,/실제 평균 속도 7.5/)
- assert.doesNotMatch(mixed,/평균 심박|경사도|운동 기록 메뉴/)
+ assert.doesNotMatch(mixed,/평균 심박|경사도|운동 기록 메뉴|운동 기록 상세|<h2>중량 검토<\/h2>|중량 검토 결과를 확인하지 못했습니다/)
 
  s.initialPlan.weightExercises=[]
  state.appliedPlan.weightExercises=[]

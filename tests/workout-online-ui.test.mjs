@@ -241,12 +241,17 @@ test('repetition contribution colors follow server review and missing planned se
     assert.doesNotMatch(html,/이번 수행|· 3세트|· 4세트|유지 검토/)
   }
 })
-test('maintain, unavailable, missing, stale and mismatched review have distinct empty/error states',()=>{
-  assert.doesNotMatch(endView(reviewedSession('MAINTAIN',[13,12,11])),/aria-label="중량 검토 카드"/)
-  assert.match(endView(reviewedSession('UNAVAILABLE')),/수행·승인 정보가 부족/)
+test('summary hides empty review states and preserves stale and mismatched data errors',()=>{
+  const reviewArea = /aria-label="중량 검토 카드"|<h2>중량 검토<\/h2>|수행·승인 정보가 부족|중량 검토 결과를 확인하지 못했습니다/
+  assert.doesNotMatch(endView(reviewedSession('MAINTAIN',[13,12,11])),reviewArea)
+  assert.doesNotMatch(endView(reviewedSession('UNAVAILABLE')),reviewArea)
   const pair=reviewedSession()
-  for(const assessment of [null,{...pair.assessment,version:'1'},{...pair.assessment,sessionId:OTHER}]){
-    const html=endView({...pair,assessment});assert.match(html,/중량 검토 결과를 확인하지 못했습니다/);assert.doesNotMatch(html,/중량 변경 검토 대상이 없습니다/)
+  assert.doesNotMatch(endView({...pair,assessment:null}),reviewArea)
+  for(const assessment of [{...pair.assessment,version:'1'},{...pair.assessment,sessionId:OTHER},
+    {...pair.assessment,weightReview:{...pair.assessment.weightReview,sessionVersion:'1'}}]){
+    const html=endView({...pair,assessment})
+    assert.match(html,/role="alert">중량 검토 결과를 확인하지 못했습니다/)
+    assert.doesNotMatch(html,/aria-label="중량 검토 카드"|<h2>중량 검토<\/h2>/)
   }
   pair.assessment.weightReview.exercises[0].sets[0].performedSetId=OTHER
   assert.match(endView(pair),/중량 검토에 해당하는 수행 기록을 확인하지 못했습니다/)

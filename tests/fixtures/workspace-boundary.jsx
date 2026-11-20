@@ -23,6 +23,24 @@ window.boundaryOverview = (scope, period, signal) => {
   return Promise.resolve(value)
 }
 window.releaseBoundaryResponses = () => held.splice(0).forEach(resolve => resolve())
+window.boundaryWeightReview = (scope, id) => new Promise((resolve, reject) => {
+  window.finishBoundaryWeightReview = scenario => {
+    window.finishBoundaryWeightReview = null
+    if (scenario === 'error') return reject(new Error('saved review unavailable'))
+    const { detail } = window.boundaryState
+    const plan = detail.initialPlan.weightExercises[0]
+    const advice = scenario === 'maintain' ? 'MAINTAIN' : scenario === 'unavailable' ? 'UNAVAILABLE' : 'INCREASE'
+    const candidate = advice === 'INCREASE'
+    resolve({ ...scope, sessionId: id, version: detail.version, routineVersion: '1', approvals: [],
+      current: [{ sessionExerciseId: plan.sessionExerciseId, available: scenario !== 'blocked', approvedWeightKg: '25' }],
+      frozen: scenario === 'empty' ? null : { schemaVersion: 1, sessionVersion: detail.version, assessedAt: detail.closedAt,
+        exercises: [{ sessionExerciseId: plan.sessionExerciseId, sourcePlacementId: plan.sourcePlacementId,
+          standardExerciseId: plan.standardExerciseId, name: plan.exerciseName, loadType: plan.loadType,
+          recommendedWeightKg: candidate ? '30' : null, guidance: { sessionExerciseId: plan.sessionExerciseId, advice,
+            referenceWeightKg: '25', plannedSetCount: 3, completedSetCount: 3, incomplete: false,
+            sets: [1, 2, 3].map(ordinal => ({ performedSetId: crypto.randomUUID(), ordinal, reps: 10, contributes: candidate })) } }] } })
+  }
+})
 const authentication = { getSnapshot: () => window.boundaryAuth, invalidateLocalWorkoutAccess() {} }
 function FinishRouteHarness() {
   const { scope, detail } = window.boundaryState

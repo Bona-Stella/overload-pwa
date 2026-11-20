@@ -8,7 +8,7 @@ import { manufacturers, reviewToday } from './routine-samples.ts'
 import { makeCardio, sessionAdvice, setVolume, weightDone } from './workout-model.ts'
 import type { ReviewRecord } from './workout-model.ts'
 
-export function WorkoutRecordReview({ record, onBack, backLabel, detail = false,onPreviewApprove }: {onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>; record: ReviewRecord; onBack: () => void; backLabel?: string; detail?: boolean }) {
+export function WorkoutRecordReview({ record, onBack, backLabel, detail = false, onPreviewApprove, takeInitialScroll }: {onPreviewApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>; record: ReviewRecord; onBack: () => void; backLabel?: string; detail?: boolean; takeInitialScroll?: () => boolean }) {
   const saved=reviewRecordSession(record)
   const { session, endedAt } = record
   const { initialPlan, weights, cardio } = session
@@ -33,7 +33,7 @@ export function WorkoutRecordReview({ record, onBack, backLabel, detail = false,
   }) && initialPlan.cardioActivities.every(p => cardio.some(c => c.id === p.sessionActivityId && c.phase === 'completed'))
     && weights.every(weightDone) && cardio.every(c => c.phase === 'completed')
   const plannedSets = initialPlan.weightExercises.reduce((sum, p) => sum + p.setCount, 0)
-  return <WorkoutSummary recordFacts={recordSummary(saved)} achievementReasons={achievementReasons(saved)} recordRange={recordRange(saved.startedAt,saved.endedAt,saved.startedTimeZone,saved.workoutDate)} onPreviewApprove={onPreviewApprove} dataNote={detail?'UI 검토 · 합성 기록과 시연 승인 상태입니다. 실제 서버·DB 이력이 아닙니다.':'UI 검토 · 합성 수행·권고 및 메모리 승인 시연입니다. 실제 서버 요청·영구 저장은 하지 않습니다.'} detail={detail} historicalWeights={record.judgments??[]} previewApproval recordTime={recordTime(new Date(session.startedAt).toISOString(),'Asia/Seoul',record.workoutDate??reviewToday)} routine={initialPlan.routineName} date={record.workoutDate??reviewToday} elapsed={endedAt - session.startedAt} deload={session.deload}
+  return <WorkoutSummary recordFacts={recordSummary(saved)} achievementReasons={achievementReasons(saved)} recordRange={recordRange(saved.startedAt,saved.endedAt,saved.startedTimeZone,saved.workoutDate)} onPreviewApprove={onPreviewApprove} dataNote={detail?'UI 검토 · 합성 기록과 시연 승인 상태입니다. 실제 서버·DB 이력이 아닙니다.':'UI 검토 · 합성 수행·권고 및 메모리 승인 시연입니다. 실제 서버 요청·영구 저장은 하지 않습니다.'} detail={detail} takeInitialScroll={takeInitialScroll} historicalWeights={record.judgments??[]} previewApproval recordTime={recordTime(new Date(session.startedAt).toISOString(),'Asia/Seoul',record.workoutDate??reviewToday)} routine={initialPlan.routineName} date={record.workoutDate??reviewToday} elapsed={endedAt - session.startedAt} deload={session.deload}
     reviewExcluded={removed.length > 0 || weights.some(w => {
       const initial=initialPlan.weightExercises.find(p => p.sessionExerciseId===w.id)
       return !!initial && (initial.manufacturerId!==w.manufacturerId || initial.loadType!==w.loadType)
