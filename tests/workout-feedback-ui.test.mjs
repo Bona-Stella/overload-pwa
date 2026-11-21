@@ -120,7 +120,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           Object.defineProperty(event,'touches',{value:held?[{}]:[]})
           field.dispatchEvent(event)
         }
-        const space=()=>parseFloat(frame.style.getPropertyValue('--workout-memo-space'))||0
+        const space=()=>parseFloat(frame.style.getPropertyValue('--memo-keyboard-space'))||0
         const footer=()=>getComputedStyle(frame.querySelector('footer')).display
         const attempts=[]
         try {

@@ -2,6 +2,7 @@ import { KgWheel } from '../workout-flow/WeightFocus.tsx'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { EditorViewportOccluded } from '../../components/useEditorKeyboard.ts'
+import { editorViewport } from '../../components/editorViewport.ts'
 import { Button, Card } from '../../components/ui.tsx'
 import { boundaryError } from '../home/load.ts'
 import { newId } from '../../id.ts'
@@ -65,11 +66,17 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const feedback = useRef<HTMLDivElement>(null)
   const searchRegion = useRef<HTMLElement>(null)
   const cardioSearchRegion = useRef<HTMLElement>(null)
+  const pickerFrame = useRef(0)
+  useEffect(() => () => cancelAnimationFrame(pickerFrame.current), [])
   const showPicker = (target: string) => {
     setPicker(target)
-    requestAnimationFrame(() => {
-      if (!keyboardOccludesPage) searchRegion.current?.scrollIntoView({ block:'nearest', inline:'nearest' })
-      searchRegion.current?.querySelector('input')?.focus({ preventScroll:true })
+    cancelAnimationFrame(pickerFrame.current)
+    pickerFrame.current = requestAnimationFrame(() => {
+      const region = searchRegion.current
+      if (!region || region.contains(document.activeElement)) return
+      if (!keyboardOccludesPage && editorViewport().occlusion <= 2) region.scrollIntoView({ block:'nearest', inline:'nearest' })
+      // On touch, the user's tap starts native keyboard positioning on the search field.
+      if (!matchMedia('(pointer: coarse)').matches) region.querySelector('input')?.focus({ preventScroll:true })
     })
   }
   useEffect(() => {

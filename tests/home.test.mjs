@@ -14,7 +14,7 @@ registerHooks({ load(url, context, next) {
   if (url.endsWith('.tsx')) return { format: 'module', source: ts.transpileModule(readFileSync(fileURLToPath(url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2023 } }).outputText, shortCircuit: true }
   return next(url, context)
 } })
-const { RoutinePlan } = await import('../src/features/home/HomePanel.tsx')
+const { HomeStartup, HomeView, RoutinePlan } = await import('../src/features/home/HomePanel.tsx')
 const { RecentWorkout } = await import('../src/features/home/RecentWorkout.tsx')
 const { ReviewHeader } = await import('./fixtures/review/ReviewHeader.tsx')
 const cardio = { kind: 'TREADMILL', name: '러닝머신', targetSeconds: 1200, targetDistanceKm: null, intensity: { mode: 'SPEED', value: '8.123456' }, inclinePercent: null, resistance: null }
@@ -82,14 +82,19 @@ test('saved plan strings retain precision and WEIGHT/CARDIO have independent lis
   assert.equal(cardioPlanLabel({ ...cardio, intensity: null, targetSeconds: 90, targetDistanceKm: '0' }), '1분 30초 · 0 km')
 })
 function fixture() {
-  const calls = [], schedule = { timeZone: 'Asia/Seoul' }, overview = { plannedDays: [], statistics: { recentSessions: [{ id: OTHER }] } }
+  const calls = [], schedule = { timeZone: 'Asia/Seoul', assignments: [{ dayOfWeek: 1, routineId: routine.id }] }, overview = { plannedDays: [], statistics: { recentSessions: [{ id: OTHER }] } }
   const api = { async routine(_scope, id) { calls.push(id); return { ...routine, id } }, async detail() { return session({ status: 'FINISHED' }) } }
   const active = { ...schedule, activeId: routine.id, appliedVersion: schedule.version, presets: [{ id: routine.id, assignments: schedule.assignments }] }, statistics = { async overview(_scope, period) { calls.push(period); return overview } }
   const summaries = [{ id: routine.id, name: routine.name, version: routine.version }]
   api.routines = async () => ({ ...scope, routines: summaries })
   api.closed = async () => ({ ...scope, sessions: [{ id: OTHER, deletedAt: null }], next: null })
   const cache = new Map(), signal = new AbortController().signal
-  return { calls, api, statistics, summaries, cache, signal, read: () => loadHome(scope, api, summaries, active, statistics, cache, new Date('2026-11-01T15:30:00Z'), 'America/Los_Angeles', signal) }
+  const start = () => loadHome(scope, api, summaries, active, statistics, cache, new Date('2026-11-01T15:30:00Z'), 'America/Los_Angeles', signal)
+  return { calls, api, statistics, summaries, cache, signal, start, read: async () => {
+    const {todayPlan, plan, week} = start()
+    const [routinePlan, weekly] = await Promise.all([plan, week, todayPlan])
+    return { ...routinePlan, ...weekly }
+  } }
 }
 test('home reads authoritative timezone then overview; successful routine details reused by version', async () => {
   const f = fixture(), first = await f.read()
@@ -98,6 +103,43 @@ test('home reads authoritative timezone then overview; successful routine detail
   await f.read(); assert.equal(f.calls.filter(x => x === routine.id).length, 1)
   f.summaries[0].version = '9007199254740995'; await f.read()
   assert.equal(f.calls.filter(x => x === routine.id).length, 2)
+})
+test('a slow or failed weekly request does not delay the ready routine plan', async () => {
+  const f = fixture()
+  let failWeek
+  f.statistics.overview = () => new Promise((_, reject) => { failWeek = reject })
+  const {plan, week} = f.start()
+  assert.equal((await plan).routines.get(routine.id).name, routine.name)
+  failWeek(Error('offline'))
+  await assert.rejects(week, /offline/)
+})
+test('today’s assigned routine is ready before other routine choices without issuing duplicate reads', async () => {
+  const f = fixture()
+  f.summaries.unshift({ id: OTHER, name: '다른 루틴', version: routine.version })
+  let allowOther
+  const other = new Promise(resolve => { allowOther = resolve })
+  const read = f.api.routine
+  f.api.routine = async (scope, id) => {
+    const detail = await read(scope, id)
+    if (id === OTHER) await other
+    return detail
+  }
+  const {todayPlan, plan, week} = f.start()
+  assert.deepEqual([...(await todayPlan).routines.keys()], [routine.id])
+  assert.deepEqual(f.calls.filter(call => typeof call === 'string'), [routine.id, OTHER])
+  allowOther()
+  assert.equal((await plan).routines.size, 2)
+  await week
+})
+test('weekly data can render while the routine plan is still pending, without fake statistics', () => {
+  const startup = renderToStaticMarkup(React.createElement(HomeStartup))
+  const view = renderToStaticMarkup(React.createElement(HomeView, {today:'2026-11-02', loading:true, week:{overview:{plannedDays:[]}, evidence:new Map()}}))
+  for (const area of ['오늘의 루틴', '이번 주 일정', '최근 운동']) {
+    assert.ok(startup.includes(`aria-label="${area}"`))
+    assert.ok(view.includes(`aria-label="${area}"`))
+  }
+  assert.match(view, /data-loading-skeleton="home-today"/)
+  assert.doesNotMatch(view, /data-loading-skeleton="home-week"|0세트|0kg|표시할 운동 기록이 없습니다/)
 })
 test('individual detail failures do not fabricate plans or zero performed counts', async () => {
   const f = fixture(); f.api.routine = async () => { throw Error('offline') }; f.api.detail = async () => { throw Error('offline') }

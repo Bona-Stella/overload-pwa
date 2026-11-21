@@ -1,12 +1,11 @@
 export function editorViewport() {
   const viewport = window.visualViewport
   const height = viewport?.height ?? window.innerHeight
-  const offsetTop = viewport?.offsetTop ?? 0
   // During Safari keyboard panning, client rects already reflect the window scroll.
   const clientTop = viewport ? viewport.pageTop - window.scrollY : 0
   const scale = viewport?.scale ?? 1
   const layoutHeight = Math.max(window.innerHeight, document.documentElement.clientHeight)
-  return { offsetTop, clientTop, height, scale, occlusion: Math.max(0, layoutHeight - height) }
+  return { clientTop, height, scale, occlusion: Math.max(0, layoutHeight - height) }
 }
 
 export function revealEditorField(field: HTMLElement, {

@@ -9,11 +9,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#111216" />
     <meta name="color-scheme" content="dark" />
-    <style>html, body, #root { margin: 0; background: #111216; }</style>
+    <style>
+      html, body, #root { margin: 0; background: #111216; }
+      html:has(#startup-splash) { overflow: hidden; scrollbar-gutter: auto; }
+      #root[inert] { height: 100dvh; overflow: clip; }
+      #startup-splash {
+        position: fixed;
+        inset: 0 auto 0 0;
+        width: 100vw;
+        z-index: 1000;
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+          max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+        background: #111216;
+        touch-action: none;
+      }
+      .startup-wordmark {
+        position: relative;
+        width: min(60vw, 264px);
+        max-width: 100%;
+        animation: startup-wordmark-in 280ms ease-out both;
+      }
+      .startup-wordmark img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      @supports (mask-image: url('')) or (-webkit-mask-image: url('')) {
+        .startup-wordmark {
+          -webkit-mask: url('/src/assets/OVERLOAD_white_transparent_4x.png') center / 100% 100% no-repeat;
+          mask: url('/src/assets/OVERLOAD_white_transparent_4x.png') center / 100% 100% no-repeat;
+        }
+        .startup-wordmark-sweep {
+          position: absolute;
+          inset: 0;
+          background: #6C93C6;
+        }
+        .startup-wordmark-sweep::before {
+          content: '';
+          position: absolute;
+          inset: 0 auto 0 0;
+          width: 100%;
+          background: linear-gradient(100deg, transparent 43%, #b9c9de88 48%, #b9c9deeb 49.3% 50.7%, #b9c9de88 52%, transparent 57%);
+          animation: startup-wordmark-sweep 2800ms 280ms linear infinite both;
+        }
+      }
+      #startup-splash[data-leaving] { animation: startup-splash-out 200ms ease-out both; }
+      @keyframes startup-wordmark-in { from { opacity: 0; } }
+      @keyframes startup-wordmark-sweep {
+        from { transform: translateX(-64%); }
+        to { transform: translateX(64%); }
+      }
+      @keyframes startup-splash-out { to { opacity: 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        .startup-wordmark, #startup-splash[data-leaving] { animation: none; }
+        .startup-wordmark-sweep::before { content: none; animation: none; }
+      }
+    </style>
     <title>Overload — 나의 운동 기록</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="startup-splash" role="status" aria-label="Overload 시작 중">
+      <span class="startup-wordmark">
+        <img src="/src/assets/OVERLOAD_white_transparent_4x.png" alt="" width="3624" height="428" fetchpriority="high" />
+        <span class="startup-wordmark-sweep" aria-hidden="true"></span>
+      </span>
+    </div>
+    <script>requestAnimationFrame(() => performance.mark('startup-splash-frame'))</script>
+    <div id="root" inert></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

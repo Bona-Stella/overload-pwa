@@ -39,7 +39,8 @@ import { Metadata, StatusNotice } from '../../components/ui.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { boundaryError, readAccessDenied } from '../home/load.ts'
 import { Button } from '../../components/ui.tsx'
-import { HomePanel } from '../home/HomePanel.tsx'
+import { HomePanel, HomeStartup } from '../home/HomePanel.tsx'
+import { useStartupReveal } from '../../app/useStartupReveal.ts'
 import { activeWorkoutProgress } from '../home/active-workout.ts'
 import { RestSettings } from '../settings/RestSettings.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
@@ -106,7 +107,6 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const [created, setCreated] = useState<{ id: string; name: string } | null>(null)
   const [deleting, setDeleting] = useState<{ id: string; base: LiveSchedule } | null>(null)
   const [renaming, setRenaming] = useState<RenameDraft | null>(null)
-  const renameInput = useRef<HTMLInputElement>(null)
   const [previews, setPreviews] = useState(() => new Map<string, Routine>())
   const routineList = state.data?.routines
   const previewKey = JSON.stringify([state.scope, routineList?.map(r => [r.id, r.version])])
@@ -280,7 +280,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers}
         busy={busy} controller={controller} onClose={() => setEditor(null)} navigationKey={editorKey} backLabel={editorRoute?.fromDetail ? '루틴 상세로' : undefined} managementBlocked={managementBlocked} />}
     </>}
-    {enabled && renaming && <Dialog title="주간 일정 이름 변경" initialFocus={renameInput} onClose={() => { if (!busy) setRenaming(null) }}>
+    {enabled && renaming && <Dialog title="주간 일정 이름 변경" onClose={() => { if (!busy) setRenaming(null) }}>
       <form className="stack" onSubmit={async event => {
         event.preventDefault()
         if (scheduleBlocked || renameStale) return
@@ -292,7 +292,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         }
         if (await training.write({ type: 'rename', id: renaming.id, name }, renaming.base)) setRenaming(null)
       }}>
-        <label>일정 이름<input ref={renameInput} name="name" type="text" value={renaming.value} autoComplete="off"
+        <label>일정 이름<input name="name" type="text" value={renaming.value} autoComplete="off"
           aria-invalid={!!renaming.issue} aria-describedby={renaming.issue ? 'preset-name-issue' : undefined} disabled={busy}
           onChange={event => setRenaming({ ...renaming, value: event.target.value, issue: undefined })} /></label>
         {(renaming.issue || training.writeIssue || training.issue) &&
@@ -459,6 +459,9 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
   }, [api, controller, referenceUser, referenceGeneration, referenceKey, referenceRoutineId])
   const focused = visible && !!session && session.status === 'ACTIVE' && (localOnly || workoutRoute === session.id)
   const workoutLoading = !!workoutRoute && workoutRoute !== session?.id && !state.issue
+  useStartupReveal(auth.status === 'authenticated' && tab === 'home' && (
+    visible && (focused || workoutLoading || recordFocused) || state.userId === auth.userId && !!state.issue && !state.data
+  ))
   const lastFocused = useRef<string | null>(null)
   useEffect(() => {
     if (focused && session?.status === 'ACTIVE') lastFocused.current = session.id
@@ -477,7 +480,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     onBack={onSettingsBack} onRequest={controller.requestRestSettings} onExitGuard={onRestExitGuard} />}
     {(catalogOpen || cardioKey && catalogScope === cardioKey) && <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null}
       active={!localOnly && !focused && tab === 'settings' && catalogOpen} enabled={accountReady} onInvalid={controller.invalidateScope} onBack={onSettingsBack} />}</>
-  if (!retainOnlineViews && !preserveDrafts) return settingsDetail
+  if (!retainOnlineViews && !preserveDrafts) return auth.status === 'authenticated' && auth.pending === null && !auth.accountOpen && tab === 'home'
+    ? <HomeStartup /> : settingsDetail
   const editable = session && session.status === 'ACTIVE' && !session.deletedAt && session.editorDeviceId === state.deviceId && state.copySaved && state.data
   const flush = async () => {
     const before = controller.getSnapshot(), guard = exitGuard.current
@@ -530,7 +534,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     {visible && navigationIssue && <StatusNotice error>입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.</StatusNotice>}
     <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'home'}>{retainOnlineViews && !localOnly && (state.scope && state.data ? <HomePanel
       key={'home:' + state.scope.userId + ':' + state.scope.dataGeneration} scope={state.scope} routines={state.data.routines} api={api} training={training} statistics={statistics} visit={visit.home}
-      enabled={accountReady} refreshKey={dataRevision} active={state.active} progress={state.active ? activeWorkoutProgress(state.active, homeWorkout, state.data.exercises) : undefined}
+      enabled={accountReady} startupHome={visible && tab === 'home' && !focused && !workoutLoading && !recordFocused}
+      refreshKey={dataRevision} active={state.active} progress={state.active ? activeWorkoutProgress(state.active, homeWorkout, state.data.exercises) : undefined}
       onRefreshRoutines={() => void controller.refresh()}
       attempt={state.attempt !== null} busy={state.busy} localReady={state.localReady} action={homeAction}
       issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void runHomeAction('resume', resume)} onRetry={() => void runHomeAction('retry', startWorkout)}
@@ -544,7 +549,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
           if (latest.selected?.id !== routine.id || window.history.state?.overloadNavigation !== origin) return
           if (latest.selected.version !== routine.version) { setHomeStartIssue('루틴이 변경되었습니다. 홈을 새로고침하여 최신 계획을 확인한 뒤 시작하세요.'); return }
           await startWorkout()
-      })} /> : state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : <LoadingSkeleton layout="home" label="현재 계정의 운동 정보를 확인하는 중입니다." />)}</div>
+      })} /> : state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : <HomeStartup />)}</div>
     {(!localOnly || preserveDrafts) && <div hidden={!visible || localOnly || focused || workoutLoading || tab !== 'routines'}>
       <WorkspaceView activities={activities} training={training} enabled={accountReady && visit.routines} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} onEditingChange={setEditingRoutine} onStart={startWorkout} />
     </div>}
@@ -575,5 +580,9 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
     }} />}</div>
     {settingsDetail}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
-    {visible && state.issue && <button type="button" className="outline" onClick={() => void authentication.restore()}>로그인 상태 다시 확인</button>}</SearchExerciseDetails></CombinationMemoProvider>
+    {visible && state.issue && <button type="button" className="outline" onClick={async () => {
+      await authentication.restore()
+      // The same authenticated account may still need to retry its failed initial workout read.
+      if (!controller.getSnapshot().data) await controller.refresh()
+    }}>로그인 상태 다시 확인</button>}</SearchExerciseDetails></CombinationMemoProvider>
 }

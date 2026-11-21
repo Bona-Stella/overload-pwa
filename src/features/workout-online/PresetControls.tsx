@@ -13,7 +13,7 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
   const number = presetNumber(schedule.presets.indexOf(viewed))
   const menuAction = (button: HTMLButtonElement, action: () => void) => {
     const menu = button.closest('details')
-    if (menu) { menu.open = false; menu.querySelector('summary')?.focus() }
+    if (menu) { menu.open = false; menu.querySelector('summary')?.focus({ preventScroll: true }) }
     action()
   }
   return <>

@@ -718,6 +718,40 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await dialogClick('걷기')
   await click('야외 걷기', 'textContent', dialog + ' [aria-label="표준 유산소 목록"] strong')
   const widthBeforeCardio = await evaluate('innerWidth')
+  await verifyWidth(393)
+  const cardioKeyboard = await evaluate(`(async()=>{
+    const dialog=document.querySelector('dialog[open]'),field=dialog.querySelector('.app-card input'), vv=visualViewport;
+    const page=scrollY;
+    let pan=0;
+    Object.defineProperty(vv,'offsetTop',{configurable:true,get:()=>pan+70});
+    Object.defineProperty(vv,'pageTop',{configurable:true,get:()=>scrollY+pan});
+    const resize=height=>{Object.defineProperty(vv,'height',{configurable:true,value:height});vv.dispatchEvent(new Event('resize'))};
+    const settle=()=>new Promise(resolve=>setTimeout(resolve,310));
+    field.focus({preventScroll:true});resize(410);await settle();
+    const originalTop=dialog.getBoundingClientRect().top;
+    pan=56;vv.dispatchEvent(new Event('scroll'));await settle();
+    const pannedTop=dialog.getBoundingClientRect().top;
+    pan=0;vv.dispatchEvent(new Event('scroll'));await settle();
+    const first=field.getBoundingClientRect().bottom;
+    resize(first-34);await settle();
+    const result={originalTop,pannedTop,first,floor:vv.height,bottom:field.getBoundingClientRect().bottom,before:page,after:scrollY,modalScroll:dialog.scrollTop};
+    const next=dialog.querySelectorAll('.app-card input')[1];
+    result.switches=[];
+    for (const input of [next,field,next,field]) {
+      input.focus({preventScroll:true});await settle();
+      result.switches.push({visible:input.getBoundingClientRect().bottom<=vv.height+1,y:scrollY});
+    }
+    dialog.scrollTop=0;
+    resize(innerHeight);resize(result.floor);await settle();
+    result.reopened=field.getBoundingClientRect().bottom<=vv.height+1;
+    field.blur();delete vv.height;delete vv.offsetTop;delete vv.pageTop;vv.dispatchEvent(new Event('resize'));await settle();
+    return result;
+  })()`)
+  assert.ok(cardioKeyboard.originalTop===12 && cardioKeyboard.pannedTop===68, 'modal follows the actual client viewport across pan-only events '+JSON.stringify(cardioKeyboard))
+  assert.ok(cardioKeyboard.bottom<=cardioKeyboard.floor+1, 'cardio goal above the expanded keyboard '+JSON.stringify(cardioKeyboard))
+  assert.ok(cardioKeyboard.modalScroll>0 && cardioKeyboard.reopened)
+  assert.equal(cardioKeyboard.after,cardioKeyboard.before)
+  assert.ok(cardioKeyboard.switches.every(step=>step.visible&&step.y===cardioKeyboard.before), 'switching cardio fields keeps both visible without moving the page')
   for (const width of [320, 375, 393, 430]) {
     await verifyWidth(width)
     const layout = await evaluate(`(() => {

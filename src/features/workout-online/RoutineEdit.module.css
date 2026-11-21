@@ -3,7 +3,7 @@
   --save-padding: 12px;
   gap: 16px;
   margin-inline: calc(12px - var(--space-page));
-  padding-bottom: calc(var(--save-height) + 2 * var(--save-padding) + 1px + var(--added-card-clearance, 0px) + var(--editor-keyboard-space, 0px));
+  padding-bottom: calc(var(--save-height) + 2 * var(--save-padding) + 1px + var(--added-card-clearance, 0px) + max(var(--editor-keyboard-space, 0px), var(--memo-keyboard-space, 0px)));
 }
 .form:global(.online-routine) :is(input:not([type='checkbox']), textarea) { font-size: 16px; }
 .form > header {

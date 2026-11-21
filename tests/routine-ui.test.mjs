@@ -80,7 +80,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       await evaluate(`(()=>{document.activeElement.blur();delete visualViewport.height;delete visualViewport.offsetTop;delete visualViewport.pageTop;visualViewport.dispatchEvent(new Event('resize'))})()`)
       await wait(() => evaluate(`[...document.querySelectorAll('form footer')].some(e=>e.getClientRects().length&&getComputedStyle(e).visibility==='visible')`))
     }
-    const keyboardField = async (selector, { manual = false, fits = false } = {}) => {
+    const keyboardField = async (selector, { manual = false, fits = false, grows = false } = {}) => {
       await evaluate(`(()=>{
         const e=document.querySelector(${JSON.stringify(selector)}), vv=visualViewport;
         e.focus({preventScroll:true});
@@ -104,6 +104,24 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       })()`))
       await new Promise(r=>setTimeout(r,180))
       if (fits) assert.equal(await evaluate('scrollY===window.keyboardEntryScroll'),true,'a visible field stays in place')
+      if (grows) {
+        const beforeResize = await evaluate('scrollY')
+        await evaluate(`(()=>{const vv=visualViewport,r=document.activeElement.getBoundingClientRect();
+          const at=y=>new Touch({identifier:1,target:document.activeElement,clientX:100,clientY:y});
+          document.activeElement.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,touches:[at(100)]}));
+          document.activeElement.dispatchEvent(new PointerEvent('pointermove',{pointerType:'touch',buttons:1,bubbles:true}));
+          document.activeElement.dispatchEvent(new TouchEvent('touchmove',{bubbles:true,touches:[at(103)]}));
+          document.activeElement.dispatchEvent(new TouchEvent('touchend',{bubbles:true}));
+          Object.defineProperty(vv,'height',{configurable:true,value:r.bottom-vv.offsetTop-35});
+          vv.dispatchEvent(new Event('resize'));vv.dispatchEvent(new Event('resize'))})()`)
+        await new Promise(r=>setTimeout(r,390))
+        const geometry=await evaluate(`({bottom:document.activeElement.getBoundingClientRect().bottom,floor:visualViewport.offsetTop+visualViewport.height,y:scrollY})`)
+        assert.ok(geometry.bottom<=geometry.floor+1,'search after a second keyboard resize '+JSON.stringify(geometry))
+        assert.ok(geometry.y > beforeResize && geometry.y - beforeResize <= 48, 'search moves only the occluded distance plus margin')
+        await evaluate(`visualViewport.dispatchEvent(new Event('resize'))`)
+        await new Promise(r=>setTimeout(r,220))
+        assert.equal(await evaluate('scrollY'),geometry.y,'duplicate viewport notification does not move the search again')
+      }
       if (manual) {
         const entry = await evaluate('({scroll:scrollY,value:document.activeElement.value})')
         await send('Input.insertText',{text:'메모'})
@@ -118,6 +136,92 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       }
       await closeKeyboard()
       assert.equal(await evaluate(`!document.querySelector('[data-edit-keyboard]')&&[...document.forms].every(f=>!f.style.getPropertyValue('--editor-keyboard-space'))`),true)
+    }
+    const memoMeasurements = []
+    const verifyRoutineMemo = async mode => {
+      for (const width of [320,375,393,430]) {
+        await viewport(width)
+        if (width === 393) {
+          const visibleMemo = await evaluate(`(async()=>{
+            const memo=document.querySelector('[data-keyboard-editor] textarea'),page=document.scrollingElement;
+            window.scrollTo(0,scrollY+memo.getBoundingClientRect().top-165);
+            const y=scrollY,limit=page.scrollHeight;
+            memo.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,isPrimary:true,pointerType:'touch',pointerId:3}));
+            memo.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,isPrimary:true,pointerType:'touch',pointerId:3}));
+            memo.focus({preventScroll:true});
+            Object.defineProperty(visualViewport,'height',{configurable:true,value:390});
+            visualViewport.dispatchEvent(new Event('resize'));await new Promise(r=>setTimeout(r,230));
+            return {sameScroll:scrollY===y,sameRange:page.scrollHeight===limit,bottom:memo.getBoundingClientRect().bottom};
+          })()`)
+          assert.ok(visibleMemo.sameScroll&&visibleMemo.sameRange&&visibleMemo.bottom<=390, mode+' already visible memo stays in place')
+          await closeKeyboard()
+        }
+        const opening = await evaluate(`(async()=>{
+          const form=document.querySelector('[data-keyboard-editor]'), fields=form.querySelectorAll('textarea');
+          const memo=fields[fields.length-1],page=document.scrollingElement,vv=visualViewport;
+          const scroll=window.scrollTo.bind(window),ordinary=page.scrollHeight-page.clientHeight,visible=innerHeight/2-20;
+          scroll(0,ordinary);
+          const before=memo.getBoundingClientRect(),nativeTarget=Math.round(scrollY+before.top+before.height/2-visible/2);
+          const touch=type=>memo.dispatchEvent(new PointerEvent(type,{bubbles:true,isPrimary:true,pointerType:'touch',pointerId:3}));
+          const resize=height=>{Object.defineProperty(vv,'height',{configurable:true,value:height});vv.dispatchEvent(new Event('resize'))};
+          const calls=[];
+          window.scrollTo=(...args)=>{calls.push(args);scroll(...args)};
+          window.routineMemoTest={memo,page,form,scroll,resize,touch,calls,ordinary,visible};
+          touch('pointerdown');const prepared=page.scrollHeight-page.clientHeight;
+          const beforeFocus={y:scrollY,top:memo.getBoundingClientRect().top};
+          touch('pointerup');memo.focus({preventScroll:true});
+          scroll(0,nativeTarget);const nativeY=scrollY;
+          resize(innerHeight-145);resize(visible+45);resize(visible);
+          await new Promise(r=>setTimeout(r,260));
+          const first={y:scrollY,bottom:memo.getBoundingClientRect().bottom,calls:calls.length};
+          resize(360);await new Promise(r=>setTimeout(r,260));
+          return {ordinary,prepared,nativeTarget,nativeY,beforeFocus,beforeTop:before.top,y:scrollY,
+            bottom:memo.getBoundingClientRect().bottom,visible:vv.height,calls:calls.length,height:before.height,first};
+        })()`)
+        assert.ok(opening.nativeTarget>opening.ordinary,mode+' bottom memo needs room before focus '+JSON.stringify(opening))
+        assert.ok(opening.prepared>=opening.nativeTarget && opening.nativeY===opening.nativeTarget,
+          mode+' can reach native keyboard position on the first tap '+JSON.stringify(opening))
+        assert.deepEqual(opening.beforeFocus,{y:opening.ordinary,top:opening.beforeTop})
+        assert.ok(opening.bottom<=opening.visible && opening.calls===0,mode+' native placement is left alone '+JSON.stringify(opening))
+
+        const text='윗줄\n'+ '가운데 메모\n'.repeat(32)+'마지막 줄'
+        await send('Input.insertText',{text:'첫 줄'})
+        await evaluate(`routineMemoTest.memo.select()`)
+        await send('Input.insertText',{text})
+        await evaluate(`routineMemoTest.memo.setSelectionRange(5,5)`)
+        await send('Input.insertText',{text:'수정'})
+        const typing=await evaluate(`(()=>{const {memo,calls}=routineMemoTest;
+          return {value:memo.value,caret:memo.selectionStart,height:memo.getBoundingClientRect().height,
+            content:memo.scrollHeight,client:memo.clientHeight,top:memo.getBoundingClientRect().top,bottom:memo.getBoundingClientRect().bottom,y:scrollY,calls:calls.length};})()`)
+        assert.equal(typing.value,text.slice(0,5)+'수정'+text.slice(5))
+        assert.equal(typing.caret,7)
+        assert.ok(typing.content>typing.client && typing.height===opening.height && typing.bottom<=opening.visible)
+        assert.equal(typing.y,opening.y,'typing grows only the internal text scroll range')
+        assert.equal(typing.calls,0,'typing and caret movement do not scroll the page from app code')
+
+        await evaluate(`(()=>{const {memo,visible,resize,touch,scroll}=routineMemoTest;
+          const other=memo.closest('section').querySelector('input[inputmode=numeric]');
+          other.focus({preventScroll:true});touch('pointerdown');touch('pointerup');memo.focus({preventScroll:true});
+          resize(innerHeight);resize(visible);
+          window.dispatchEvent(new WheelEvent('wheel'));scroll(0,Math.max(0,scrollY-26));
+          window.routineMemoTest.manual=scrollY;visualViewport.dispatchEvent(new Event('scroll'));})()`)
+        await new Promise(r=>setTimeout(r,260))
+        assert.equal(await evaluate('scrollY===routineMemoTest.manual&&routineMemoTest.memo.selectionStart===7'),true)
+        await evaluate(`(()=>{const {memo,resize}=routineMemoTest;
+          Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(memo,'');
+          memo.dispatchEvent(new Event('input',{bubbles:true}));memo.blur();resize(innerHeight-45);})()`)
+        await new Promise(r=>setTimeout(r,220))
+        assert.equal(await evaluate(`getComputedStyle(routineMemoTest.form.querySelector('footer')).visibility`),'hidden')
+        await evaluate(`delete visualViewport.height;visualViewport.dispatchEvent(new Event('resize'))`)
+        await wait(()=>evaluate(`!routineMemoTest.form.hasAttribute('data-memo-keyboard-space')&&
+          getComputedStyle(routineMemoTest.form.querySelector('footer')).visibility==='visible'`))
+        const closed=await evaluate(`(()=>{const {page,calls,scroll}=routineMemoTest;
+          const result={y:scrollY,limit:page.scrollHeight-page.clientHeight,calls:calls.length};
+          window.scrollTo=scroll;delete window.routineMemoTest;return result;})()`)
+        assert.equal(closed.limit,opening.ordinary,'closing releases only temporary clearance')
+        assert.ok(closed.y<=closed.limit&&closed.y>0)
+        memoMeasurements.push({mode,width,opening,closed})
+      }
     }
     const cardPosition = label => evaluate(`(()=>{const card=document.querySelector('form section[aria-label="${label}"]'),header=card.closest('form').querySelector('header')
       return {gap:card.getBoundingClientRect().top-header.getBoundingClientRect().bottom,headerTop:header.getBoundingClientRect().top,
@@ -139,6 +243,8 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await identityMatches()
     await viewport(375)
     await keyboardField('[aria-label="웨이트 2"] textarea',{manual:true})
+    await verifyRoutineMemo('edit')
+    await viewport(375)
     await evaluate(`document.querySelector('[aria-label="루틴 태그"]').click()`)
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="루틴 태그 선택"] [role="option"]').length`),11)
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="루틴 태그 선택"]')).overscrollBehaviorY`),'contain')
@@ -375,10 +481,14 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.match(await evaluate(`document.querySelector('[aria-label="루틴 태그 선택"]').textContent`),/가슴·어깨·삼두中心|가슴·어깨·삼두 중심/)
     await shot('routine-create-tags-393',393);await shot('routine-create-tags-320',320)
     await evaluate(`document.querySelector('h2').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))`)
-    await click('+ 웨이트 종목 추가');await searchVisible();assert.equal(await evaluate(`document.querySelectorAll('[aria-label="표준 운동 목록"] li > button:first-child').length`),1)
+    await evaluate(`window.nativePickerMedia=matchMedia;window.matchMedia=query=>query==='(pointer: coarse)'?{matches:true}:nativePickerMedia(query)`)
+    await click('+ 웨이트 종목 추가')
+    assert.equal(await evaluate(`document.activeElement.matches('input[type="search"]')`),false,'touch opens the picker without taking keyboard focus')
+    await evaluate(`window.matchMedia=nativePickerMedia;delete window.nativePickerMedia;document.querySelector('input[type="search"]').focus({preventScroll:true})`)
+    await searchVisible();assert.equal(await evaluate(`document.querySelectorAll('[aria-label="표준 운동 목록"] li > button:first-child').length`),1)
     await searchVisible()
     await shot('exercise-add-list-393',393);await shot('exercise-add-list-320',320)
-    await keyboardField('input[type="search"]')
+    await keyboardField('input[type="search"]',{grows:true})
     await tap('[aria-label="표준 운동 목록"] li > button:first-child')
     await assertAligned('웨이트 1','벤치프레스','smooth')
     assert.equal(await empty('웨이트'),null)
@@ -397,6 +507,9 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelector('${setting(1)}[aria-label="설정 중량"]').textContent.trim()`),'2.5 kg')
     await click('+ 웨이트 종목 추가');await searchVisible();await tap('[aria-label="표준 운동 목록"] li > button:first-child')
     await assertAligned('웨이트 2','벤치프레스','smooth')
+    await verifyRoutineMemo('create')
+    await viewport(393)
+    await writeFile(resolve(directory,'memo-keyboard-checks.json'),JSON.stringify(memoMeasurements,null,2))
     const moveUp = '[aria-label="웨이트 2"] > div:last-child button:first-child'
     await tap(moveUp)
     assert.match(await evaluate(`document.querySelector('[aria-label="웨이트 2"]').textContent`),/2\.5 kg/)

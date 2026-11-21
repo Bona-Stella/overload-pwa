@@ -6,12 +6,14 @@ import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { LoginScreens } from './LoginScreens'
 import { AccountSettings } from './AccountSettings'
 import { WorkoutWorkspace } from '../workout-online/WorkoutWorkspace'
+import { HomeStartup } from '../home/HomePanel.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import { OfflineResume } from '../workout-local/OfflineResume.tsx'
 import { SettingsMain } from '../settings/SettingsMain.tsx'
 import { RestAlertSettings } from '../settings/RestAlertSettings.tsx'
 import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
 import { AppShell } from '../../app/AppShell.tsx'
+import { useStartupReveal } from '../../app/useStartupReveal.ts'
 import type { AppTab } from '../../app/types.ts'
 import type { AuthController } from './controller.ts'
 import '../../App.css'
@@ -38,6 +40,9 @@ export function AuthApp() {
   const registerExitGuard = useCallback<ExitGuardRegistration>(guard => { localExitGuard.current = guard }, [])
   const registerRestExit = useCallback((guard: (() => boolean) | null) => { restExitGuard.current = guard }, [])
   const tab = state.accountOpen ? 'settings' : selection?.userId === state.userId ? selection!.tab : 'home'
+  const checkingHome = state.status === 'checking' && tab === 'home' && typeof window !== 'undefined' && window.location.pathname === '/' &&
+    !Object.entries(window.history.state?.overloadNavigation?.values ?? {}).some(([key, value]) =>
+      key.startsWith('app:') && value && typeof value === 'object' && 'tab' in value && value.tab !== 'home')
   const navigateFromTabs = (next: AppTab) => {
     if (next !== tab) { void navigate(next); return }
     navigateToCurrentTabRoot(() => {
@@ -91,6 +96,7 @@ export function AuthApp() {
   }, [controller])
   const busy = state.pending !== null
   const authenticated = state.status === 'authenticated'
+  useStartupReveal(state.status !== 'checking' && (!authenticated || tab !== 'home' || state.accountOpen))
   const settingsVisible = authenticated && tab === 'settings' && !state.accountOpen
   const catalogOpen = settingsVisible && selection?.settingsView === 'catalog' && !focused
   const restAlertsOpen = settingsVisible && selection?.settingsView === 'alerts' && !focused
@@ -128,7 +134,8 @@ export function AuthApp() {
       {state.issue && <div className="notice error" role="alert">{state.issue.message}</div>}
       {state.notice && !state.challenge && <p className="notice" role="status">{state.notice}</p>}
     </div>
-    {state.status === 'checking' ? <LoadingSkeleton layout="auth" label="로그인 상태를 확인하고 있어요." />
+    {state.status === 'checking' ? checkingHome
+      ? <HomeStartup label="로그인 상태를 확인하고 있어요." /> : <LoadingSkeleton layout="auth" label="로그인 상태를 확인하고 있어요." />
       : state.status === 'unavailable' ? <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}

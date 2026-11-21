@@ -4,7 +4,13 @@ import { createServer } from 'vite'
 export function reviewFixtureEntry(entry = '/tests/fixtures/review/main.tsx') {
   return {
     name: 'overload-review-fixture-entry',
-    transformIndexHtml: { order: 'pre', handler: html => html.replace('/src/main.tsx', entry) },
+    transformIndexHtml: { order: 'pre', handler(html) {
+      const document = html.replace('/src/main.tsx', entry)
+      // Isolated preview entries do not mount the authenticated app's startup flow.
+      return entry.startsWith('/tests/fixtures/') ? document
+        .replace(/<div id="startup-splash"[^>]*>[\s\S]*?<\/div>/, '')
+        .replace('<div id="root" inert>', '<div id="root">') : document
+    } },
   }
 }
 

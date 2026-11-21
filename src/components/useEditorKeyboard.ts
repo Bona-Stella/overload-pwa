@@ -5,7 +5,8 @@ import { editorViewport, revealEditorField } from './editorViewport.ts'
 export const EditorViewportOccluded = createContext(false)
 
 const textField = 'textarea, input:not([type]), input:is([type=text], [type=search], [type=number], [type=email], [type=tel], [type=url], [type=password])'
-const memoSelector = '[data-workout-frame] [data-workout-memo]'
+const editorScope = '[data-workout-frame], [data-keyboard-editor]'
+const memoSelector = `:is(${editorScope}) [data-workout-memo]`
 const settleDelay = 180
 
 /** Owns field placement and keyboard layout for the app shell. */
@@ -25,13 +26,15 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
     let owner: HTMLElement | null = null
     let recovering = false
     let keyboard = false
-    let placed = false
+    let placedViewport: ReturnType<typeof editorViewport> | null = null
     let userScrolled = false
     let width = document.documentElement.clientWidth
     let pending: ReturnType<typeof setTimeout> | undefined
     let memoEditing = false
+    let workoutMemoEditing = false
     let memoPointer: number | null = null
     let touching = false
+    let touchOrigin: Touch | null = null
     let memoSpace: { scope: HTMLElement; pixels: number; phase: 'editing' | 'closing' | 'returning' } | null = null
 
     const stopMemoReturn = () => {
@@ -40,7 +43,7 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
       window.scrollTo({ left: window.scrollX, top: window.scrollY, behavior: 'instant' })
     }
     const clearMemoSpace = () => {
-      memoSpace?.scope.style.removeProperty('--workout-memo-space')
+      memoSpace?.scope.style.removeProperty('--memo-keyboard-space')
       memoSpace?.scope.removeAttribute('data-memo-keyboard-space')
       memoSpace = null
     }
@@ -67,8 +70,20 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
         schedule()
       }
     }
+    const editorSpace = (scope: HTMLElement) => Number.parseFloat(scope.style.getPropertyValue('--editor-keyboard-space')) || 0
+    const setMemoSpace = (scope: HTMLElement, pixels: number) => {
+      if (memoSpace && memoSpace.scope !== scope) clearMemoSpace()
+      scope.setAttribute('data-memo-keyboard-space', '')
+      scope.style.setProperty('--memo-keyboard-space', pixels + 'px')
+      memoSpace = { scope, pixels, phase: 'editing' }
+      if (scope.hasAttribute('data-keyboard-editor')) {
+        // An earlier field's clearance must survive until the memo's return has settled.
+        scope.style.removeProperty('--editor-keyboard-space')
+        reserved.delete(scope)
+      }
+    }
     const prepareMemoSpace = (input: HTMLElement) => {
-      const scope = input.closest<HTMLElement>('[data-workout-frame]')
+      const scope = input.closest<HTMLElement>(editorScope)
       const page = document.scrollingElement
       if (!scope || !page || visual.scale > 1.01 || recovering && memoSpace?.scope === scope) return
       stopMemoReturn()
@@ -81,12 +96,11 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
       const targetBottom = estimatedVisible / 2 + rect.height / 2 - 12
       const requiredEnd = window.scrollY + rect.bottom - targetBottom + closedHeight
       if (memoSpace) memoSpace.phase = 'editing'
-      if (requiredEnd <= page.scrollHeight) return
+      const existing = scope.hasAttribute('data-keyboard-editor') ? editorSpace(scope) : 0
+      if (!existing && requiredEnd <= page.scrollHeight) return
       const scopeEnd = window.scrollY + scope.getBoundingClientRect().bottom
-      const pixels = (memoSpace?.pixels ?? 0) + Math.ceil(requiredEnd - Math.min(page.scrollHeight, scopeEnd))
-      scope.setAttribute('data-memo-keyboard-space', '')
-      scope.style.setProperty('--workout-memo-space', pixels + 'px')
-      memoSpace = { scope, pixels, phase: 'editing' }
+      const extra = requiredEnd > page.scrollHeight ? Math.ceil(requiredEnd - Math.min(page.scrollHeight, scopeEnd)) : 0
+      setMemoSpace(scope, Math.max(existing, memoSpace?.pixels ?? 0) + extra)
     }
 
     const updateOwner = (next: HTMLElement | null) => {
@@ -107,29 +121,38 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
       const next = active instanceof HTMLElement && (root.contains(active) || !!dialog) &&
         (active.isContentEditable || active.matches(textField) && !active.matches(':disabled, [readonly]')) ? active : null
       if (next && next !== field) {
-        placed = false
+        placedViewport = null
         userScrolled = false
         stopMemoReturn()
         if (memoSpace) memoSpace.phase = 'editing'
         memoEditing = next.matches(memoSelector)
+        workoutMemoEditing = memoEditing && !!next.closest('[data-workout-frame]')
         if (memoEditing && matchMedia('(pointer: coarse)').matches) prepareMemoSpace(next)
       }
       field = next
-      return field && (dialog ?? field.closest<HTMLElement>('[data-keyboard-editor], [data-workout-frame]') ?? main)
+      return field && (dialog ?? field.closest<HTMLElement>(editorScope) ?? main)
     }
     const isCovered = ({ scale, occlusion }: ReturnType<typeof editorViewport>) =>
       scale <= 1.01 && occlusion > (recovering && (memoEditing || memoSpace) ? 2 : 100)
+    const needsPlacement = (viewport: ReturnType<typeof editorViewport>) => !userScrolled &&
+      (placedViewport === null || !workoutMemoEditing && (viewport.height < placedViewport.height - 2 ||
+        Math.abs(viewport.clientTop - placedViewport.clientTop) > 2))
 
     const place = (input: HTMLElement, scope: HTMLElement, withKeyboard: boolean) => {
       revealEditorField(input, {
         header: scope.querySelector(':scope > [data-keyboard-header], :scope > header'),
         footer: withKeyboard ? null : scope.querySelector(':scope > footer'),
-        reserve: withKeyboard && !(input.matches(memoSelector) && memoSpace?.scope === scope) ? missing => {
-          const current = Number.parseFloat(scope.style.getPropertyValue('--editor-keyboard-space')) || 0
+        reserve: withKeyboard && !(workoutMemoEditing && memoSpace?.scope === scope) ? missing => {
+          const current = editorSpace(scope)
           const pageHeight = document.scrollingElement?.scrollHeight ?? 0
           const scopeBottom = window.scrollY + scope.getBoundingClientRect().bottom
           // A short page can absorb padding inside the shell's minimum height.
           const unusedSpace = Math.max(0, Math.ceil(pageHeight - scopeBottom))
+          if (scope.hasAttribute('data-keyboard-editor') && (input.matches(memoSelector) || memoSpace?.scope === scope)) {
+            const prepared = memoSpace?.scope === scope ? memoSpace.pixels : 0
+            setMemoSpace(scope, Math.max(current, prepared) + unusedSpace + missing)
+            return
+          }
           scope.style.setProperty('--editor-keyboard-space', `${current + unusedSpace + missing}px`)
           reserved.add(scope)
         } : undefined,
@@ -155,19 +178,19 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
           if (memoSpace.phase === 'editing') memoSpace.phase = 'closing'
           settleMemoSpace()
         }
-        placed = false
+        placedViewport = null
         userScrolled = false
         return
       }
       if (!field || !scope || !keyboard) return
       updateOwner(scope)
       if (scope instanceof HTMLDialogElement) {
-        // Fixed dialog insets are relative to the layout viewport.
-        scope.style.setProperty('--editor-viewport-top', viewport.offsetTop + 'px')
+        // Match the client coordinates used to check the field, even while Safari is panning.
+        scope.style.setProperty('--editor-viewport-top', viewport.clientTop + 'px')
         scope.style.setProperty('--editor-viewport-height', viewport.height + 'px')
       }
-      if (placed || userScrolled) return
-      placed = true
+      if (!needsPlacement(viewport)) return
+      placedViewport = viewport
       place(field, scope, true)
     }
     const schedule = () => {
@@ -179,8 +202,9 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
       const viewport = editorViewport()
       const nextWidth = document.documentElement.clientWidth
       const widthChanged = Math.abs(nextWidth - width) > 2
-      if (widthChanged) {
-        placed = false
+      // A rapid close and reopen can finish before the placement timer fires.
+      if (widthChanged || recovering && !workoutMemoEditing && viewport.scale <= 1.01 && viewport.occlusion <= 2) {
+        placedViewport = null
         userScrolled = false
       }
       width = nextWidth
@@ -193,7 +217,7 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
         keyboard ||= field !== null
         // Keep the active field's footer hidden during the transition, but position dialogs only once stable.
         if (scope && !(scope instanceof HTMLDialogElement)) updateOwner(scope)
-        if (scope && (!placed && !userScrolled || scope instanceof HTMLDialogElement)) schedule()
+        if (scope && (needsPlacement(viewport) || scope instanceof HTMLDialogElement)) schedule()
         else if (pending !== undefined) {
           clearTimeout(pending)
           pending = undefined
@@ -212,13 +236,27 @@ export function useEditorKeyboard(ref: RefObject<HTMLElement | null>) {
       }
     }
     visual.addEventListener('resize', sync, { signal })
-    visual.addEventListener('scroll', () => { if (pending !== undefined) schedule() }, { signal })
+    visual.addEventListener('scroll', () => {
+      if (pending !== undefined) { schedule(); return }
+      if (!keyboard || !field || workoutMemoEditing) return
+      const viewport = editorViewport()
+      const dialogPanned = owner instanceof HTMLDialogElement &&
+        Math.abs(viewport.clientTop - (Number.parseFloat(owner.style.getPropertyValue('--editor-viewport-top')) || 0)) > 2
+      if (isCovered(viewport) && (dialogPanned || needsPlacement(viewport))) sync()
+    }, { signal })
     window.addEventListener('resize', sync, { signal })
     window.addEventListener('wheel', manualScroll, { passive: true, signal })
-    window.addEventListener('touchmove', manualScroll, { passive: true, signal })
-    window.addEventListener('pointermove', event => { if (event.buttons) manualScroll() }, { passive: true, signal })
+    window.addEventListener('touchmove', event => {
+      const touch = event.touches?.length === 1 ? event.touches[0] : null
+      if (workoutMemoEditing || memoSpace?.scope.hasAttribute('data-workout-frame') || touch && touchOrigin && touch.identifier === touchOrigin.identifier &&
+        Math.hypot(touch.clientX - touchOrigin.clientX, touch.clientY - touchOrigin.clientY) >= 8) manualScroll()
+    }, { passive: true, signal })
+    window.addEventListener('pointermove', event => {
+      if (event.pointerType !== 'touch' && event.buttons && (event.movementX || event.movementY)) manualScroll()
+    }, { passive: true, signal })
     const touchChanged = (event: TouchEvent) => {
       touching = event.touches.length > 0
+      if (event.type === 'touchstart' || !touching) touchOrigin = event.touches.length === 1 ? event.touches[0] : null
       if (memoSpace && memoSpace.phase !== 'editing') {
         if (touching) stopMemoReturn()
         else schedule()

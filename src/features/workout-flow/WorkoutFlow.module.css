@@ -19,7 +19,7 @@
 .flow { --radius-card: 5px; --radius-control: 5px; --workout-input-space: var(--editor-keyboard-space, 0px); margin-top: calc(-20px - env(safe-area-inset-top)); padding-top: calc(var(--workout-clock-height, 80px) + 12px); padding-bottom: calc(var(--workout-footer-height, 0px) + var(--workout-input-space) + 8px); }
 .flow :is(input, textarea, select) { border-radius: var(--radius-control); }
 .flow:not([data-fixed-actions]) { padding-bottom: calc(var(--workout-input-space) + env(safe-area-inset-bottom) + 8px); }
-.flow:has([data-workout-memo]) { --workout-input-space: max(var(--workout-memo-space, 0px), var(--editor-keyboard-space, 0px)); }
+.flow:has([data-workout-memo]) { --workout-input-space: max(var(--memo-keyboard-space, 0px), var(--editor-keyboard-space, 0px)); }
 :global(html):has([data-workout-frame]:not([hidden]) [data-exercise-swipe]) { overflow-anchor: none; }
 .flow:is([data-weight-focus], [data-cardio-focus]) { display: flex; flex-direction: column; min-block-size: 100dvh; }
 .flow h1, .summary h1 { font-size: clamp(22px, 6.5vw, 29px); line-height: 1.2; }
