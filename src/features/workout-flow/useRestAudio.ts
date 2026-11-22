@@ -1,6 +1,5 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
-import { REST_MIDDLE_SECONDS } from './rest-alerts.ts'
 
 type SampleResult = 'finished' | 'cancelled' | 'unavailable'
 
@@ -124,7 +123,7 @@ type RestTimerAudioOptions = {
   remaining: number
   now?: number
   countdown: boolean
-  middleEnabled?: boolean
+  middleAt?: number
   userId?: string
   workoutId?: string
 }
@@ -138,7 +137,7 @@ function playedMiddleAlerts(key: string, workoutId: string): string[] {
 }
 
 export function useRestTimerAudio(audio: ReturnType<typeof useRestAudio>, {
-  id, ends, remaining, now, countdown, middleEnabled, userId, workoutId,
+  id, ends, remaining, now, countdown, middleAt, userId, workoutId,
 }: RestTimerAudioOptions) {
   const { play, middle, stop } = audio
   const previous = useRef<{ id: string | null; ends: number | undefined; remaining: number } | null>(null)
@@ -160,9 +159,9 @@ export function useRestTimerAudio(audio: ReturnType<typeof useRestAudio>, {
     previous.current = { id, ends, remaining }
     if (!id || ends === undefined || remaining <= 0) return
     if (countdown) play(id, ends, remaining)
-    const crossed = last?.id === id && last.ends === ends && last.remaining > REST_MIDDLE_SECONDS
-      && remaining === REST_MIDDLE_SECONDS
-    if (!middleEnabled || !crossed || announced.current.has(id)) return
+    const crossed = middleAt !== undefined && last?.id === id && last.ends === ends && last.remaining > middleAt
+      && remaining === middleAt
+    if (!crossed || announced.current.has(id)) return
 
     // Retain only the most recent workout for this browser account, including across reloads.
     const storageKey = userId && `overload.rest-middle-alerts.v1:${userId}`
@@ -173,5 +172,5 @@ export function useRestTimerAudio(audio: ReturnType<typeof useRestAudio>, {
       try { localStorage.setItem(storageKey, JSON.stringify({ workoutId, rests: [...played, id] })) }
       catch { /* The current view already remembers the alert. */ }
     }
-  }, [id, ends, remaining, now, countdown, middleEnabled, userId, workoutId, play, middle])
+  }, [id, ends, remaining, now, countdown, middleAt, userId, workoutId, play, middle])
 }

@@ -77,7 +77,7 @@ export async function verifyRestAlerts({ send, evaluate, wait, click, set, body,
   assert.ok(Math.abs(await evaluate('window.reviewToneGain[0]') - 0.065) < 0.001)
   const middleOff = await icon('중간 알림음')
   await press('중간 알림음')
-  await left('휴식 종료 10초 전에 알림음이 세 번 울려요.')
+  await click('20초 전')
   await changedIcon('중간 알림음', middleOff)
   await listen('중간 알림음 미리듣기')
   await wait(async () => await tones() === 4, 'three-beep midpoint sample')

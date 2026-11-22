@@ -1,5 +1,6 @@
 import type { ActiveResolution, ActiveWeightContext, CardioResult, Counter, FinishAck, FinishRequest, InitialPlan, PerformedSet, Scope, Session, Snapshot, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
 import type { CardioMeasurementDraft } from '../workout-online/cardio-measurement.ts'
+import type { REST_TEST_MIDDLE_SECONDS, RestMiddleSeconds } from '../workout-flow/rest-alerts.ts'
 
 export type LocalKey = Scope & { sessionId: string; editorDeviceId: string; writerEpoch: Counter }
 export type RecordPresence = 'LOCAL_ONLY' | 'SERVER_CONFIRMED' | 'UNKNOWN'
@@ -7,7 +8,8 @@ export type SetDraft = { weight: string; reps: string; additionalWeight?: string
 export type CardioTimer = Omit<CardioMeasurementDraft, 'speed'> & { startedAt: string | null; runningSince: string | null; accumulatedMs: number;
   segments: { startedAt: string; stoppedAt: string }[]; speed?: string; bpm: string; correctedSeconds: string | null; reviewing: boolean }
 export type RestPolicy = { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
-export type ExerciseRest = { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number }
+export type ExerciseRest = { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number
+  middleAt?: RestMiddleSeconds | typeof REST_TEST_MIDDLE_SECONDS }
 export type ExitGuardRegistration = (guard: (() => Promise<boolean>) | null) => void
 export type LocalWorkout = LocalKey & {
   schemaVersion: 2

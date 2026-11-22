@@ -9,12 +9,14 @@ import { countDraft, decimalDraft } from '../../../src/features/workout-online/v
 import { restSeconds } from '../../../src/features/workout-local/model.ts'
 import type { ActualCardio, CardioFocusData, SetDraft, SetResult, SetRow, WeightAdvice, WeightFocusData } from '../../../src/features/workout-flow/types.ts'
 import { newId } from '../../../src/id.ts'
+import { defaultRestAlerts, REST_TEST_MIDDLE_SECONDS, REST_TEST_SECONDS } from '../../../src/features/workout-flow/rest-alerts.ts'
+import type { RestMiddleSeconds } from '../../../src/features/workout-flow/rest-alerts.ts'
 
 export const reviewRest = { restLowSeconds: 180, restMediumSeconds: 120, restHighSeconds: 90 }
 export const reviewClock = () => Date.now()
 
 export type ReviewWeight = WeightFocusData & {
-  nextSlot: number; rest?: { ends: number; slot: number }
+  nextSlot: number; rest?: { ends: number; slot: number; middleAt: RestMiddleSeconds | typeof REST_TEST_MIDDLE_SECONDS }
 }
 export type ReviewCardio = CardioFocusData & {
   accumulated: number; runningSince: number | null
@@ -98,7 +100,8 @@ export function changeWeight(weight: ReviewWeight, value: string, mode: 'today' 
     }) }
 }
 
-export function finishSet(session: ReviewSession, weight: ReviewWeight, set: SetRow, now: number, previewRest: boolean): ReviewSession {
+export function finishSet(session: ReviewSession, weight: ReviewWeight, set: SetRow, now: number, previewRest: boolean,
+  middleAt = defaultRestAlerts.middleAt): ReviewSession {
   if (set.result || restRemaining(weight, now)) return session
   const kg = decimalDraft(set.draft.kg)
   const result: SetResult = {
@@ -110,7 +113,8 @@ export function finishSet(session: ReviewSession, weight: ReviewWeight, set: Set
   const updated = { ...weight, sets: weight.sets.map(s => s.id === set.id ? { ...s, result } : s) }
   const complete = weightDone(updated)
   updated.rest = complete ? undefined : { slot: set.id,
-    ends: now + (previewRest ? 12 : restSeconds(reviewRest, weight.max)) * 1000 }
+    ends: now + (previewRest ? REST_TEST_SECONDS : restSeconds(reviewRest, weight.max)) * 1000,
+    middleAt: previewRest ? REST_TEST_MIDDLE_SECONDS : middleAt }
   return { ...session, weights: session.weights.map(w => w.id === updated.id ? updated : w),
     transition: complete ? { exerciseId: weight.id, at: now } : undefined }
 }

@@ -39,7 +39,7 @@ window.AudioContext=class{
 window.feedback={
  c,ready:false,
  currentRest:()=>exerciseRest(c.getSnapshot().workout)??null,
- rest:seconds=>c.change((w,now)=>{w.rests[w.currentExerciseId]={sessionExerciseId:w.currentExerciseId,ordinal:1,startedAt:new Date(now).toISOString(),endsAt:new Date(now+seconds*1000).toISOString(),seconds:180}}),
+ rest:(seconds,middleAt)=>c.change((w,now)=>{w.rests[w.currentExerciseId]={sessionExerciseId:w.currentExerciseId,ordinal:1,startedAt:new Date(now).toISOString(),endsAt:new Date(now+seconds*1000).toISOString(),seconds,middleAt}}),
  hold(){gate=new Promise(r=>release=r)},release(){gate=null;release?.()},
  title:name=>c.change(w=>{w.exerciseNames[w.currentExerciseId]=name}),
  stored:()=>stored

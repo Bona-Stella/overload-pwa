@@ -4,7 +4,7 @@ import { Dialog } from '../../components/Dialog.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import { RestCountdown } from '../workout-flow/WorkoutFrame.tsx'
-import { REST_MIDDLE_SECONDS, restAlertVisual, restPreviewSeconds } from '../workout-flow/rest-alerts.ts'
+import { REST_MIDDLE_OPTIONS, restAlertVisual, restPreviewSeconds } from '../workout-flow/rest-alerts.ts'
 import type { RestAlerts } from '../workout-flow/rest-alerts.ts'
 import { useRestAudio, useRestTimerAudio } from '../workout-flow/useRestAudio.ts'
 import flow from '../workout-flow/WorkoutFlow.module.css'
@@ -204,7 +204,8 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
       </AlertSection>
       <AlertSection title="중간 알림음" icon="middle" checked={alerts.middle} locked={running} onToggle={() => update({ middle: !alerts.middle })}
         onPlay={() => void playSample(3)} playing={playingSample === 3} playDisabled={!(alerts.sound || alerts.middle) || !alerts.volume}>
-        {alerts.middle && <p>휴식 종료 {REST_MIDDLE_SECONDS}초 전에 알림음이 세 번 울려요.</p>}
+        {alerts.middle && <Times label="휴식 종료 몇 초 전에 알릴까요?" options={REST_MIDDLE_OPTIONS} selected={alerts.middleAt} disabled={running}
+          onSelect={middleAt => update({ middleAt })} />}
       </AlertSection>
       <AlertSection title="휴식 테스트" checked={alerts.testMode} locked={running} onToggle={() => update({ testMode: !alerts.testMode })}>
         <p>켜면 실제 운동의 휴식 시간이 12초로 적용됩니다.</p>

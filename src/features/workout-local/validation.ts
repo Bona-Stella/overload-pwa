@@ -1,5 +1,6 @@
 import * as v from '../workout-online/validation.ts'
 import type { LocalWorkout } from './types.ts'
+import { isRestMiddleSeconds, REST_TEST_MIDDLE_SECONDS } from '../workout-flow/rest-alerts.ts'
 const dictionary = (value: unknown, guard: (x: unknown) => boolean) => v.object(value) && Object.values(value).every(guard)
 const ms = (x: unknown) => typeof x === 'number' && Number.isSafeInteger(x) && x >= 0
 function frozen(value: unknown, kind: 'snapshot' | 'resolution', owner: Record<string, unknown>) {
@@ -65,3 +66,4 @@ export function localWorkout(value: unknown): value is LocalWorkout {
     && (value.rest === undefined || v.nullable(value.rest, exerciseRest))
 }
 const exerciseRest = (x: unknown) => v.object(x) && v.instant(x.startedAt) && v.instant(x.endsAt) && v.count(x.seconds) && v.uuid(x.sessionExerciseId) && v.count(x.ordinal)
+  && (x.middleAt === undefined || x.middleAt === REST_TEST_MIDDLE_SECONDS || isRestMiddleSeconds(x.middleAt))

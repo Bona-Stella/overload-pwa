@@ -74,7 +74,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   const restStarted = weight?.sets.find(set => set.id === rest?.slot)?.result?.at
   useRestTimerAudio(audio, {
     id: rest && weight ? `${weight.id}:${rest.slot}:${restStarted}` : null, ends: rest?.ends, remaining, now,
-    countdown: alerts.sound, middleEnabled: alerts.middle,
+    countdown: alerts.sound, middleAt: alerts.middle ? rest?.middleAt : undefined,
   })
   const visual = restAlertVisual(alerts, remaining)
 
@@ -103,7 +103,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     const at = reviewClock()
     if (restRemaining(weight, at)) return
     try {
-      const updated = finishSet(session, weight, set, at, shortRest || alerts.testMode)
+      const updated = finishSet(session, weight, set, at, shortRest || alerts.testMode, alerts.middleAt)
       audio.unlock()
       onChange(updated); setNow(at); setIssue('')
       setCompletedScroll(value => value + 1)

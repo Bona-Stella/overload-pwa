@@ -5,7 +5,8 @@ import type { CardioTimer, LocalWorkout, RestPolicy, SetDraft } from './types.ts
 import { slotKey } from './types.ts'
 import { actualCardioMeasurement, estimatedCardioDistance } from '../workout-online/cardio-measurement.ts'
 import { supportsCardioMotion } from '../workout-online/cardio-draft.ts'
-import { REST_TEST_SECONDS } from '../workout-flow/rest-alerts.ts'
+import { defaultRestAlerts, REST_TEST_MIDDLE_SECONDS, REST_TEST_SECONDS } from '../workout-flow/rest-alerts.ts'
+import type { RestAlerts } from '../workout-flow/rest-alerts.ts'
 
 export function increment(value: string) {
   const next = (BigInt(value) + 1n).toString()
@@ -135,7 +136,8 @@ function requireWeight(workout: LocalWorkout, id: string) {
   if (!e) throw new Error('현재 적용 계획에 없는 종목입니다.')
   return e
 }
-export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId = newId, testRest = false) {
+export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId = newId,
+  alerts: Pick<RestAlerts, 'testMode' | 'middleAt'> = defaultRestAlerts) {
   const plan = requireWeight(workout, id)
   if (!count(ordinal) || workout.snapshot.performedSets.some(x => x.sessionExerciseId === id && x.ordinal === ordinal)) throw new Error('이미 완료한 세트입니다.')
   const draft = draftFor(workout, id, ordinal), weightKg = decimalDraft(draft.weight), reps = countDraft(draft.reps)
@@ -155,8 +157,9 @@ export function completeSet(workout: LocalWorkout, id: string, ordinal: number, 
   const rests = migrateRest(workout)
   if (weightDone(workout.snapshot, id)) delete rests[id]
   else {
-    const seconds = testRest ? REST_TEST_SECONDS : restSeconds(workout.restPolicy, plan.maxReps)
-    rests[id] = { startedAt: completedAt, endsAt: new Date(now + seconds * 1000).toISOString(), seconds, sessionExerciseId: id, ordinal }
+    const seconds = alerts.testMode ? REST_TEST_SECONDS : restSeconds(workout.restPolicy, plan.maxReps)
+    const middleAt = alerts.testMode ? REST_TEST_MIDDLE_SECONDS : alerts.middleAt
+    rests[id] = { startedAt: completedAt, endsAt: new Date(now + seconds * 1000).toISOString(), seconds, sessionExerciseId: id, ordinal, middleAt }
   }
 }
 export function undoSet(workout: LocalWorkout, recordId: string) {

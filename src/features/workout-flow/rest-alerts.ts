@@ -1,3 +1,7 @@
+export const REST_MIDDLE_OPTIONS = [20, 30, 60] as const
+export type RestMiddleSeconds = typeof REST_MIDDLE_OPTIONS[number]
+export const REST_TEST_MIDDLE_SECONDS = 10
+
 export type RestAlerts = {
   visual: 'off' | 'dim' | 'flash'
   top: boolean
@@ -6,14 +10,18 @@ export type RestAlerts = {
   sound: boolean
   volume: number
   middle: boolean
+  middleAt: RestMiddleSeconds
   testMode: boolean
 }
 
 export const REST_TEST_SECONDS = 12
-export const REST_MIDDLE_SECONDS = 10
 
 export const defaultRestAlerts: RestAlerts = {
-  visual: 'flash', top: true, bottom: true, threshold: 5, sound: true, volume: 70, middle: false, testMode: false,
+  visual: 'flash', top: true, bottom: true, threshold: 5, sound: true, volume: 70, middle: false, middleAt: 30, testMode: false,
+}
+
+export function isRestMiddleSeconds(value: unknown): value is RestMiddleSeconds {
+  return REST_MIDDLE_OPTIONS.some(seconds => seconds === value)
 }
 
 export function readRestAlerts(raw: string | null): RestAlerts {
@@ -29,6 +37,7 @@ export function readRestAlerts(raw: string | null): RestAlerts {
     sound: typeof value.sound === 'boolean' ? value.sound : defaults.sound,
     volume: typeof value.volume === 'number' && Number.isInteger(value.volume) && value.volume >= 0 && value.volume <= 100 ? value.volume : defaults.volume,
     middle: typeof value.middle === 'boolean' ? value.middle : defaults.middle,
+    middleAt: isRestMiddleSeconds(value.middleAt) ? value.middleAt : defaults.middleAt,
     testMode: typeof value.testMode === 'boolean' ? value.testMode : defaults.testMode,
   }
 }

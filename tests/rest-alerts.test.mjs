@@ -5,10 +5,12 @@ import { defaultRestAlerts, readRestAlerts, restAlertVisual, restPreviewSeconds 
 test('rest alerts keep independent choices and only restore supported browser settings', () => {
   assert.deepEqual(readRestAlerts(null), defaultRestAlerts)
   assert.deepEqual(readRestAlerts('{'), defaultRestAlerts)
-  const preferences = { visual: 'dim', top: false, bottom: true, threshold: 3, sound: false, volume: 0, middle: true, testMode: true }
+  const preferences = { visual: 'dim', top: false, bottom: true, threshold: 3, sound: false, volume: 0, middle: true, middleAt: 20, testMode: true }
   assert.deepEqual(readRestAlerts(JSON.stringify(preferences)), preferences)
-  assert.deepEqual(readRestAlerts('{"visual":"both","threshold":4,"volume":105,"testMode":"true"}'), defaultRestAlerts)
-  assert.deepEqual(readRestAlerts('{"sound":false,"middle":true,"middleAt":60}'), { ...defaultRestAlerts, sound: false, middle: true })
+  assert.deepEqual(readRestAlerts('{"visual":"both","threshold":4,"volume":105,"middleAt":10,"testMode":"true"}'), defaultRestAlerts)
+  for (const middleAt of [20, 30, 60]) {
+    assert.deepEqual(readRestAlerts(JSON.stringify({ sound: false, middle: true, middleAt })), { ...defaultRestAlerts, sound: false, middle: true, middleAt })
+  }
 })
 
 test('rest alert visuals use the current time, do not overlap and exclude unselected areas', () => {

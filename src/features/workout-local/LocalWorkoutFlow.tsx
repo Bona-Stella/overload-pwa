@@ -25,7 +25,7 @@ import { SYNC_LABEL } from './sync.ts'
 import { useRestAudio, useRestTimerAudio } from '../workout-flow/useRestAudio.ts'
 import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
 import { useCardioEstimate } from '../settings/useCardioEstimate.ts'
-import { restAlertVisual } from '../workout-flow/rest-alerts.ts'
+import { defaultRestAlerts, restAlertVisual } from '../workout-flow/rest-alerts.ts'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 
 type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'edit-cardio' | 'remove' | 'undo-cardio' | { undo: number }
@@ -70,7 +70,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   useRestTimerAudio(audio, {
     id: alertsActive ? restKey(audioRest) : null, ends: restEnd, now: restNow,
     remaining: restEnd === undefined ? 0 : Math.max(0, Math.ceil((restEnd - restNow) / 1000)),
-    countdown: alerts.sound, middleEnabled: alerts.middle,
+    countdown: alerts.sound, middleAt: alerts.middle ? audioRest?.middleAt ?? defaultRestAlerts.middleAt : undefined,
     userId: workout?.userId, workoutId: workout ? `${workout.dataGeneration}:${workout.sessionId}` : undefined,
   })
   useEffect(() => {
@@ -197,7 +197,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     void completeExercise((w, at) => {
       if (!model.weightStarted(w, id) || model.restRemaining(w, at, id) > 0) throw new Error('운동을 시작하고 휴식을 마친 뒤 완료해 주세요.')
       model.editDraft(w, id, ordinal, inputDraft(w, id, ordinal, history))
-      model.completeSet(w, id, ordinal, at, createSetId, alerts.testMode)
+      model.completeSet(w, id, ordinal, at, createSetId, alerts)
     }).then(saved => { if (saved && controller.getSnapshot().workout?.currentExerciseId === id) setCompletedScroll(v => v + 1) })
       .finally(() => setCompletingSet(null))
   }

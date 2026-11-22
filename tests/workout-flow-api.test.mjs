@@ -18,7 +18,7 @@ test('applied order and stable exercise IDs survive mapping, completion and navi
 })
 test('only newly started rest uses the 12-second override and the configured bands stay intact', () => {
   const policy = {...bootstrap.settings, restLowSeconds: 180, restMediumSeconds: 120}
-  for (const [maxReps, duration] of [[10, 180], [12, 120]]) {
+  for (const [maxReps, duration, middleAt] of [[10, 180, 60], [12, 120, 20], [12, 120, 30]]) {
     const w = createLocalWorkout(session(), policy)
     const plan = w.snapshot.appliedPlan.weightExercises[0]
     plan.maxReps = maxReps
@@ -26,10 +26,14 @@ test('only newly started rest uses the 12-second override and the configured ban
     for (const [ordinal, testMode, seconds] of [[1, false, duration], [2, true, 12], [3, false, duration], [4, true, 0]]) {
       const now = at + 180000 * ordinal
       editDraft(w, E, ordinal, {reps: '8'})
-      completeSet(w, E, ordinal, now, undefined, testMode)
+      completeSet(w, E, ordinal, now, undefined, { testMode, middleAt })
       const rest = w.rests[E]
       assert.equal(rest?.seconds ?? 0, seconds)
-      if (rest) assert.equal(Date.parse(rest.endsAt) - now, seconds * 1000)
+      if (rest) {
+        assert.equal(Date.parse(rest.endsAt) - now, seconds * 1000)
+        assert.equal(rest.middleAt, testMode ? 10 : middleAt)
+        assert.ok(localWorkout(structuredClone(w)))
+      }
       assert.deepEqual(w.restPolicy, policy)
     }
     assert.ok(localWorkout(w))
