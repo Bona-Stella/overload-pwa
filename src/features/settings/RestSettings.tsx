@@ -103,13 +103,15 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
 
   return <section className={styles.page} hidden={hidden} aria-label="세트 사이 휴식">
     <RecordSubpageHeader title="세트 사이 휴식" backLabel="설정으로" headingRef={heading} backDisabled={saving}
-      onBack={() => { if (onExitGuard) onBack(canLeave); else if (canLeave()) onBack() }}
-      action={<Button className={styles.headerAction} disabled={!settings || busy || saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>} />
+      onBack={() => { if (onExitGuard) onBack(canLeave); else if (canLeave()) onBack() }} />
     {settings ? <form className={styles.form} onSubmit={event => void submit(event)} aria-busy={saving}>
       <Card className={styles.card}>
         <div className={styles.cardHeading}>
-          <h2>반복 구간별 휴식 시간</h2>
-          <p>{draft ? '구간별 휴식 시간을 수정할 수 있어요.' : '목표 반복 횟수에 따른 휴식 기준'}</p>
+          <div className={styles.cardTitle}>
+            <h2>반복 구간별 휴식 시간</h2>
+            <p>{draft ? '구간별 휴식 시간을 수정할 수 있어요.' : '목표 반복 횟수에 따른 휴식 기준'}</p>
+          </div>
+          <Button className={styles.cardAction} disabled={busy || saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>
         </div>
         {draft ? <>
           <div className={`${styles.columns} ${styles.labels}`} aria-hidden="true"><span>시작 세트</span><span>끝 세트</span><span>휴식 (초)</span></div>

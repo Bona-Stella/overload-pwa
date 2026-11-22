@@ -34,6 +34,8 @@ import { SearchScopePopover } from './SearchScopePopover.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { boundaryError, readAccessDenied } from '../home/load.ts'
 
+const wordmark = new URL('../../assets/OVERLOAD_white_transparent_4x.png', import.meta.url).href
+
 function RecordMainIcon({ kind }: { kind: 'activity' | 'growth' | 'plan' | 'muscles' | 'clock' | 'weight' | 'footprints' }) {
   const paths = {
     activity: 'M4 20V10h3v10M10.5 20V4h3v16M17 20V7h3v13',
@@ -90,7 +92,11 @@ function RecordSummary({ data, planning, onScreen }: { data: Statistics | null; 
       </div>
     </Card>
     <section className={styles.analysis} aria-label="운동 분석">
-      <h2>운동 분석</h2><div className={styles.analysisGrid} aria-label="운동 분석 메뉴">
+      <div className={styles.analysisHeading}>
+        <h2>운동 분석</h2>
+        <img className={styles.wordmark} src={wordmark} alt="OVERLOAD" width={3624} height={428} />
+      </div>
+      <div className={styles.analysisGrid} aria-label="운동 분석 메뉴">
         {([['activity','운동 현황','운동량과 추이'],['growth','성장 추적','중량과 기록 변화'],['plan','주간 근육 계획','운동 부위별 계획'],['muscles','주간 근육 통계','근육별 운동 분석']] as const).map(([id,label,description])=><button type="button" className={styles.analysisCard} aria-label={label} key={id} onClick={()=>onScreen(id)}><span className={styles.analysisTop}><RecordMainIcon kind={id} /><span aria-hidden="true">↗</span></span><span className={styles.analysisText}><strong>{label}</strong><small>{description}</small></span></button>)}
       </div>
     </section>

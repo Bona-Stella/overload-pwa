@@ -630,16 +630,18 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     const restSeconds = restPage + ' [name="restLowSeconds"]'
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${restPage} dt, ${restPage} dd strong')].map(e => e.textContent)`),
       ['1~10회', '180초', '11~12회', '120초', '13회 이상', '90초'])
-    const headerAction = restPage + ' header button:last-child'
-    const actionStyle = () => evaluate(`(() => { const b = document.querySelector('${headerAction}'), r = b.getBoundingClientRect(), s = getComputedStyle(b);
+    const cardAction = restPage + ' form .app-card > div:first-child > button'
+    assert.equal(await evaluate(`document.querySelectorAll('${restPage} header img[alt="OVERLOAD"]').length`), 0)
+    assert.equal(await evaluate(`document.querySelectorAll('${restPage} header button').length`), 1)
+    const actionStyle = () => evaluate(`(() => { const b = document.querySelector('${cardAction}'), r = b.getBoundingClientRect(), s = getComputedStyle(b);
       return [r.width,r.height,s.backgroundColor,s.borderColor,s.borderRadius,s.padding] })()`)
     const editStyle = await actionStyle()
-    await click('편집', 'textContent', headerAction)
+    await click('편집', 'textContent', cardAction)
     assert.deepEqual(await actionStyle(), editStyle)
-    assert.equal(await evaluate(`document.querySelector('${headerAction}').matches(':focus-visible')`), false)
+    assert.equal(await evaluate(`document.querySelector('${cardAction}').matches(':focus-visible')`), false)
     await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
     await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
-    assert.equal(await evaluate(`document.activeElement === document.querySelector('${headerAction}') && getComputedStyle(document.activeElement).outlineStyle === 'solid'`), true)
+    assert.equal(await evaluate(`document.activeElement === document.querySelector('${cardAction}') && getComputedStyle(document.activeElement).outlineStyle === 'solid'`), true)
     for (const width of [320, 375, 393, 430, 1280]) {
       await verifyWidth(width)
       const layout = await evaluate(`(() => {
@@ -698,15 +700,15 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     }
     await set(restSeconds, '185')
     await evaluate('window.restConfirms = 0; window.confirm = () => { window.restConfirms++; return false }')
-    await click('취소', 'textContent', headerAction)
+    await click('취소', 'textContent', cardAction)
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
     await navTo('홈')
     assert.equal(await evaluate('window.restConfirms'), 2)
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
     await evaluate('window.confirm = () => true')
-    await click('취소', 'textContent', headerAction)
+    await click('취소', 'textContent', cardAction)
     assert.match(await body(), /180초/)
-    await click('편집', 'textContent', headerAction); await set(restSeconds, '185')
+    await click('편집', 'textContent', cardAction); await set(restSeconds, '185')
     await click('변경 사항 저장', 'textContent', restPage + ' button')
     assert.match(await body(), /연결을 확인하지 못했습니다. 입력을 유지/)
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
