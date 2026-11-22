@@ -11,6 +11,8 @@ export function appShell(): Plugin {
     configResolved(config) { if (config.base !== '/') throw new Error('PWA deployment requires root scope'); directory = resolve(config.root, config.build.outDir) },
     async closeBundle() {
       const paths = ['index.html', 'manifest.webmanifest', 'favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png']
+      const html = await readFile(resolve(directory, 'index.html'), 'utf8')
+      for (const match of html.matchAll(/rel="apple-touch-startup-image" href="\/(startup\/onyx-\d+x\d+\.png)"/g)) paths.push(match[1])
       for (const name of await readdir(resolve(directory, 'assets'))) {
         if (!/\.(js|css|woff2?|svg|png)$/.test(name)) throw new Error('Review new app-shell asset type: ' + name)
         paths.push('assets/' + name)

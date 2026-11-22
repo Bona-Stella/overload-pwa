@@ -71,6 +71,7 @@ test('authenticated UI is separated from demo data and identity-management previ
 })
 test('initial checking, connection failure, processing and logged-out states stay distinct', () => {
   const startup = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+  assert.match(startup, /<html[^>]*style="background-color: #111216; color-scheme: dark"/)
   assert.match(startup, /<div id="root" inert><\/div>/)
   assert.match(startup, /id="startup-splash" role="status"/)
   assert.match(startup, /<img src="\/src\/assets\/OVERLOAD_white_transparent_4x\.png" alt="" width="3624" height="428"/)

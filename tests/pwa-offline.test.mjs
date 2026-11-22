@@ -9,6 +9,23 @@ import { AuthError } from '../src/features/auth/api.ts'
 import { session, scope, USER, OTHER, DEVICE, SESSION } from './fixtures/workout-online-data.mjs'
 import { createLocalWorkout } from '../src/features/workout-local/model.ts'
 import { acquireEditor } from '../src/features/workout-local/lock.ts'
+
+test('iOS launch images match the page background and their portrait device sizes', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
+  const manifest = JSON.parse(readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8'))
+  const links = [...html.matchAll(/rel="apple-touch-startup-image" href="\/(startup\/onyx-\d+x\d+\.png)" media="\(device-width: (\d+)px\) and \(device-height: (\d+)px\) and \(-webkit-device-pixel-ratio: (\d+)\) and \(orientation: portrait\)"/g)]
+  assert.ok(links.some(([, , width]) => width === '393'))
+  assert.ok(links.some(([, , width, height, density]) => width === '420' && height === '912' && density === '3'))
+  assert.ok(links.some(([, , width]) => width === '430'))
+  const canvas = Buffer.from(manifest.background_color.slice(1), 'hex')
+  for (const [, path, width, height, density] of links) {
+    const png = readFileSync(new URL(`../public/${path}`, import.meta.url))
+    assert.equal(png.readUInt32BE(16), Number(width) * Number(density))
+    assert.equal(png.readUInt32BE(20), Number(height) * Number(density))
+    const palette = png.indexOf('PLTE') + 4
+    assert.deepEqual(png.subarray(palette, palette + 6), Buffer.concat([canvas, canvas]))
+  }
+})
 const key={...scope,editorDeviceId:DEVICE,sessionId:SESSION,writerEpoch:'0'}
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve}}
 function permission(){
