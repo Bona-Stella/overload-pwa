@@ -36,7 +36,7 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
     assert.equal(!!await text(reviewCard), recommendation)
     assert.equal(await evaluate("[...document.querySelectorAll('h2, button, a')].some(e => e.textContent.trim() === '운동 기록 상세')"), false)
     if (!recommendation) {
-      assert.equal(await evaluate("[...document.querySelectorAll('h2, [role=status], [role=alert]')].some(e => e.textContent.includes('중량 검토'))"), false)
+      assert.equal(await evaluate("[...document.querySelectorAll('h2, [role=status], [role=alert]')].some(e => !e.closest('[aria-label=\"당시 중량 검토\"]') && e.textContent.includes('중량 검토'))"), false)
       assert.doesNotMatch(await text('article'), /저장된 종료 당시 중량 권고가 없습니다/)
     }
     const view = '[aria-label="웨이트 수행"]'
@@ -228,13 +228,12 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   await summary(true, null, true)
   await summaryAtTop()
   assert.match(await text(reviewCard), /벤치 프레스.*kg.*→.*kg.*3\/3세트/s)
-  await click('수정', 'textContent', reviewCard + ' button')
   assert.equal(await evaluate(`!!document.querySelector('${reviewCard} input[type="checkbox"]:checked')`), true)
-  await click('수정 완료', 'textContent', reviewCard + ' button')
   await click('전체 승인', 'textContent', reviewCard + ' button')
   await click('시연 확인', 'textContent', 'dialog[open] button')
   await wait(() => evaluate(`!document.querySelector('dialog[open], ${reviewCard}')`), 'approved candidate disappears')
   await summary(true, null)
+  assert.match(await text('[aria-label="당시 중량 검토"]'), /25kg → 30kg.*증량 완료/s)
   await startPlan('plan=cardio')
   await expectTitle('러닝머신')
   const completeCardio = async () => {

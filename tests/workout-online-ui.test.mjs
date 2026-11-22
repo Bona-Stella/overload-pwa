@@ -219,10 +219,10 @@ test('summary restores WEIGHT and CARDIO below the weight review, removes only t
   const pair=reviewedSession(),before=structuredClone(pair.server),html=endView(pair)
   assert.match(html,/<h1[^>]*>운동 기록 요약<\/h1>/);assert.match(html,/10\.31 · 토 · 21:00–21:30/);assert.match(html,/전체 루틴 완료/)
   assert.match(html,/aria-label="홈으로"/);assert.match(html,/<h2>기록 보존 안내<\/h2>/)
-  assert.match(html,/3\/3세트/);assert.match(html,/45kg →/);assert.match(html,/기준 40kg · 6–10회 × 3세트/)
+  assert.match(html,/3\/3세트/);assert.match(html,/>45kg<\/span>.*>→</);assert.match(html,/기준 40kg · 6–10회 × 3세트/)
   assert.match(html,/45kg × 12회/);assert.match(html,/1,665kg/)
   assert.doesNotMatch(html,/운동 수행<|이번 수행|유지 검토|기록 정정·복구 및 서버 평가 상세|운동 기록 메뉴/)
-  assert(html.indexOf('중량 검토')<html.indexOf('WEIGHT'))
+  assert(html.includes('중량 변경 검토 사항') && html.indexOf('중량 변경 검토 사항')<html.indexOf('WEIGHT'))
   assert.deepEqual(pair.server,before)
 })
 test('repetition contribution colors follow server review and missing planned sets create no fabricated repetitions',()=>{
@@ -235,14 +235,14 @@ test('repetition contribution colors follow server review and missing planned se
   ]){
     const html=endView(reviewedSession(advice,reps,planned))
     assert.match(html,new RegExp(reps.length+'/'+planned+'세트'))
-    assert.equal((html.match(/data-direction="(?:increase|decrease)"/g)??[]).length,marked+1)
+    assert.equal((html.match(/data-direction="(?:increase|decrease)"/g)??[]).length,marked)
     assert.equal(html.includes('data-incomplete="true"'),incomplete)
     assert.match(html,new RegExp('aria-label="'+(advice==='INCREASE'?'증량 검토':'감량 검토')+'"'))
     assert.doesNotMatch(html,/이번 수행|· 3세트|· 4세트|유지 검토/)
   }
 })
 test('summary hides empty review states and preserves stale and mismatched data errors',()=>{
-  const reviewArea = /aria-label="중량 검토 카드"|<h2>중량 검토<\/h2>|수행·승인 정보가 부족|중량 검토 결과를 확인하지 못했습니다/
+  const reviewArea = /aria-label="중량 검토 카드"|<h2>중량 변경 검토 사항<\/h2>|수행·승인 정보가 부족|중량 검토 결과를 확인하지 못했습니다/
   assert.doesNotMatch(endView(reviewedSession('MAINTAIN',[13,12,11])),reviewArea)
   assert.doesNotMatch(endView(reviewedSession('UNAVAILABLE')),reviewArea)
   const pair=reviewedSession()
@@ -251,7 +251,7 @@ test('summary hides empty review states and preserves stale and mismatched data 
     {...pair.assessment,weightReview:{...pair.assessment.weightReview,sessionVersion:'1'}}]){
     const html=endView({...pair,assessment})
     assert.match(html,/role="alert">중량 검토 결과를 확인하지 못했습니다/)
-    assert.doesNotMatch(html,/aria-label="중량 검토 카드"|<h2>중량 검토<\/h2>/)
+    assert.doesNotMatch(html,/aria-label="중량 검토 카드"|<h2>중량 변경 검토 사항<\/h2>/)
   }
   pair.assessment.weightReview.exercises[0].sets[0].performedSetId=OTHER
   assert.match(endView(pair),/중량 검토에 해당하는 수행 기록을 확인하지 못했습니다/)

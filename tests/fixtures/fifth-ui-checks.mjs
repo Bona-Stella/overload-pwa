@@ -2,13 +2,13 @@ import assert from 'node:assert/strict'
 
 export async function verifyFifthUi({go,title,click,set,evaluate,send,wait,width,capture,tab,body,report}){
  const byLabel=label=>label==='검색 목록 닫기'?evaluate('document.querySelector(".record-search input").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))'):label==='검색 목록 열기'?evaluate('document.querySelector(".record-search input").click();document.querySelector(".record-search input").focus()'):evaluate('document.querySelector('+JSON.stringify('button[aria-label="'+label+'"]')+').click()')
- await go('/routine-preview?tab=history&review=approval');await title('운동 기록 요약');await click('수정')
+ await go('/routine-preview?tab=history&review=approval');await title('운동 기록 요약')
  for(const w of [320,375,390,430]){
   await width(w,'react')
-  const sizes=await evaluate('[...document.querySelectorAll(".approval-toolbar button,.approval-edit-row > button")].map(b=>{const c=getComputedStyle(b);return [b.getBoundingClientRect().height,c.padding,c.fontSize,c.fontWeight,c.borderTopWidth,c.borderRadius]})')
+  const sizes=await evaluate('[...document.querySelectorAll(".approval-toolbar button,.approval-item > button")].map(b=>{const c=getComputedStyle(b);return [b.getBoundingClientRect().height,c.padding,c.fontSize,c.fontWeight,c.borderTopWidth,c.borderRadius]})')
   assert(sizes.length>1);for(const size of sizes)assert.deepEqual(size,sizes[0])
  }
- await click('수정 완료');await click('홈으로 돌아가기');assert(await evaluate('!!document.querySelector("section[aria-label=홈]")'))
+ await click('홈으로 돌아가기');assert(await evaluate('!!document.querySelector("section[aria-label=홈]")'))
  for(const w of [320,375,390,430]){
   await width(w,'react')
   const icons=await evaluate('[...document.querySelectorAll("section[aria-label=홈] [class*=recordFacts] img,section[aria-label=홈] [class*=recordState]")].map(e=>({w:e.getBoundingClientRect().width,h:e.getBoundingClientRect().height,fit:e.tagName==="IMG"?getComputedStyle(e).objectFit:"contain"}))')

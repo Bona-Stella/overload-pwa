@@ -2,31 +2,43 @@
 .detail > * + * { margin-top: 16px; }
 .detail > .review,.detail > .review + * { margin-top: 10px; }
 .detail > :global(.app-card) { padding: 14px 12px; border-radius: 5px; }
-.summaryTop { display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 6px; min-width: 0; }
+.detail > .summaryCard { padding-block-start: 10px; }
+.summaryInfo { --record-menu-size: 44px; --record-menu-outset: 8px; display: grid; grid-template-columns: minmax(0,1fr); row-gap: 4px; }
+.summaryTop { display: grid; grid-template-columns: minmax(0,1fr); grid-auto-flow: column; grid-auto-columns: max-content; align-items: center; gap: 6px; min-width: 0; }
 .detail .summaryTop .date { min-width: 0; margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-muted); overflow-wrap: anywhere; }
-.menu { grid-column: 3; grid-row: 1; justify-self: end; width: 44px; margin-right: -8px; }
-.menu > details > summary { width: 44px; height: 44px; min-height: 44px; padding: 0; }
+.menu { position: relative; align-self: stretch; width: var(--record-menu-size); margin-inline-end: calc(0px - var(--record-menu-outset)); }
+/* The icon follows the compact row. The trigger extends into the reserved space beside the routine name. */
+.menu > details { position: absolute; inset: 0; }
+.menu > details > summary { width: 100%; height: var(--record-menu-size); min-height: var(--record-menu-size); padding: 0; }
+.menu > details > summary > span { position: absolute; inset-block-start: 50%; inset-inline-end: var(--record-menu-outset); transform: translateY(-50%); line-height: 1; pointer-events: none; }
+.menu > details > div { top: var(--record-menu-size); }
 .status { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
 .status b { display: inline-grid; place-items: center; width: 14px; font-size: 14px; font-weight: 400; }
 .status[data-state='complete'] { color: var(--status-done); }
 .status[data-state='partial'] { color: var(--status-warning); }
 .status[data-state='missed'] { color: var(--status-missed); }
 .detail .routine { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; }
-.detail :global([aria-label='운동 기록 요약']) { margin-top: 10px; margin-bottom: 0; border-top: 1px solid var(--border-subtle); padding-top: 18px; }
+.summaryInfo:has(.menu) > .routine { max-width: calc(100% - var(--record-menu-size) + var(--record-menu-outset)); }
+.detail :global([aria-label='운동 기록 요약']) { margin-block: 0; border-top: 1px solid var(--border-subtle); padding-top: 12px; }
 .detail :global([aria-label='운동 기록 요약']) strong { max-width: 100%; font-size: 16px; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .detail :global([aria-label='운동 기록 요약']) section { padding-inline: 4px; }
-.detail .review { display: block; padding-block: 8px; }
-.review > details > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; cursor: pointer; list-style: none; }
+.detail > .review { display: block; padding-block: 0; }
+.detail > .pendingReview { padding-block: 8px; }
+.pendingReview > :global(.approval-toolbar), .review > details > summary { min-height: 44px; }
+.detail .reviewTitle { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.4; color: var(--text-primary); }
+.review > details > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 8px; cursor: pointer; list-style: none; }
 .review > details > summary::-webkit-details-marker { display: none; }
-.review > details > summary h2 { margin: 0; font-size: 16px; }
 .review > details > summary svg { flex: none; color: var(--text-muted); }
 .review > details[open] > summary svg { transform: rotate(180deg); }
 .review > details > summary:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 3px; }
-.review > details > div { padding-top: 6px; }
+.review > details[open] > div { display: grid; gap: 6px; padding-block-end: 8px; }
+.detail > .pendingReview, .review :global(.app-card) { gap: 6px; }
 .review :global(.app-card) { padding: 0; border: 0; background: transparent; box-shadow: none; }
 .review :global([aria-label='당시 중량 검토']) > :global(.approval-toolbar) { display: none; }
-.review :global(.approval-review-row) { padding-block: 14px; }
-.review :global(.approval-review-row) + :global(.approval-review-row) { margin-top: 8px; }
+.review :global(.approval-review-row) { padding-block: 8px; }
+.pendingReview > :global(.approval-review-row:nth-child(1 of .approval-review-row)) { padding-block-start: 4px; }
+.review :global(.approval-review-row:last-child),
+.pendingReview > :global(.approval-review-row:nth-last-child(1 of .approval-review-row)) { padding-block-end: 0; }
 .detail :global([aria-label='웨이트 수행']) > div:first-child,
 .detail :global([aria-label='유산소 수행']) > div:first-child { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .detail :global([aria-label='웨이트 수행']) > div:first-child h3,

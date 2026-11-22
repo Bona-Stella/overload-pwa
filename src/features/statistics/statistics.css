@@ -58,8 +58,6 @@
 .analysis-start { position: absolute; top: -2px; transform: translateX(-50%); font-size: 11px; line-height: 12px; color: var(--accent) !important; }
 .analysis-track .statistics-bar { margin-top: 0; }
 dialog [data-dialog-heading]:focus { outline: none; }
-.review-select { width: 44px; min-height: 44px; display: grid; place-items: center; }
-.review-select input[type='checkbox'] { width: 22px; min-height: 22px; }
 @media(max-width:374px) { .record-menu button { padding: 12px; } .record-menu strong { font-size: 14px; } .muscle-analysis h1 { font-size: 20px; } .record-days { gap: 3px; } }
 
 /* Record layouts follow the approved HTML; theme roles remain Onyx. */
@@ -147,14 +145,7 @@ dialog [data-dialog-heading]:focus { outline: none; }
 .record-screen .analysis-group:first-child {margin-top:0;}
 
 .approval-toolbar {flex-wrap:wrap;gap:8px;}
-.approval-toolbar > .row {gap:6px;flex:0 0 auto;}
-.approval-toolbar button,.approval-edit-row .approval-values > button {min-height:44px;padding:7px 9px;font-size:12px;line-height:1.35;width:auto;flex:none;}
-.approval-edit-row {display:grid;grid-template-columns:24px minmax(0,1fr);gap:9px;align-items:start;}
-.approval-edit-row .review-select {width:24px;min-height:24px;padding:0;}
-.approval-edit-row .review-select input {margin:0;width:22px;min-height:22px;}
-.approval-edit-row h3 {font-size:14px;line-height:1.4;}
-.approval-edit-row .approval-values {display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;margin-top:4px;}
-.approval-edit-row .approval-values > strong {white-space:nowrap;}
+.approval-toolbar button {min-height:44px;padding:7px 9px;font-size:12px;line-height:1.35;width:auto;flex:none;}
 
 .record-screen .record-calendar-grid button {min-height:44px;}
 .record-calendar-grid button small {display:block;margin-top:2px;font-size:10px;color:var(--text-muted);}

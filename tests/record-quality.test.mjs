@@ -43,7 +43,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await click(name,navigation+' button:not([inert])')
  }
  const title=async name=>wait(()=>evaluate('[...document.querySelectorAll("h1,h2")].some(e=>e.getClientRects().length&&e.textContent==='+JSON.stringify(name)+')'),name)
- const width=async (w,side)=>{await send('Emulation.setDeviceMetricsOverride',{width:w,height:844,deviceScaleFactor:1,mobile:true});if(side!=='html'){await wait(()=>evaluate('innerWidth==='+w),'viewport width');assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'horizontal overflow')}}
+  const width=async (w,side)=>{await send('Emulation.setDeviceMetricsOverride',{width:w,height:844,deviceScaleFactor:1,mobile:w<500});if(side!=='html'){await wait(()=>evaluate('innerWidth==='+w),'viewport width '+w);assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth'),'horizontal overflow')}}
  const capture=async(name,side,w)=>{
   await width(w,side)
   if(side==='react'){
@@ -100,6 +100,27 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await title('운동 기록 상세')
   assert.equal(await evaluate('history.state.overloadNavigation.values["review-record"].id'), recent.id)
   await title(recent.name)
+  const compactSummary = detail => evaluate(`(() => {
+   const columns=document.querySelector('article [aria-label="운동 기록 요약"]')
+   const card=columns.parentElement, info=card.querySelector('h2').parentElement, menu=info.querySelector('summary')
+   const title=info.querySelector('h2'), box=e=>e.getBoundingClientRect(), css=e=>getComputedStyle(e)
+   const date=info.querySelector('p'), status=info.querySelector('[data-state]')
+   const center=e=>(box(e).top+box(e).bottom)/2
+   const original=title.firstChild.data
+   title.firstChild.data='세로 여백 검증을 위한 아주 긴 운동 루틴 이름을 여러 단어로 작성한 시험용 이름'.repeat(3)
+   const clamped=title.scrollHeight>title.clientHeight&&Math.abs(box(title).height-2*parseFloat(css(title).lineHeight))<1
+   title.firstChild.data=original
+   return css(card).paddingTop==='10px'&&css(card).paddingBottom==='14px'&&css(info).rowGap==='4px'
+     &&css(columns).paddingTop==='12px'&&css(columns).marginTop==='0px'&&Math.abs(box(columns).top-box(info).bottom-8)<.5
+     &&columns.children.length===3&&[...columns.children].every(col=>col.querySelectorAll('strong').length===2)
+     &&(!status||Math.abs(center(date)-center(status))<.5)
+     &&clamped&&(!menu||${detail}&&box(menu).height>=44&&box(menu).right<=box(card).right&&box(title).right<=box(menu).left+.5)
+  })()`)
+  for(const w of [320,375,393,430,1280]){
+   await width(w,'react')
+   assert.ok(await compactSummary(true),'compact detail summary at '+w)
+  }
+  await send('Emulation.setDeviceMetricsOverride',{width:393,height:600,deviceScaleFactor:1,mobile:true})
   assert.equal(await evaluate('document.querySelector("dialog[open]") === null'), true)
   await click('홈으로')
   const restoredHome = () => wait(() => evaluate(`document.querySelector(${JSON.stringify(homeCard)})?.getClientRects().length && Math.abs(scrollY - ${recent.scroll}) <= 1`), 'home scroll restored')
@@ -226,20 +247,105 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   assert.deepEqual(api,[]);assert.equal(await evaluate('indexedDB.databases().then(x=>x.length)'),0);assert.deepEqual(errors,[])
 
   await go('/routine-preview?tab=history&review=approval');await title('운동 기록 요약')
-  await reactCapture('approval-normal');assert.ok(await evaluate('[...document.querySelectorAll("button")].some(e=>e.textContent==="전체 승인"&&!e.disabled)'))
-  await click('수정');await reactCapture('approval-edit')
-  for(const w of [320,375,390,430]){
+  await reactCapture('approval-normal');assert.ok(await evaluate('document.querySelectorAll(".approval-toolbar button").length===1&&[...document.querySelectorAll(".approval-toolbar button")].some(e=>e.textContent==="전체 승인"&&!e.disabled)'))
+  assert.equal(await evaluate('document.querySelectorAll(".approval-item input:checked").length'),3)
+  assert.equal(await evaluate('document.querySelector(".approval-toolbar h2").textContent'),'중량 변경 검토 사항')
+  const normal = await evaluate(`[...document.querySelectorAll('[data-weight-review] .approval-values')].map(e=>{
+    const previous=e.firstElementChild,next=e.querySelector('strong')
+    return [getComputedStyle(previous).fontSize,getComputedStyle(next).fontSize,getComputedStyle(next).color,next.parentElement.dataset.approvalDirection]
+  })`)
+  assert.ok(normal.some(([, , color, direction])=>color==='rgb(116, 166, 138)'&&direction==='increase'))
+  assert.ok(normal.every(([previous,next])=>previous==='11px'&&next==='13px'))
+  let truncatedAtNarrowWidth=false
+  for(const w of [320,375,393,430,1280]){
    await width(w,'react')
-   const layout=await evaluate('(()=>{const h=document.querySelector(".approval-toolbar"),title=h.querySelector("h2").getBoundingClientRect(),buttons=[...h.querySelectorAll("button")].map(e=>e.getBoundingClientRect());return{aligned:buttons.every(r=>r.top<=title.top&&r.bottom>=title.bottom),rows:[...document.querySelectorAll(".approval-edit-row")].every(e=>{const n=e.querySelector("h3"),b=e.lastElementChild;return getComputedStyle(n).textOverflow==="ellipsis"&&getComputedStyle(n).whiteSpace==="nowrap"&&n.getBoundingClientRect().right<=e.querySelector(".approval-values").getBoundingClientRect().left&&b.getBoundingClientRect().right<=e.getBoundingClientRect().right+.5})}})()')
-   assert.deepEqual(layout,{aligned:true,rows:true},'approval layout '+w)
+   const layout=await evaluate(`(()=>{
+    const rect=e=>e.getBoundingClientRect()
+    const center=e=>(e.top+e.bottom)/2
+    const h=document.querySelector('.approval-toolbar'),titleElement=h.querySelector('h2'),title=rect(titleElement)
+    const card=h.parentElement, titleStyle=getComputedStyle(titleElement), cardStyle=getComputedStyle(card)
+    const control=getComputedStyle(h.querySelector('button'))
+    const rows=[...document.querySelectorAll('.approval-item')]
+    const sections=rows.map(row=>row.parentElement), first=rect(sections[0]), last=rect(sections.at(-1))
+    return { aligned:[...h.querySelectorAll('button')].every(b=>rect(b).left>=title.right&&rect(b).right<=rect(h).right+.5&&rect(b).height===36&&Math.abs(center(rect(b))-center(title))<.5),
+      approval:[control.backgroundColor,control.color,control.borderTopColor,control.borderRadius,control.padding],
+      typography:[titleStyle.fontSize,titleStyle.fontWeight,titleStyle.lineHeight,titleStyle.color],
+      spacing:[cardStyle.paddingTop,cardStyle.paddingBottom,cardStyle.rowGap,rect(h).height,first.top-rect(h).bottom,rect(card).bottom-last.bottom],
+      firstInset:rect(rows[0]).top-first.top-parseFloat(getComputedStyle(sections[0]).borderTopWidth),
+      separated:sections.slice(1).every((section,i)=>Math.abs(rect(section).top-rect(sections[i]).bottom-6)<.5&&getComputedStyle(section).paddingTop==='8px'),
+      truncated:rows.some(e=>{const name=e.querySelector('h3');return name.scrollWidth>name.clientWidth}),
+      rows:rows.every(e=>{
+        const n=e.querySelector('h3'),name=rect(n),line=e.lastElementChild,values=line.querySelector('.approval-values'),value=rect(values)
+        const input=e.querySelector('input'),box=rect(input),mark=input.nextElementSibling
+        const editButton=e.querySelector('button'),edit=rect(editButton),editStyle=getComputedStyle(editButton)
+        const evidence=line.lastElementChild, count=evidence.firstElementChild
+        const type=node=>{const s=getComputedStyle(node);return [s.fontSize,s.fontWeight,s.lineHeight].join('/')}
+        const previous=values.firstElementChild, arrow=values.children[1]
+        const color=node=>getComputedStyle(node).color
+        const plain=[values.firstElementChild,values.children[1]].every(node=>color(node)===color(line))
+        const direction=values.querySelector('b'),result=values.querySelector('strong')
+        const sameStateColor=!direction||color(direction)===color(result)&&color(result)!==color(line)
+        const hitTarget=document.elementFromPoint(box.right-1,center(box))===input
+        return box.width===44&&box.height===44&&rect(mark).width===17&&rect(mark).height===17&&getComputedStyle(mark).borderRadius==='50%'
+          &&getComputedStyle(mark).borderTopWidth==='1px'&&getComputedStyle(mark).fontSize==='11px'
+          &&Math.abs(rect(mark).left-rect(e).left)<.5
+          &&type(n)==='14px/650/22.4px'&&getComputedStyle(n).textOverflow==='ellipsis'&&getComputedStyle(n).whiteSpace==='nowrap'
+          &&n.title===n.textContent&&input.ariaLabel===n.textContent+' 승인 선택'
+          &&type(previous)==='11px/400/17.6px'&&type(arrow)===type(previous)&&type(result)==='13px/700/20.8px'
+          &&(!direction||type(direction)==='11px/700/17.6px')&&plain&&sameStateColor&&type(count)==='12px/400/19.2px'
+          &&[name,edit].every(bounds=>Math.abs(center(bounds)-center(box))<=.5)
+          &&edit.height===36&&editStyle.borderRadius==='9999px'&&editStyle.padding==='4px 6px'
+          &&editStyle.backgroundColor==='rgba(0, 0, 0, 0)'&&editStyle.borderTopColor==='rgb(53, 57, 65)'
+          &&Math.abs(rect(mark).right+6-name.left)<.5&&Math.abs(name.left-rect(values.firstElementChild).left)<.5
+          &&hitTarget&&box.right<edit.left&&name.right<=edit.left&&value.right<=rect(evidence).left
+          &&values.scrollWidth<=values.clientWidth+1&&Math.abs(edit.right-rect(e).right)<=.5
+          &&box.bottom<=rect(line).top&&e.scrollWidth<=e.clientWidth+1
+      })
+    }
+   })()`)
+   assert.ok(layout.aligned&&layout.rows&&layout.separated,'approval layout '+w)
+   assert.deepEqual(layout.approval,['rgb(116, 166, 138)','rgb(17, 24, 32)','rgb(116, 166, 138)','9999px','4px 6px'])
+   assert.deepEqual(layout.typography,['16px','700','22.4px','rgb(240, 241, 244)'])
+   assert.deepEqual(layout.spacing,['8px','8px','6px',44,6,9])
+   assert.equal(layout.firstInset,4)
+   assert.ok(await compactSummary(false),'compact completion summary at '+w)
+   if(w===320)truncatedAtNarrowWidth=layout.truncated||await evaluate(`(()=>{
+    const name=document.querySelector('.approval-item h3'),node=name.firstChild,original=node.data
+    node.data='매우 긴 운동명 검증을 위한 슈퍼 버티컬 체스트 프레스'
+    try{return name.scrollWidth>name.clientWidth}finally{node.data=original}
+   })()`)
+    if(w===320)assert.ok(await evaluate(`(()=>{
+     const line=document.querySelector('.approval-item').lastElementChild
+     const [values,evidence]=line.children, previous=values.firstElementChild.firstChild, next=values.querySelector('strong').firstChild
+     const original=[previous.data,next.data]
+     previous.data='12345678901234.123456kg';next.data='12345678901235.123456kg'
+     try{return values.getBoundingClientRect().right<=evidence.getBoundingClientRect().left
+       &&values.scrollHeight<=values.clientHeight+1&&line.scrollWidth<=line.clientWidth+1
+       &&document.documentElement.scrollWidth<=innerWidth}
+     finally{[previous.data,next.data]=original}
+    })()`),'long decimal weights stay on one line without widening the card')
   }
-  await evaluate('document.querySelector("input[type=checkbox]").click()');assert.doesNotMatch(await body(),/전체 승인|선택 승인/)
+  assert.ok(truncatedAtNarrowWidth,'long names shorten at 320px')
+  await evaluate('document.querySelector(".approval-item input").focus()')
+  await send('Input.dispatchKeyEvent',{type:'rawKeyDown',key:' ',code:'Space',windowsVirtualKeyCode:32})
+  await send('Input.dispatchKeyEvent',{type:'keyUp',key:' ',code:'Space',windowsVirtualKeyCode:32})
+  assert.equal(await evaluate('document.querySelector(".approval-item input").checked'),false)
+  assert.deepEqual(await evaluate(`(()=>{
+    const [off,on]=document.querySelectorAll('.approval-item input')
+    return [off,on].map(input=>getComputedStyle(input.nextElementSibling).borderTopColor)
+  })()`),['rgb(169, 173, 183)','rgb(116, 166, 138)'])
+  assert.equal(await evaluate('document.querySelector(".approval-toolbar button").textContent'),'선택 승인')
+  assert.equal(await evaluate('getComputedStyle(document.querySelector(".approval-toolbar button")).backgroundColor'),'rgb(116, 166, 138)')
   const before=await evaluate('document.querySelector(".approval-values").textContent')
   await click('무게 수정');await wait(()=>evaluate('!!document.querySelector("dialog[open]")'),'weight modal')
   await click('+2.5');await click('취소');assert.equal(await evaluate('document.querySelector(".approval-values").textContent'),before)
-  await click('무게 수정');await click('+2.5');await click('확인');await click('수정 완료');await click('선택 승인');await click('취소');await click('선택 승인');assert.match(await body(),/서버·DB에는 저장하지 않습니다/);await click('시연 확인');assert.doesNotMatch(await body(),/실제 승인/)
-  await click('수정');await evaluate('[...document.querySelectorAll("input[type=checkbox]")].filter(e=>e.checked).forEach(e=>e.click())')
-  await click('수정 완료');assert.ok(await evaluate('[...document.querySelectorAll("button")].some(e=>/선택 승인/.test(e.textContent)&&e.disabled)'))
+  await click('무게 수정');await click('+2.5');await click('확인')
+  assert.equal(await evaluate('document.querySelector(".approval-item input").checked'),false)
+  await click('선택 승인');await click('취소');await click('선택 승인');assert.match(await body(),/서버·DB에는 저장하지 않습니다/);await click('시연 확인');assert.doesNotMatch(await body(),/실제 승인/)
+  await evaluate('[...document.querySelectorAll(".approval-item input:checked")].forEach(e=>e.click())')
+  assert.ok(await evaluate('[...document.querySelectorAll(".approval-toolbar button")].some(e=>/선택 승인/.test(e.textContent)&&e.disabled&&getComputedStyle(e).backgroundColor==="rgba(0, 0, 0, 0)"&&getComputedStyle(e).opacity==="0.42")'))
+  await evaluate('[...document.querySelectorAll(".approval-item input:not(:checked)")].forEach(e=>e.click())')
+  assert.equal(await evaluate('document.querySelector(".approval-toolbar button").textContent'),'전체 승인')
   await evaluate('window.__beforeSeventhReload=true');await send('Page.reload');await wait(()=>evaluate('!window.__beforeSeventhReload'),'new document');await title('운동 기록 요약');assert.ok(await evaluate('[...document.querySelectorAll(".approval-toolbar button")].some(e=>e.textContent==="전체 승인"&&!e.disabled)'));assert.equal(await evaluate('!!document.querySelector(\'[aria-label="중량 검토 카드"]\')'),true);assert.match(await body(),/WEIGHT/)
   assert.equal(await evaluate('document.querySelectorAll("[data-weight-review]").length'),3)
   assert.deepEqual(api,[]);assert.equal(await evaluate('indexedDB.databases().then(x=>x.length)'),0)

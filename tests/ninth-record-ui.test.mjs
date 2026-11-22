@@ -95,9 +95,11 @@ test('detail uses three columns, actual six values and frozen approvals without 
  assert.equal(recordRange(s.startedAt,s.endedAt,s.startedTimeZone,s.workoutDate),'10/31 · 토 · 21:00–22:10')
  const review={direction:'increase',referenceKg:'25',recommendedKg:'30',planned:1,completed:1,incomplete:false,sets:[{id:'set',reps:23,contributes:true}],approval:{nextWeightKg:'27.5',previousWeightKg:'25',occurredAt:'2026-11-15T10:33:49Z',source:'WORKOUT_REVIEW'}}
  const approved=render(WeightReview,{weights:[{id:E,name:'운동',results:[],review}],readOnly:true})
- assert.match(approved,/27.5/);assert.match(approved,/승인 완료/);assert.doesNotMatch(approved,/11:33|2026|당시 권고|<button|checkbox/)
+ assert.match(approved,/data-approval-direction="increase"><strong>27\.5kg/);assert.match(approved,/증량 완료/);assert.doesNotMatch(approved,/11:33|2026|당시 권고|<button|checkbox/)
+ const reduced=render(WeightReview,{weights:[{id:E,name:'운동',results:[],review:{...review,approval:{...review.approval,previousWeightKg:'24',nextWeightKg:'20'}}}],readOnly:true})
+ assert.match(reduced,/>24kg</);assert.match(reduced,/data-approval-direction="decrease"><strong>20kg/);assert.match(reduced,/감량 완료/)
  const pending=render(WeightReview,{weights:[{id:E,name:'운동',results:[],review:{...review,approval:undefined}}],readOnly:true})
- assert.match(pending,/30kg/);assert.match(pending,/미승인/)
+ assert.match(pending,/30kg/);assert.match(pending,/미승인/);assert.doesNotMatch(pending,/증량 완료|감량 완료/)
 })
 test('immediate summary uses the applied set count and shows only saved cardio measurements',()=>{
  const s=mixedRecord(),state=s.snapshot.state

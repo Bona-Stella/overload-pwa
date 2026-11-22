@@ -112,7 +112,8 @@ test('approval recommendation and manual step differ by load type and remain exa
 test('approval UI presents drafts and disabled server action, without invoking any write',()=>{
   const weights=[{id:'w',name:'벤치',loadType:'PLATE',results:[],review:{direction:'increase',referenceKg:'95',planned:3,completed:3,incomplete:false,sets:[]}}]
   const result=html(WeightReview,{weights})
-  assert.match(result,/95kg →.*100kg/);assert.match(result,/<button disabled=""[^>]*>전체 승인</)
+  assert.match(result,/<h2\b[^>]*>중량 변경 검토 사항<\/h2>/);assert.match(result,/>95kg<\/span>.*→.*data-approval-direction="increase"><strong>100kg/)
+  assert.match(result,/<button disabled=""[^>]*>전체 승인</)
   assert.match(result,/공식 승인 중량은 저장되지 않습니다/)
 })
 test('changed combination is excluded in the display while same-combination extra exercise preserves original eligibility',()=>{

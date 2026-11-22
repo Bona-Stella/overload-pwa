@@ -34,7 +34,7 @@ try{
   }
   await d.click('운동 종료 및 요약');await waitFor(()=>visible('[aria-label="중량 검토 카드"]'),'persisted finish guidance')
   const path='/api/v1/workout-sessions/'+session.id,unapproved=await api('GET',path+'/weight-review');assert.equal(unapproved.approvals.length,0);assert.equal(unapproved.frozen.exercises.length,2)
-  await d.click('수정','[aria-label="중량 검토 카드"]');await waitFor(()=>d.evaluate('document.querySelectorAll(".approval-edit-row input").length===2'),'approval selection rows');await d.evaluate('document.querySelectorAll(".approval-edit-row input")[1].click()');await d.click('수정 완료');await d.click('선택 승인');await d.click('승인 확인','dialog[open]')
+  await waitFor(()=>d.evaluate('document.querySelectorAll(".approval-item input").length===2'),'approval selection rows');await d.evaluate('document.querySelectorAll(".approval-item input")[1].click()');await d.click('선택 승인');await d.click('승인 확인','dialog[open]')
   await waitFor(async()=>{const v=await api('GET',path+'/weight-review');return v.approvals.length===1},'committed approval')
   const saved=await api('GET',path+'/weight-review');assert.equal(saved.approvals[0].sessionExerciseId,session.initialPlan.weightExercises[0].sessionExerciseId);assert.equal(saved.approvals[0].source,'WORKOUT_REVIEW')
   await waitFor(()=>d.evaluate('!document.querySelector("dialog[open]")'),'approval closes after confirmation')
@@ -43,10 +43,11 @@ try{
   await d.evaluate('document.querySelector('+JSON.stringify('.recent-records .session-record-card[data-session-id="'+session.id+'"]')+').click()')
   await waitFor(()=>visible('[aria-label="당시 중량 검토"]'),'past frozen review')
   const check=async()=>d.evaluate('(()=>{const c=document.querySelector("[aria-label=\\\"당시 중량 검토\\\"]");return{text:c.textContent,buttons:c.querySelectorAll("button,input").length,rows:[...c.querySelectorAll("[data-weight-review]")].map(r=>r.textContent)}})()')
-  let history=await check();assert.equal(history.buttons,0);assert(history.rows[0].includes('승인 완료'));assert(history.rows[1].includes('미승인'))
+  const appliedLabel=reps[0]===10?'증량 완료':'감량 완료'
+  let history=await check();assert.equal(history.buttons,0);assert(history.rows[0].includes(appliedLabel));assert(history.rows[1].includes('미승인'))
   for(const width of [320,375,390,430]){await d.send('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});assert.equal(await d.evaluate('document.documentElement.scrollWidth>innerWidth'),false)}
   await shot('sixth-saved-review-'+index)
-  await d.send('Page.reload');await waitFor(()=>visible('[aria-label="당시 중량 검토"]'),'history survives reload');history=await check();assert(history.rows[0].includes('승인 완료'));assert(history.rows[1].includes('미승인'))
+  await d.send('Page.reload');await waitFor(()=>visible('[aria-label="당시 중량 검토"]'),'history survives reload');history=await check();assert(history.rows[0].includes(appliedLabel));assert(history.rows[1].includes('미승인'))
   const latest=await api('GET','/api/v1/routines/'+routine.id)
   await api('PUT','/api/v1/routines/'+routine.id,{dataGeneration:owner.dataGeneration,expectedVersion:latest.version,name:latest.name,weightPlacements:latest.weightPlacements.map(p=>({mode:'EXISTING',id:p.id,manufacturerId:p.manufacturerId,loadType:p.loadType,setCount:p.setCount,minReps:p.minReps,maxReps:p.maxReps})),cardioPlacements:[],weightApprovals:[{placementId:latest.weightPlacements[1].id,nextApprovedWeightKg:'35',occurredAt:new Date().toISOString()}]})
   const after=await api('GET',path+'/weight-review');assert.deepEqual(after.approvals,saved.approvals);assert.deepEqual(after.frozen,unapproved.frozen)

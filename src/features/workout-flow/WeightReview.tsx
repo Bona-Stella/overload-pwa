@@ -1,44 +1,111 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigationGuard } from '../../app/navigation.ts'
 import { Button, Card } from '../../components/ui.tsx'
+import { CircleCheck } from '../../components/common-ui/CircleCheck.tsx'
 import { Dialog } from '../../components/Dialog.tsx'
 import { NumberWheel } from '../../components/NumberWheel.tsx'
 import { decimalDraft } from '../workout-online/validation.ts'
 import { adjustApproval, approvalStep, suggestedApproval } from '../workout-online/approval-weight.ts'
 import type { WeightSummary } from './WorkoutSummary.tsx'
 import styles from './WorkoutFlow.module.css'
+import detailStyles from './WorkoutRecordDetail.module.css'
 
-export function WeightReview({ weights, preview = false, readOnly = false, onApprove, approvedIds = [], disabled = false }: { weights: WeightSummary[]; preview?: boolean; readOnly?: boolean; onApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>;approvedIds?:string[];disabled?:boolean }) {
-  const reviews = weights.filter(w => w.review)
-  const [editing, setEditing] = useState(false), [selected, setSelected] = useState(() => reviews.map(w => w.id))
-  const [drafts, setDrafts] = useState<Record<string,string>>(() => readOnly?{}:Object.fromEntries(reviews.map(w => [w.id, w.review!.recommendedKg??suggestedApproval(w.review!.referenceKg, w.review!.direction, w.loadType ?? null)])))
+type WeightChange = { previous: string; next: string }
+
+export function ReviewWeightChange({ previous, next, confirmed = false }: { previous: string; next?: string; confirmed?: boolean }) {
+  const direction = next === undefined ? 'same' : compareWeight(next, previous)
+  const directionLabel = (direction === 'increase' ? '증량' : '감량') + (confirmed ? '' : ' 검토')
+  return <span className={`${styles.reviewChange} approval-values`}>
+    <span>{previous}kg</span>
+    {next !== undefined && <>{' '}<span>→</span>{' '}
+      <span className={styles.reviewResult} data-approval-direction={direction}>
+        <strong>{next}kg</strong>
+        {direction !== 'same' && <>{' '}<b role="img" aria-label={directionLabel}>{direction === 'increase' ? '↑' : '↓'}</b></>}
+      </span>
+    </>}
+  </span>
+}
+
+export function WeightApprovalStatus({ previous, next }: WeightChange) {
+  const direction = compareWeight(next, previous)
+  return <span className={styles.reviewApprovalState} data-approval-direction={direction}>
+    {direction === 'increase' ? '증량 완료' : direction === 'decrease' ? '감량 완료' : '변경 없음'}
+  </span>
+}
+
+export function WeightReview({ weights, preview = false, readOnly = false, onApprove, disabled = false, approvalIssue }: { weights: WeightSummary[]; preview?: boolean; readOnly?: boolean; onApprove?:(choices:{id:string;nextKg:string}[])=>Promise<boolean>;disabled?:boolean;approvalIssue?:string }) {
+  const [excluded, setExcluded] = useState<string[]>([])
+  const [drafts, setDrafts] = useState<Record<string,string>>({})
   const [modal, setModal] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState(false), [approved, setApproved] = useState<string[]>([])
+  const [confirming, setConfirming] = useState<string[]>([]), [approved, setApproved] = useState<string[]>([])
   const submitting=useRef(false),[saving,setSaving]=useState(false),[confirmationIssue,setConfirmationIssue]=useState('')
-  const pendingReviews = reviews.filter(w => readOnly||!approved.includes(w.id)&&!approvedIds.includes(w.id))
-  const targets = selected.filter(id => pendingReviews.some(w=>w.id===id))
-  const current = reviews.find(w => w.id === modal)
+  const pendingReviews = weights.filter(w => w.review && (readOnly || !approved.includes(w.id)))
+  const targets = pendingReviews.filter(w => !excluded.includes(w.id))
+  const confirmedTargets = targets.filter(w => confirming.includes(w.id))
+  const current = pendingReviews.find(w => w.id === modal)
+  const approvalLabel = targets.length === pendingReviews.length ? '전체 승인' : '선택 승인'
+  const defaultWeight = (weight: WeightSummary) => weight.review!.recommendedKg ?? suggestedApproval(weight.review!.referenceKg, weight.review!.direction, weight.loadType ?? null)
+  const nextWeight = (weight: WeightSummary) => drafts[weight.id] ?? defaultWeight(weight)
+  const hasDraft = !!onApprove && !readOnly && !preview && pendingReviews.some(w => drafts[w.id] !== undefined && drafts[w.id] !== defaultWeight(w))
+  useNavigationGuard(() => !hasDraft || window.confirm('승인하지 않은 중량 변경을 버리고 나갈까요?'))
+  useEffect(() => {
+    if (!hasDraft) return
+    const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', beforeUnload)
+    return () => window.removeEventListener('beforeunload', beforeUnload)
+  }, [hasDraft])
   if (!pendingReviews.length) return null
-  return <Card className={styles.reviewCard} aria-label={readOnly?"당시 중량 검토":"중량 검토 카드"}>
-    <div className="section-heading approval-toolbar"><h2>{readOnly?'당시 중량 검토':'중량 검토'}</h2>{!readOnly&&<div className="row">{!editing&&<Button className={styles.approveButton} disabled={disabled||saving||!onApprove&&!preview||!targets.length} title={preview?'서버에 저장하지 않는 합성 승인 시연':undefined} onClick={()=>{setConfirmationIssue('');setConfirming(true)}}>{targets.length===pendingReviews.length?'전체 승인':'선택 승인'}</Button>}<Button className={styles.reviewButton} disabled={disabled||saving} onClick={()=>setEditing(!editing)}>{editing?'수정 완료':'수정'}</Button></div>}</div>
+  return <Card className={readOnly ? styles.reviewCard : `${styles.reviewCard} ${detailStyles.pendingReview}`} aria-label={readOnly?"당시 중량 검토":"중량 검토 카드"}>
+    <div className="section-heading approval-toolbar">
+      <h2 className={detailStyles.reviewTitle}>{readOnly?'당시 중량 검토':'중량 변경 검토 사항'}</h2>
+      {!readOnly && <Button className={styles.approveButton} disabled={disabled||saving||!onApprove&&!preview||!targets.length}
+        aria-busy={saving || undefined} title={preview?'서버에 저장하지 않는 합성 승인 시연':undefined}
+        onClick={() => { setConfirmationIssue(''); setConfirming(targets.map(w => w.id)) }}>
+        {approvalLabel}{saving && ' 처리 중…'}
+      </Button>}
+    </div>
     {readOnly&&<p className="muted small">운동 종료 당시 저장된 판정 · 현재 승인 중량과 정정 후 평가는 별개입니다.</p>}
     {!readOnly&&!preview&&!onApprove && <p className="muted small" role="status">선택·무게 수정은 승인 초안입니다. 현재는 검토만 가능하며 공식 승인 중량은 저장되지 않습니다.</p>}{!readOnly&&preview&&!onApprove&&<p className="muted small">합성 승인 시연 · 서버에는 저장하지 않습니다. 실제 계정 승인과 별개입니다.</p>}
     {pendingReviews.map(weight => {
       const review = weight.review!
+      const previous = (readOnly ? review.approval?.previousWeightKg : undefined) ?? review.referenceKg
+      const next = readOnly ? review.approval?.nextWeightKg ?? review.previewApproval?.nextWeightKg ?? review.recommendedKg : nextWeight(weight)
+      const change = <ReviewWeightChange previous={previous} next={next} confirmed={readOnly && !!review.approval} />
+      const sets = <span data-incomplete={!readOnly && review.incomplete || undefined}>{review.completed}/{review.planned}세트</span>
+      const reps = review.sets.length ? review.sets.map((set,i) => <span key={set.id}>{i > 0 && ' / '}<span data-direction={set.contributes ? review.direction : undefined}>{set.reps}회</span></span>) : '완료한 세트 없음'
       return <section className={styles.recordItem + " approval-review-row"} key={weight.id} data-weight-review={review.direction}>
-        {editing&&!readOnly?<div className="approval-edit-row"><label className="review-select"><input type="checkbox" aria-label={weight.name+' 승인 선택'} disabled={disabled} checked={selected.includes(weight.id)} onChange={e=>setSelected(ids=>e.target.checked?[...ids,weight.id]:ids.filter(id=>id!==weight.id))} /></label><h3 title={weight.name}>{weight.name}</h3><strong className="approval-values">{review.referenceKg}kg → {drafts[weight.id]}kg</strong><Button className={styles.reviewButton} disabled={disabled} onClick={()=>setModal(weight.id)}>무게 수정</Button></div>
-          :<div className={styles.weightReviewHead}><h3 title={weight.name}>{weight.name}</h3><span>{readOnly?<>{review.referenceKg}kg{review.recommendedKg!==undefined&&<> → {review.approval?.nextWeightKg??review.previewApproval?.nextWeightKg??review.recommendedKg}kg</>}</>:<>{review.referenceKg}kg → <b>{drafts[weight.id]}kg</b></>} <b data-direction={review.direction} aria-label={review.direction==='increase'?'증량 검토':'감량 검토'}>{review.direction==='increase'?'↑':'↓'}</b></span></div>}
-
-        <div className={readOnly?styles.reviewHistoryValues:styles.reviewValues}><span data-incomplete={!readOnly&&review.incomplete || undefined}>{review.completed}/{review.planned}세트</span><span>{review.sets.length ? review.sets.map((set,i) => <span key={set.id}>{i > 0 && ' / '}<span data-direction={set.contributes ? review.direction : undefined}>{set.reps}회</span></span>) : '완료한 세트 없음'}</span>{readOnly&&<span className={styles.reviewApprovalState} data-approved={!!review.approval} title={review.previewApproval?'합성 승인 시연 · 서버·DB 미저장':undefined}>{review.approval?'승인 완료':review.previewApproval?'시연 승인 · DB 미저장':preview?'미승인 · 합성 표본':'미승인'}</span>}</div>
+        {readOnly ? <>
+          <div className={styles.weightReviewHead}><h3>{weight.name}</h3>{change}</div>
+          <div className={styles.reviewHistoryValues}>
+            {sets}<span className={styles.reviewHistoryReps}>{reps}</span>
+            {review.approval
+              ? <WeightApprovalStatus previous={review.approval.previousWeightKg} next={review.approval.nextWeightKg} />
+              : <span className={styles.reviewApprovalState} title={review.previewApproval ? '합성 승인 시연 · 서버·DB 미저장' : undefined}>
+                {review.previewApproval ? '시연 승인 · DB 미저장' : preview ? '미승인 · 합성 표본' : '미승인'}
+              </span>}
+          </div>
+        </> : <div className={`${styles.approvalRow} approval-item`}>
+          <CircleCheck label={weight.name + ' 승인 선택'} disabled={disabled||saving} checked={!excluded.includes(weight.id)}
+            onCheckedChange={checked => setExcluded(ids => checked ? ids.filter(id => id !== weight.id) : [...ids, weight.id])} />
+          <h3 title={weight.name}>{weight.name}</h3>
+          <Button className={styles.reviewButton} disabled={disabled||saving} onClick={() => setModal(weight.id)}>무게 수정</Button>
+          <div className={styles.reviewValues}>{change}<div className={styles.reviewEvidence}>{sets}{' · '}{reps}</div></div>
+        </div>}
       </section>
     })}
-    {confirming && (onApprove||preview) && <Dialog title={preview?'합성 승인 시연':'중량 승인'} onClose={()=>{if(!submitting.current)setConfirming(false)}}><p>{onApprove&&!preview?<>선택한 {targets.length}종목의 중량을 현재 루틴에 저장합니다.</>:<>선택한 {targets.length}종목의 승인 화면을 시연합니다. 서버·DB에는 저장하지 않습니다.</>}</p>{confirmationIssue&&<p role="alert">{confirmationIssue}</p>}<div className="row"><Button disabled={saving} onClick={()=>setConfirming(false)}>취소</Button><Button variant="primary" disabled={disabled||saving||!targets.length} onClick={async()=>{
+    {confirmedTargets.length > 0 && (onApprove||preview) && <Dialog title={preview?'합성 승인 시연':'중량 승인'} onClose={()=>{if(!submitting.current)setConfirming([])}}><p>{onApprove&&!preview?<>선택한 {confirmedTargets.length}종목의 중량을 현재 루틴에 저장합니다.</>:<>선택한 {confirmedTargets.length}종목의 승인 화면을 시연합니다. 서버·DB에는 저장하지 않습니다.</>}</p>{(approvalIssue||confirmationIssue)&&<p role="alert">{approvalIssue||confirmationIssue}</p>}<div className="row"><Button disabled={saving} onClick={()=>setConfirming([])}>취소</Button><Button variant="primary" disabled={disabled||saving} onClick={async()=>{
       if(submitting.current)return
       submitting.current=true;setSaving(true);setConfirmationIssue('')
-      try{if(!onApprove||await onApprove(targets.map(id=>({id,nextKg:drafts[id]})))){setApproved(ids=>[...ids,...targets]);setConfirming(false)}else setConfirmationIssue('승인 저장을 확인하지 못했습니다. 최신 이력을 확인한 뒤 다시 시도해 주세요.')}
+      try {
+        if (!onApprove || await onApprove(confirmedTargets.map(w => ({ id:w.id, nextKg:nextWeight(w) })))) {
+          if (preview) setApproved(ids => [...ids,...confirmedTargets.map(w => w.id)])
+          setConfirming([])
+        } else setConfirmationIssue('승인 저장을 확인하지 못했습니다. 최신 이력을 확인한 뒤 다시 시도해 주세요.')
+      }
       catch{setConfirmationIssue('승인 저장을 확인하지 못했습니다. 연결 상태와 최신 이력을 확인해 주세요.')}
       finally{submitting.current=false;setSaving(false)}
     }}>{saving?'저장 확인 중…':preview?'시연 확인':'승인 확인'}</Button></div></Dialog>}
-    {current && <ApprovalWeightDialog weight={current} value={drafts[current.id]} onClose={() => setModal(null)} onConfirm={value => { setDrafts({ ...drafts, [current.id]:value }); setModal(null) }} />}
+    {current && <ApprovalWeightDialog weight={current} value={nextWeight(current)} onClose={() => setModal(null)} onConfirm={value => { setDrafts(values => ({ ...values, [current.id]:value })); setModal(null) }} />}
   </Card>
 }
 

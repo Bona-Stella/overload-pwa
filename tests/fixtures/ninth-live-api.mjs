@@ -48,7 +48,7 @@ try{
  await waitFor(()=>d.evaluate('document.querySelector('+JSON.stringify(selector(mixed.id))+')?.dataset.sessionVersion==='+JSON.stringify(mixedRecent.version)),'full same version')
  assert.equal(await d.text(selector(mixed.id)),mixedRecent.text)
  await d.evaluate('document.querySelector('+JSON.stringify(selector(mixed.id))+').click()');await waitFor(()=>visible('[aria-label="당시 중량 검토"]'),'saved approval detail')
- let history=await d.text('[aria-label="당시 중량 검토"]');assert.match(history,/25kg.*27.5kg/s);assert.match(history,/승인 완료/);assert.doesNotMatch(history,/2026|当時|당시 권고|오후|오전/)
+ let history=await d.text('[aria-label="당시 중량 검토"]');assert.match(history,/25kg.*27.5kg/s);assert.match(history,/증량 완료/);assert.doesNotMatch(history,/2026|当時|당시 권고|오후|오전/)
  const columns=await d.evaluate('[...document.querySelector("[aria-label=\\"운동 기록 요약\\"]").querySelectorAll("strong")].map(e=>e.textContent)')
  assert.deepEqual(columns,['1:10:00','10:00','40:00','1/1','20:00','0/1'])
  assert.match(await d.text('article:has([aria-label="운동 기록 요약"])'),/△ 거리 목표 미달/)

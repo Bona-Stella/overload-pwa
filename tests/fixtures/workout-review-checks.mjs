@@ -919,7 +919,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('운동 종료 및 요약')
   await has('전체 루틴 완료')
   assert.equal(await evaluate('!!document.querySelector("dialog[open]")'), false)
-  assert.match(await body(),/중량 검토/,'banner dismissal leaves end review intact')
+  assert.match(await body(),/중량 변경 검토 사항/,'banner dismissal leaves end review intact')
   await click('홈', 'ariaLabel', 'nav button')
   await click('운동 시작');await click('준비운동 완료')
   await has('이전 유효 기준 기록');assert.match(await body(),/25kg → 30kg/)
@@ -946,7 +946,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await dialogClick('취소')
   await click('운동 종료')
   await has('운동 기록 요약')
-  assert.doesNotMatch(await body(), /중량 검토|디로딩 운동 · 검토 제외/)
+  assert.doesNotMatch(await body(), /중량 변경 검토 사항|디로딩 운동 · 검토 제외/)
   assert.equal(await evaluate('!!document.querySelector(\'[aria-label="웨이트 수행"]\')'),true)
 
   await click('홈', 'ariaLabel', 'nav button')

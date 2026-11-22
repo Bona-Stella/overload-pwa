@@ -2,6 +2,7 @@
 import { useId, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { Button, Card, Help } from '../../components/ui.tsx'
+import { CircleCheck } from '../../components/common-ui/CircleCheck.tsx'
 import { NumberWheel } from '../../components/NumberWheel.tsx'
 import { adjustRepsDraft } from '../workout/reps.ts'
 import { halfWeight } from '../workout/weight.ts'
@@ -108,10 +109,8 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
                   <small className="muted">선택 입력 · 체중은 포함하지 않습니다.</small></>)}
             </div>
             <div role="cell" className={styles.checkCell}>
-              <Button variant="quiet" className={styles.check} aria-label={`${ordinal}세트 ${result ? '완료 취소' : '완료'}`}
-                disabled={!result && resting} data-done={!!result || undefined} onClick={preview ? undefined : () => result ? onUndo(set.id) : onComplete(set.id)}>
-                <span aria-hidden="true">{result ? '✓' : ''}</span>
-              </Button>
+              <CircleCheck label={`${ordinal}세트 ${result ? '완료 취소' : '완료'}`} checked={!!result}
+                disabled={!result && resting} onClick={preview ? undefined : () => result ? onUndo(set.id) : onComplete(set.id)} />
             </div>
             {editing && <div className={styles.setActions}>
               {set === weight.sets.at(-1) && <Button onClick={onAddSet}>+ 세트 추가</Button>}

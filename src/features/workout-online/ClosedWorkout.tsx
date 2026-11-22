@@ -172,7 +172,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
       onClick={()=>void controller.confirmFinish(c)}>운동 종료 저장 결과 확인</Button>)}
   </>
   const menuAction = (action: () => void) => { if(menuRef.current)menuRef.current.open=false; action() }
-  const menu = <details className={styles.recordMenu} ref={menuRef}><summary aria-label="운동 기록 메뉴">⋮</summary><div>
+  const menu = <details className={styles.recordMenu} ref={menuRef}><summary aria-label="운동 기록 메뉴"><span aria-hidden="true">⋮</span></summary><div>
     <Button disabled={disabled} onClick={()=>menuAction(()=>setMode('correction'))}>기록 정정</Button>
     <Button disabled={disabled || !state.copies.length || !state.changes} onClick={()=>menuAction(()=>setDialog('recovery'))}>누락 수행 복구</Button>
     <Button data-danger disabled={disabled} onClick={()=>menuAction(()=>setDialog('delete'))}>기록 전체 삭제</Button>

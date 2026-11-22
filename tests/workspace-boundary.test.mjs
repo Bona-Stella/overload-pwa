@@ -113,7 +113,7 @@ test('real React reconciliation removes statistics across workout, account, gene
       await evaluate('document.querySelector("#test-reopen-weight-review").click()')
       await wait(async () => (await reviewText()).includes('당시 중량 검토 확인 중'))
       await finishReview(scenario)
-      if (scenario === 'candidate') await wait(async () => /중량 검토.*벤치프레스.*25kg → 30kg/.test(await reviewText()))
+      if (scenario === 'candidate') await wait(async () => /중량 변경 검토 사항.*벤치프레스.*25kg → 30kg/.test(await reviewText()))
       else await wait(async () => (await reviewText()) === '')
     }
     assert.equal(await evaluate("[...document.querySelectorAll('[data-boundary-summary] button')].some(button => button.textContent.trim() === '운동 기록 상세')"), false)

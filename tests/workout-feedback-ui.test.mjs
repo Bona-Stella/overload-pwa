@@ -304,6 +304,11 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     // Start through the real completion UI to unlock audio, then shorten only the fixture clock.
     await click('운동 시작하기')
     await wait(()=>evaluate('document.querySelector(\'[aria-label="1세트 완료"]\')?.disabled === false'))
+    assert.deepEqual(await evaluate(`(()=>{
+      const button=document.querySelector('[aria-label="1세트 완료"]'), mark=button.firstElementChild
+      const {width,height}=button.getBoundingClientRect(), circle=mark.getBoundingClientRect()
+      return [width,height,circle.width,circle.height,getComputedStyle(mark).fontSize]
+    })()`),[44,44,21,21,'14px'],'the shared set completion check keeps its original size')
     assert.equal(await plate(),null,'the exercise start clears the plate weight')
     const memoExpansion=()=>evaluate(`document.querySelector('[data-workout-memo-card] button').getAttribute('aria-expanded')`)
     await wait(async()=>await memoExpansion()==='false')
@@ -615,7 +620,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           }),
           counts:[...document.querySelectorAll('[data-weight-review]')].map(r=>r.querySelectorAll('[data-direction]').length)}
       })()`)
-      assert.equal(values.overflow,false);assert.deepEqual(values.counts,[4,2,1])
+      assert.equal(values.overflow,false);assert.deepEqual(values.counts,[3,1,0])
       assert.deepEqual(values.headings.map(h=>h.number),['01','02','03'])
       assert(values.headings.every(h=>h.fits&&h.goalBelow&&/세트 · 총 .*kg/.test(h.totals)))
       await writeFile(resolve(directory,'integrated-record-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
@@ -624,8 +629,55 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"] [class*="cardioTime"]\').textContent'),/수정00:20:30$/,'summary displays the correction badge and rounded seconds')
     assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"]\').textContent'),/자동 기록 00:20:00/)
     await evaluate("window.feedback.record('detail')")
-    await wait(()=>evaluate('!!document.querySelector("summary[aria-label=\\\"운동 기록 메뉴\\\"]")'))
-    await evaluate('document.querySelector("summary").click()');await click('기록 정정')
+    const recordMenu = 'summary[aria-label="운동 기록 메뉴"]'
+    const menuAction = expression => evaluate(`(menu=>{${expression}})(document.querySelector(${JSON.stringify(recordMenu)}))`)
+    await wait(()=>menuAction('return !!menu'))
+    for (const width of [320,375,393,430,1280]) {
+      await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})
+      await wait(()=>evaluate('innerWidth==='+width))
+      const rows = await menuAction(`
+        window.scrollTo(0,0)
+        const row=menu.parentElement.parentElement.parentElement, [date,status]=row.children
+        const icon=menu.firstElementChild, divider=row.parentElement.nextElementSibling
+        const dateText=date.firstChild, statusText=status.lastChild, bounds=e=>e.getBoundingClientRect()
+        const dateValue=dateText.data, statusValue=statusText.data
+        const center=box=>(box.top+box.bottom)/2
+        try {
+          return ['전체 완료','부분 완료','기준 미달'].map(text=>{
+            dateText.data='11.22 · 일 · 07:45:30–23:50:10'
+            statusText.data=text
+            const [d,s,i,t,line]=[date,status,icon,menu,divider].map(bounds)
+            const card=bounds(divider.parentElement)
+            return {
+              gap:Math.round(t.left-s.right), iconEnd:Math.abs(i.right-line.right),
+              centerDifference:Math.max(Math.abs(center(d)-center(i)),Math.abs(center(s)-center(i))),
+              target:[t.width,t.height], dateFits:d.right<=s.left+.5,
+              insideCard:t.right<=card.right&&t.top>=card.top&&t.bottom<=card.bottom,
+              hittable:document.elementFromPoint(t.right-1,t.bottom-1)===menu,
+              overflow:document.documentElement.scrollWidth>innerWidth,
+            }
+          })
+        } finally { dateText.data=dateValue;statusText.data=statusValue }
+      `)
+      for (const row of rows) {
+        assert.equal(row.gap,6)
+        assert.ok(row.iconEnd<.5 && row.centerDifference<.5 && row.dateFits && row.insideCard && row.hittable && !row.overflow, JSON.stringify({width,row}))
+        assert.deepEqual(row.target,[44,44])
+      }
+    }
+    await viewport(393)
+    const popup = await menuAction(`
+      menu.click()
+      const target=menu.getBoundingClientRect(), pane=menu.nextElementSibling.getBoundingClientRect()
+      return { inside:pane.left>=0&&pane.right<=innerWidth, anchored:Math.abs(pane.top-target.bottom)<.5&&Math.abs(pane.right-target.right)<.5,
+        actions:[...menu.nextElementSibling.querySelectorAll('button')].map(b=>b.textContent) }
+    `)
+    assert.deepEqual(popup,{inside:true,anchored:true,actions:['기록 정정','누락 수행 복구','기록 전체 삭제','평가 변경 이력']})
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'})
+    assert.ok(await menuAction('return !menu.parentElement.open&&document.activeElement===menu'))
+    await menuAction("menu.click(); document.querySelector('h1').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))")
+    assert.ok(await menuAction('return !menu.parentElement.open'))
+    await menuAction('menu.click()');await click('기록 정정')
     await evaluate('[...document.querySelectorAll("button")].filter(b=>b.textContent==="정정").at(-1).click()')
     await wait(()=>evaluate('!!document.querySelector(".duration-wheels")'))
     const fontAudit=()=>evaluate('(()=>{const root=document.querySelector(".app-shell"),font=getComputedStyle(root).fontFamily;return [...root.querySelectorAll("*")].filter(e=>e.getClientRects().length&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&getComputedStyle(e).fontFamily!==font).map(e=>e.textContent.slice(0,60))})()')
@@ -741,19 +793,156 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
       await wait(()=>evaluate('!document.querySelector(\'[data-loading-skeleton="row"]\')'))
     }
+    const approvedCard = '[aria-label="당시 중량 검토"]'
+    const verifyCompactHistory = async () => {
+      for (const width of [320,375,393,430,1280]) {
+        await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})
+        await wait(()=>evaluate('innerWidth==='+width))
+        const layout=await evaluate(`(() => {
+          const record=document.querySelector('${approvedCard}'), details=record.closest('details'), card=details.parentElement
+          const [heading,body]=details.children, css=e=>getComputedStyle(e), box=e=>e.getBoundingClientRect()
+          const rows=[...record.querySelectorAll('.approval-review-row')]
+          const weights=rows.map(row=>{
+            const values=row.querySelector('.approval-values'), [old,arrow,result]=values.children
+            const [current,direction]=result.children
+            return {
+              type:[old,arrow,current,direction,row.querySelector('h3'),row.lastElementChild.firstElementChild].map(e=>css(e).fontSize),
+              weight:[old,arrow,current,direction].map(e=>css(e).fontWeight),
+              colors:[old,arrow,current,direction].map(e=>css(e).color),
+              state:result.dataset.approvalDirection,
+            }
+          })
+          const spacing=[css(card).paddingTop,css(heading).paddingTop,css(body).paddingTop,css(body).paddingBottom,
+            css(rows[0]).paddingTop,css(rows.at(-1)).paddingBottom]
+          const opened=box(card).height
+          heading.click()
+          const closed=box(card).height, target=box(heading).height
+          heading.click()
+          const headingStyle=css(heading.querySelector('h2'))
+          return {weights,spacing,opened,closed,target,reopened:box(card).height, heading:[headingStyle.fontSize,headingStyle.fontWeight,headingStyle.lineHeight,headingStyle.color],
+            separated:rows.slice(1).every((row,i)=>box(row).top-box(rows[i]).bottom>=6), fits:document.documentElement.scrollWidth<=innerWidth}
+        })()`)
+        assert.deepEqual(layout.heading,['16px','700','22.4px','rgb(240, 241, 244)'])
+        assert.deepEqual(layout.spacing,['0px','8px','0px','8px','8px','0px'])
+        assert.ok(layout.target>=44 && layout.closed===layout.target+2 && layout.opened>layout.closed)
+        assert.ok(layout.reopened===layout.opened && layout.separated && layout.fits)
+        for (const row of layout.weights) {
+          assert.deepEqual(row.type,['11px','11px','13px','11px','14px','12px'])
+          assert.deepEqual(row.weight,['400','400','700','700'])
+          assert.equal(row.colors[0],row.colors[1])
+          assert.deepEqual(row.colors.slice(2),Array(2).fill(row.state==='increase'?'rgb(116, 166, 138)':'rgb(214, 188, 101)'))
+        }
+      }
+      await viewport(393)
+    }
     await openSavedReview('empty')
     assert.doesNotMatch(await evaluate('document.querySelector("main").innerText'),/중량 변경 승인 이력|당시 중량 판정|판정 근거 부족/)
     await openSavedReview('candidate')
     assert.match(await evaluate('document.querySelector("main").innerText'),/중량 변경 승인 이력/)
     assert.match(await evaluate('document.querySelector(\'[aria-label="당시 중량 검토"]\').textContent'),/45kg → 50kg.*미승인/)
     assert.doesNotMatch(await evaluate('document.querySelector("main").innerText'),/표시하면 안 되는|판정 근거 부족/)
+    await verifyCompactHistory()
     await openSavedReview('legacy-event')
-    assert.match(await evaluate('document.querySelector("main").innerText'),/운동 중 승인 · 45kg → 50kg/)
+    const legacy = await evaluate('document.querySelector("main").textContent')
+    assert.match(legacy,/45kg → 50kg/)
+    assert.match(legacy,/운동 중 승인.*증량 완료/)
     await openSavedReview('failure')
     assert.match(await evaluate('document.querySelector(\'[role="alert"]\').textContent'),/승인 이력을 조회하지 못했습니다/)
     await click('다시 조회')
     await wait(()=>evaluate('!document.querySelector(\'[role="alert"], [data-loading-skeleton="row"]\')'))
     assert.doesNotMatch(await evaluate('document.querySelector("main").innerText'),/중량 변경 승인 이력|판정 근거 부족/)
+    const reviewCard = '[aria-label="중량 검토 카드"]'
+    const counts = () => evaluate(`[${JSON.stringify(reviewCard)},${JSON.stringify(approvedCard)}].map(s=>document.querySelector(s)?.querySelectorAll('[data-weight-review]').length??0)`)
+    const expectCounts = async (pending,approved) => {
+      await wait(async()=>String(await counts())===String([pending,approved]))
+      assert.deepEqual(await counts(),[pending,approved])
+    }
+    const selectOnlyFirst = async () => {
+      await wait(()=>evaluate(`!!document.querySelector('${reviewCard} input:not(:disabled)')`))
+      await evaluate(`[...document.querySelectorAll('${reviewCard} input')].forEach((input,index)=>{if(input.checked!==(index===0))input.click()})`)
+    }
+    const approveButton = () => evaluate(`(()=>{const b=document.querySelector('${reviewCard} .approval-toolbar button');return [b.textContent,b.disabled]})()`)
+    const checkedCount = () => evaluate(`document.querySelectorAll('${reviewCard} input:checked').length`)
+    await evaluate("window.feedback.record('approval-summary:empty')")
+    await wait(()=>evaluate('window.feedback.approvalNetwork?.reads>0'))
+    await expectCounts(0,0)
+    await evaluate("window.feedback.record('approval-summary:active')")
+    await expectCounts(3,0)
+    assert.deepEqual(await approveButton(),['전체 승인',false])
+    assert.equal(await checkedCount(),3)
+    assert.equal(await evaluate(`document.querySelectorAll('${reviewCard} .approval-toolbar button').length`),1)
+    for(const direction of ['increase','decrease']) {
+      const colors=await evaluate(`(()=>{
+        const row=document.querySelector('${reviewCard} .approval-values [data-approval-direction="${direction}"]')
+        return [...row.children].map(e=>getComputedStyle(e).color)
+      })()`)
+      const expected=direction==='increase'?'rgb(116, 166, 138)':'rgb(214, 188, 101)'
+      assert.deepEqual(colors,[expected,expected])
+    }
+    await selectOnlyFirst()
+    await click('무게 수정'); await click('−2.5'); await click('확인')
+    const draft = () => evaluate(`document.querySelector('${reviewCard} [data-weight-review=increase] .approval-values strong').textContent`)
+    assert.equal(await draft(),'47.5kg')
+    assert.equal(await checkedCount(),1)
+    await click('선택 승인'); await click('취소')
+    assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),0)
+    assert.equal(await draft(),'47.5kg')
+    await evaluate('window.feedback.approvalNetwork.rejectPost=true')
+    await click('선택 승인'); await click('승인 확인')
+    await wait(()=>evaluate('!!document.querySelector("dialog[open] [role=alert]")'))
+    await expectCounts(3,0)
+    assert.equal(await draft(),'47.5kg')
+    assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),1)
+    await click('취소')
+    await evaluate('Object.assign(window.feedback.approvalNetwork,{rejectPost:false,failAfterPost:true,holdPost:true})')
+    await click('선택 승인'); await click('승인 확인')
+    await wait(()=>evaluate('!!window.feedback.approvalNetwork.resumePost'))
+    assert.deepEqual(await approveButton(),['선택 승인 처리 중…',true])
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('${reviewCard} .approval-toolbar button')).backgroundColor`),'rgba(0, 0, 0, 0)')
+    await evaluate('[...document.querySelectorAll("dialog[open] button")].find(b=>b.textContent==="저장 확인 중…").click()')
+    assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),2)
+    await evaluate('window.feedback.approvalNetwork.holdPost=false;window.feedback.approvalNetwork.resumePost()')
+    await wait(()=>evaluate('document.querySelector("dialog[open] [role=alert]")?.textContent.includes("서버가 승인 요청을 수락했습니다")'))
+    await expectCounts(3,0)
+    assert.equal(await draft(),'47.5kg')
+    assert.ok(await evaluate('[...document.querySelectorAll("dialog[open] button")].some(b=>b.textContent==="승인 확인"&&b.disabled)'))
+    await click('취소')
+    await evaluate('Object.assign(window.feedback.approvalNetwork,{failAfterPost:false,failReads:false})')
+    await click('다시 조회')
+    await expectCounts(2,1)
+    assert.equal(await checkedCount(),0)
+    assert.deepEqual(await approveButton(),['선택 승인',true])
+    assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),2)
+    const historyText = () => evaluate(`document.querySelector('${approvedCard}').textContent`)
+    assert.match(await historyText(),/45kg → 47\.5kg.*증량 완료/)
+    assert.doesNotMatch(await historyText(),/미승인|50kg/)
+    const toggleHistory = () => evaluate(`document.querySelector('${approvedCard}').closest('details').querySelector('summary').click()`)
+    const historyOpen = () => evaluate(`document.querySelector('${approvedCard}').closest('details').open`)
+    await toggleHistory();assert.equal(await historyOpen(),false)
+    await toggleHistory();assert.equal(await historyOpen(),true)
+    for (const [target,pending,approved] of [['선택 승인',1,2],['전체 승인',0,3]]) {
+      await selectOnlyFirst()
+      await click(target); await click('승인 확인')
+      await expectCounts(pending,approved)
+      if (pending===1) {
+        for(const width of [320,375,393,430,1280]) {
+          await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})
+          const compact=await evaluate(`(()=>{
+            const card=document.querySelector('${reviewCard}'), header=card.querySelector('.approval-toolbar'), row=card.querySelector('.approval-review-row')
+            const control=header.querySelector('button'), heading=header.querySelector('h2'), historyHeading=document.querySelector('${approvedCard}').closest('details').querySelector('h2')
+            const box=e=>e.getBoundingClientRect(), styles=e=>getComputedStyle(e)
+            return {stylesMatch:['fontSize','fontWeight','lineHeight','color'].every(key=>styles(heading)[key]===styles(historyHeading)[key]),
+              touching:box(heading).right>box(control).left+.5, overflow:document.documentElement.scrollWidth>innerWidth,
+              spacing:[styles(card).paddingTop,styles(card).paddingBottom,box(header).height,box(row).top-box(header).bottom,styles(row).paddingTop,box(card).bottom-box(row).bottom]}
+          })()`)
+          assert.deepEqual(compact,{stylesMatch:true,touching:false,overflow:false,spacing:['8px','8px',44,6,'4px',9]},'single review row at '+width)
+        }
+        await viewport(393)
+      }
+    }
+    assert.match(await historyText(),/감량 완료/)
+    await verifyCompactHistory()
+    assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),4)
     for(const [kind, selector, width, typed] of [['login','#auth-email',393,'sample@example.invalid'],['otp','#auth-code',430,'123456']]){
       await viewport(width)
       await send('Page.navigate',{url:origin+'/boundary?input='+kind})

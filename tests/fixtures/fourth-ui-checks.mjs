@@ -7,9 +7,8 @@ export async function verifyFourthUi({go,title,click,set,evaluate,send,wait,widt
  for(const w of [320,375,390,430]){
   await width(w,'react')
   const buttons=await evaluate('[...document.querySelectorAll(".approval-toolbar button")].map(b=>({text:b.textContent,w:b.getBoundingClientRect().width,h:b.getBoundingClientRect().height}))')
-  assert.deepEqual(buttons.map(b=>b.text),['전체 승인','수정']);assert.equal(buttons[0].w,buttons[1].w);assert.equal(buttons[0].h,buttons[1].h);assert(buttons[0].h<=40)
+  assert.deepEqual(buttons.map(b=>b.text),['전체 승인']);assert(buttons[0].h<=40)
  }
- await click('수정');assert.deepEqual(await evaluate('[...document.querySelectorAll(".approval-toolbar button")].map(b=>b.textContent)'),['수정 완료'])
  await click('무게 수정')
  await wait(()=>evaluate('!!document.querySelector(".approval-draft-value")'),'approval modal')
  const colors=()=>evaluate('(()=>{const p=document.querySelector(".approval-draft-value");return{before:getComputedStyle(p).color,after:getComputedStyle(p.querySelector("strong")).color,text:p.textContent}})()')
@@ -32,7 +31,7 @@ export async function verifyFourthUi({go,title,click,set,evaluate,send,wait,widt
  await wait(()=>evaluate('document.querySelector("dialog[open]:not(:has(dialog[open])) [aria-pressed=true]").textContent.trim()!=="30 kg"'),'wheel touch scroll selects a new value')
  await click('확인',dialog+' button');await click('취소',dialog+' button')
  assert.match(await evaluate('document.querySelector(".approval-values").textContent'),/25kg → 30kg/)
- await click('수정 완료');await tab('기록');await title('이번 주 요약')
+ await tab('기록');await title('이번 주 요약')
  const cards=await evaluate('[...document.querySelectorAll(".recent-records .session-record-card")].map(b=>({id:b.dataset.sessionId,date:b.querySelector("time").textContent}))')
  assert(cards.length>0);assert.equal(cards.length,new Set(cards.map(c=>c.id)).size);assert(cards.every(c=>c.date.slice(0,5)>='11.05'&&c.date.slice(0,5)<='11.11'))
  assert.doesNotMatch(await body(),/운동 기록 요약 보기/)

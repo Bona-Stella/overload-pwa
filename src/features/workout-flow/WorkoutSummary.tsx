@@ -36,7 +36,7 @@ const formatKg = (value: bigint) => {
 
 export function WeightApprovalHistory({ children }: { children: ReactNode }) {
   return <Card className={detailStyles.review}>
-    <details open><summary><h2>중량 변경 승인 이력</h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <details open><summary><h2 className={detailStyles.reviewTitle}>중량 변경 승인 이력</h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
       <div>{children}</div>
     </details>
   </Card>
@@ -69,15 +69,17 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
   const returnLabel = backLabel ?? (detail ? '기록으로' : '홈으로')
   return <article className={`${styles.summary} ${detailStyles.detail}`}>
     <RecordSubpageHeader title={detail ? '운동 기록 상세' : '운동 기록 요약'} onBack={onBack} backLabel={returnLabel} />
-    <Card hero className={styles.summaryHeader}>
+    <Card hero className={`${styles.summaryHeader} ${detailStyles.summaryCard}`}>
       {deload && <p className={styles.eyebrow}>DELOAD</p>}
-      <div className={detailStyles.summaryTop}>
-        <p className={`${styles.recordDate} ${detailStyles.date}`}>{dateLabel}</p>
-        {detail && recordFacts && <span className={detailStyles.status} data-state={recordFacts.status.kind}><b aria-hidden="true">{recordFacts.status.mark}</b>{recordFacts.status.kind==='complete'?'전체 완료':recordFacts.status.kind==='partial'?'부분 완료':recordFacts.status.label}</span>}
-        {!detail && whole && <span className={detailStyles.status} data-state="complete"><b aria-hidden="true">✓</b>전체 루틴 완료</span>}
-        {recordMenu && <div className={detailStyles.menu}>{recordMenu}</div>}
+      <div className={detailStyles.summaryInfo}>
+        <div className={detailStyles.summaryTop}>
+          <p className={`${styles.recordDate} ${detailStyles.date}`}>{dateLabel}</p>
+          {detail && recordFacts && <span className={detailStyles.status} data-state={recordFacts.status.kind}><b aria-hidden="true">{recordFacts.status.mark}</b>{recordFacts.status.kind==='complete'?'전체 완료':recordFacts.status.kind==='partial'?'부분 완료':recordFacts.status.label}</span>}
+          {!detail && whole && <span className={detailStyles.status} data-state="complete"><b aria-hidden="true">✓</b>전체 루틴 완료</span>}
+          {recordMenu && <div className={detailStyles.menu}>{recordMenu}</div>}
+        </div>
+        <h2 className={`${styles.recordRoutine} ${detailStyles.routine}`} title={routine}>{routine}</h2>
       </div>
-      <h2 className={`${styles.recordRoutine} ${detailStyles.routine}`} title={routine}>{routine}</h2>
       {detail && recordFacts ? <div className={styles.recordColumns} aria-label="운동 기록 요약">
         <section><h3>전체</h3><strong>{recordFacts.totalMs===null?'–':recordDuration(recordFacts.totalMs)}</strong><small>전체 경과 시간</small><strong>{recordFacts.inactiveMs===null?'–':recordDuration(recordFacts.inactiveMs)}</strong><small>비수행 시간</small></section>
         <section><h3>웨이트</h3><strong>{recordFacts.weightMs===null?'–':recordDuration(recordFacts.weightMs)}</strong><small>수행 시간</small><strong>{recordFacts.achievement.weight.completed}/{recordFacts.achievement.weight.planned}</strong><small>수행/계획 종목</small></section>
