@@ -4,9 +4,9 @@ import { Dialog } from '../../components/Dialog.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import { RestCountdown } from '../workout-flow/WorkoutFrame.tsx'
-import { restAlertVisual, restPreviewSeconds } from '../workout-flow/rest-alerts.ts'
+import { REST_MIDDLE_SECONDS, restAlertVisual, restPreviewSeconds } from '../workout-flow/rest-alerts.ts'
 import type { RestAlerts } from '../workout-flow/rest-alerts.ts'
-import { useRestAudio } from '../workout-flow/useRestAudio.ts'
+import { useRestAudio, useRestTimerAudio } from '../workout-flow/useRestAudio.ts'
 import flow from '../workout-flow/WorkoutFlow.module.css'
 import styles from './RestAlertSettings.module.css'
 
@@ -38,12 +38,12 @@ function SwitchMark({ on }: { on: boolean }) {
 }
 
 function AlertSection({ title, icon, checked, locked, onToggle, onPlay, playing, playDisabled, children }: {
-  title: string; icon: AlertIcon; checked: boolean; locked: boolean; onToggle: () => void
+  title: string; icon?: AlertIcon; checked: boolean; locked: boolean; onToggle: () => void
   onPlay?: () => void; playing?: boolean; playDisabled?: boolean; children?: ReactNode
 }) {
   return <section className={styles.setting} aria-label={`${title} 설정`}>
     <div className={styles.settingHeading}>
-      <h2 data-on={checked || undefined}><Icon name={checked ? icon : inactiveIcons[icon]} />{title}</h2>
+      <h2 data-on={checked || undefined}>{icon && <Icon name={checked ? icon : inactiveIcons[icon]} />}{title}</h2>
       {onPlay && <Button variant="quiet" className={styles.sample} aria-label={`${title} 미리듣기${playing ? ' 중지' : ''}`}
         disabled={locked || playDisabled} onClick={onPlay}><Icon name={playing ? 'pause' : 'play'} /></Button>}
       <Button className={styles.switch} role="switch" aria-label={title} aria-checked={checked} disabled={locked} onClick={onToggle}><SwitchMark on={checked} /></Button>
@@ -97,7 +97,8 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
 }) {
   const [run, setRun] = useState<{ ends: number; alerts: RestAlerts } | null>(null)
   const previewAlerts = run?.alerts ?? alerts
-  const { play, stop, unlock, sample } = useRestAudio(previewAlerts.sound, previewAlerts.volume)
+  const audio = useRestAudio(previewAlerts.sound || previewAlerts.middle, previewAlerts.volume)
+  const { stop, unlock, sample } = audio
   const title = useRef<HTMLHeadingElement>(null)
   const preview = useRef<HTMLElement>(null)
   const [seconds, setSeconds] = useState(0)
@@ -111,21 +112,27 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
   const flash = alerts.visual === 'flash'
   const previewDim = previewAlerts.visual === 'dim'
   const previewFlash = previewAlerts.visual === 'flash'
+  useRestTimerAudio(audio, { id: running ? 'preview' : null, ends: run?.ends, remaining: seconds, countdown: previewAlerts.sound })
 
   useLayoutEffect(() => { title.current?.focus({ preventScroll: true }); window.scrollTo(0, 0) }, [])
   useEffect(() => () => { sampleRequest.current = null }, [])
   useEffect(() => {
     if (!run) return
     const { ends } = run
-    const timer = window.setInterval(() => {
+    const tick = () => {
       const left = ends - Date.now()
-      const remaining = Math.max(0, Math.ceil(left / 1000))
-      setSeconds(remaining)
-      play(ends, remaining)
+      setSeconds(Math.max(0, Math.ceil(left / 1000)))
       if (left < -400) { stop(); setCompleted(true); setRun(null) }
-    }, 80)
-    return () => { window.clearInterval(timer); stop() }
-  }, [run, play, stop])
+    }
+    const timer = window.setInterval(tick, 80)
+    document.addEventListener('visibilitychange', tick)
+    window.addEventListener('pageshow', tick)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+      window.removeEventListener('pageshow', tick)
+    }
+  }, [run, stop])
   useEffect(() => {
     if (running && !previewDim) preview.current?.scrollIntoView({ block: 'nearest' })
   }, [running, previewDim])
@@ -186,21 +193,22 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
       </AlertSection>
       <AlertSection title="효과음" icon="sound" checked={alerts.sound} locked={running} onToggle={() => update({ sound: !alerts.sound })}
         onPlay={() => void playSample(1)} playing={playingSample === 1} playDisabled={!alerts.sound || !alerts.volume}>
-        {alerts.sound && <>
+        {(alerts.sound || alerts.middle) &&
           <label className={styles.volume}>
             <span>효과음 볼륨 <strong aria-hidden="true">{alerts.volume}%</strong></span>
             <span><Icon name="quiet" /><input type="range" aria-label="효과음 볼륨" aria-valuetext={`${alerts.volume}%`} min={0} max={100} step={5}
               value={alerts.volume} disabled={running} style={{ '--volume': alerts.volume / 100 } as CSSProperties}
               onChange={event => update({ volume: Number(event.target.value) })} /><Icon name="sound" /></span>
-          </label>
-          <p>휴식 종료 전 마지막 5초에 효과음이 재생돼요.</p>
-        </>}
+          </label>}
+        {alerts.sound && <p>휴식 종료 전 마지막 5초에 효과음이 재생돼요.</p>}
       </AlertSection>
-      {alerts.sound && <AlertSection title="중간 알림음" icon="middle" checked={alerts.middle} locked={running} onToggle={() => update({ middle: !alerts.middle })}
-        onPlay={() => void playSample(3)} playing={playingSample === 3} playDisabled={!alerts.volume}>
-        {alerts.middle && <Times label="휴식 종료 몇 초 전에 알릴까요?" options={[20, 30, 60] as const} selected={alerts.middleAt} disabled={running}
-          onSelect={middleAt => update({ middleAt })} />}
-      </AlertSection>}
+      <AlertSection title="중간 알림음" icon="middle" checked={alerts.middle} locked={running} onToggle={() => update({ middle: !alerts.middle })}
+        onPlay={() => void playSample(3)} playing={playingSample === 3} playDisabled={!(alerts.sound || alerts.middle) || !alerts.volume}>
+        {alerts.middle && <p>휴식 종료 {REST_MIDDLE_SECONDS}초 전에 알림음이 세 번 울려요.</p>}
+      </AlertSection>
+      <AlertSection title="휴식 테스트" checked={alerts.testMode} locked={running} onToggle={() => update({ testMode: !alerts.testMode })}>
+        <p>켜면 실제 운동의 휴식 시간이 12초로 적용됩니다.</p>
+      </AlertSection>
     </Card>
     {saveIssue && <StatusNotice error>이 브라우저에 알림 설정을 저장하지 못했어요.</StatusNotice>}
     <Button className={styles.previewButton} aria-disabled={running} onClick={start}><Icon name="play" />알림 미리보기</Button>

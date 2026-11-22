@@ -5,6 +5,7 @@ import type { CardioTimer, LocalWorkout, RestPolicy, SetDraft } from './types.ts
 import { slotKey } from './types.ts'
 import { actualCardioMeasurement, estimatedCardioDistance } from '../workout-online/cardio-measurement.ts'
 import { supportsCardioMotion } from '../workout-online/cardio-draft.ts'
+import { REST_TEST_SECONDS } from '../workout-flow/rest-alerts.ts'
 
 export function increment(value: string) {
   const next = (BigInt(value) + 1n).toString()
@@ -134,7 +135,7 @@ function requireWeight(workout: LocalWorkout, id: string) {
   if (!e) throw new Error('현재 적용 계획에 없는 종목입니다.')
   return e
 }
-export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId = newId) {
+export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId = newId, testRest = false) {
   const plan = requireWeight(workout, id)
   if (!count(ordinal) || workout.snapshot.performedSets.some(x => x.sessionExerciseId === id && x.ordinal === ordinal)) throw new Error('이미 완료한 세트입니다.')
   const draft = draftFor(workout, id, ordinal), weightKg = decimalDraft(draft.weight), reps = countDraft(draft.reps)
@@ -151,10 +152,12 @@ export function completeSet(workout: LocalWorkout, id: string, ordinal: number, 
   workout.snapshot.performedSets.push(performed); workout.presence[performed.id] = 'LOCAL_ONLY'
   // Preserve the original input text, including trailing decimal zeros.
   workout.drafts[slotKey(id, ordinal)] = { ...draft }
-  const seconds = restSeconds(workout.restPolicy, plan.maxReps)
   const rests = migrateRest(workout)
   if (weightDone(workout.snapshot, id)) delete rests[id]
-  else rests[id] = { startedAt: completedAt, endsAt: new Date(now + seconds * 1000).toISOString(), seconds, sessionExerciseId: id, ordinal }
+  else {
+    const seconds = testRest ? REST_TEST_SECONDS : restSeconds(workout.restPolicy, plan.maxReps)
+    rests[id] = { startedAt: completedAt, endsAt: new Date(now + seconds * 1000).toISOString(), seconds, sessionExerciseId: id, ordinal }
+  }
 }
 export function undoSet(workout: LocalWorkout, recordId: string) {
   const record = workout.snapshot.performedSets.find(x => x.id === recordId)

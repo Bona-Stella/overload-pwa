@@ -106,7 +106,7 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   const { route: recordRoute, open: openRecord, back: backFromRecord } = useRecordDetailHistory('review-record', tab)
   const [alerts, setAlerts] = useState(defaultRestAlerts)
   const [estimate, setEstimate] = useState(false)
-  const audio = useRestAudio(alerts.sound, alerts.volume)
+  const audio = useRestAudio(alerts.sound || alerts.middle, alerts.volume)
   const [shortRest, setShortRest] = useState(() => isWorkoutScenario(scenario) || scenario === 'active')
   const inFlight = useRef(false)
   const restExit = useRef<(() => boolean) | null>(null)

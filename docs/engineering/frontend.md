@@ -659,7 +659,7 @@ iPhone의 화면 구조를 고려합니다.
 |---|---|---|
 | 01 UI-16 | `1e4e4a7`의 [HomePanel](../../src/features/home/HomePanel.tsx)·[RecentWorkout](../../src/features/home/RecentWorkout.tsx)에서 세션 ID를 [WorkoutWorkspace](../../src/features/workout-online/WorkoutWorkspace.tsx)에 넘긴다. 기존 상세를 재사용하고 전체 보기는 기록 탭의 전체 이력으로 연다. [상세 이력 훅](../../src/features/history/useRecordDetailHistory.ts)이 홈·기록의 원래 위치 복원을 담당한다. | 완료. 기존 상세/이력 조회 계약을 재사용한다. 격리 브라우저에서 개별 상세·전체 보기와 이력 복귀를 검증한다. |
 | 02 UI-13 | `b8d5e1b`의 [useEditorKeyboard](../../src/components/useEditorKeyboard.ts)·[editorViewport](../../src/components/editorViewport.ts)를 [AppShell](../../src/app/AppShell.tsx)에서 공유한다. [SearchList](../../src/components/SearchList.tsx)·[Dialog](../../src/components/Dialog.tsx)·루틴 편집·운동/메모의 실제 렌더링과 스크롤을 조정한다. | 완료. 사용자 iPhone Safari에서 입력 확대 방지와 메모·검색의 왕복 스크롤 개선을 확인했다. 격리 Chrome은 뷰포트·키보드 시뮬레이션과 공간 복원 회귀를 검사한다. 설치형 PWA의 전체 입력 조합 검증은 별도다. |
-| 03 UI-02·11·20 | `38f0bfa`의 [useRestAudio](../../src/features/workout-flow/useRestAudio.ts)에서 사용자 상호작용으로 활성화한 Web Audio 상태를 복귀 때 재개한다. [로컬 알림 설정](../../src/features/workout-flow/useRestAlertPreferences.ts)과 기존 일부 효과를 사용한다. | UI-11 완료. 사용자 iPhone 실기기에서 마지막 5초 효과음을 확인했다. UI-02·20은 보류이며 사용자별 서버 저장·기기 간 동기화는 없다. 상·하단 점멸 일치는 05의 부분 수정이다. |
+| 03 UI-02·11·20 | `38f0bfa`의 [useRestAudio](../../src/features/workout-flow/useRestAudio.ts)는 사용자 상호작용으로 활성화한 Web Audio를 복귀 때 재개한다. UI-02·20은 [로컬 알림 설정](../../src/features/workout-flow/useRestAlertPreferences.ts)과 05의 상·하단 점멸을 재사용하고 [운동 연동](#t035-휴식-타이머-시각효과음-알림)을 보완했다. | 사용자 iPhone 실기기에서는 당시 UI-11의 마지막 5초 효과음을 확인했다. UI-02·20 후속 변경의 iPhone 검증과 서버·기기 간 설정 동기화는 남아 있다. |
 | 04 UI-24 | `af1046f`의 [navigation.ts](../../src/app/navigation.ts)는 탭·하위 화면을 선형 이력으로 관리한다. [ExerciseSwipe](../../src/features/workout-flow/ExerciseSwipe.tsx)와 [WorkoutFrame](../../src/features/workout-flow/WorkoutFrame.tsx)은 읽기 전용 인접 콘텐츠, 전환과 세로 위치 보정을 담당한다. | 완료. 이전 iPhone 스와이프 피드백과 Chrome 320·375·393·430px의 드래그·취소·경계·위치·이력 회귀를 반영했다. 현재 통합 결과의 설치형 PWA 재검수는 별도다. |
 | 05 UI-07·10·19 및 UI-09 | `0331dab`의 [홈 진행 카드 계산](../../src/features/home/active-workout.ts), [LocalWorkoutFlow](../../src/features/workout-local/LocalWorkoutFlow.tsx), [model](../../src/features/workout-local/model.ts), [weight-timing](../../src/features/workout-local/weight-timing.ts)와 [WorkoutSummary](../../src/features/workout-flow/WorkoutSummary.tsx)를 사용한다. UI-09의 편집 명칭·닫기 색·완료 수치 표현을 함께 반영했다. | 구현과 2차 피드백 반영. 기존 브랜치 검증은 자동 테스트 660건, Chrome 모바일 전환/종료/요약, 실제 IndexedDB를 사용한 격리 Edge의 롤백·새로고침 복원·편집 잠금이다. 기존 세션 API 연결과 이 검증을 운영 계정의 실제 저장 검수로 간주하지 않는다. |
 
@@ -721,7 +721,7 @@ iPhone의 화면 구조를 고려합니다.
 | CATALOG-01·02 및 SETTING-01 | **실제 API 연동·격리 검증·사용자 최종 승인 및 마감.** 계정 설정의 전체 메뉴와 공개 운동 목록·UUID 상세를 연결했다. 하이 로우 보호 GIF는 내부 검토 계정에서 확인했다. [최종 마감](#catalog-0102--setting-01-실제-계정-마감) |
 | 일반 운동 UI 및 실제 API (2026-11-13 기록) | **구현·사용자 검수 피드백·로컬 코드 커밋 완료.** UI 승인 `e2965d8` 이후 일반 계정 경로를 실제 API에 연결했다. 메모는 기기·세션 범위이며 서버 저장은 미구현이다. 2026-11-13 문서 동기화, 검토 서버 종료. 실기기·운영 경계와 당시 검증은 [마감 기록](../tasks/ui-v09-workout-api-integration.md#최종-마감--2026-11-13)을 따른다. |
 | T03·T04 및 G6 | **후속.** 홈의 디로딩 분석·기간 조회와 일반 쓰기 보호는 연결했다. 기간·임시 계획의 편집, 디로딩 START 및 혼재 세션의 검증·로컬 저장·동기화는 G6 범위다. [G6 선행조건](backend-ui-v0.9.md#g6-실제-연동-선행조건) |
-| T03.5 휴식 타이머 알림 | **운영 설정과 실제 운동 연결 구현.** 화면 어둡게·위치별 깜빡임, 종료 효과음·중간 알림음, 별도 미리보기와 계정별 브라우저 저장을 지원한다. 서버 동기화는 미지원이다. [구현 지침](#t035-휴식-타이머-시각효과음-알림) |
+| T03.5 휴식 타이머 알림 | **운영 설정과 실제 운동 연결 구현.** 화면 어둡게·위치별 깜빡임, 종료 효과음·중간 알림음, 별도 미리보기와 계정별 브라우저 저장을 지원한다. UI-02·UI-20에서 실제 운동 복귀·알림 해제와 미리보기의 종료음 판정을 보완했다. 서버 동기화는 미지원이며 이번 변경의 iPhone 검증은 남아 있다. [구현 지침](#t035-휴식-타이머-시각효과음-알림) |
 | 실기기·후속 통합 | **검증 대기.** 최신 HOME·ROUTINE의 iPhone Safari, 설치형 PWA 및 신뢰된 로컬 HTTPS START는 이번 PC 검증에 포함되지 않았다. [실기기 검증 규칙](#167-실제-iphone-테스트) |
 
 #### 일반 운동 실제 API 연결 — 2026-11-13
@@ -1066,11 +1066,15 @@ T02-A 일반 홈은 2026-11-06 iPhone 실기기에서 최종 승인됐다. 보�
 
 `1eb6c05`에서 설정과 실제 운동 연결이 구현됐다. [최신 UI 결정](../product/Overload_UI_Decision_Log_v0.9.md#1035--세트-사이-휴식과-휴식-타이머-알림--2026-11-19)
 
-- `rest-alerts.ts`의 `RestAlerts`는 화면 방식 `off|dim|flash`, 상·하단 선택, 점멸 시점, 효과음·볼륨, 중간 알림·시점을 가진다. 기본은 상·하단 깜빡임 ON(5초), 효과음 ON(70%), 중간 OFF(선택값 30초)다. `useRestAlertPreferences`는 `overload.rest-alerts.v1:<userId>`로 분리하고 브라우저 저장 이벤트로 변경을 반영한다. 저장 실패는 설정 화면에 표시한다.
+- `rest-alerts.ts`의 `RestAlerts`는 화면 방식 `off|dim|flash`, 상·하단 선택, 점멸 시점, 종료 카운트 효과음, 중간 알림, 공통 음량과 휴식 테스트를 가진다. 기본은 상·하단 깜빡임 ON(5초), 종료 카운트음 ON(70%), 중간 알림과 휴식 테스트 OFF다. `useRestAlertPreferences`는 `overload.rest-alerts.v1:<userId>`로 분리하고 브라우저 저장 이벤트로 변경을 반영한다. 저장 실패는 설정 화면에 표시한다.
+- 휴식 테스트 ON에서는 `completeSet`이 새 세트 사이 휴식에만 12초를 적용한다. 계정의 반복 상한별 휴식 시간과 진행 중인 휴식의 종료 시각은 그대로 보존한다. 마지막 세트 완료에는 새 휴식이 생기지 않는다.
 - `LocalWorkoutFlow`가 기존 종료 시각에서 구한 남은 시간을 `restAlertVisual`로 평가한다. `WorkoutFrame`/`RestActions`가 상단과 하단 점멸 및 푸터를 제외한 12~1초 어둡게 오버레이를 표시한다. 10초 이하의 중앙 숫자는 경고색이다. 운동 의도와 `+30초`·수동 종료의 저장 경로는 기존 코드가 담당한다.
-- `useRestAudio`는 사용자 제스처로 Web Audio를 활성화한다. `useRestTimerAudio`는 종료 시각·초로 5~1초 효과음을 중복 방지한다. 중간음은 설정 초에 도달했거나 동일 길이로 막 시작한 경우 같은 소리를 3회 예약하며 휴식 ID당 한 번으로 제한한다. 임계점보다 짧은 휴식 또는 이미 지나간 시점을 소급 재생하지 않는다. 연장·수동 종료·백그라운드/컴포넌트 정리에 기존 재생 취소를 사용한다.
-- `RestAlertSettings`는 설정과 분리된 가상 종료 시각 및 시작 시점의 설정 사본을 사용한다. 설정 화면 오디오 인스턴스는 운동 인스턴스와 독립적이다. 마지막 예약 오실레이터의 `ended`로 미리듣기 UI를 복원하고 `Ⅱ`·다른 샘플·이탈은 예약음까지 정리한다. 전체 미리보기는 중간 알림음을 호출하지 않는다. [화면과 시연 규칙](../product/ui-ux.md#휴식-타이머-알림)
+- `useRestAudio`는 사용자 제스처로 Web Audio를 활성화한다. `useRestTimerAudio`는 같은 휴식 ID·종료 시각·초에 5~1초 효과음을 한 번만 재생한다. 중간 알림은 종료 카운트음과 독립적이며 화면에 보이는 동안 남은 시간이 10초에 처음 도달할 때 기존 소리를 3회 예약한다. 계정별 브라우저 저장소에는 최근 운동의 재생한 휴식 ID만 남겨 연장·새로고침 뒤에도 같은 휴식에서 다시 울리지 않게 한다. 화면 잠금·백그라운드·탭 이동·새로고침 중 지난 시점은 소급 재생하지 않는다. 복귀 시에는 현재 종료 시각을 다시 비교하고 활성화된 오디오의 재개를 시도한다.
+- 수동 휴식 종료와 해당 세트 완료 취소는 로컬 쓰기 완료를 기다리는 동안 기존 시각 효과와 예약음을 해제한다. 운동 종료를 확정하면 같은 시점에 모든 휴식 효과를 해제한다. 다른 종목을 보기만 하면 기존 휴식 종료 시각은 유지된다.
+- `RestAlertSettings`는 가상 종료 시각과 시작 시점의 설정 사본을 사용하며 운동과 같은 5~1초 판정과 오디오 재생 코드를 재사용한다. 설정 화면 오디오 인스턴스는 운동 인스턴스와 독립적이다. 마지막 예약 오실레이터의 `ended`로 미리듣기 UI를 복원하고 `Ⅱ`·다른 샘플·이탈은 예약음까지 정리한다. 전체 미리보기는 중간 알림음을 호출하지 않는다. [화면과 시연 규칙](../product/ui-ux.md#휴식-타이머-알림)
 - 앱 구현 당시 전체 테스트는 세트 사이 휴식 649/649, 알림 연동과 후속 아이콘·미리듣기 단계 651/651이었다. 당시 Chrome·정적 검사 이력과 별개로 실제 계정의 휴식 PATCH, iPhone Safari 키보드·음량, 설치형 PWA·백그라운드 오디오는 미검증이다. 알림의 서버·기기 간 동기화는 미지원이다.
+- 2026-11-22 UI-02·UI-20 후속 검수는 [4173 실제 앱](#review-4173)의 PC 루프백과 LAN 주소에서 진행했다. Spring START·snapshot·FINISH와 종목 전환·이어하기·새로고침의 휴식 종료 시각, 미리보기와 같은 점멸·종료음, 중간음·연장·수동 종료·세트 취소를 확인했다. 검수 운동은 논리 삭제했고 전용 프로필의 편집 잠금을 정리했다. iPhone 설치형 PWA·잠금·음악 동시 재생은 실기기 검증이 남아 있다.
+- 같은 4173 환경에서 휴식 테스트 ON의 12초 자연 종료와 OFF의 120·180초 휴식, 10초 중간음 3회·35% 음량, 5~1초 종료 카운트음 및 ON/OFF 독립을 확인했다. 진행 중 토글 변경과 연장·새로고침 뒤에도 현재 종료 시각과 휴식당 재생 횟수를 확인했다. 검수 뒤 ACTIVE는 0건이었다.
 
 ---
 

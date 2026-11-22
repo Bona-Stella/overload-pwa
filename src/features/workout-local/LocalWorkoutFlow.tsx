@@ -48,8 +48,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const action = useRef(false), clock = useRef<HTMLDivElement>(null), working = useRef<HTMLElement>(null)
   const [alerts] = useRestAlertPreferences(state.workout?.userId ?? null)
   const [estimateCardio] = useCardioEstimate(state.workout?.userId ?? null)
-  const audio = useRestAudio(alerts.sound, alerts.volume)
-  const { silence, unlock } = audio
+  const audio = useRestAudio(alerts.sound || alerts.middle, alerts.volume)
+  const { stop, unlock } = audio
   const workout = state.workout
   const timingReady = !!workout && state.writable && !workout.finish
   useEffect(() => {
@@ -62,14 +62,29 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const rests = workout?.rests ? Object.values(workout.rests) : workout?.rest ? [workout.rest] : []
   const audioRests = rests.filter(rest => restKey(rest) !== endingRest)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
-  const audioRest = audioRests.find(rest => Date.parse(rest.endsAt) > now) ?? audioRests[0]
+  const audioRest = audioRests.find(rest => Date.parse(rest.endsAt) > now)
   const restStarted = audioRest ? Date.parse(audioRest.startedAt) : undefined
   const restEnd = audioRest ? Date.parse(audioRest.endsAt) : undefined
   const restNow = Math.max(now, restStarted ?? now)
-  useRestTimerAudio(audio, visible && state.writable && !workout?.finish ? restKey(audioRest) : null, restEnd,
-    restStarted, restEnd === undefined ? 0 : Math.max(0, Math.ceil((restEnd - restNow) / 1000)), restNow,
-    alerts.sound && alerts.middle ? alerts.middleAt : null)
-  useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer) }, [])
+  const alertsActive = visible && state.writable && !workout?.finish && !finishing
+  useRestTimerAudio(audio, {
+    id: alertsActive ? restKey(audioRest) : null, ends: restEnd, now: restNow,
+    remaining: restEnd === undefined ? 0 : Math.max(0, Math.ceil((restEnd - restNow) / 1000)),
+    countdown: alerts.sound, middleEnabled: alerts.middle,
+    userId: workout?.userId, workoutId: workout ? `${workout.dataGeneration}:${workout.sessionId}` : undefined,
+  })
+  useEffect(() => {
+    const tick = () => setNow(Date.now())
+    tick()
+    const timer = window.setInterval(tick, 250)
+    document.addEventListener('visibilitychange', tick)
+    window.addEventListener('pageshow', tick)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+      window.removeEventListener('pageshow', tick)
+    }
+  }, [visible])
   useLayoutEffect(() => {
     if (!completedScroll || !visible) return
     const frame = requestAnimationFrame(() => {
@@ -89,7 +104,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const rest = model.exerciseRest(workout, id)
   const remaining = rest && restKey(rest) !== endingRest ? model.restRemaining(workout, Math.max(now, Date.parse(rest.startedAt)), id) : 0
   const blocked = !state.writable || !!workout.finish
-  const visual = restAlertVisual(alerts, weight && !warmup ? remaining : 0)
+  const visual = restAlertVisual(alerts, alertsActive && weight && !warmup ? remaining : 0)
   const completeWeight = !!weight && isWeightDone(weight)
   const preparingWeight = !!weight && !completeWeight && !model.weightStarted(workout, id)
   const preparing = !warmup && (preparingWeight || activity?.phase === 'ready')
@@ -112,11 +127,12 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     const rest = current ? model.exerciseRest(current, id) : undefined, key = restKey(rest)
     if (!rest || !key || manualRest.current === key) return
     manualRest.current = key
-    silence(Date.parse(rest.endsAt))
+    if (key === restKey(audioRest)) stop()
     setEndingRest(key)
     // Serialize behind an in-flight extension instead of dropping the manual end.
-    void controller.complete(w => { if (restKey(model.exerciseRest(w, id)) === key) delete model.migrateRest(w)[id] }).then(saved => {
-      if (!saved) { manualRest.current = null; setEndingRest(null) }
+    void controller.complete(w => { if (restKey(model.exerciseRest(w, id)) === key) delete model.migrateRest(w)[id] }).then(() => {
+      manualRest.current = null
+      setEndingRest(current => current === key ? null : current)
     })
   }
   const go = async (next: string) => {
@@ -135,9 +151,26 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const end = async () => {
     if (action.current || blocked) return
     action.current = true
+    stop()
     setFinishing(true)
     try { if (await controller.finish(Date.now())) setModal(null) }
     finally { action.current = false; setFinishing(false) }
+  }
+  const undoSet = async (ordinal: number) => {
+    if (action.current || blocked) return
+    const key = rest?.ordinal === ordinal ? restKey(rest) : null
+    if (key) {
+      if (key === restKey(audioRest)) stop()
+      setEndingRest(key)
+    }
+    try {
+      await act(w => {
+        const record = w.snapshot.performedSets.find(s => s.sessionExerciseId === id && s.ordinal === ordinal)
+        if (record) model.undoSet(w, record.id)
+      }, true)
+    } finally {
+      if (key) setEndingRest(current => current === key ? null : current)
+    }
   }
   const requestEnd = () => { if (allDone) void end(); else setModal('end') }
   const completeExercise = async (transform: (w: LocalWorkout, now: number) => void) => {
@@ -164,7 +197,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     void completeExercise((w, at) => {
       if (!model.weightStarted(w, id) || model.restRemaining(w, at, id) > 0) throw new Error('운동을 시작하고 휴식을 마친 뒤 완료해 주세요.')
       model.editDraft(w, id, ordinal, inputDraft(w, id, ordinal, history))
-      model.completeSet(w, id, ordinal, at, createSetId)
+      model.completeSet(w, id, ordinal, at, createSetId, alerts.testMode)
     }).then(saved => { if (saved && controller.getSnapshot().workout?.currentExerciseId === id) setCompletedScroll(v => v + 1) })
       .finally(() => setCompletingSet(null))
   }
@@ -284,7 +317,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         renderPreview: next => renderExercise(exercises.findIndex(exercise => exercise.id === next), true),
         disabled: !visible || blocked || !!modal || editing, canMove: () => !action.current, onGo: go } : undefined}
       cardioFocus={!!activity && !warmup}
-      onHome={onHome} backLabel={backLabel} onEnd={requestEnd} actions={actions} onRestInteraction={visible && !blocked && remaining > 0 ? unlock : undefined}
+      onHome={onHome} backLabel={backLabel} onEnd={requestEnd} actions={actions} onRestInteraction={alertsActive && audioRest ? unlock : undefined}
       reviewNote={statusNote}>
       <fieldset disabled={blocked} className={styles.controls}>
         {warmup ? <Warmup next={weight ? { name: weight.name, target: `${weight.working || '중량 미지정'}kg · ${weight.min}–${weight.max}회 × ${weight.plannedCount ?? weight.sets.length}세트`,
@@ -323,10 +356,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     {modal === 'remove' && <ConfirmWorkoutAction saveIssue={issue} title="현재 종목 제외" message="완료 기록은 먼저 취소해야 합니다. 원래 계획은 보존됩니다." action="종목 제외"
       onClose={() => setModal(null)} onConfirm={() => void act(w => model.removeExercise(w, id), true)} />}
     {typeof modal === 'object' && modal && <ConfirmWorkoutAction saveIssue={issue} title="완료를 취소할까요?" message="완료 기록을 취소하고 입력값을 복원합니다." action="완료 취소 확인"
-      onClose={() => setModal(null)} onConfirm={() => void act(w => {
-        const record = w.snapshot.performedSets.find(s => s.sessionExerciseId === id && s.ordinal === modal.undo)
-        if (record) model.undoSet(w, record.id)
-      }, true)} />}
+      onClose={() => setModal(null)} onConfirm={() => void undoSet(modal.undo)} />}
     {modal === 'undo-cardio' && <ConfirmWorkoutAction saveIssue={issue} title="유산소 완료 취소" message="완료 기록을 취소하고 일시정지 상태로 돌아갑니다." action="유산소 완료 취소 확인"
       onClose={() => setModal(null)} onConfirm={() => void act(w => {
         const record = w.snapshot.cardioResults.find(c => c.sessionActivityId === id)

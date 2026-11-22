@@ -16,6 +16,25 @@ test('applied order and stable exercise IDs survive mapping, completion and navi
   assert.equal(w.currentExerciseId,E);assert.equal(flowWeights(state(w))[1].sets[0].result.reps,8)
   assert.equal(isWeightDone(flowWeights(state(w))[1]),false)
 })
+test('only newly started rest uses the 12-second override and the configured bands stay intact', () => {
+  const policy = {...bootstrap.settings, restLowSeconds: 180, restMediumSeconds: 120}
+  for (const [maxReps, duration] of [[10, 180], [12, 120]]) {
+    const w = createLocalWorkout(session(), policy)
+    const plan = w.snapshot.appliedPlan.weightExercises[0]
+    plan.maxReps = maxReps
+    plan.setCount = 4
+    for (const [ordinal, testMode, seconds] of [[1, false, duration], [2, true, 12], [3, false, duration], [4, true, 0]]) {
+      const now = at + 180000 * ordinal
+      editDraft(w, E, ordinal, {reps: '8'})
+      completeSet(w, E, ordinal, now, undefined, testMode)
+      const rest = w.rests[E]
+      assert.equal(rest?.seconds ?? 0, seconds)
+      if (rest) assert.equal(Date.parse(rest.endsAt) - now, seconds * 1000)
+      assert.deepEqual(w.restPolicy, policy)
+    }
+    assert.ok(localWorkout(w))
+  }
+})
 test('recent real records match equipment and preserve explicitly empty or pending input',()=>{
   const w=local(), previous=session({status:'FINISHED',endedAt:new Date(at).toISOString()})
   previous.snapshot.state.performedSets=[{id:OTHER,sessionExerciseId:E,ordinal:1,weightKg:'60',reps:9,completedAt:new Date(at).toISOString(),weightContext:{kind:'TODAY_ONLY',requestId:null},manufacturerId:null,loadType:null}]
