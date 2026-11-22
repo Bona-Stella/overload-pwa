@@ -84,11 +84,20 @@
 .exerciseNav button:last-child { text-align: right; }
 .exerciseNav small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-muted); margin-top: 3px; font-size: 10px; }
 .working { grid-template-columns: minmax(0, 1fr) minmax(64px, .48fr); gap: 4px 10px; padding-block: 12px; }
+.working:has(.plateSide) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(64px, .7fr); }
+.working:has(.plateSide) .workingHead { display: grid; grid-template-columns: subgrid; column-gap: normal; }
+.working:has(.plateSide) .weightChange { justify-self: end; }
+.working:has(.plateSide) .workingValues { display: contents; }
+.working:has(.plateSide) .workingValues > strong { grid-row: 2; align-self: baseline; overflow-wrap: anywhere; }
+.working:has(.plateSide) .workingValues > p { grid-area: 3 / 1 / 4 / 3; }
+.working:has(.plateSide) .equipment { grid-area: 2 / 3 / 4; overflow-wrap: anywhere; }
 .workingValues { min-width: 0; display: grid; gap: 4px; }
 .workingValues > strong { font-size: 30px; line-height: 1.2; }
 .workingValues > strong small { font-size: 13px; }
+.plateLabel, .plateSide > strong { text-align: center; }
+.plateSide > strong { font-size: clamp(24px, 6.5vw, 30px); }
 .workingHead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 5px; min-height: 28px; }
-.workingHead > span { font-size: 10px; color: var(--text-muted); }
+.workingLabel { font-size: 10px; color: var(--text-muted); }
 .workingHead .weightChange { flex-shrink: 0; min-height: 44px; padding: 8px 0; margin-block: -8px; }
 .weightChange > span { display: block; font-size: 11px; padding: 3px 7px; border: 1px solid var(--line); border-radius: var(--radius-control); }
 .headingRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

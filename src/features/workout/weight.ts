@@ -1,3 +1,5 @@
+import { decimal } from '../workout-online/validation.ts'
+
 function decimalParts(value: number) {
   const [coefficient, exponent = '0'] = String(value).split('e')
   const [whole, fraction = ''] = coefficient.split('.')
@@ -9,6 +11,12 @@ function decimalParts(value: number) {
 function decimalText(units: bigint, scale: number) {
   const digits = units.toString().padStart(scale + 1, '0')
   return scale === 0 ? digits : `${digits.slice(0, -scale)}.${digits.slice(-scale)}`.replace(/0+$/, '').replace(/\.$/, '')
+}
+
+export function halfWeight(value: string): string | null {
+  if (!decimal(value)) return null
+  const [whole, fraction = ''] = value.split('.')
+  return decimalText(BigInt(whole + fraction) * 5n, fraction.length + 1)
 }
 
 export function adjustWeightDraft(value: string, direction: -1 | 1): string | null {

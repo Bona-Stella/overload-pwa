@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { adjustWeightDraft, formatWeightDelta } from '../src/features/workout/weight.ts'
+import { adjustWeightDraft, formatWeightDelta, halfWeight } from '../src/features/workout/weight.ts'
+
+test('one-side plate weight halves the applied decimal without rounding or losing digits', () => {
+  for (const [weight, expected] of [
+    ['0', '0'], ['10', '5'], ['17.5', '8.75'], ['20', '10'], ['42.5', '21.25'], ['60', '30'],
+    ['0.000001', '0.0000005'], ['99999999999999.999999', '49999999999999.9999995'],
+  ]) assert.equal(halfWeight(weight), expected)
+})
+
+test('one-side plate weight is absent when the applied weight is missing or invalid', () => {
+  for (const value of ['', ' ', '1e2', 'Infinity', '-1', '0.0000001']) {
+    assert.equal(halfWeight(value), null)
+  }
+})
 
 test('weight buttons adjust the valid draft by 2.5 without rounding to multiples or floating noise', () => {
   let value = '60'

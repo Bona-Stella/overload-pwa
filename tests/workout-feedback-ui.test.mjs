@@ -287,11 +287,33 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await wait(()=>evaluate(`!document.querySelector('dialog[open]')&&document.querySelector(${JSON.stringify(workoutFooter)}).getClientRects().length>0`))
     assert.ok(Math.abs(await evaluate('scrollY - Math.min('+modalPosition+', document.documentElement.scrollHeight-innerHeight)'))<=1,'moving to a numeric input discards the prior memo restoration')
     assert.deepEqual(await workoutIdentity(),beforeKeyboard,'keyboard and cancel retain the workout identity, draft revision and rest state')
+    const plate = () => evaluate(`(() => {
+      const card = document.querySelector('[aria-label="진행 중량"]')
+      const label = [...card.querySelectorAll('span')].find(e => e.textContent === '한쪽 원판')
+      return label ? card.querySelectorAll('strong')[1].textContent : null
+    })()`)
+    for (const [loadType, value] of [[null, '17.5'], ['STACK', '17.5'], ['DUMBBELL', '17.5'], ['BODYWEIGHT', '17.5'], ['PLATE', null]]) {
+      assert.equal(await evaluate('window.feedback.plateSetup(...'+JSON.stringify([loadType,value])+')'),true)
+      assert.equal(await plate(),null)
+    }
+    assert.equal(await evaluate('window.feedback.plateSetup("PLATE","17.5")'),true)
+    assert.equal(await plate(),'8.75 kg','preparation uses the applied weight and ignores the different approved weight')
+    await click('기구 세팅 메모')
+    assert.equal(await plate(),'8.75 kg','closing the memo does not hide the prepared plate weight')
+    await click('기구 세팅 메모')
     // Start through the real completion UI to unlock audio, then shorten only the fixture clock.
     await click('운동 시작하기')
     await wait(()=>evaluate('document.querySelector(\'[aria-label="1세트 완료"]\')?.disabled === false'))
+    assert.equal(await plate(),null,'the exercise start clears the plate weight')
+    const memoExpansion=()=>evaluate(`document.querySelector('[data-workout-memo-card] button').getAttribute('aria-expanded')`)
+    await wait(async()=>await memoExpansion()==='false')
+    await click('기구 세팅 메모')
+    assert.equal(await memoExpansion(),'true')
+    assert.equal(await plate(),null,'reopening the memo cannot restore the plate weight')
+    await click('기구 세팅 메모')
     await evaluate("document.querySelector('[aria-label=\"1세트 완료\"]').click()")
     await wait(()=>evaluate('!!window.feedback.currentRest()'))
+    assert.equal(await plate(),null,'the plate weight stays hidden during rest')
     await evaluate('window.feedback.rest(1)')
     await wait(()=>evaluate('window.feedbackAudio.starts>0'))
     const before=await evaluate('window.feedbackAudio.starts')

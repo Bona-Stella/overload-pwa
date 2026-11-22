@@ -4,6 +4,7 @@ import type { ReactNode, RefObject } from 'react'
 import { Button, Card, Help } from '../../components/ui.tsx'
 import { NumberWheel } from '../../components/NumberWheel.tsx'
 import { adjustRepsDraft } from '../workout/reps.ts'
+import { halfWeight } from '../workout/weight.ts'
 import { adjust } from '../workout-online/cardio-draft.ts'
 import { countDraft, decimalDraft } from '../workout-online/validation.ts'
 import { LOAD_LABELS } from '../workout-online/equipment.ts'
@@ -31,10 +32,10 @@ export function KgWheel({ label, value, onChange, editorStep, preview }: { label
     stepAdjust={editorStep === undefined ? undefined : (value, direction) => adjustKg(value, direction, editorStep)} />
 }
 
-export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, resting, editing, editTools,
+export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, editing, editTools,
   onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, memoOpen = true, onMemoToggle, preview = false }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
-  issue: ReactNode; resting: boolean; editing: boolean; editTools: ReactNode
+  issue: ReactNode; preparing?: boolean; resting: boolean; editing: boolean; editTools: ReactNode
   onDraft: (id: number, draft: Partial<SetDraft>) => void; onComplete: (id: number) => void
   onUndo: (id: number) => void; onExcludeSet: (id: number) => void
   onAddSet: () => void; workingRef?: RefObject<HTMLElement | null>
@@ -48,6 +49,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
   const title = `${String(position).padStart(2, '0')}. ${weight.name}`
   const titleRef = useFitWorkoutTitle(title, !preview)
   const manufacturer = manufacturers.find(m => m.id === weight.manufacturerId)
+  const plateWeight = preparing && weight.loadType === 'PLATE' ? halfWeight(weight.working) : null
   const memoId = useId()
   const memo = memoContent ?? <><label>기구 세팅 메모<textarea data-workout-memo={preview ? undefined : ''} rows={2} value={weight.memo} readOnly={preview}
     onChange={preview ? undefined : event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
@@ -63,13 +65,20 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       {progressNote && <p className="muted small">{progressNote}</p>}
     </section>
     <Card hero className={styles.working} ref={workingRef} aria-label="진행 중량">
-      <div className={styles.workingHead}><span>진행 중량 · 잠금</span><Button variant="quiet" className={styles.weightChange} onClick={preview ? undefined : onWeight}><span>중량 변경</span></Button></div>
+      <div className={styles.workingHead}>
+        <span className={styles.workingLabel}>진행 중량 · 잠금</span>
+        {plateWeight !== null && <span className={`${styles.workingLabel} ${styles.plateLabel}`}>한쪽 원판</span>}
+        <Button variant="quiet" className={styles.weightChange} onClick={preview ? undefined : onWeight}><span>중량 변경</span></Button>
+      </div>
       <div className={styles.workingValues}>
         <strong>{weight.working || '—'} <small>kg</small></strong>
         <p className="muted small">승인 중량 {weight.approved === null ? '없음' : weight.approved + ' kg'}
           {weight.mode === 'today' && weight.working && ' · 오늘만 적용'}
           {weight.mode === 'progression' && (' · ' + (approvalNote ?? '진행 중량 변경 시연'))}</p>
       </div>
+      {plateWeight !== null && <div className={`${styles.workingValues} ${styles.plateSide}`}>
+        <strong>{plateWeight} <small>kg</small></strong>
+      </div>}
       <div className={styles.equipment} aria-label="현재 장비"><span>{manufacturer?.name ?? '제조사 미지정'}</span><span>{weight.loadType ? LOAD_LABELS[weight.loadType] : '부하 미지정'}</span></div>
     </Card>
     {weight.sets.some(set => !set.result) && !weight.sets.some(set => !set.result && set.previous) &&

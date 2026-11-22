@@ -5,7 +5,7 @@ import '../../src/features/statistics/statistics.css'
 import React,{useState,useSyncExternalStore} from 'react'
 import {createRoot} from 'react-dom/client'
 import {LocalWorkoutController} from '../../src/features/workout-local/controller.ts'
-import {createLocalWorkout,editDraft,exerciseRest} from '../../src/features/workout-local/model.ts'
+import {changeEquipment,changeWeight,createLocalWorkout,editDraft,exerciseRest} from '../../src/features/workout-local/model.ts'
 import {WorkoutFrame,WeightRecommendation} from '../../src/features/workout-flow/WorkoutFrame.tsx'
 import {Button} from '../../src/components/ui.tsx'
 import {ClosedWorkoutView} from '../../src/features/workout-online/ClosedWorkout.tsx'
@@ -42,6 +42,12 @@ window.feedback={
  rest:(seconds,middleAt)=>c.change((w,now)=>{w.rests[w.currentExerciseId]={sessionExerciseId:w.currentExerciseId,ordinal:1,startedAt:new Date(now).toISOString(),endsAt:new Date(now+seconds*1000).toISOString(),seconds,middleAt}}),
  hold(){gate=new Promise(r=>release=r)},release(){gate=null;release?.()},
  title:name=>c.change(w=>{w.exerciseNames[w.currentExerciseId]=name}),
+ plateSetup:(loadType,value)=>c.change((w,now)=>{
+   const id=w.currentExerciseId
+   changeEquipment(w,id,{manufacturerId:null,loadType})
+   if(value===null)delete w.weights[id]
+   else changeWeight(w,id,value,false,now)
+ }),
  stored:()=>stored
 }
 const recordServer=session({status:'FINISHED',endedAt:'2026-10-31T12:30:00Z',closedAt:'2026-10-31T12:30:01Z'})

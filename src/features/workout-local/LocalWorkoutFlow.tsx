@@ -265,12 +265,13 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     const navigation = <ExerciseNavigation previous={items[at - 1]} next={items[at + 1]} onList={() => setModal('list')} onGo={go} preview={preview} />
     const id = exercise.id
     const started = model.weightStarted(workout, id)
+    const resting = model.restRemaining(workout, now, id) > 0
     const open = memoOpen[id] ?? !started
     return <>
       {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
       {weight && <WeightFocus preview={preview} additionalInput weight={weight} position={at + 1} workingRef={preview ? undefined : working} manufacturers={manufacturers}
         description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
-        issue={preview ? null : issue} resting={!started || model.restRemaining(workout, now, id) > 0} editing={!preview && editing}
+        issue={preview ? null : issue} preparing={!started && !resting && !isWeightDone(weight)} resting={!started || resting} editing={!preview && editing}
         memoOpen={open} onMemoToggle={() => setMemoOpen(value => ({ ...value, [id]: !open }))}
         memoContent={<CombinationMemo preview={preview} hiddenLabel exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />}
         progressNote={workout.replacementSlots?.[id] ? '대체 수행 ' + weight.sets.filter(s => s.result).length + '/' + weight.sets.length + '세트 · 원계획 슬롯 완료 인정은 서버 확인이 필요합니다.' : changedCombination ? '오늘만 조합 변경 · 공식 중량 검토 제외' : undefined}
