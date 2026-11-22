@@ -745,7 +745,7 @@ WorkoutFrame의 본문 스크롤 소유자는 document/window다. 메모 포커�
 
 고정 액션의 ResizeObserver 실측 높이에는 Safe Area가 포함된다. 액션이 없으면 버튼 예약 대신 최소 Safe Area+8px만 사용한다. AppShell의 하단 예약은 보이는 운동 프레임에만 해제한다. useFitWorkoutTitle은 번호/이름 전체의 실제 폭을 측정해 최소16px까지 축소하고 남으면 말줄임한다. 숫자 휠·다른 입력에 메모 전용 보정을 적용하지 않는다.
 
-Web Locks 없는 환경의 편집 차단을 유지한다. iPhone LAN HTTP는 secure context가 아니므로 전체 편집 검증을 대신하지 못한다. UI 1차의 사용자 실기기 승인과 API 연동 후 에이전트 실기기 미검증을 구분한다. HTTPS/설치형 PWA/운영 검증 및 디로딩 G6는 후속이다. 이번 문서 작업에서 제품 테스트·Lint·타입 검사·빌드를 다시 실행하지 않았다.
+당시 검수 빌드는 Web Locks를 사용하는 출처에서만 편집을 허용했다. 현행 사설 LAN 검수의 운동 START는 [4173 PWA 검수](#review-4173)를 따른다. UI 1차의 사용자 실기기 승인과 API 연동 후 에이전트 실기기 미검증을 구분한다. HTTPS/설치형 PWA/운영 검증 및 디로딩 G6는 이 검수 이후의 범위였다. 해당 문서 작업에서 제품 테스트·Lint·타입 검사·빌드를 다시 실행하지 않았다.
 
 #### HOME·ROUTINE 마감 범위
 
@@ -1738,9 +1738,38 @@ Mock은 검토 환경임을 화면에 표시하고 현실적인 합성 데이터
 
 #### 환경 재사용과 마감
 
+로컬 PWA를 검수할 때는 [4173 PWA 검수](#review-4173)의 실제 앱과 전용 계정으로 운동 START까지 확인합니다. 아래 LAN Mock 설정은 합성 UI를 독립적으로 시연할 때 적용합니다.
+
 - 기존 검토 서버·설정·주소·포트를 우선 사용합니다. 사설 LAN 접속에는 기존 `server.host: true` 또는 해당 검토 모드의 LAN 바인딩을 적용합니다. `ui-review`에서는 확인한 사설 IPv4를 `OVERLOAD_MOCK_LAN_IP`에 지정하며 기본 포트는 4173입니다. 피드백마다 서버·DB·계정을 다시 만들지 않습니다. UI 변경은 같은 환경에 반영하고 필요한 경우 프런트엔드만 재시작합니다.
 - 사용자의 최종 UI 승인이 없거나 피드백이 남아 있으면 사용자 검토 환경을 유지하고 중간 커밋을 하지 않습니다. 검증에 사용한 별도 일회용 프로세스는 [AGENTS.md의 정리 규칙](../../AGENTS.md#local-process-cleanup)을 적용합니다. 최종 종료 시 실행 소유권·PID·포트를 확인하고 해당 환경의 안전 종료 경로를 사용합니다. [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md#종료와-보존)
 - Backend·DB 변경을 포함하면 변경 범위를 먼저 확인합니다. 기존 환경의 Backend 버전, DB 스키마, 실제 Flyway 이력, 데이터·계정 상태와 호환성·보존 여부를 확인합니다. 승인·백업·복구 조건을 충족한 뒤 승인된 변경만 반영하고, 적용 결과와 코드·데이터 일치를 검증한 상태로 PC와 iPhone에서 시연합니다. 보존 DB의 재개·마이그레이션·데이터 변경에는 기존 별도 승인 절차를 적용합니다. UI 전용 작업은 프런트엔드에서 검토합니다. [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md)
+
+<a id="review-4173"></a>
+
+#### 로컬 4173 PWA 검수
+
+로컬 PWA 검수의 기본 주소는 PC `http://127.0.0.1:4173/`와 동일 Wi-Fi의 `http://192.168.0.3:4173/`입니다. 둘 다 격리 Spring API와 PostgreSQL을 사용하는 실제 앱의 `/`로 들어갑니다. `npm run review:lan`과 `/routine-preview`는 합성 UI 시연 경로입니다.
+
+**기존 환경 실행과 갱신**
+
+1. PWA 저장소에서 `logs/workout-api-review/recovery-current.json`의 검수 실행 ID와 기존 `.local-backups/workout-api-review/<run-id>/backend.json`을 확인합니다. 실행 스크립트가 Spring·제어 서비스의 실행 소유권, 전용 컨테이너·볼륨, loopback DB 연결, V1~V37 호환성을 확인합니다. 4173 리스너와 두 주소의 `GET /api/v1/health`에서 HTTP 200과 `status=UP`을 확인합니다. 앱 루트에서는 **검토 계정으로 로그인** 또는 이미 인증된 앱이 표시됩니다. Health 확인 뒤 실제 START까지 진행합니다.
+2. Spring과 기존 4173 게이트웨이가 실행 중이면 PWA 저장소의 PowerShell에서 아래 명령으로 기존 프런트엔드 빌드만 갱신합니다. 다음 예시의 IP는 검수 PC의 현재 사설 IPv4입니다. 기존 브라우저에서 새로고침한 뒤 루프백과 LAN의 앱이 모두 최신 빌드를 제공하는지 확인합니다.
+
+   ```powershell
+   $env:OVERLOAD_REVIEW_LAN_IP = '192.168.0.3'
+   node scripts/recovered-data-review-server.mjs 4173 build-only
+   ```
+
+3. 기존 Spring이 실행 중이고 4173이 비어 있으면 같은 셸에서 `node scripts/recovered-data-review-server.mjs 4173`으로 빌드 및 게이트웨이를 시작합니다. 이미 유효한 검수 빌드가 있으면 `node scripts/recovered-data-review-server.mjs 4173 serve-built`로 게이트웨이만 시작할 수 있습니다. LAN IP가 바뀌면 새 주소로 빌드한 뒤 소유권을 확인한 게이트웨이를 재시작해 접속 허용 주소도 반영합니다. `OVERLOAD_DEV_API_TARGET`을 설정하지 않은 검수 셸을 사용합니다. [4173 실행 스크립트](../../scripts/recovered-data-review-server.mjs)
+4. Spring 확인이 실패하면 같은 실행의 `backend.err.log`와 `backend.out.log`, 컨테이너 라벨·볼륨·loopback 매핑부터 확인합니다. 기존 스키마와 데이터로 Spring을 다시 띄우는 절차는 [Backend 검수 환경 안내](../../../overload-server/docs/engineering/test-environment.md#review-4173-backend)를 따릅니다.
+
+**더미데이터와 운동 검증**
+
+- 2026-11-22 복구한 검수용 더미데이터는 기존 4173 전용 계정에 있습니다. 월~토요일 루틴을 포함한 루틴 12개, 11월 13일 종료 운동 13건, 웨이트 세트 111개, 유산소 기록 9건입니다. 기존 `Test` 루틴과 활성 일정은 유지했고, 복구한 요일 배정은 두 번째 주간 일정 프리셋에서 확인할 수 있습니다. 기록·통계에서는 11월 13일이 포함된 기간을 선택합니다.
+- 운동을 시작할 때는 기존 루틴을 **홈 → 오늘만 다른 루틴 선택**으로 선택합니다. 이 경로는 주간 일정 배정을 저장하지 않습니다. 검수 계정의 ACTIVE 운동이 0건인지 먼저 확인합니다. 기존 ACTIVE 운동이 있다면 표시와 소유 브라우저를 확인해 해당 운동의 이어하기를 검수하며, 다른 검수자가 만든 운동의 종료·삭제는 소유권이 확인된 뒤 처리합니다.
+- 검수할 때 같은 LAN 주소에서 **운동 시작 → 준비운동 완료 → 운동 시작하기 → 세트 입력·완료 → 홈 복귀 → 운동 이어가기 → 새로고침 후 복원**을 실행합니다. 실제 `POST /api/v1/workout-sessions`의 `201`과 세트 완료 시 `PUT /api/v1/workout-sessions/{id}/snapshot`의 `200`을 확인합니다. 두 번째 같은 출처 탭에서는 읽기 전용이 되고, 편집 탭을 닫은 뒤 다시 열면 저장한 세트를 이어서 편집할 수 있어야 합니다. PC 루프백 결과와 LAN 결과는 각각 기록하고, iPhone Safari와 홈 화면 앱은 직접 실행한 결과만 기록합니다.
+- 일반 출처와 PC 루프백은 Web Locks를 사용합니다. **4173 빌드에서 지정한 사설 LAN HTTP 주소**는 Web Locks가 없는 경우 계정·데이터 세대·운동별 IndexedDB 편집 잠금을 획득한 뒤 START를 보내고 같은 잠금으로 이어하기를 보호합니다. 잠금 실패 화면에서는 편집 탭과 IndexedDB 사용 가능 여부를 먼저 확인합니다. 이 주소의 운동 START·저장은 실제 OTP·CSRF·Spring API를 사용합니다. HTTP에서의 운동 검수와 HTTPS Service Worker·오프라인 설치 검증은 각각의 조건에서 확인합니다. [검수용 편집 잠금](../../src/features/workout-local/review-lock.ts)
+- 검증이 끝나면 이번에 만든 운동 ID에 한해 정상 종료하고, 검증 후 표시할 필요가 없는 기록은 앱의 기록 삭제 절차를 사용합니다. 새로 만든 검증용 루틴도 같은 범위로 정리합니다. 새 ACTIVE가 남지 않았는지 확인하고 검증 브라우저와 탭을 닫습니다. 공용 검수 계정의 기존 루틴·기록·로그인과 사용자의 브라우저 저장소는 보존합니다. 복구가 필요하면 [Backend 검수 환경 안내](../../../overload-server/docs/engineering/test-environment.md#review-4173-backend)를 따릅니다.
 
 #### 실제 API 연동과 통합 검증
 

@@ -14,6 +14,7 @@ import type { HomeData, HomePlan, HomeWeek } from './load.ts'
 import { loadRecent } from './recent.ts'
 import { HomeReviewContext } from '../../app/review-context.ts'
 import { useStartupReveal } from '../../app/useStartupReveal.ts'
+import { supportsWorkoutEditing } from '../workout-local/lock.ts'
 import { RecentWorkout } from './RecentWorkout.tsx'
 import { DeloadMoon } from '../../components/DeloadMoon.tsx'
 import { scheduleRoutineLabel } from './tags.ts'
@@ -93,7 +94,7 @@ type Props = {
 }
 export function HomePanel(props: Props) {
   const review = useContext(HomeReviewContext)
-  const editingSupported = typeof globalThis.crypto?.randomUUID === 'function' && !!globalThis.navigator?.locks
+  const editingSupported = supportsWorkoutEditing()
   const { scope, routines, api, training, statistics, refreshKey } = props
   const { schedule, protection, analysis, refresh } = training
   const [clock, setClock] = useState(() => new Date())
@@ -171,7 +172,8 @@ export function HomePanel(props: Props) {
   const protectedView = protection !== null
   const protectionNotice = protection === 'ACTIVE' ? '일반 보기 · 디로딩 진행 중에는 일반 운동과 루틴을 변경할 수 없습니다.'
     : protection === 'COMPLETED' ? '디로딩 완료 당일 · 일반 운동은 다음 날부터 시작할 수 있습니다.' : null
-  return <HomeView {...props} data={data} chooserPending={!!partialPlan && !completePlan && partialPlan.data.summaries.length > 0}
+  return <HomeView {...props} localReady={props.localReady && editingSupported}
+    data={data} chooserPending={!!partialPlan && !completePlan && partialPlan.data.summaries.length > 0}
     week={week ?? undefined} weekFailed={weekUnavailable} today={today} loading={loading}
     recent={recentResult?.data && { recent: recentResult.data.details, recentRows: recentResult.data.rows,
       recentLimited: recentResult.data.limited, recentFailed: recentResult.data.failed }} recentFailed={recentResult?.failed}

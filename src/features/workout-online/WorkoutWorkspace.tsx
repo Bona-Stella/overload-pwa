@@ -22,6 +22,7 @@ import { RoutineDetail } from './RoutineDetail.tsx'
 import detailStyles from './RoutineDetail.module.css'
 import { RoutineForm } from './RoutineForm.tsx'
 import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
+import { supportsWorkoutEditing } from '../workout-local/lock.ts'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import './online.css'
 import { ClosedWorkout } from './ClosedWorkout.tsx'
@@ -181,7 +182,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     setEditorRoute({ id, readOnly })
   }
   async function startRoutine(routine: Routine) {
-    if (managementBlocked || startPending.current) return
+    if (!supportsWorkoutEditing() || managementBlocked || startPending.current) return
     startPending.current = true
     setStartingRoutine(routine.id)
     const origin = window.history.state?.overloadNavigation
@@ -274,7 +275,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         presets={schedule?.presets} scheduleLoading={training.loading} timeZone={schedule?.timeZone ?? undefined} managementBlocked={managementBlocked}
         onBack={backFromEditor} onEdit={() => { if (!managementBlocked) setEditor({ ...editor, readOnly: false }, true) }}
         onDelete={() => { if (editor.routine) void deleteRoutine(editor.routine.id) }}
-        start={<Button variant="primary" loading={startingRoutine === editor.routine.id} disabled={managementBlocked || !state.localReady || !!startingRoutine} onClick={() => void startRoutine(editor.routine!)}>온라인으로 운동 시작</Button>} />}
+        start={<Button variant="primary" loading={startingRoutine === editor.routine.id} disabled={!supportsWorkoutEditing() || managementBlocked || !state.localReady || !!startingRoutine} onClick={() => void startRoutine(editor.routine!)}>온라인으로 운동 시작</Button>} />}
       {editor && !editor.readOnly && <RoutineForm key={editor.routine?.id ?? 'new'} routine={editor.routine} activities={activities}
         onSaved={(id, name) => { if (!editor.routine) setCreated({ id, name }); training.refresh() }}
         generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers}

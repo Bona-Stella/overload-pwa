@@ -1,4 +1,5 @@
 import type { ActiveWeightContext, CardioPlan, Equipment, Session } from '../workout-online/types.ts'
+import { newId } from '../../id.ts'
 import { count, countDraft, counter, decimalDraft, snapshot, targets, cardioPlan, uuid, equipment } from '../workout-online/validation.ts'
 import type { CardioTimer, LocalWorkout, RestPolicy, SetDraft } from './types.ts'
 import { slotKey } from './types.ts'
@@ -133,7 +134,7 @@ function requireWeight(workout: LocalWorkout, id: string) {
   if (!e) throw new Error('현재 적용 계획에 없는 종목입니다.')
   return e
 }
-export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId: () => string = () => crypto.randomUUID()) {
+export function completeSet(workout: LocalWorkout, id: string, ordinal: number, now: number, randomId = newId) {
   const plan = requireWeight(workout, id)
   if (!count(ordinal) || workout.snapshot.performedSets.some(x => x.sessionExerciseId === id && x.ordinal === ordinal)) throw new Error('이미 완료한 세트입니다.')
   const draft = draftFor(workout, id, ordinal), weightKg = decimalDraft(draft.weight), reps = countDraft(draft.reps)
@@ -169,7 +170,7 @@ export function undoSet(workout: LocalWorkout, recordId: string) {
   workout.drafts[slotKey(record.sessionExerciseId, record.ordinal)] ??= { weight: record.weightKg, reps: String(record.reps), ...(record.bodyweightLoad ? { additionalWeight: record.bodyweightLoad.additionalWeightKg ?? '' } : {}) }
   if (exerciseRest(workout, record.sessionExerciseId)?.ordinal === record.ordinal) delete migrateRest(workout)[record.sessionExerciseId]
 }
-export function changeWeight(workout: LocalWorkout, id: string, value: string, approve: boolean, now: number, randomId = () => crypto.randomUUID()) {
+export function changeWeight(workout: LocalWorkout, id: string, value: string, approve: boolean, now: number, randomId = newId) {
   requireWeight(workout, id)
   const weight = decimalDraft(value)
   let context: ActiveWeightContext = { kind: 'TODAY_ONLY', requestId: null }
@@ -202,14 +203,14 @@ export function changeEquipment(workout: LocalWorkout, id: string, settings: Equ
     && (current.manufacturerId !== settings.manufacturerId || current.loadType !== settings.loadType)) workout.originalCombinationChanged = true
   Object.assign(current, settings)
 }
-export function addWeight(workout: LocalWorkout, standardExerciseId: string, name: string, randomId = () => crypto.randomUUID(), settings: Equipment = { manufacturerId: null, loadType: null }) {
+export function addWeight(workout: LocalWorkout, standardExerciseId: string, name: string, randomId = newId, settings: Equipment = { manufacturerId: null, loadType: null }) {
   if (!uuid(standardExerciseId) || !equipment(settings)) throw new Error('표준 운동과 장비 설정을 확인해 주세요.')
   const id = freshId(workout, randomId)
   workout.snapshot.sessionExercises.push({ id, kind: 'WEIGHT', standardExerciseId })
   workout.snapshot.appliedPlan.weightExercises.push({ sessionExerciseId: id, setCount: 3, minReps: 6, maxReps: 10, ...settings })
   workout.weights[id] = { value: '0', context: { kind: 'TODAY_ONLY', requestId: null } }; workout.exerciseNames[id] = name; workout.currentExerciseId = id
 }
-export function replaceWeight(workout: LocalWorkout, id: string, standardExerciseId: string, name: string, randomId = () => crypto.randomUUID()) {
+export function replaceWeight(workout: LocalWorkout, id: string, standardExerciseId: string, name: string, randomId = newId) {
   const target = requireWeight(workout, id)
   if (workout.snapshot.performedSets.some(s => s.sessionExerciseId === id)) throw new Error('완료 기록을 먼저 취소해 주세요.')
   const index = workout.snapshot.appliedPlan.weightExercises.findIndex(e => e.sessionExerciseId === id)
@@ -235,13 +236,13 @@ export function updateCardioPlan(workout: LocalWorkout, id: string, plan: Cardio
   const timer = workout.timers[id]
   if (timer?.reviewing) applyCardioEstimate(timer, plan, estimate)
 }
-export function addCardio(workout: LocalWorkout, plan: CardioPlan, randomId: () => string = () => crypto.randomUUID()) {
+export function addCardio(workout: LocalWorkout, plan: CardioPlan, randomId = newId) {
   if (!cardioPlan(plan) || plan.name.length > 100) throw new Error('유산소 이름(100자 이내)과 계획을 확인해 주세요.')
   const id = freshId(workout, randomId)
   workout.snapshot.sessionExercises.push({ id, kind: 'CARDIO', standardExerciseId: plan.standardExerciseId ?? null })
   workout.snapshot.appliedPlan.cardioActivities.push({ sessionActivityId: id, plan: structuredClone(plan) }); workout.currentExerciseId = id
 }
-export function replaceCardio(workout: LocalWorkout, id: string, plan: CardioPlan, randomId: () => string = () => crypto.randomUUID()) {
+export function replaceCardio(workout: LocalWorkout, id: string, plan: CardioPlan, randomId = newId) {
   const activities = workout.snapshot.appliedPlan.cardioActivities
   const index = activities.findIndex(activity => activity.sessionActivityId === id)
   if (index < 0 || workout.timers[id]?.startedAt || workout.snapshot.cardioResults.some(result => result.sessionActivityId === id)) {
@@ -292,7 +293,7 @@ export function reviewCardio(workout: LocalWorkout, id: string, now: number, est
   applyCardioEstimate(timer, plan, estimate)
   timer.reviewing = true
 }
-export function completeCardio(workout: LocalWorkout, id: string, now: number, randomId: () => string = () => crypto.randomUUID()) {
+export function completeCardio(workout: LocalWorkout, id: string, now: number, randomId = newId) {
   timerAction(workout, id, 'pause', now)
   const timer = workout.timers[id], activity = workout.snapshot.appliedPlan.cardioActivities.find(x => x.sessionActivityId === id)
   if (!timer?.startedAt || !activity) throw new Error('유산소를 먼저 시작해 주세요.')

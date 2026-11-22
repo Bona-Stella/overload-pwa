@@ -37,7 +37,10 @@ const outDir = resolve(directory, 'frontend')
 if (action !== 'serve-built') await build({
   envDir: false,
   mode: 'ui-review',
-  define: { 'import.meta.env.VITE_APPROVED_HIGH_ROW_GIF': JSON.stringify(port === 4173 ? 'true' : 'false') },
+  define: {
+    'import.meta.env.VITE_APPROVED_HIGH_ROW_GIF': JSON.stringify(port === 4173 ? 'true' : 'false'),
+    'import.meta.env.VITE_HTTP_WORKOUT_REVIEW_ORIGIN': JSON.stringify(port === 4173 ? origins[2] : ''),
+  },
   build: { outDir, emptyOutDir: false },
   plugins: [reviewFixtureEntry('/scripts/review/account-entry.tsx')],
 })

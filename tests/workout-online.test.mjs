@@ -163,6 +163,33 @@ test('START is dispatched only after durable attempt, and duplicate clicks do no
   await s.controller.start();disk.resolve();await first
   assert.equal(s.starts.length,1);assert.equal(s.getAttempt(),null);assert.equal(s.getCopies().length,1);assert.equal(s.controller.getSnapshot().copySaved,true);s.disconnect()
 })
+test('START requires a usable Web Locks API before saving an attempt or sending a request', async t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  t.after(() => Object.defineProperty(globalThis, 'navigator', original))
+  const s = setup()
+  t.after(s.disconnect)
+  await settle()
+  await s.controller.select(ROUTINE)
+  for (const navigator of [{}, { locks: {} }]) {
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: navigator })
+    await s.controller.start()
+    assert.equal(s.getAttempt(), null)
+    assert.equal(s.starts.length, 0)
+  }
+})
+test('START uses the existing CSPRNG UUID fallback when Web Locks is available', async t => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'crypto')
+  t.after(() => Object.defineProperty(globalThis, 'crypto', original))
+  Object.defineProperty(globalThis, 'crypto', { configurable: true, value: { getRandomValues(bytes) { return bytes.fill(255) } } })
+  const s = setup()
+  t.after(s.disconnect)
+  await settle()
+  await s.controller.select(ROUTINE)
+  await s.controller.start()
+  assert.equal(s.starts.length, 1)
+  assert.equal(s.starts[0].id, 'ffffffff-ffff-4fff-bfff-ffffffffffff')
+  assert.equal(s.controller.getSnapshot().copySaved, true)
+})
 test('lost START ACK and reload reuse the exact stored UUID, time, date, zone and body',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE)
   const startCall=s.api.start;let lost=true;s.api.start=async(...args)=>{const response=await startCall(...args);if(lost){lost=false;throw Error('lost after commit')}return response}

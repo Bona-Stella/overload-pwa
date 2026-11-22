@@ -490,7 +490,13 @@ http://localhost:3000
 
 개발 서버는 `host: true`로 LAN 접속을 허용하며, 같은 네트워크의 iPhone에서는 `http://<PC의 LAN IP>:3000`으로 접속합니다. 네트워크·방화벽에서 해당 접속을 허용해야 합니다. `port: 3000`, `strictPort: true`이므로 3000번 포트가 사용 중이면 실행에 실패합니다. iPhone에서도 API 요청은 같은 Origin의 `/api`를 사용하며, 기존 Vite 프록시가 PC의 `http://127.0.0.1:8080`으로 전달합니다.
 
-### 격리 검토 계정으로 로그인
+### 로컬 4173 PWA 검수
+
+PC [루프백](http://127.0.0.1:4173/)과 같은 Wi-Fi의 [LAN](http://192.168.0.3:4173/)에서 기존 격리 Spring·PostgreSQL에 연결된 앱을 엽니다. **검토 계정으로 로그인**한 뒤 확인용 루틴을 선택해 홈에서 **운동 시작**까지 확인합니다. 실행 중인 4173에는 프런트엔드 빌드만 반영합니다. 실행 명령, 더미데이터와 세트 저장·이어하기 절차는 [4173 PWA 검수](docs/engineering/frontend.md#review-4173)를 따릅니다.
+
+### 일회용 격리 OTP 검토
+
+별도 일회용 4173 환경에서 실행 중인 fixture UUID와 해당 실행의 전용 계정을 지정할 때 사용합니다.
 
 ```powershell
 node scripts/otp-review-server.mjs <실행 중인 검증 UUID> <전용 테스트 이메일>
@@ -501,7 +507,7 @@ node scripts/otp-review-server.mjs <실행 중인 검증 UUID> <전용 테스트
 ### Production Build
 
 Google 인증은 위 localhost 주소와 [고정 PWA 복귀 설정](docs/engineering/authentication.md)을 사용합니다.
-LAN/iPhone 안내는 개발 데모 `/demo` 확인용이며 실제 Google·HTTPS 검증을 완료했다는 의미가 아닙니다.
+사설 LAN에서 하는 실제 운동 검수는 [로컬 4173 PWA 검수](docs/engineering/frontend.md#review-4173)를 사용합니다. Google 인증과 운영 HTTPS 검증에는 위 인증 설정을 사용합니다.
 
 ```bash
 npm run build

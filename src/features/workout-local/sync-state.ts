@@ -1,4 +1,5 @@
 import type { ActiveResolution, ApprovalRequest, FinishAck, Resolution, Session, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
+import { newId } from '../../id.ts'
 import type { LocalWorkout } from './types.ts'
 import { decimalDraft } from '../workout-online/validation.ts'
 import { increment } from './model.ts'
@@ -90,7 +91,7 @@ export function rejectSnapshot(w: LocalWorkout) {
   w.syncState = 'UNSENT'
 }
 export function makeResolution(w: LocalWorkout, server: Session, exerciseId: string, pendingIds: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE',
-  nextWeight: string, routine: { version: string; approvedWeight: string } | null, now: number, randomId = () => crypto.randomUUID()): ActiveResolution {
+  nextWeight: string, routine: { version: string; approvedWeight: string } | null, now: number, randomId = newId): ActiveResolution {
   assertWriter(w, server)
   if (w.pendingSnapshot && !w.pendingSnapshot.rejected || w.localRevision !== server.localRevision) throw new SyncStateConflict('먼저 현재 운동 기록을 서버에 저장해 주세요.')
   const actual = server.snapshot.approvalResults.filter(r => r.sessionExerciseId === exerciseId && r.status === 'PENDING').map(r => r.id).sort()

@@ -1,10 +1,11 @@
 import { routineMatches } from './routine-match.ts'
+import { newId } from '../../id.ts'
 import type { AuthController, AuthState } from '../auth/controller.ts'
 import { WorkoutApi, WorkoutApiError } from './api.ts'
 import { WorkoutStore, LocalStoreError } from './storage.ts'
 import type { StartAttempt, SessionCopy } from './storage.ts'
 import type { Scope, Session, Routine, RoutineList, CreateRoutine, UpdateRoutine } from './types.ts'
-import { acquireEditor } from '../workout-local/lock.ts'
+import { acquireEditor, supportsWorkoutEditing, usesReviewEditorLock } from '../workout-local/lock.ts'
 import type { RestPolicy } from '../workout-local/types.ts'
 
 type Bootstrap = Awaited<ReturnType<WorkoutApi['bootstrap']>>
@@ -233,21 +234,30 @@ export class WorkoutOnlineController {
     finally { await lease?.release(); if (context.current()) this.set({ busy: false }) }
   }
   start = async () => {
+    if (!supportsWorkoutEditing()) return
     const { scope, selected, deviceId, attempt, localReady, active } = this.state
     const context = this.context(); if (!scope || !deviceId || !localReady || !context || (!attempt && (!selected || active))) return
     this.set({ busy: true, issue: null, notice: '', copySaved: false })
+    let lease: Awaited<ReturnType<typeof acquireEditor>> = null
     try {
-      const pending = attempt ?? await this.store.prepareStart(scope, startBody(scope, selected!.id, deviceId, crypto.randomUUID(), new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone))
+      const pending = attempt ?? await this.store.prepareStart(scope, startBody(scope, selected!.id, deviceId, newId(), new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone))
       if (!context.current()) return
       this.set({ attempt: pending })
+      if (usesReviewEditorLock()) {
+        lease = await acquireEditor({ ...scope, sessionId: pending.request.id, editorDeviceId: deviceId, writerEpoch: '0' })
+        if (!context.current()) return
+        if (!lease?.held()) { this.set({ issue: '이 브라우저에서 운동 편집 잠금을 얻지 못했습니다. 다른 편집 탭을 닫은 뒤 다시 시도해 주세요.' }); return }
+      }
       const detail = await this.api.start(scope, pending.request, context.signal)
       if (!context.current()) return
       // The attempt remains durable until the server copy commits in the same local transaction.
       await this.store.saveSession(scope, detail, pending.request.id)
       if (!context.current()) return
+      await lease?.release(); lease = null
+      if (!context.current()) return
       this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null, attempt: null, copySaved: true, notice: '운동 시작 결과와 계획을 이 기기에 저장했습니다. 수행 완료 후 서버 저장 상태를 확인해 주세요.' })
     } catch (error) { if (context.current()) this.failure(error) }
-    finally { if (context.current()) this.set({ busy: false }) }
+    finally { await lease?.release(); if (context.current()) this.set({ busy: false }) }
   }
   removedRoutine = async (id: string) => {
     const scope = this.state.scope, context = this.context()
