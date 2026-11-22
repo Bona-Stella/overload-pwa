@@ -11,12 +11,14 @@ import type { RestPolicy } from '../workout-local/types.ts'
 type Bootstrap = Awaited<ReturnType<WorkoutApi['bootstrap']>>
 type AuthSource = Pick<AuthController, 'getSnapshot' | 'subscribe'>
 type Store = Pick<WorkoutStore, 'deviceId' | 'attempt' | 'prepareStart' | 'saveSession' | 'copies'> & Partial<Pick<WorkoutStore, 'prepareTakeover' | 'rejectTakeover'>>
+type RoutineRefresh = { version: string; failed: boolean }
 export type OnlineState = { userId: string | null; scope: Scope | null; data: Bootstrap | null; selected: Routine | null;
   active: Session | null; detail: Session | null; deviceId: string | null; attempt: StartAttempt | null;
+  routineRefreshes: ReadonlyMap<string, RoutineRefresh>;
   revalidatingScope?: boolean;
   status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string; recordsRevision: number }
 const empty = (): OnlineState => ({ userId: null, scope: null, data: null, selected: null, active: null, detail: null, deviceId: null, attempt: null,
-  status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '', recordsRevision: 0 })
+  routineRefreshes: new Map(), status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '', recordsRevision: 0 })
 const eligible = (state: AuthState) => state.status === 'authenticated' && state.pending === null ? state.userId : null
 export function onlineIssue(error: unknown): string {
   if (error instanceof LocalStoreError) return error.message
@@ -49,37 +51,45 @@ export class WorkoutOnlineController {
   private owner: string | null = null
   private sequence = 0
   private abort: AbortController | null = null
+  private routineRead: AbortController | null = null
   private needsRevalidation = false
   private readonly onBoundary?: () => void
   constructor(api: WorkoutApi, store: Store = new WorkoutStore(), onBoundary?: () => void) { this.api = api; this.store = store; this.onBoundary = onBoundary }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener) }
-  private set(patch: Partial<OnlineState>) { this.state = { ...this.state, ...patch }; this.listeners.forEach(fn => fn()) }
+  private set(patch: Partial<OnlineState>) {
+    const released = this.state.busy && patch.busy === false
+    this.state = { ...this.state, ...patch }
+    this.listeners.forEach(fn => fn())
+    if (released) void this.refreshApprovedRoutines()
+  }
   private cancel() { this.sequence++; this.abort?.abort(); this.abort = null }
+  private cancelRoutineRead() { this.routineRead?.abort(); this.routineRead = null }
   connect(auth: AuthSource) {
     this.auth = auth
     const update = () => {
       const authState = auth.getSnapshot()
       // Keep only this already admitted workout when authentication expires in memory.
       if (authState.localWorkoutUserId === this.owner && this.owner && this.state.detail?.status === 'ACTIVE') {
-        this.cancel(); this.needsRevalidation = true; this.set({ busy: false, status: 'ready' }); return
+        this.cancel(); this.cancelRoutineRead(); this.needsRevalidation = true; this.set({ busy: false, status: 'ready' }); return
       }
       // Preserve mounted management drafts in memory during a transient outage. They stay hidden
       // until the same account revalidates. Logout, expiration and account switches clear the scope.
       if (authState.offlineNetworkFailure && this.owner && authState.localWorkoutUserId === this.owner && this.state.scope) {
-        this.cancel(); this.needsRevalidation = true; this.set({ busy: false }); return
+        this.cancel(); this.cancelRoutineRead(); this.needsRevalidation = true; this.set({ busy: false }); return
       }
       const owner = authState.status === 'authenticated' && (authState.pending === null || authState.userId === this.owner && authState.pending !== 'logout') ? authState.userId : null
       if (this.owner === owner) {
         if (this.needsRevalidation && eligible(authState)) { this.needsRevalidation = false; void this.refresh(true) }
+        else if (eligible(authState)) void this.refreshApprovedRoutines()
         return
       }
       this.needsRevalidation = false
-      this.cancel(); this.owner = owner; this.state = empty(); this.set({ userId: owner })
+      this.cancel(); this.cancelRoutineRead(); this.owner = owner; this.state = empty(); this.set({ userId: owner })
       if (owner) void this.refresh()
     }
     const unsubscribe = auth.subscribe(update); update()
-    return () => { unsubscribe(); this.cancel(); this.auth = null; this.owner = null; this.state = empty(); this.set({}) }
+    return () => { unsubscribe(); this.cancel(); this.cancelRoutineRead(); this.auth = null; this.owner = null; this.state = empty(); this.set({}) }
   }
   private context() {
     const userId = this.owner
@@ -90,6 +100,7 @@ export class WorkoutOnlineController {
   private failure(error: unknown) {
     const code = (error as { code?: string })?.code
     if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) {
+      this.cancelRoutineRead()
       this.onBoundary?.()
       this.set({ ...empty(), userId: this.owner, issue: onlineIssue(error), status: 'ready' }); return
     }
@@ -97,6 +108,7 @@ export class WorkoutOnlineController {
   }
   refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
+    this.cancelRoutineRead()
     const previous = this.state
     this.set({ userId: context.userId, status: 'loading', busy: true, issue: null, revalidatingScope: keepDraftScope && !!previous.scope })
     try {
@@ -111,6 +123,7 @@ export class WorkoutOnlineController {
         && previous.detail?.writerEpoch === detail?.writerEpoch && previous.detail?.editorDeviceId === detail?.editorDeviceId
       const selected = sameScope && data.routines.some(r => r.id === previous.selected?.id && r.version === previous.selected.version) ? previous.selected : null
       this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected, revalidatingScope: false,
+        routineRefreshes: this.remainingRoutineRefreshes(data.routines),
         recordsRevision: sameScope ? previous.recordsRevision + 1 : 0 })
       let deviceId: string | null = null, attempt: StartAttempt | null = null, copies: SessionCopy[] = []
       try {
@@ -146,6 +159,71 @@ export class WorkoutOnlineController {
       if (context.current()) this.set({ status: 'ready', busy: false })
     }
   }
+  private currentScope(scope: Scope) {
+    return this.state.scope?.userId === scope.userId && this.state.scope.dataGeneration === scope.dataGeneration
+      && !!this.auth && eligible(this.auth.getSnapshot()) === scope.userId && !this.needsRevalidation
+  }
+  private remainingRoutineRefreshes(routines: RoutineList['routines']) {
+    return new Map([...this.state.routineRefreshes].filter(([id, refresh]) => {
+      const routine = routines.find(r => r.id === id)
+      return routine && BigInt(routine.version) < BigInt(refresh.version)
+    }))
+  }
+  private routineListPatch(routines: RoutineList['routines']) {
+    const data = this.state.data
+    const known = new Map(data?.routines.map(routine => [routine.id, routine.version]))
+    if (routines.some(routine => BigInt(routine.version) < BigInt(known.get(routine.id) ?? '0'))) throw new WorkoutApiError('RESPONSE_INVALID')
+    return { data: data ? { ...data, routines } : null, routineRefreshes: this.remainingRoutineRefreshes(routines) }
+  }
+  observeRoutineApproval = (scope: Scope, routineId: string, version: string) => {
+    const { data } = this.state
+    if (!data || !this.currentScope(scope)) return
+    const summary = data.routines.find(r => r.id === routineId)
+    const pending = this.state.routineRefreshes.get(routineId)
+    // V36 increases the routine version for each committed batch. An equal or newer
+    // list already covers that batch, including confirmations delivered more than once.
+    const confirmedVersion = BigInt(version)
+    if (summary && BigInt(summary.version) >= confirmedVersion || pending && BigInt(pending.version) >= confirmedVersion) return
+    this.cancelRoutineRead()
+    this.set({ routineRefreshes: new Map(this.state.routineRefreshes).set(routineId, { version, failed: false }) })
+    void this.refreshApprovedRoutines()
+  }
+  retryRoutineRefresh = (routineId: string) => {
+    const refresh = this.state.routineRefreshes.get(routineId)
+    if (!refresh?.failed) return
+    this.set({ routineRefreshes: new Map(this.state.routineRefreshes).set(routineId, { ...refresh, failed: false }) })
+    void this.refreshApprovedRoutines()
+  }
+  private async refreshApprovedRoutines() {
+    const { scope, data } = this.state
+    if (!scope || !data || !this.currentScope(scope) || this.state.busy || this.routineRead) return
+    const pending = [...this.state.routineRefreshes].filter(([, refresh]) => !refresh.failed)
+    if (!pending.length) return
+    const request = new AbortController()
+    this.routineRead = request
+    const current = () => this.routineRead === request && this.currentScope(scope)
+    const markFailed = (refreshes: ReadonlyMap<string, RoutineRefresh>) => {
+      const next = new Map(refreshes)
+      for (const [id, refresh] of pending) if (next.get(id) === refresh) next.set(id, { ...refresh, failed: true })
+      return next
+    }
+    try {
+      const list = await this.api.routines(scope, request.signal)
+      if (!current()) return
+      const patch = this.routineListPatch(list.routines)
+      this.set({ ...patch, routineRefreshes: markFailed(patch.routineRefreshes) })
+    } catch (error) {
+      if (!current()) return
+      const code = (error as { code?: string })?.code
+      if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) this.failure(error)
+      else this.set({ routineRefreshes: markFailed(this.state.routineRefreshes) })
+    } finally {
+      if (this.routineRead === request) {
+        this.routineRead = null
+        void this.refreshApprovedRoutines()
+      }
+    }
+  }
   select = async (id: string) => {
     const scope = this.state.scope, context = this.context(); if (!scope || !context) return
     this.set({ busy: true, selected: null, issue: null, notice: '' })
@@ -163,7 +241,7 @@ export class WorkoutOnlineController {
         ? await this.api.settings(scope, { ...values, dataGeneration: scope.dataGeneration }, context.signal)
         : await this.api.restSettings(scope, context.signal)
       if (!context.current()) return { message: '요청이 중단되었습니다. 연결을 확인한 뒤 다시 시도해 주세요.' }
-      this.set({ data: { ...data, settings } })
+      if (this.state.data) this.set({ data: { ...this.state.data, settings } })
       return null
     } catch (error) {
       const code = (error as { code?: string })?.code
@@ -236,6 +314,7 @@ export class WorkoutOnlineController {
   start = async () => {
     if (!supportsWorkoutEditing()) return
     const { scope, selected, deviceId, attempt, localReady, active } = this.state
+    if (!attempt && selected && this.state.routineRefreshes.has(selected.id)) return
     const context = this.context(); if (!scope || !deviceId || !localReady || !context || (!attempt && (!selected || active))) return
     this.set({ busy: true, issue: null, notice: '', copySaved: false })
     let lease: Awaited<ReturnType<typeof acquireEditor>> = null
@@ -272,16 +351,18 @@ export class WorkoutOnlineController {
   deleteRoutine = async () => {
     const scope = this.state.scope, selected = this.state.selected, context = this.context()
     if (!scope || !selected || !context) return
+    this.cancelRoutineRead()
     this.set({ busy: true, issue: null })
     try {
       await this.api.deleteRoutine(scope, selected.id, selected.version, context.signal)
       const list = await this.api.routines(scope, context.signal)
-      if (context.current()) this.set({ selected: null, data: this.state.data ? { ...this.state.data, routines: list.routines } : null, notice: '루틴을 삭제했습니다. 기존 운동 기록은 보존합니다.' })
+      if (context.current()) this.set({ ...this.routineListPatch(list.routines), selected: null, notice: '루틴을 삭제했습니다. 기존 운동 기록은 보존합니다.' })
     } catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
   }
   saveRoutine = async (body: CreateRoutine | UpdateRoutine, id?: string) => {
     const scope = this.state.scope, context = this.context(); if (!scope || !context) return false
+    this.cancelRoutineRead()
     this.set({ busy: true, issue: null, notice: '' })
     try {
       let value: Routine
@@ -307,7 +388,7 @@ export class WorkoutOnlineController {
       }
       const list: RoutineList = await this.api.routines(scope, context.signal)
       if (!context.current()) return false
-      this.set({ selected: value, data: this.state.data ? { ...this.state.data, routines: list.routines } : null, notice: this.state.notice || '루틴을 서버에 저장했습니다.' })
+      this.set({ ...this.routineListPatch(list.routines), selected: value, notice: this.state.notice || '루틴을 서버에 저장했습니다.' })
       return true
     } catch (error) { if (context.current()) this.failure(error); return false }
     finally { if (context.current()) this.set({ busy: false }) }

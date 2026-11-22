@@ -145,6 +145,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const editorRequest = JSON.stringify([editorId, editorVersion, editorRetry])
   const editor = editorRoute && (editorId === 'new' ? { routine: null, readOnly: false }
     : draft ?? (cachedRoutine && editorIssue !== editorRequest ? { routine: cachedRoutine, readOnly } : null))
+  const editorRefresh = editor?.readOnly && editor.routine ? state.routineRefreshes?.get(editor.routine.id) : undefined
   const scope = state.scope
   useEffect(() => {
     if (!enabled || !scope || !editorId || editorId === 'new' || editingDraft) return
@@ -182,7 +183,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     setEditorRoute({ id, readOnly })
   }
   async function startRoutine(routine: Routine) {
-    if (!supportsWorkoutEditing() || managementBlocked || startPending.current) return
+    if (!supportsWorkoutEditing() || managementBlocked || startPending.current || state.routineRefreshes?.has(routine.id)) return
     startPending.current = true
     setStartingRoutine(routine.id)
     const origin = window.history.state?.overloadNavigation
@@ -275,7 +276,12 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         presets={schedule?.presets} scheduleLoading={training.loading} timeZone={schedule?.timeZone ?? undefined} managementBlocked={managementBlocked}
         onBack={backFromEditor} onEdit={() => { if (!managementBlocked) setEditor({ ...editor, readOnly: false }, true) }}
         onDelete={() => { if (editor.routine) void deleteRoutine(editor.routine.id) }}
-        start={<Button variant="primary" loading={startingRoutine === editor.routine.id} disabled={!supportsWorkoutEditing() || managementBlocked || !state.localReady || !!startingRoutine} onClick={() => void startRoutine(editor.routine!)}>온라인으로 운동 시작</Button>} />}
+        start={<>
+          {editorRefresh?.failed && <Button onClick={() => controller.retryRoutineRefresh(editor.routine!.id)}>루틴 다시 조회</Button>}
+          <Button variant="primary" loading={startingRoutine === editor.routine.id || !!editorRefresh && !editorRefresh.failed}
+            disabled={!supportsWorkoutEditing() || managementBlocked || !state.localReady || !!startingRoutine || !!editorRefresh}
+            onClick={() => void startRoutine(editor.routine!)}>온라인으로 운동 시작</Button>
+        </>} />}
       {editor && !editor.readOnly && <RoutineForm key={editor.routine?.id ?? 'new'} routine={editor.routine} activities={activities}
         onSaved={(id, name) => { if (!editor.routine) setCreated({ id, name }); training.refresh() }}
         generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers}
@@ -538,6 +544,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       enabled={accountReady} startupHome={visible && tab === 'home' && !focused && !workoutLoading && !recordFocused}
       refreshKey={dataRevision} active={state.active} progress={state.active ? activeWorkoutProgress(state.active, homeWorkout, state.data.exercises) : undefined}
       onRefreshRoutines={() => void controller.refresh()}
+      routineRefreshes={state.routineRefreshes} onRetryRoutineRefresh={controller.retryRoutineRefresh}
       attempt={state.attempt !== null} busy={state.busy} localReady={state.localReady} action={homeAction}
       issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void runHomeAction('resume', resume)} onRetry={() => void runHomeAction('retry', startWorkout)}
       onStart={routine => runHomeAction('start', async () => {
@@ -574,7 +581,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, onFocu
       {visible && !localOnly && recordId && state.scope && recordCache.key === recordKey && <ClosedWorkout key={[recordKey, recordId].join(':')} api={api} scope={state.scope} recordId={recordId} cache={recordCache.entries}
       session={session?.id === recordId && session.status !== 'ACTIVE' ? session : null}
       accountReady={accountReady} summary={recordRoute?.summary === true} takeInitialScroll={takeInitialScroll} manufacturers={state.data?.manufacturers} definitions={sessionDefinitions} backLabel={recordRoute?.backLabel ?? (tab === 'home' ? '홈으로' : '기록으로')}
-      onBack={backFromRecord} onServer={controller.observeClosedRecord} onInvalid={error => { if (boundaryError(error)) controller.invalidateScope(error) }} authorized={() => {
+      onBack={backFromRecord} onServer={controller.observeClosedRecord} onRoutineApproved={controller.observeRoutineApproval} onInvalid={error => { if (boundaryError(error)) controller.invalidateScope(error) }} authorized={() => {
       const a = authentication.getSnapshot(), s = controller.getSnapshot()
       return a.status === 'authenticated' && a.pending === null && !a.accountOpen && a.userId === state.scope?.userId
         && s.scope?.dataGeneration === state.scope?.dataGeneration && window.history.state?.overloadNavigation?.values?.[recordKey]?.id === recordId

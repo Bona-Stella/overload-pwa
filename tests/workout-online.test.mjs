@@ -56,6 +56,99 @@ test('opening a different closed record does not invalidate summary data; observ
     assert.equal(s.controller.getSnapshot().recordsRevision, before + 1)
   } finally { s.disconnect() }
 })
+test('confirmed approval refreshes the list once per version and preserves the closed plan and local copy', async t => {
+  let reads = 0
+  const version = String(BigInt(routine.version) + 1n)
+  const finished = session({ status: 'FINISHED', endedAt: '2026-10-31T12:30:00Z', closedAt: '2026-10-31T12:30:01Z' })
+  const s = setup({
+    detail: async () => finished,
+    routines: async () => { reads++; return { ...scope, routines: [{ ...bootstrap.routines[0], version }] } },
+    routine: async () => ({ ...routine, version }),
+  })
+  t.after(s.disconnect)
+  await settle()
+  await s.controller.showDetail(finished.id)
+  const copies = s.getCopies()
+  s.controller.observeRoutineApproval(scope, ROUTINE, version)
+  s.controller.observeRoutineApproval(scope, ROUTINE, version)
+  await settle()
+  s.controller.observeRoutineApproval(scope, ROUTINE, version)
+  assert.equal(reads, 1)
+  assert.equal(s.controller.getSnapshot().data.routines[0].version, version)
+  assert.equal(s.controller.getSnapshot().routineRefreshes.size, 0)
+  assert.equal(s.controller.getSnapshot().detail.initialPlan.routineVersion, routine.version)
+  assert.deepEqual(s.getCopies(), copies)
+  await s.controller.select(ROUTINE)
+  await s.controller.start()
+  assert.equal(s.starts.length, 1)
+})
+test('failed approval refresh blocks only the affected new START and retries only the list', async t => {
+  let reads = 0
+  const version = String(BigInt(routine.version) + 1n)
+  const s = setup({
+    routines: async () => {
+      if (++reads === 1) throw Error('offline')
+      return { ...scope, routines: [{ ...bootstrap.routines[0], version }] }
+    },
+    routine: async (_scope, id) => ({ ...routine, id }),
+  })
+  t.after(s.disconnect)
+  await settle()
+  s.controller.observeRoutineApproval(scope, ROUTINE, version)
+  await settle()
+  assert.equal(s.controller.getSnapshot().routineRefreshes.get(ROUTINE).failed, true)
+  await s.controller.select(ROUTINE)
+  await s.controller.start()
+  assert.equal(s.starts.length, 0)
+  assert.equal(s.getAttempt(), null)
+  await s.controller.select(OTHER)
+  await s.controller.start()
+  assert.equal(s.starts[0].routineId, OTHER)
+  const active = s.controller.getSnapshot().active
+  const copies = s.getCopies()
+  s.controller.retryRoutineRefresh(ROUTINE)
+  await settle()
+  assert.equal(reads, 2)
+  assert.equal(s.controller.getSnapshot().data.routines[0].version, version)
+  assert.equal(s.controller.getSnapshot().routineRefreshes.size, 0)
+  assert.equal(s.controller.getSnapshot().active, active)
+  assert.deepEqual(s.getCopies(), copies)
+})
+test('newer approval and account or generation changes discard late list results', async t => {
+  let generation = scope.dataGeneration
+  const reads = []
+  const s = setup({
+    bootstrap: async userId => ({ ...bootstrap, scope: { userId, dataGeneration: generation } }),
+    routines: async (_scope, signal) => {
+      const pending = gate(); reads.push({ ...pending, signal })
+      return pending.promise
+    },
+  })
+  t.after(s.disconnect)
+  await settle()
+  const v1 = String(BigInt(routine.version) + 1n), v2 = String(BigInt(v1) + 1n), v3 = String(BigInt(v2) + 1n)
+  const list = version => ({ ...scope, routines: [{ ...bootstrap.routines[0], version }] })
+  s.controller.observeRoutineApproval(scope, ROUTINE, v1)
+  s.controller.observeRoutineApproval(scope, ROUTINE, v2)
+  assert.equal(reads[0].signal.aborted, true)
+  reads[1].resolve(list(v2)); await settle()
+  reads[0].resolve(list(v1)); await settle()
+  assert.equal(s.controller.getSnapshot().data.routines[0].version, v2)
+  s.controller.observeRoutineApproval(scope, ROUTINE, v3)
+  generation = '0'
+  await s.controller.refresh()
+  reads[2].resolve(list(v3)); await settle()
+  assert.equal(reads[2].signal.aborted, true)
+  assert.equal(s.controller.getSnapshot().scope.dataGeneration, '0')
+  assert.equal(s.controller.getSnapshot().data.routines[0].version, routine.version)
+  assert.equal(s.controller.getSnapshot().routineRefreshes.size, 0)
+  s.controller.observeRoutineApproval({ userId: USER, dataGeneration: '0' }, ROUTINE, v3)
+  s.change({ userId: OTHER })
+  reads[3].resolve(list(v3)); await settle()
+  assert.equal(reads[3].signal.aborted, true)
+  assert.equal(s.controller.getSnapshot().scope.userId, OTHER)
+  assert.equal(s.controller.getSnapshot().data.routines[0].version, routine.version)
+})
 test('public and selectable catalogs are separate and normalized aliases keep independent IDs', async () => {
   const treadmill = { id: OTHER, activityId: DEVICE, category: 'RUNNING', name: '트레드밀 러닝', kind: 'TREADMILL', aliases: ['treadmill run'] }
   const stretch = { id: ROUTINE, name: '스트레칭', aliases: ['stretch'], muscles: [], exerciseType: 'STRETCH',

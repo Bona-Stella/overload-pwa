@@ -104,7 +104,7 @@ function SavedReviewFixture({ mode }) {
 }
 function ApprovalSummaryFixture({ empty }) {
  const [fixture]=useState(()=>{
-  const controls={posts:0,reads:0,holdPost:false,rejectPost:false,failAfterPost:false,failReads:false}
+  const controls={posts:0,reads:0,confirmedRoutineVersions:[],holdPost:false,rejectPost:false,failAfterPost:false,failReads:false,losePostResponse:false}
   window.feedback.approvalNetwork=controls
   const exercises=empty?[]:recordServer.initialPlan.weightExercises.map((plan,index)=>({
    sessionExerciseId:plan.sessionExerciseId,sourcePlacementId:plan.sourcePlacementId,name:plan.exerciseName,
@@ -127,15 +127,19 @@ function ApprovalSummaryFixture({ empty }) {
     version=String(Number(version)+1)
     approvals=[...approvals,...body.approvals.map(event=>({...event,source:'WORKOUT_REVIEW'}))]
     if(controls.failAfterPost)controls.failReads=true
+    if(controls.losePostResponse)throw Error('Committed response lost')
     return view()
    },
   }}
  })
  const [version,setVersion]=useState('0')
  const refresh=useCallback(async()=>setVersion(fixture.version()),[fixture])
+ const onRoutineApproved=useCallback((_scope,id,version)=>{
+  if(id===recordServer.initialPlan.routineId)window.feedback.approvalNetwork.confirmedRoutineVersions.push(version)
+ },[])
  const server={...recordServer,version}
  return <ClosedWorkoutView state={{...recordState,server}} controller={recordController} summary
-  reviewContent={<SavedWeightReview api={fixture.api} session={server} readOnly={false} disabled={false} authorized={()=>true} onChanged={refresh}/>}/>
+  reviewContent={<SavedWeightReview api={fixture.api} session={server} readOnly={false} disabled={false} authorized={()=>true} onChanged={refresh} onRoutineApproved={onRoutineApproved}/>}/>
 }
 const growthApi={
  search:async()=>({exercises:[{standardExerciseId:bootstrap.exercises[0].id,name:'승인 이력 검증을 위한 매우 긴 운동명',lastPerformedAt:recordServer.endedAt,lastApprovalAt:recordServer.endedAt}],nextOffset:null}),

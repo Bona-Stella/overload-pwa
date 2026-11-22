@@ -884,6 +884,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     const draft = () => evaluate(`document.querySelector('${reviewCard} [data-weight-review=increase] .approval-values strong').textContent`)
     assert.equal(await draft(),'47.5kg')
     assert.equal(await checkedCount(),1)
+    const confirmedVersions = () => evaluate('window.feedback.approvalNetwork.confirmedRoutineVersions')
     await click('선택 승인'); await click('취소')
     assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),0)
     assert.equal(await draft(),'47.5kg')
@@ -893,6 +894,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await expectCounts(3,0)
     assert.equal(await draft(),'47.5kg')
     assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),1)
+    assert.deepEqual(await confirmedVersions(),[])
     await click('취소')
     await evaluate('Object.assign(window.feedback.approvalNetwork,{rejectPost:false,failAfterPost:true,holdPost:true})')
     await click('선택 승인'); await click('승인 확인')
@@ -905,6 +907,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await wait(()=>evaluate('document.querySelector("dialog[open] [role=alert]")?.textContent.includes("서버가 승인 요청을 수락했습니다")'))
     await expectCounts(3,0)
     assert.equal(await draft(),'47.5kg')
+    assert.deepEqual(await confirmedVersions(),[])
     assert.ok(await evaluate('[...document.querySelectorAll("dialog[open] button")].some(b=>b.textContent==="승인 확인"&&b.disabled)'))
     await click('취소')
     await evaluate('Object.assign(window.feedback.approvalNetwork,{failAfterPost:false,failReads:false})')
@@ -913,6 +916,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(await checkedCount(),0)
     assert.deepEqual(await approveButton(),['선택 승인',true])
     assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),2)
+    assert.deepEqual(await confirmedVersions(),['1'])
     const historyText = () => evaluate(`document.querySelector('${approvedCard}').textContent`)
     assert.match(await historyText(),/45kg → 47\.5kg.*증량 완료/)
     assert.doesNotMatch(await historyText(),/미승인|50kg/)
@@ -921,9 +925,11 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await toggleHistory();assert.equal(await historyOpen(),false)
     await toggleHistory();assert.equal(await historyOpen(),true)
     for (const [target,pending,approved] of [['선택 승인',1,2],['전체 승인',0,3]]) {
+      if(pending===0)await evaluate('window.feedback.approvalNetwork.losePostResponse=true')
       await selectOnlyFirst()
       await click(target); await click('승인 확인')
       await expectCounts(pending,approved)
+      assert.equal((await confirmedVersions()).at(-1),String(approved))
       if (pending===1) {
         for(const width of [320,375,393,430,1280]) {
           await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})
@@ -943,6 +949,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.match(await historyText(),/감량 완료/)
     await verifyCompactHistory()
     assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),4)
+    assert.deepEqual(await confirmedVersions(),['1','2','3'])
     for(const [kind, selector, width, typed] of [['login','#auth-email',393,'sample@example.invalid'],['otp','#auth-code',430,'123456']]){
       await viewport(width)
       await send('Page.navigate',{url:origin+'/boundary?input='+kind})

@@ -104,6 +104,20 @@ test('home reads authoritative timezone then overview; successful routine detail
   f.summaries[0].version = '9007199254740995'; await f.read()
   assert.equal(f.calls.filter(x => x === routine.id).length, 2)
 })
+test('a late detail older than the refreshed list cannot become the home plan', async () => {
+  const f = fixture()
+  const previous = await f.read()
+  assert.equal(previous.routines.get(routine.id).version, routine.version)
+  const next = String(BigInt(routine.version) + 1n)
+  f.summaries[0].version = next
+  const stale = await f.read()
+  assert.equal(stale.routines.has(routine.id), false)
+  assert.deepEqual(stale.unavailable, [routine.id])
+  f.api.routine = async () => ({ ...routine, version: next, weightPlacements: [{ ...routine.weightPlacements[0], approvedWeightKg: '47.5' }] })
+  const latest = (await f.read()).routines.get(routine.id)
+  assert.equal(latest.version, next)
+  assert.equal(latest.weightPlacements[0].approvedWeightKg, '47.5')
+})
 test('a slow or failed weekly request does not delay the ready routine plan', async () => {
   const f = fixture()
   let failWeek

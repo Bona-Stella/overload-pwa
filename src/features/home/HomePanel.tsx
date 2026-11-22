@@ -4,6 +4,7 @@ import { useContext, useEffect, useRef, useState } from 'react'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
 import type { AppTab } from '../../app/types.ts'
 import type { WorkoutApi } from '../workout-online/api.ts'
+import type { OnlineState } from '../workout-online/controller.ts'
 import type { Routine, RoutineList, Scope, Session } from '../workout-online/types.ts'
 import type { StatisticsApi } from '../statistics/api.ts'
 import type { TrainingSchedule } from '../workout-online/useTrainingSchedule.ts'
@@ -91,6 +92,8 @@ type Props = {
   onStart: (routine: Routine) => Promise<void>; onResume: () => void; onRetry: () => void; onNavigate: (tab: AppTab) => void;
   onHistory?:()=>void; onOpen: (id: string) => void; onInvalid: (error: unknown) => void
   onRefreshRoutines?: () => void
+  routineRefreshes?: OnlineState['routineRefreshes']
+  onRetryRoutineRefresh?: (routineId: string) => void
 }
 export function HomePanel(props: Props) {
   const review = useContext(HomeReviewContext)
@@ -194,7 +197,7 @@ type HomeViewData = Pick<HomeData, 'summaries' | 'routines'> & Partial<Pick<Home
   overview?: Pick<HomeData['overview'], 'plannedDays'>
 }
 
-type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen'> & {
+type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen' | 'routineRefreshes' | 'onRetryRoutineRefresh'> & {
   active: Pick<Session, 'initialPlan'> | null
   progress?: ActiveWorkoutProgress
   data?: HomeViewData | null
@@ -239,6 +242,7 @@ export function HomeView(props: HomeViewProps) {
   const overrideId = override?.date === today && data?.summaries.some(r => r.id === override.id) ? override.id : null
   const chosenId = overrideId ?? assignment?.routineId
   const chosen = chosenId ? data?.routines.get(chosenId) : null
+  const routineRefresh = chosenId && !props.active && !props.attempt ? props.routineRefreshes?.get(chosenId) : undefined
   const selected = dates.includes(selectedDay ?? '') ? selectedDay! : today
   const overview = props.week?.overview ?? data?.overview
   const evidence = props.week?.evidence ?? data?.recent
@@ -259,9 +263,12 @@ export function HomeView(props: HomeViewProps) {
         {!props.todayNotice && (chosen ? <RoutinePlan routine={chosen} /> : <p className="muted small">{chosenId ? '이 루틴의 최신 구성을 확인하지 못했습니다. 새로고침하거나 다른 루틴을 선택하세요.' : data.schedule.version !== '0' ? '정해진 휴식일입니다. 원하면 오늘만 다른 루틴을 선택할 수 있습니다.' : '루틴 탭에서 운동과 주간 일정을 등록할 수 있습니다.'}</p>)}
         </>}
       </Card>}
+      {chosenId && routineRefresh && (routineRefresh.failed
+        ? <StatusNotice error>승인한 중량은 저장되었습니다. 최신 루틴을 확인하지 못했습니다. <Button onClick={() => props.onRetryRoutineRefresh?.(chosenId)}>루틴 다시 조회</Button></StatusNotice>
+        : <StatusNotice>승인한 중량이 반영된 루틴을 확인하는 중입니다.</StatusNotice>)}
       {!props.active && (!data && !props.attempt ? <HomePlaceholder area="action" /> : <Button className={styles.start} variant="primary" loading={props.action === 'start' || props.action === 'retry'}
         data-click-action={props.attempt ? 'retry-start' : 'start'}
-        disabled={props.busy || (props.attempt ? !props.localReady : !props.canStart || props.protectedView || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length)}
+        disabled={props.busy || (props.attempt ? !props.localReady : !props.canStart || props.protectedView || !!routineRefresh || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length)}
         onClick={() => { if (props.attempt) props.onRetry(); else if (chosen) void props.onStart(chosen) }}>
         {props.action === 'retry' || props.attempt && props.action !== 'start' ? '기존 시작 요청 다시 확인' : '운동 시작'}</Button>)}
       {props.attempt && !props.action && <StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice>}

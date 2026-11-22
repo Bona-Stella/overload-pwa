@@ -36,6 +36,7 @@ export function loadHome(scope: Scope, api: WorkoutApi, summaries: RoutineList['
     try {
       const value = cache.get(key) ?? await api.routine(scope, summary.id, signal)
       if (!signal.aborted) {
+        if (BigInt(value.version) < BigInt(summary.version)) { unavailable.push(summary.id); return }
         if (value.version === summary.version) cache.set(key, value)
         routines.set(summary.id, value)
         return value
