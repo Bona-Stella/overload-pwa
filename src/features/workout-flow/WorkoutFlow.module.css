@@ -139,6 +139,10 @@
 .prepare { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; color: var(--status-warning); border: 1px solid var(--status-warning); background: var(--surface-warning); border-radius: var(--radius-control); }
 .prepare, .restActions > button { height: var(--rest-action-height, 50px); min-height: var(--rest-action-height, 50px); padding: 0 12px; border-radius: var(--radius-control); display: flex; align-items: center; }
 .restActions > button { justify-content: center; }
+.restActions > button:disabled { opacity: 1; }
+:is(.restProtected, .checkCell[data-completion-protected] > button):disabled { opacity: 1; cursor: pointer; }
+/* Match the enabled button's hover feedback while native activation is blocked. */
+:is(.restProtected, .checkCell[data-completion-protected] > button):disabled:hover { filter: brightness(1.13); }
 .prepare strong { font-size: 18px; padding-inline: 5px; border-radius: 5px; }
 .recommendation { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 2px; width: 100%; min-height: 64px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface-card); color: var(--text-muted); }
 .recommendation[data-direction='increase'] { border-color: var(--status-done); color: var(--status-done); }

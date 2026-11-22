@@ -33,10 +33,10 @@ export function KgWheel({ label, value, onChange, editorStep, preview }: { label
     stepAdjust={editorStep === undefined ? undefined : (value, direction) => adjustKg(value, direction, editorStep)} />
 }
 
-export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, editing, editTools,
+export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, completionProtected, editing, editTools,
   onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, memoOpen = true, onMemoToggle, preview = false }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
-  issue: ReactNode; preparing?: boolean; resting: boolean; editing: boolean; editTools: ReactNode
+  issue: ReactNode; preparing?: boolean; resting: boolean; completionProtected?: boolean; editing: boolean; editTools: ReactNode
   onDraft: (id: number, draft: Partial<SetDraft>) => void; onComplete: (id: number) => void
   onUndo: (id: number) => void; onExcludeSet: (id: number) => void
   onAddSet: () => void; workingRef?: RefObject<HTMLElement | null>
@@ -108,9 +108,9 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
                 : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} value={set.draft.additional} onChange={additional => onDraft(set.id, { additional })} />
                   <small className="muted">선택 입력 · 체중은 포함하지 않습니다.</small></>)}
             </div>
-            <div role="cell" className={styles.checkCell}>
+            <div role="cell" className={styles.checkCell} data-completion-protected={!result && completionProtected || undefined}>
               <CircleCheck label={`${ordinal}세트 ${result ? '완료 취소' : '완료'}`} checked={!!result}
-                disabled={!result && resting} onClick={preview ? undefined : () => result ? onUndo(set.id) : onComplete(set.id)} />
+                disabled={!result && (resting || completionProtected)} onClick={preview ? undefined : () => result ? onUndo(set.id) : onComplete(set.id)} />
             </div>
             {editing && <div className={styles.setActions}>
               {set === weight.sets.at(-1) && <Button onClick={onAddSet}>+ 세트 추가</Button>}

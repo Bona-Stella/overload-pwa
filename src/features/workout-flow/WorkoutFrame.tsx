@@ -27,6 +27,8 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
   const appliedScroll = useRef<ExerciseScrollPosition | null>(null)
   const hasActions = !!actions
   const timeBar = clockRef ?? ownClock
+  const currentExercise = swipe?.currentId
+  // Measure the new footer before restoring the next exercise's scroll position.
   useLayoutEffect(() => {
     const dock = timeBar.current
     if (!dock) return
@@ -42,8 +44,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     observer.observe(dock)
     if (footer.current) observer.observe(footer.current)
     return () => observer.disconnect()
-  }, [timeBar, hasActions, hidden])
-  const currentExercise = swipe?.currentId
+  }, [timeBar, hasActions, hidden, currentExercise])
   useLayoutEffect(() => {
     if (!exerciseScroll || exerciseScroll.exerciseId !== currentExercise || appliedScroll.current === exerciseScroll) return
     appliedScroll.current = exerciseScroll
@@ -128,11 +129,16 @@ export function RestCountdown({ seconds }: { seconds: number }) {
   </div>
 }
 
-export function RestActions({ remaining, flash, onEnd, onExtend }: { remaining: number; flash?: boolean; onEnd: () => void; onExtend: () => void }) {
+export function RestActions({ remaining, flash, onEnd, onExtend, disabled }: {
+  remaining: number; flash?: boolean; onEnd: () => void; onExtend: () => void; disabled?: boolean
+}) {
   return <>
-    {remaining <= 10 && <div className={`${styles.prepare} ${styles.restFlashBar}`} data-flash={flash || undefined}>
+    {remaining > 0 && remaining <= 10 && <div className={`${styles.prepare} ${styles.restFlashBar}`} data-flash={flash || undefined}>
       <b>다음 세트 준비</b><strong>{remaining}초</strong>
     </div>}
-    <div className={`${styles.actions} ${styles.restActions}`}><Button variant="primary" onClick={onEnd}>휴식 종료</Button><Button onClick={onExtend}>+30초</Button></div>
+    <div className={`${styles.actions} ${styles.restActions}`}>
+      <Button variant="primary" disabled={disabled} onClick={onEnd}>휴식 종료</Button>
+      <Button disabled={disabled} onClick={onExtend}>+30초</Button>
+    </div>
   </>
 }

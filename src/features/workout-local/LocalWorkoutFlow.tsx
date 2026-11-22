@@ -30,6 +30,7 @@ import styles from '../workout-flow/WorkoutFlow.module.css'
 
 type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'edit-cardio' | 'remove' | 'undo-cardio' | { undo: number }
 const restKey = (rest: LocalWorkout['rest']) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
+const REST_TRANSITION_GUARD_MS = 275
 export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, referenceRecords = [], referenceRoutine = null, createSetId }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
   activities?: CardioActivity[]; history?: Session[]; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
@@ -41,17 +42,52 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const [completedScroll, setCompletedScroll] = useState(0)
   const [exerciseScroll, setExerciseScroll] = useState<ExerciseScrollPosition | null>(null)
   const [memoOpen, setMemoOpen] = useState<Record<string, boolean>>({})
-  const [endingRest, setEndingRest] = useState<string | null>(null)
+  const [restChange, setRestChange] = useState<{ key: string; kind: 'manual' | 'undo' } | null>(null)
   const [finishing, setFinishing] = useState(false)
   const [completingSet, setCompletingSet] = useState<number | null>(null)
-  const manualRest = useRef<string | null>(null)
+  const [guardedSet, setGuardedSet] = useState<string | null>(null)
+  const previousRest = useRef<{ nextSet: string | null; active: boolean } | null>(null)
+  const completionGuard = useRef<string | null>(null)
+  const guardTimer = useRef<number | undefined>(undefined)
+  const manualEndPending = useRef(false)
   const action = useRef(false), clock = useRef<HTMLDivElement>(null), working = useRef<HTMLElement>(null)
   const [alerts] = useRestAlertPreferences(state.workout?.userId ?? null)
   const [estimateCardio] = useCardioEstimate(state.workout?.userId ?? null)
   const audio = useRestAudio(alerts.sound || alerts.middle, alerts.volume)
   const { stop, unlock } = audio
   const workout = state.workout
+  const weights = workout ? flowWeights(state, history, definitions) : []
+  const weight = weights.find(weight => weight.id === workout?.currentExerciseId)
+  const nextSet = weight?.sets.find(set => !set.result)
   const timingReady = !!workout && state.writable && !workout.finish
+  const rest = workout ? model.exerciseRest(workout, workout.currentExerciseId) : undefined
+  const endingRest = restChange?.kind === 'manual'
+  const changingCurrentRest = !!rest && restKey(rest) === restChange?.key
+  const remaining = workout && rest && (!changingCurrentRest || endingRest)
+    ? model.restRemaining(workout, Math.max(now, Date.parse(rest.startedAt)), workout.currentExerciseId) : 0
+  const showingRest = remaining > 0 || endingRest && changingCurrentRest
+  const nextSetScope = workout && nextSet ? `${workout.userId}:${workout.dataGeneration}:${workout.sessionId}:${workout.currentExerciseId}:${nextSet.id}` : null
+  const restScope = timingReady && visible && !editing && restChange?.kind !== 'undo' ? nextSetScope : null
+  const restProtected = nextSetScope !== null && guardedSet === nextSetScope
+  useLayoutEffect(() => {
+    const previous = previousRest.current
+    previousRest.current = { nextSet: restScope, active: showingRest }
+    if (!restScope || previous?.nextSet !== restScope || !previous.active || showingRest) return
+
+    // Start at the committed transition, including expiry observed by the timer.
+    const until = performance.now() + REST_TRANSITION_GUARD_MS
+    completionGuard.current = restScope
+    setGuardedSet(restScope)
+    window.clearTimeout(guardTimer.current)
+    const release = () => {
+      const left = until - performance.now()
+      if (left > 0) { guardTimer.current = window.setTimeout(release, Math.ceil(left)); return }
+      completionGuard.current = null
+      setGuardedSet(null)
+    }
+    guardTimer.current = window.setTimeout(release, REST_TRANSITION_GUARD_MS)
+  }, [restScope, showingRest])
+  useEffect(() => () => window.clearTimeout(guardTimer.current), [])
   useEffect(() => {
     if (!timingReady) return
     const observe = () => { void controller.observeWeightVisibility(visible && document.visibilityState === 'visible') }
@@ -60,7 +96,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     return () => document.removeEventListener('visibilitychange', observe)
   }, [controller, timingReady, visible])
   const rests = workout?.rests ? Object.values(workout.rests) : workout?.rest ? [workout.rest] : []
-  const audioRests = rests.filter(rest => restKey(rest) !== endingRest)
+  const audioRests = rests.filter(rest => restKey(rest) !== restChange?.key)
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
   const audioRest = audioRests.find(rest => Date.parse(rest.endsAt) > now)
   const restStarted = audioRest ? Date.parse(audioRest.startedAt) : undefined
@@ -95,14 +131,12 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     return () => cancelAnimationFrame(frame)
   }, [completedScroll, visible])
   if (!workout) return null
-  const weights = flowWeights(state, history, definitions), cardio = flowCardio(state, now)
+  const cardio = flowCardio(state, now)
   const exercises = [...weights, ...cardio]
   const items = exercises.map(exercise => ({ id: exercise.id, name: 'plan' in exercise ? exercise.plan.name : exercise.name, cardio: 'plan' in exercise }))
   const id = workout.currentExerciseId, index = items.findIndex(e => e.id === id)
-  const weight = weights.find(w => w.id === id), activity = cardio.find(c => c.id === id)
+  const activity = cardio.find(c => c.id === id)
   const warmup = workout.warmupCompleted === false && weights.length > 0
-  const rest = model.exerciseRest(workout, id)
-  const remaining = rest && restKey(rest) !== endingRest ? model.restRemaining(workout, Math.max(now, Date.parse(rest.startedAt)), id) : 0
   const blocked = !state.writable || !!workout.finish
   const visual = restAlertVisual(alerts, alertsActive && weight && !warmup ? remaining : 0)
   const completeWeight = !!weight && isWeightDone(weight)
@@ -110,7 +144,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const preparing = !warmup && (preparingWeight || activity?.phase === 'ready')
   const allWeights = weights.every(isWeightDone)
   const allDone = allWeights && cardio.every(c => c.phase === 'completed' || c.phase === 'skipped')
-  const nextSet = weight?.sets.find(s => !s.result)
   const pending = items.slice(index + 1).concat(items.slice(0, index + 1)).find(item => {
     const w = weights.find(e => e.id === item.id), c = cardio.find(e => e.id === item.id)
     return w ? !isWeightDone(w) : c?.phase !== 'completed' && c?.phase !== 'skipped'
@@ -125,14 +158,15 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     if (blocked) return
     const current = controller.getSnapshot().workout
     const rest = current ? model.exerciseRest(current, id) : undefined, key = restKey(rest)
-    if (!rest || !key || manualRest.current === key) return
-    manualRest.current = key
+    if (!rest || !key || manualEndPending.current) return
+    manualEndPending.current = true
     if (key === restKey(audioRest)) stop()
-    setEndingRest(key)
+    const change = { key, kind: 'manual' as const }
+    setRestChange(change)
     // Serialize behind an in-flight extension instead of dropping the manual end.
-    void controller.complete(w => { if (restKey(model.exerciseRest(w, id)) === key) delete model.migrateRest(w)[id] }).then(() => {
-      manualRest.current = null
-      setEndingRest(current => current === key ? null : current)
+    void controller.complete(w => { if (restKey(model.exerciseRest(w, id)) === key) delete model.migrateRest(w)[id] }).finally(() => {
+      manualEndPending.current = false
+      setRestChange(current => current === change ? null : current)
     })
   }
   const go = async (next: string) => {
@@ -157,11 +191,12 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     finally { action.current = false; setFinishing(false) }
   }
   const undoSet = async (ordinal: number) => {
-    if (action.current || blocked) return
+    if (manualEndPending.current || action.current || blocked) return
     const key = rest?.ordinal === ordinal ? restKey(rest) : null
-    if (key) {
+    const change = key ? { key, kind: 'undo' as const } : null
+    if (change) {
       if (key === restKey(audioRest)) stop()
-      setEndingRest(key)
+      setRestChange(change)
     }
     try {
       await act(w => {
@@ -169,7 +204,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         if (record) model.undoSet(w, record.id)
       }, true)
     } finally {
-      if (key) setEndingRest(current => current === key ? null : current)
+      if (change) setRestChange(current => current === change ? null : current)
     }
   }
   const requestEnd = () => { if (allDone) void end(); else setModal('end') }
@@ -191,7 +226,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     return saved
   }
   const complete = (ordinal: number) => {
-    if (!weight || preparingWeight || warmup || remaining > 0 || action.current || blocked) return
+    if (!weight || preparingWeight || warmup || remaining > 0 || manualEndPending.current || action.current || blocked) return
+    if (nextSetScope && completionGuard.current === nextSetScope) return
     void unlock()
     setCompletingSet(ordinal)
     void completeExercise((w, at) => {
@@ -232,10 +268,12 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   }}>준비운동 완료</Button>
   else if (weight && editing) actions = <Button className={styles.editClose} onClick={() => setEditing(false)}>편집 닫기</Button>
   else if (preparing) actions = <Button variant="primary" data-click-action={id + ':start'} onClick={startExercise}>운동 시작하기</Button>
-  else if (weight && remaining > 0) actions = <RestActions remaining={remaining} flash={visual.bottom}
+  else if (weight && showingRest) actions = <RestActions remaining={remaining} flash={visual.bottom} disabled={endingRest}
     onEnd={endRest}
-    onExtend={() => { void act(w => { const current = model.exerciseRest(w, id); if (current) current.endsAt = new Date(Date.parse(current.endsAt) + 30000).toISOString() }) }} />
-  else if (weight && nextSet) actions = <Button variant="primary" data-click-action={id + ':complete:' + nextSet.id} loading={completingSet === nextSet.id} onClick={() => complete(nextSet.id)}>{nextSet.id}세트 완료</Button>
+    onExtend={() => { if (!manualEndPending.current) void act(w => { const current = model.exerciseRest(w, id); if (current) current.endsAt = new Date(Date.parse(current.endsAt) + 30000).toISOString() }) }} />
+  else if (weight && nextSet) actions = <Button className={restProtected || endingRest ? styles.restProtected : undefined}
+    variant="primary" data-click-action={id + ':complete:' + nextSet.id} disabled={restProtected || endingRest}
+    loading={completingSet === nextSet.id} onClick={() => complete(nextSet.id)}>{nextSet.id}세트 완료</Button>
   else if (weight) actions = finalActions
   else if (activity?.phase === 'review') actions = <Button variant="primary" onClick={() => void completeExercise((w, at) => model.completeCardio(w, id, at, createSetId)).then(saved => { if (saved && controller.getSnapshot().workout?.currentExerciseId === id) window.scrollTo(0, 0) })}>유산소 기록 확정</Button>
   else if (activity?.phase === 'completed' || activity?.phase === 'skipped') actions = finalActions
@@ -271,7 +309,9 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
       {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
       {weight && <WeightFocus preview={preview} additionalInput weight={weight} position={at + 1} workingRef={preview ? undefined : working} manufacturers={manufacturers}
         description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
-        issue={preview ? null : issue} preparing={!started && !resting && !isWeightDone(weight)} resting={!started || resting} editing={!preview && editing}
+        issue={preview ? null : issue} preparing={!started && !resting && !isWeightDone(weight)}
+        resting={!started || resting || id === workout.currentExerciseId && endingRest}
+        completionProtected={id === workout.currentExerciseId && restProtected} editing={!preview && editing}
         memoOpen={open} onMemoToggle={() => setMemoOpen(value => ({ ...value, [id]: !open }))}
         memoContent={<CombinationMemo preview={preview} hiddenLabel exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />}
         progressNote={workout.replacementSlots?.[id] ? '대체 수행 ' + weight.sets.filter(s => s.result).length + '/' + weight.sets.length + '세트 · 원계획 슬롯 완료 인정은 서버 확인이 필요합니다.' : changedCombination ? '오늘만 조합 변경 · 공식 중량 검토 제외' : undefined}

@@ -6,7 +6,7 @@ import { resolve, relative, isAbsolute } from 'node:path'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-test('workout feedback keeps manual rest silent through queued writes and fits actual title widths', { timeout: 90000 }, async () => {
+test('workout feedback keeps manual rest silent through queued writes and fits actual title widths', { timeout: 120000 }, async t => {
   const directory = resolve('logs/workout-feedback-ui'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
   await mkdir(profile, { recursive: true })
   const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'workout-feedback-only', enforce: 'pre',
@@ -335,7 +335,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     const prior=await evaluate('window.feedbackAudio.starts')
     await click('휴식 종료')
     await new Promise(r=>setTimeout(r,80))
-    assert.equal(await evaluate('document.body.textContent.includes("휴식 종료")'),false,'manual hide is immediate even before durable completion')
+    assert.equal(await evaluate('[...document.querySelectorAll("footer button")].find(b=>b.textContent==="휴식 종료")?.disabled'),true,
+      'the resting action stays in place and blocks repeat input until the queued writes complete')
     await evaluate('window.feedback.release()')
     await wait(()=>evaluate('window.feedback.currentRest()===null'))
     await new Promise(r=>setTimeout(r,350))
@@ -959,7 +960,200 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await closeKeyboard()
       assert.equal(await evaluate(`document.querySelector(${JSON.stringify(selector)}).value`),typed)
     }
-    await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts,memoRunway},null,2))
+    const restSafetyGeometry = []
+    await t.test('rest controls keep the original hit areas and only intentional completion sends a snapshot', async () => {
+      const run = (fn, ...args) => evaluate('(' + fn + ')(...' + JSON.stringify(args) + ')')
+      const action = label => run(label => {
+        const button = [...document.querySelectorAll('[data-workout-frame] footer button')].find(element => element.textContent.trim() === label)
+        if (!button) return null
+        const { x, y, width, height } = button.getBoundingClientRect()
+        const css = getComputedStyle(button)
+        return { x, y, width, height, disabled: button.disabled, opacity: css.opacity, filter: css.filter,
+          hovered: button.matches(':hover'), cursor: css.cursor, busy: button.getAttribute('aria-busy'),
+          appearance: [css.backgroundColor, css.color, css.padding, css.borderRadius],
+          footerWidth: button.closest('footer').clientWidth }
+      }, label)
+      const ready = async label => wait(async () => { const button = await action(label); return button && !button.disabled && button })
+      const point = ({ x, y, width, height }) => ({ x: Math.round(x + width / 2), y: Math.round(y + height / 2) })
+      const pick = async label => point(await ready(label))
+      const watchTransition = label => run(label => {
+        window.setShownAt = undefined
+        window.restTransitionFrames = []
+        const findButton = () => [...document.querySelectorAll('footer button')].find(button => button.textContent.trim() === label)
+        const finishFrame = () => {
+          const button = findButton()
+          if (!button) return
+          const inline = document.querySelector(`button[aria-label="${label}"]`)
+          const css = getComputedStyle(button)
+          const footer = button.closest('footer')
+          const {x,y,width,height} = button.getBoundingClientRect()
+          window.restTransitionFrames.push({ disabled:button.disabled, hovered:button.matches(':hover'),
+            filter:css.filter, cursor:css.cursor, opacity:css.opacity, background:css.backgroundColor, color:css.color,
+            padding:css.padding, radius:css.borderRadius, busy:button.getAttribute('aria-busy'), text:button.textContent.trim(),
+            rect:[x,y,width,height],
+            footer:[footer.clientWidth,footer.clientHeight,footer.children.length],
+            inlineOpacity:inline && getComputedStyle(inline).opacity })
+          if (button.disabled) requestAnimationFrame(finishFrame)
+        }
+        const observer = new MutationObserver(() => {
+          if (!findButton()?.disabled) return
+          window.setShownAt = performance.now()
+          observer.disconnect()
+          finishFrame()
+        })
+        observer.observe(document.body, { childList: true, attributes: true, subtree: true })
+      }, label)
+      const afterAppearance = ms => run(ms => new Promise(resolve => setTimeout(resolve, Math.max(0, window.setShownAt + ms - performance.now()))), ms)
+      const checkAppearance = ({hovered,filter,cursor,...appearance}) => {
+        assert.equal(filter,hovered ? 'brightness(1.13)' : 'none')
+        assert.equal(cursor,'pointer')
+        return appearance
+      }
+      const checkFrames = async label => {
+        const frames = await wait(async () => {
+          const frames = await run(() => window.restTransitionFrames)
+          return frames.at(-1)?.disabled === false && frames
+        })
+        assert.ok(frames.some(frame => frame.disabled))
+        const settled = checkAppearance(frames.at(-1))
+        for (const frame of frames) {
+          const appearance = checkAppearance(frame)
+          assert.deepEqual(appearance,{...settled,disabled:frame.disabled})
+          assert.equal(frame.inlineOpacity,'1')
+          assert.equal(frame.busy,null)
+          assert.equal(frame.text,label)
+        }
+      }
+      const key = async (key, code, windowsVirtualKeyCode) => {
+        const event = { key, code, windowsVirtualKeyCode }
+        await send('Input.dispatchKeyEvent', key === 'Enter' ? { ...event, type:'keyDown', text:'\r' } : { ...event, type:'rawKeyDown' })
+        await send('Input.dispatchKeyEvent', { ...event, type:'keyUp' })
+      }
+      const snap = () => run(() => ({
+        local: window.restSafety.local().snapshot.performedSets.map(set => set.ordinal),
+        remote: window.restSafety.server().snapshot.state.performedSets.map(set => set.ordinal),
+        requests: window.restSafety.requests.map(body => body.snapshot.performedSets.map(set => set.ordinal)),
+      }))
+      for (const width of [320,375,393,430,1280]) {
+        const mobile = width < 500
+        await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile})
+        await send('Emulation.setTouchEmulationEnabled',{enabled:mobile,maxTouchPoints:1})
+        const press = (p, down) => mobile
+          ? send('Input.dispatchTouchEvent',{type:down?'touchStart':'touchEnd',touchPoints:down?[p]:[]})
+          : send('Input.dispatchMouseEvent',{type:down?'mousePressed':'mouseReleased',button:'left',clickCount:1,...p})
+        const tap = async p => { await press(p,true); await press(p,false) }
+        await send('Page.navigate',{url:origin+'/boundary?input=rest-safety'})
+        const initial = await ready('1세트 완료')
+        if (!mobile) await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point(initial)})
+        const first = await ready('1세트 완료')
+        const originalPlan = await run(() => window.restSafety.local().initialPlan)
+        await tap(point(first))
+        const rest = await ready('휴식 종료')
+        const extension = await ready('+30초')
+        assert.equal(rest.y + rest.height, first.y + first.height)
+        assert.equal(extension.y, rest.y)
+        assert.equal(rest.height, extension.height)
+        for (const rect of [rest,extension,first]) {
+          assert.ok(rect.height>=44 && rect.width>=44 && rect.x>=0 && rect.x+rect.width<=width)
+        }
+        assert.ok(Math.abs(rest.width - extension.width) <= 1)
+        assert.ok(extension.x - (rest.x + rest.width) > 0)
+        assert.equal(rest.x, first.x)
+        assert.equal(extension.x + extension.width, first.x + first.width)
+        restSafetyGeometry.push({width,rest,extension,completion:first})
+        await wait(async () => (await snap()).remote.length===1)
+        await evaluate('window.restSafety.controller.syncSettled()')
+        const firstSnapshot = await snap()
+        assert.deepEqual(firstSnapshot,{local:[1],remote:[1],requests:[[1]]})
+        const oldRest = point(rest), oldExtension = point(extension)
+        if (!mobile) await send('Input.dispatchMouseEvent',{type:'mouseMoved',...oldRest})
+        await watchTransition('2세트 완료')
+        if (width===393) {
+          await evaluate('window.restSafety.hold(true)')
+          await tap(oldRest)
+          await wait(async () => (await action('휴식 종료'))?.disabled)
+          await tap(oldRest); await tap(point(first))
+          assert.deepEqual(await snap(),firstSnapshot)
+          await evaluate('window.restSafety.release()')
+          await ready('휴식 종료')
+          assert.equal(await evaluate('!!window.restSafety.controller.getSnapshot().issue'),true)
+          assert.equal(await action('2세트 완료'),null)
+          assert.deepEqual(await snap(),firstSnapshot)
+
+          await evaluate('window.restSafety.hold()')
+          await tap(oldRest)
+          await wait(async () => (await action('휴식 종료'))?.disabled)
+          await new Promise(resolve => setTimeout(resolve, 320))
+          await evaluate('window.restSafety.expire()')
+          await tap(oldRest); await tap(point(first))
+          assert.equal((await action('휴식 종료')).disabled,true)
+          assert.equal(await action('2세트 완료'),null)
+          assert.deepEqual(await snap(),firstSnapshot)
+          await evaluate('window.restSafety.release()')
+        } else {
+          await tap(oldRest)
+          await tap(oldRest)
+        }
+        await wait(() => evaluate('window.setShownAt'))
+        const second = await action('2세트 완료')
+        assert.deepEqual(checkAppearance(second),{...checkAppearance(first),disabled:true})
+        assert.deepEqual(await run((...points)=>points.map(({x,y})=>document.elementFromPoint(x,y)?.closest('button')?.textContent??null),oldRest,oldExtension),['2세트 완료','2세트 완료'])
+        await afterAppearance(35); await tap(oldRest)
+        await afterAppearance(width === 1280 ? 124 : 145); await tap(oldRest)
+        if (width === 393) {
+          assert.equal(await evaluate(`(() => {
+            const inline = document.querySelector('button[aria-label="2세트 완료"]')
+            inline.focus(); inline.click()
+            return inline.disabled && document.activeElement !== inline
+          })()`), true)
+          await key(' ', 'Space', 32)
+          await afterAppearance(210); await press(oldExtension,true)
+          await ready('2세트 완료'); await press(oldExtension,false)
+        }
+        assert.deepEqual(checkAppearance(await ready('2세트 완료')),checkAppearance(first))
+        await checkFrames('2세트 완료')
+        await evaluate('window.restSafety.controller.syncSettled()')
+        assert.deepEqual(await snap(),firstSnapshot,'inputs during the guard are discarded, including a press lifted after enabling')
+        if (width === 1280) {
+          await run(() => [...document.querySelectorAll('footer button')].find(button => button.textContent === '2세트 완료').focus())
+          await key('Enter','Enter',13)
+        } else await tap(point(second))
+        await wait(async () => (await snap()).remote.length===2)
+        await evaluate('window.restSafety.controller.syncSettled()')
+        const secondSnapshot = await snap()
+        assert.deepEqual(secondSnapshot,{local:[1,2],remote:[1,2],requests:[[1],[1,2]]})
+        if (width===393) {
+          const prior = await pick('휴식 종료')
+          await watchTransition('3세트 완료')
+          await press(prior,true)
+          await evaluate('window.restSafety.expire()')
+          await wait(() => evaluate('window.setShownAt'))
+          await press(prior,false)
+          await afterAppearance(125)
+          await tap(prior)
+          await ready('3세트 완료')
+          await checkFrames('3세트 완료')
+          assert.deepEqual(await snap(),secondSnapshot,'expiry does not accept a spanning touch or a fast fresh touch')
+          await click('운동 종료')
+          await wait(()=>evaluate('!!document.querySelector("dialog[open]")'))
+          await click('취소')
+          assert.equal(await evaluate('!!window.restSafety.local().finish'),false)
+          await evaluate('window.restSafety.offline()')
+          await tap(await pick('3세트 완료'))
+          await wait(async () => (await snap()).local.length===3)
+          assert.deepEqual(await snap(),{...secondSnapshot,local:[1,2,3]})
+          await evaluate('window.restSafety.reopen()')
+          await ready('운동 종료 및 요약')
+          assert.deepEqual(await run(()=>window.restSafety.local().initialPlan),originalPlan)
+          assert.deepEqual(await snap(),{...secondSnapshot,local:[1,2,3]})
+          await evaluate('window.restSafety.online(); window.restSafety.controller.retrySync()')
+          await wait(async () => (await snap()).remote.length===3)
+          await evaluate('window.restSafety.controller.syncSettled()')
+          assert.deepEqual(await snap(),{local:[1,2,3],remote:[1,2,3],requests:[[1],[1,2],[1,2,3]]})
+        }
+      }
+    })
+    await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts,memoRunway,restSafetyGeometry},null,2))
   } finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))
