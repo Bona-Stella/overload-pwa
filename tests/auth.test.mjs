@@ -39,6 +39,20 @@ test('settings account summary uses verified masked contact and linked methods w
   await assert.rejects(controller.readSettingsAccount(USER, stale.signal), {code:'SESSION_CHANGED'})
 })
 
+test('lost START and FINISH responses leave a reachable account available for read-only reconciliation', async () => {
+  for (const path of ['/api/v1/workout-sessions', `/api/v1/workout-sessions/${CHALLENGE}/finish`]) {
+    const { api, controller, setSession } = fake()
+    setSession({ userId: USER })
+    await controller.start()
+    let requests = 0
+    api.workoutRequest = async () => { requests++; throw new AuthError('NETWORK') }
+    await assert.rejects(controller.workoutRequest(USER, path, 'POST', {}, new AbortController().signal), { code: 'NETWORK' })
+    assert.equal(requests, 1)
+    assert.equal(controller.getSnapshot().status, 'authenticated')
+    assert.equal(controller.getSnapshot().userId, USER)
+  }
+})
+
 test('session 401 is anonymous with credentialed uncached fetch, not a fabricated local login', async () => {
   let options
   const api = new AuthApi(async (path, init) => { assert.equal(path, '/api/v1/auth/session'); options = init; return json({ code: 'AUTHENTICATION_REQUIRED' }, 401) })

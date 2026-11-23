@@ -6,16 +6,21 @@ import { useState } from 'react'
 import { addDays, dayOfWeek, weekdays, dayStatus } from '../home/model.ts'
 import { selectedPeriod } from './period-selection.ts'
 import type { PeriodSelection } from './period-selection.ts'
+import { useDelayedPending } from '../../components/useDelayedPending.ts'
 
-export function PeriodControls({ value, onChange, monthOnly = false, compact = false, days = [], variant, pendingMode }: { value: PeriodSelection; onChange: (value: PeriodSelection) => void; monthOnly?: boolean; compact?: boolean; days?:PlannedDay[]; variant?:'activity'; pendingMode?: PeriodSelection['mode'] }) {
+export function PeriodControls({ value, onChange, monthOnly = false, compact = false, days = [], variant, pendingMode, pendingValue }: { value: PeriodSelection; onChange: (value: PeriodSelection) => void; monthOnly?: boolean; compact?: boolean; days?:PlannedDay[]; variant?:'activity'; pendingMode?: PeriodSelection['mode']; pendingValue?: PeriodSelection }) {
   const preview=useRecordPreview()
   const [calendar, setCalendar] = useState<string | null>(null)
   const range = selectedPeriod(value)
+  const showPending = useDelayedPending(!!pendingMode)
   const monthMove = (anchor: string, direction: number) => {
     const d = new Date(anchor.slice(0,7) + '-01T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + direction)
     return d.toISOString().slice(0,10)
   }
-  const move = (direction: number) => onChange({ ...value, anchor:value.mode === 'week' ? addDays(range.fromDate, direction * 7) : monthMove(value.anchor,direction) })
+  const move = (direction: number) => {
+    const base = pendingValue?.mode === value.mode ? pendingValue : value
+    onChange({ ...base, anchor:base.mode === 'week' ? addDays(selectedPeriod(base).fromDate, direction * 7) : monthMove(base.anchor,direction) })
+  }
   const monthLabel = (anchor: string) => anchor.slice(0,4) + '년 ' + Number(anchor.slice(5,7)) + '월'
   const periodLabel = value.mode === 'month'
     ? (variant === 'activity' ? value.anchor.slice(0,7).replace('-','/') : monthLabel(value.anchor))
@@ -26,6 +31,7 @@ export function PeriodControls({ value, onChange, monthOnly = false, compact = f
     {!monthOnly && <>{variant!=='activity'&&<h2>조회 기간</h2>}<div className="record-tabs">
       {(['week', 'month'] as const).map(mode => <button key={mode} type="button" className="outline" aria-pressed={value.mode === mode}
         aria-busy={pendingMode === mode || undefined} aria-disabled={pendingMode === mode || undefined}
+        data-wait={showPending && pendingMode === mode || undefined}
         onClick={() => { if (pendingMode !== mode) onChange({ ...value, mode }) }}>
         {mode === 'week' ? '주간' : '월간'}
       </button>)}

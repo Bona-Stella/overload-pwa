@@ -174,6 +174,8 @@ dialog [data-dialog-heading]:focus { outline: none; }
 .analysis-controls select {height:36px;min-height:36px;font-size:12px;padding:6px 9px;}
 .analysis-subtotal {margin-left:auto;white-space:nowrap;font-size:11px;font-weight:600;}
 .record-chart,.record-chart-canvas {min-width:0;max-width:100%;}
+/* The measured SVG width must not become the canvas's minimum on viewport changes. */
+.record-chart-canvas {contain:inline-size;}
 .record-chart-tooltip {border:1px solid var(--border-subtle);border-radius:var(--radius-control);background:var(--surface-input);color:var(--text-primary);padding:8px;font-size:12px;}
 .record-chart .recharts-surface {overflow:visible;}
 .record-screen .growth-graph {background:transparent;border:0;padding:0;}
@@ -211,6 +213,16 @@ dialog [data-dialog-heading]:focus { outline: none; }
 .record-gauge-track {position:absolute;inset:calc(50% - 4px) 0 auto;height:8px;background:var(--surface-input);border-radius:4px;overflow:hidden;}
 .record-gauge[data-guide] .record-gauge-track {top:21px;}
 .record-gauge-fill {display:block;height:100%;background:var(--chart-primary);border-radius:4px;}
+.statistics-plan:not([hidden]) { display: contents; }
+.statistics-wait {
+  position: fixed;
+  z-index: 9;
+  inset: auto 0 calc(var(--tabs-height, 56px) + env(safe-area-inset-bottom) + 16px);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  margin-inline: auto;
+  pointer-events: none;
+}
 .record-gauge-guide {position:absolute;top:3px;transform:translateX(-50%);font-size:10px;line-height:18px;color:var(--text-muted);}
 
 .session-record-card > .section-heading {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px;}

@@ -553,6 +553,14 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelectorAll('article details[open]').length`),1)
     assert.equal(await evaluate(`document.querySelector('article[aria-label^="달리기"] details').open`),true)
     const listRadius = await evaluate(`getComputedStyle(document.querySelector('article[aria-label^="상체 PUSH"]')).borderRadius`)
+    await evaluate(`window.routineFrames=[];window.watchRoutines=true;requestAnimationFrame(function sample(){
+      if(!window.watchRoutines)return;
+      const detail=!!document.querySelector('section[aria-label="루틴 상세"]')?.getClientRects().length;
+      const edit=!!document.querySelector('form[aria-label="루틴 편집"]')?.getClientRects().length;
+      window.routineFrames.push({focused:detail||edit,list:!!document.querySelector('article[aria-label^="상체 PUSH"]')?.getClientRects().length,
+        tabs:!!document.querySelector('nav[aria-label="기본 탐색"]'),padding:getComputedStyle(document.querySelector('main')).paddingBottom});
+      requestAnimationFrame(sample);
+    })`)
     await tap('article[aria-label^="상체 PUSH"] button[aria-label$="상세"]')
     assert.equal(await evaluate(`document.querySelectorAll('article details[open]').length`),0,'another card selection closes the menu')
     assert.equal(await evaluate('window.listUi.selected.length'),0,'opening a routine does not block on selecting it for a write')
@@ -619,6 +627,10 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`!!document.querySelector('${editForm}')`),false)
     assert.equal(await evaluate('window.listUi.confirms.length'),confirmations,'unchanged cancel returns without confirmation')
     await closeDetail()
+    await evaluate('new Promise(requestAnimationFrame)')
+    const routineFrames = await evaluate('window.watchRoutines=false;window.routineFrames')
+    assert.ok(routineFrames.some(frame=>frame.focused)&&routineFrames.some(frame=>frame.list))
+    assert.ok(routineFrames.every(frame=>(!frame.focused||!frame.tabs)&&(!frame.list||frame.tabs)))
     await tap('article[aria-label^="상체 PUSH"] button[aria-label$="상세"]')
     await click('편집')
     await input('input[placeholder="나의 루틴"]','미저장 편집값')
@@ -655,6 +667,10 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelector('article[aria-label^="상체 PUSH"] details').open`),false)
     assert.equal(await evaluate(`document.activeElement.matches('article summary')`),true)
     const selectedBeforeMenuAction=await evaluate('window.listUi.selected.length')
+    await evaluate('window.scrollTo(0,0)')
+    await wait(()=>evaluate('!!document.querySelector("nav button[data-tab=home]:not([inert])")'))
+    await new Promise(resolve=>setTimeout(resolve,360))
+    const homeTab=await evaluate('document.querySelector("nav button[data-tab=home]").getBoundingClientRect().toJSON()')
     await tap('article[aria-label^="상체 PUSH"] summary');await tap('article[aria-label^="상체 PUSH"] details button')
     await wait(()=>evaluate(`document.querySelector('form input[placeholder="나의 루틴"]')!==null`))
     await identityMatches()
@@ -662,7 +678,27 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="루틴 태그 선택"] [role="option"]').length`),11,'creation and editing reuse exactly the same descriptive dropdown')
     await evaluate(`document.querySelector('[aria-label="루틴 태그"]').click()`)
     assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction,'edit uses the scoped routine and opens only the editor')
-    await tap(editForm+' button[aria-label="루틴 목록으로"]')
+    const cancelRect=await evaluate(`document.querySelector('${cancelEdit}').getBoundingClientRect().toJSON()`)
+    const left=Math.max(homeTab.left,cancelRect.left), right=Math.min(homeTab.right,cancelRect.right)
+    const top=Math.max(homeTab.top,cancelRect.top), bottom=Math.min(homeTab.bottom,cancelRect.bottom)
+    assert.ok(left<right&&top<bottom)
+    const overlap={x:Math.round((left+right)/2),y:Math.round((top+bottom)/2)}
+    const touchAt=async point=>{
+      await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[point]})
+      await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+    }
+    await send('Emulation.setTouchEmulationEnabled',{enabled:true})
+    await touchAt(overlap)
+    await wait(()=>evaluate(`!document.querySelector('${editForm}')&&!!document.querySelector('nav')`),'routine tabs restored')
+    assert.equal(await evaluate(`document.elementFromPoint(${overlap.x},${overlap.y}).closest('button')?.dataset.tab`),'home')
+    await touchAt(overlap)
+    assert.equal(await evaluate('document.querySelector("nav button[aria-current=page]").dataset.tab'),'routines')
+    await new Promise(resolve=>setTimeout(resolve,300))
+    await touchAt(overlap)
+    await wait(()=>evaluate('document.querySelector("nav button[aria-current=page]")?.dataset.tab==="home"'),'deliberate tab tap works after guard')
+    await send('Emulation.setTouchEmulationEnabled',{enabled:false})
+    await evaluate('window.listUi.showRoutines()')
+    await wait(()=>evaluate('document.querySelector("nav button[aria-current=page]")?.dataset.tab==="routines"'))
     await tap('article[aria-label^="상체 PUSH"] summary');await tap('article[aria-label^="상체 PUSH"] details button:last-child')
     assert.equal(await evaluate('window.listUi.deleted.at(-1)'),await evaluate('window.listUi.ids[0]'))
     assert.equal(await evaluate('window.listUi.selected.length'),selectedBeforeMenuAction+1,'delete verifies once without a bubbling card-detail selection')

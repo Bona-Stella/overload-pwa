@@ -6,6 +6,7 @@ import { changedOriginalCombination } from '../workout-online/approval-weight.ts
 import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
+import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { WorkoutFrame, Warmup, RestActions, ExerciseNavigation, WeightRecommendation } from '../workout-flow/WorkoutFrame.tsx'
 import type { ExerciseScrollPosition } from '../workout-flow/WorkoutFrame.tsx'
 import { WeightFocus, EquipmentEditor } from '../workout-flow/WeightFocus.tsx'
@@ -31,11 +32,11 @@ import styles from '../workout-flow/WorkoutFlow.module.css'
 type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'edit-cardio' | 'remove' | 'undo-cardio' | { undo: number }
 const restKey = (rest: LocalWorkout['rest']) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
 const REST_TRANSITION_GUARD_MS = 275
-export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, referenceRecords = [], referenceRoutine = null, createSetId }: {
+export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, referenceRecords = [], referenceRoutine = null, createSetId, preparingSummary = false, confirmingFinish = false }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
   activities?: CardioActivity[]; history?: Session[]; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
   progressAssessment?: ProgressAssessment; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
-  createSetId?: () => string
+  createSetId?: () => string; preparingSummary?: boolean; confirmingFinish?: boolean
 }) {
   const [now, setNow] = useState(Date.now), [modal, setModal] = useState<Modal | null>(null), [editing, setEditing] = useState(false)
   const [hiddenRecommendations,setHiddenRecommendations]=useState<Set<string>>(()=>new Set())
@@ -44,6 +45,9 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const [memoOpen, setMemoOpen] = useState<Record<string, boolean>>({})
   const [restChange, setRestChange] = useState<{ key: string; kind: 'manual' | 'undo' } | null>(null)
   const [finishing, setFinishing] = useState(false)
+  const [finishAssessment, setFinishAssessment] = useState<ProgressAssessment>()
+  const finishInFlight = finishing || preparingSummary || confirmingFinish
+  const showFinishWait = useDelayedPending(finishInFlight)
   const [completingSet, setCompletingSet] = useState<number | null>(null)
   const [guardedSet, setGuardedSet] = useState<string | null>(null)
   const previousRest = useRef<{ nextSet: string | null; active: boolean } | null>(null)
@@ -137,7 +141,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const id = workout.currentExerciseId, index = items.findIndex(e => e.id === id)
   const activity = cardio.find(c => c.id === id)
   const warmup = workout.warmupCompleted === false && weights.length > 0
-  const blocked = !state.writable || !!workout.finish
+  const blocked = !state.writable || !!workout.finish || finishInFlight
   const visual = restAlertVisual(alerts, alertsActive && weight && !warmup ? remaining : 0)
   const completeWeight = !!weight && isWeightDone(weight)
   const preparingWeight = !!weight && !completeWeight && !model.weightStarted(workout, id)
@@ -186,6 +190,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     if (action.current || blocked) return
     action.current = true
     stop()
+    setFinishAssessment(progressAssessment)
     setFinishing(true)
     try { if (await controller.finish(Date.now())) setModal(null) }
     finally { action.current = false; setFinishing(false) }
@@ -207,7 +212,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
       if (change) setRestChange(current => current === change ? null : current)
     }
   }
-  const requestEnd = () => { if (allDone) void end(); else setModal('end') }
+  const requestEnd = () => { if (blocked) return; if (allDone) void end(); else setModal('end') }
   const completeExercise = async (transform: (w: LocalWorkout, now: number) => void) => {
     const saved = await act((w, at) => {
       if (w.currentExerciseId !== id) throw new Error('현재 종목을 다시 확인해 주세요.')
@@ -249,9 +254,9 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   })
   const finalActions = <>{allWeights && <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>}
     {pending ? <><Button variant="primary" onClick={() => go(pending.id)}>다음 종목으로</Button>
-      {allWeights && <Button variant="quiet" loading={finishing && modal !== 'end'} onClick={() => void end()}>남은 유산소 건너뛰고 종료</Button>}</>
-      : <Button variant="primary" loading={finishing && modal !== 'end'} onClick={() => void end()}>운동 종료 및 요약</Button>}</>
-  const candidate = progressAssessment?.evaluation?.exercises.find(e => e.sessionExerciseId === id)
+      {allWeights && <Button variant="quiet" disabled={finishInFlight} data-transition-pending={finishInFlight || undefined} loading={showFinishWait && modal !== 'end'} onClick={() => void end()}>남은 유산소 건너뛰고 종료</Button>}</>
+      : <Button variant="primary" disabled={finishInFlight} data-transition-pending={finishInFlight || undefined} loading={showFinishWait && modal !== 'end'} onClick={() => void end()}>운동 종료 및 요약</Button>}</>
+  const candidate = (finishInFlight ? finishAssessment : progressAssessment)?.evaluation?.exercises.find(e => e.sessionExerciseId === id)
   const advice = weight && completeWeight && weight.mode !== 'today' && candidate?.eligible && candidate.comparisonContext
     && decimalDraft(weight.working) === candidate.comparisonContext.approvedWeightKg ? candidate : null
   const changedCombination = workout.originalCombinationChanged === true || changedOriginalCombination(workout.initialPlan, workout.snapshot)
@@ -261,7 +266,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const recommendation=weight&&!changedCombination&&direction&&!hiddenRecommendations.has(workout.sessionId+':'+id)?<WeightRecommendation provisional={!prior} source={advice?.advice==='INCREASE'||advice?.advice==='DECREASE'?'current':'benchmark'} direction={direction} kg={referenceKg} loadType={weight.loadType} onDismiss={()=>setHiddenRecommendations(ids=>new Set(ids).add(workout.sessionId+':'+id))}/>:null
 
   let actions: ReactNode
-  if (blocked) actions = <Button onClick={() => void controller.retrySync()}>서버 저장 상태 다시 확인</Button>
+  if (blocked && !finishInFlight) actions = <Button onClick={() => void controller.retrySync()}>서버 저장 상태 다시 확인</Button>
   else if (warmup) actions = <Button variant="primary" data-click-action="warmup" onClick={() => {
     void unlock()
     void act(model.completeWarmup).then(saved => { if (saved) window.scrollTo(0, 0) })
@@ -281,7 +286,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     <Button onClick={() => void act(w => model.timerAction(w, id, activity?.phase === 'running' ? 'pause' : 'start', Date.now()))}>{activity?.phase === 'running' ? '일시정지' : '재개'}</Button>
     <Button variant="primary" onClick={() => void act((w, at) => model.reviewCardio(w, id, at, estimateCardio))}>유산소 완료</Button>
   </div>
-  if(weight&&!warmup&&!editing&&!blocked&&recommendation)actions=<>{recommendation}{actions}</>
+  if (weight && !warmup && !editing && (!blocked || finishInFlight) && recommendation) actions = <>{recommendation}{actions}</>
   const preparedFrom = preparing ? model.exercisePreparationStartedAt(workout, id) : undefined
   const performingWeight = !!weight && !warmup && !preparingWeight && !completeWeight
   const weightTimingLabel = workout.snapshot.weightTiming?.complete === false ? 'WEIGHT 수행 · 일부' : 'WEIGHT 수행'
@@ -292,6 +297,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     : performingWeight ? observedWeightMs(workout, now) : activity && !preparing && !allDone && activity.phase !== 'skipped' ? activity.activeMs : undefined
   const issue = state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : null
   const syncNotice = state.syncStatus && ['WAITING', 'APPROVAL', 'CHECK', 'OTHER'].includes(state.syncStatus) ? SYNC_LABEL[state.syncStatus] : null
+  const pendingLabel = showFinishWait && modal !== 'end' && !allDone ? (preparingSummary ? '운동 기록 요약을 불러오고 있습니다.' : '서버 종료 결과를 확인하고 있습니다.') : null
   const statusNote = state.issue || state.unsavedDrafts || state.syncIssue || syncNotice || Children.count(notices) > 0
     ? <aside className="muted small" role="status">{state.issue ? '최근 변경 미확정' : state.unsavedDrafts ? '입력 보존 확인 필요' : syncNotice}
       {state.syncIssue && <p>{state.syncIssue}</p>}{notices}{issue}</aside> : undefined
@@ -358,9 +364,10 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         renderPreview: next => renderExercise(exercises.findIndex(exercise => exercise.id === next), true),
         disabled: !visible || blocked || !!modal || editing, canMove: () => !action.current, onGo: go } : undefined}
       cardioFocus={!!activity && !warmup}
-      onHome={onHome} backLabel={backLabel} onEnd={requestEnd} actions={actions} onRestInteraction={alertsActive && audioRest ? unlock : undefined}
+      onHome={onHome} backLabel={backLabel} onEnd={requestEnd} actions={actions} actionsBlocked={finishInFlight} onRestInteraction={alertsActive && audioRest ? unlock : undefined}
       reviewNote={statusNote}>
-      <fieldset disabled={blocked} className={styles.controls}>
+      {pendingLabel && <div className={styles.finishWait}><StatusNotice>{pendingLabel}</StatusNotice></div>}
+      <fieldset inert={finishInFlight} disabled={blocked && !finishInFlight} className={styles.controls}>
         {warmup ? <Warmup next={weight ? { name: weight.name, target: `${weight.working || '중량 미지정'}kg · ${weight.min}–${weight.max}회 × ${weight.plannedCount ?? weight.sets.length}세트`,
           equipment: equipmentLabel(weight, manufacturers) } : { name: activity!.plan.name, target: '목표 ' + activity!.plan.targetSeconds + '초' }} /> : renderExercise(index)}
       </fieldset>
@@ -405,6 +412,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         if (w.timers[id]) w.timers[id].reviewing = false
       }, true)} />}
     {modal === 'end' && <ConfirmWorkoutAction saveIssue={issue} title="운동을 종료할까요?" message="완료한 수행과 실제 종료 시각을 보존한 뒤 서버 종료 결과를 확인합니다. 미완료 수행은 자동 완료하지 않습니다."
-      action="운동 종료 및 요약" loading={finishing} onClose={() => setModal(null)} onConfirm={() => void end()} />}
+      action="운동 종료 및 요약" pending={finishing} loading={finishing && showFinishWait} onClose={() => { if (!finishing) setModal(null) }} onConfirm={() => void end()} />}
   </>
 }

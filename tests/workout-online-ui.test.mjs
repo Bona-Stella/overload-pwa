@@ -22,6 +22,7 @@ registerHooks({
   }
 })
 const {WorkspaceView,SessionView}=await import('../src/features/workout-online/WorkoutWorkspace.tsx')
+const {useRoutineEditorRoutes}=await import('../src/features/workout-online/useRoutineEditorRoutes.ts')
 const {RoutineForm}=await import('../src/features/workout-online/RoutineForm.tsx')
 const {RoutineDetail}=await import('../src/features/workout-online/RoutineDetail.tsx')
 const {RoutineCards}=await import('../src/features/workout-online/RoutineCards.tsx')
@@ -92,7 +93,8 @@ test('failed local write is never labeled as successful local saving',()=>{
   assert.match(html,/최근 변경 미확정/);assert.doesNotMatch(html,/이 기기에 저장됨/)
 })
 test('new account shows empty routines without demo seeds or workout input controls',()=>{
-  const html=render(WorkspaceView,{state:{...state,data:{...bootstrap,routines:[]}},controller:{},enabled:true,
+  const RoutineWorkspace=props=>React.createElement(WorkspaceView,{...props,routes:useRoutineEditorRoutes(props.state.scope)})
+  const html=render(RoutineWorkspace,{state:{...state,data:{...bootstrap,routines:[]}},controller:{},enabled:true,
     training:{schedule:{version:'0',activeId:OTHER,autoEnabled:false,presets:[{id:OTHER,name:'01 주간 일정',version:'0',included:false,assignments:[]}]},
       protection:null,loading:false,busy:false,canWrite:true}})
   assert.match(html,/아직 루틴이 없습니다/);assert.match(html,/새 루틴/)

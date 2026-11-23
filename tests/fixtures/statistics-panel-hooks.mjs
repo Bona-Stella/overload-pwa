@@ -24,6 +24,7 @@ export function useEffect(effect, deps) {
     })
   }
 }
+export const useLayoutEffect = useEffect
 export function mountPanel(Component, props) {
   const host = { slots: [], effects: [], index: 0, mounted: true, lateUpdates: 0 }
   return {

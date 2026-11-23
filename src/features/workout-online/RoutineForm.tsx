@@ -4,6 +4,7 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { EditorViewportOccluded } from '../../components/useEditorKeyboard.ts'
 import { editorViewport } from '../../components/editorViewport.ts'
 import { Button, Card } from '../../components/ui.tsx'
+import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { boundaryError } from '../home/load.ts'
 import { newId } from '../../id.ts'
 import { TagPicker } from './TagPicker.tsx'
@@ -102,6 +103,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     return () => cancelAnimationFrame(frame)
   }, [addedCardId, keyboardOccludesPage])
   const [saving, setSaving] = useState(false)
+  const showSaveSpinner = useDelayedPending(saving)
   const guard = useRef(false), abort = useRef(new AbortController())
   useEffect(() => { abort.current = new AbortController(); return () => abort.current.abort() }, [])
   const locked=busy||saving
@@ -283,7 +285,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     </div>}
     <footer className={editStyles.footer}>
       <button type="button" className="outline" disabled={locked} onClick={close}>취소</button>
-      <Button type="submit" variant="primary" className="full" disabled={locked || managementBlocked} loading={saving}>{saveLabel}</Button>
+      <Button type="submit" variant="primary" className="full" disabled={locked || managementBlocked} data-transition-pending={saving || undefined} loading={showSaveSpinner}>{saveLabel}</Button>
     </footer>
   </form>
 }

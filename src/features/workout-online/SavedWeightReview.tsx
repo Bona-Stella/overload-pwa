@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react'
+import {useEffect,useLayoutEffect,useRef,useState} from 'react'
 import {Button,Card} from '../../components/ui.tsx'
 import {ReviewWeightChange,WeightApprovalStatus,WeightReview} from '../workout-flow/WeightReview.tsx'
 import {WeightApprovalHistory} from '../workout-flow/WorkoutSummary.tsx'
@@ -16,8 +16,9 @@ function confirmsApproval(view: SavedReview, expected: ReviewApproval['approvals
   && event.nextWeightKg === request.nextWeightKg && event.source === 'WORKOUT_REVIEW'))
 }
 
-export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRoutineApproved,authorized,preview=false}:{api:Pick<WorkoutApi,'weightReview'|'approveReview'>;session:Session;readOnly:boolean;disabled:boolean;onChanged:()=>Promise<void>;onRoutineApproved?:(scope:Scope,routineId:string,version:string)=>void;authorized:()=>boolean;preview?:boolean}){
+export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRoutineApproved,authorized,preview=false,onReadSettled}:{api:Pick<WorkoutApi,'weightReview'|'approveReview'>;session:Session;readOnly:boolean;disabled:boolean;onChanged:()=>Promise<void>;onRoutineApproved?:(scope:Scope,routineId:string,version:string)=>void;authorized:()=>boolean;preview?:boolean;onReadSettled?:(version:string)=>void}){
  const [view,setView]=useState<SavedReview|null>(null),[issue,setIssue]=useState(''),[busy,setBusy]=useState(false),[reload,setReload]=useState(0)
+ const [readVersion,setReadVersion]=useState<string|null>(null)
  const access=useRef(authorized)
  useEffect(()=>{access.current=authorized},[authorized])
  const flight=useRef<AbortController|null>(null),mounted=useRef(false)
@@ -30,6 +31,7 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
   const authorizedRead = () => !abort.signal.aborted && mounted.current && access.current()
   void api.weightReview({userId:session.userId,dataGeneration:session.dataGeneration},session.id,abort.signal).then(saved => {
    if (!authorizedRead()) return
+   setReadVersion(session.version)
    const expected = awaitingHistory.current
    const confirmed = expected && confirmsApproval(saved, expected.requests)
    if (expected?.acknowledged && !confirmed) { setIssue(historyCheckIssue); return }
@@ -39,11 +41,15 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
    if (confirmed && saved.routineVersion !== null) onRoutineApproved?.(saved, session.initialPlan.routineId, saved.routineVersion)
    if (confirmed || (!readOnly && saved.version !== session.version)) void onChanged()
   }).catch(() => {
-   if (authorizedRead()) setIssue(awaitingHistory.current?.acknowledged ? historyCheckIssue : '당시 중량 검토와 승인 이력을 조회하지 못했습니다.')
+   if (authorizedRead()) {
+    setReadVersion(session.version)
+    setIssue(awaitingHistory.current?.acknowledged ? historyCheckIssue : '당시 중량 검토와 승인 이력을 조회하지 못했습니다.')
+   }
   })
   return () => abort.abort()
  }, [api,session.id,session.userId,session.dataGeneration,session.version,session.initialPlan.routineId,reload,onChanged,onRoutineApproved,readOnly])
  const current=view?.sessionId===session.id&&view.userId===session.userId&&view.dataGeneration===session.dataGeneration?view:null
+ useLayoutEffect(()=>{if(readVersion===session.version)onReadSettled?.(readVersion)},[readVersion,session.version,onReadSettled])
  const frozen=current?.frozen
  const retryNotice=issue?<Card><p role="alert">{issue}</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>:null
  if(!current)return retryNotice??<div role="status" className="sr-only">당시 중량 검토 확인 중…</div>

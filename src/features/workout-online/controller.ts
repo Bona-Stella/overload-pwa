@@ -327,7 +327,29 @@ export class WorkoutOnlineController {
         if (!context.current()) return
         if (!lease?.held()) { this.set({ issue: '이 브라우저에서 운동 편집 잠금을 얻지 못했습니다. 다른 편집 탭을 닫은 뒤 다시 시도해 주세요.' }); return }
       }
-      const detail = await this.api.start(scope, pending.request, context.signal)
+      const readStarted = async () => {
+        const { session } = await this.api.active(scope, context.signal)
+        if (!context.current() || !session) return null
+        const request = pending.request
+        if (session.id !== request.id) {
+          this.set({ active: session })
+          throw new WorkoutApiError('ACTIVE_SESSION_EXISTS', 409)
+        }
+        if (session.deletedAt || session.status !== 'ACTIVE' || session.initialPlan.routineId !== request.routineId
+          || session.editorDeviceId !== request.editorDeviceId || Date.parse(session.startedAt) !== Date.parse(request.startedAt)
+          || session.workoutDate !== request.workoutDate || session.startedTimeZone !== request.startedTimeZone) throw new WorkoutApiError('RESPONSE_INVALID')
+        return session
+      }
+      let detail = attempt ? await readStarted() : null
+      if (!context.current()) return
+      if (!detail) try { detail = await this.api.start(scope, pending.request, context.signal) }
+      catch (error) {
+        if (!context.current()) return
+        const { status = 0, code } = (error ?? {}) as { status?: number; code?: string }
+        if (status >= 400 && status < 500 || ['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) throw error
+        detail = await readStarted()
+        if (!detail) throw error
+      }
       if (!context.current()) return
       // The attempt remains durable until the server copy commits in the same local transaction.
       await this.store.saveSession(scope, detail, pending.request.id)

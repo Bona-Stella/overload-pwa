@@ -290,6 +290,19 @@ test('lost START ACK and reload reuse the exact stored UUID, time, date, zone an
   s.disconnect();const fresh=new WorkoutOnlineController(s.api,s.store),stop=fresh.connect({getSnapshot:()=>({status:'authenticated',userId:USER,pending:null}),subscribe:()=>()=>{}})
   await settle();await fresh.start();assert.equal(s.starts.length,2);assert.deepEqual(s.starts[0],s.starts[1]);assert.equal(JSON.stringify(s.starts[1]),original.requestJson);assert.equal(s.getAttempt(),null);stop()
 })
+test('a lost START response with a verified ACTIVE session opens the local copy without a second POST',async()=>{
+  const s=setup();await settle();await s.controller.select(ROUTINE)
+  let active=null
+  const startCall=s.api.start
+  s.api.start=async(...args)=>{active=await startCall(...args);throw Error('lost after commit')}
+  s.api.active=async()=>({...scope,session:active})
+  await s.controller.start()
+  assert.equal(s.starts.length,1)
+  assert.equal(s.controller.getSnapshot().detail.id,active.id)
+  assert.equal(s.controller.getSnapshot().copySaved,true)
+  assert.equal(s.getAttempt(),null)
+  s.disconnect()
+})
 test('attempt save failure prevents HTTP; post-START copy failure retains the fixed attempt and blocks ready state',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE);s.setFailPrepare(true);await s.controller.start();assert.equal(s.starts.length,0)
   s.setFailPrepare(false);s.setFailSave(true);await s.controller.start();assert.equal(s.starts.length,1);assert.ok(s.getAttempt());assert.equal(s.controller.getSnapshot().copySaved,false)

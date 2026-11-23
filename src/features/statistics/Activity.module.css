@@ -7,11 +7,11 @@
 .page :global(.record-period[data-layout='activity'] > .record-tabs > button), .page .segment > button { position: relative; min-width: 0; min-height: 40px; height: auto; padding: 8px 4px; border: 0; border-radius: 7px; background: transparent; color: var(--text-primary); font-size: 14px; font-weight: 600; }
 .page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-pressed='true']) { background: var(--accent); color: var(--on-accent); }
 .page .segment > button[aria-pressed='true'] { background: transparent; color: var(--on-accent); }
-.page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-busy='true'])::after { content: ''; position: absolute; inset-inline-end: 14px; inset-block: 0; margin-block: auto; width: 10px; height: 10px; border: 1px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; pointer-events: none; animation: period-spin .8s linear infinite; }
+.page :global(.record-period[data-layout='activity'] > .record-tabs > button[data-wait='true'])::after { content: ''; position: absolute; inset-inline-end: 14px; inset-block: 0; margin-block: auto; width: 10px; height: 10px; border: 1px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; pointer-events: none; animation: period-spin .8s linear infinite; }
 @keyframes period-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) {
   .page .segment::before { transition: none; }
-  .page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-busy='true'])::after { animation: none; }
+  .page :global(.record-period[data-layout='activity'] > .record-tabs > button[data-wait='true'])::after { animation: none; }
 }
 .page :global(.record-period-row) { grid-template-columns: 36px minmax(0,1fr) 36px 36px; gap: 4px; }
 .page :global(.record-period[data-layout='activity'] .record-period-row > button) { position: relative; min-width: 36px; min-height: 44px; height: auto; border: 0; border-radius: 5px; background: transparent; color: var(--text-primary); }

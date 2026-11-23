@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { root } from './routine-ui.jsx'
 import { routine, bootstrap, session, start } from './workout-online-data.mjs'
 import { WorkspaceView } from '../../src/features/workout-online/WorkoutWorkspace.tsx'
+import { useRoutineEditorRoutes } from '../../src/features/workout-online/useRoutineEditorRoutes.ts'
 import { HomePanel } from '../../src/features/home/HomePanel.tsx'
 import { useTrainingSchedule } from '../../src/features/workout-online/useTrainingSchedule.ts'
 import { WorkoutApiError } from '../../src/features/workout-online/api.ts'
@@ -61,7 +62,8 @@ const statistics = { overview: async (_scope, period) => ({ plannedDays: Array.f
 }) }) }
 function ReviewWorkspace() {
   const initial = { userId: scope.userId, scope, data: { ...bootstrap, manufacturers: [longManufacturer], scope, routines: summaries }, selected: null, active: null, detail: null, deviceId: null, attempt: null, status: 'ready', busy: false, localReady: true, copySaved: false, issue: null, notice: '' }
-  const [state, setState] = useState(initial), [refresh, setRefresh] = useState(0), [focused, setFocused] = useState(false), [tab, setTab] = useState('routines')
+  const [state, setState] = useState(initial), [refresh, setRefresh] = useState(0), [tab, setTab] = useState('routines')
+  const routes = useRoutineEditorRoutes(scope)
   const [controller] = useState(() => {
     let current = initial
     const update = patch => { current = { ...current, ...patch }; setState(current) }
@@ -80,8 +82,8 @@ function ReviewWorkspace() {
   const [visible, setVisible] = useState(true)
   ui.hide = () => setVisible(false)
   ui.reveal = () => setVisible(true)
-  return <AppShell authenticated tab={tab} focused={focused} onNavigate={setTab}>
-    <div hidden={tab !== 'routines'}>{visible && <WorkspaceView state={state} controller={controller} api={api} activities={[treadmill]} training={training} enabled onEditingChange={setFocused}/>}</div>
+  return <AppShell authenticated tab={tab} focused={visible && tab === 'routines' && routes.focused} routineEditor={visible && tab === 'routines' && routes.focused} onNavigate={setTab}>
+    <div hidden={tab !== 'routines'}>{visible && <WorkspaceView state={state} controller={controller} api={api} activities={[treadmill]} training={training} enabled routes={routes}/>}</div>
     {tab === 'home' && <HomePanel scope={scope} routines={summaries} api={api} training={training} statistics={statistics} visit={refresh} refreshKey={String(refresh)} active={null} attempt={false} busy={false} localReady issue={null} onStart={async () => {}} onResume={() => {}} onRetry={() => {}} onNavigate={setTab} onOpen={() => {}} onInvalid={() => {}}/>}
   </AppShell>
 }

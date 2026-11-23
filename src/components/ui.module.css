@@ -1,4 +1,6 @@
 .button { min-height: 44px; padding: 11px 16px; transition: background-color .15s, border-color .15s; }
+.button[data-transition-pending]:disabled { opacity: 1; cursor: pointer; }
+.button[data-transition-pending]:disabled:hover { filter: brightness(1.13); }
 .loadingButton { position: relative; }
 .busyLabel { display: contents; opacity: 0; }
 .loadingButton { color: transparent !important; }

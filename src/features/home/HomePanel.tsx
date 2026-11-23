@@ -22,6 +22,7 @@ import { scheduleRoutineLabel } from './tags.ts'
 import { presetNumber } from '../workout-online/preset-schedule.ts'
 import type { SchedulePreset } from '../workout-online/preset-schedule.ts'
 import type { ActiveWorkoutProgress, PlanWeight, PlanCardio } from './active-workout.ts'
+import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { formatDuration } from '../workout/model.ts'
 import routineStyles from '../workout-online/Routine.module.css'
 import styles from './Home.module.css'
@@ -222,6 +223,7 @@ type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 
 export function HomeView(props: HomeViewProps) {
   const { data, today, loading } = props
   const active = props.progress?.confirmedFinished ? null : props.active
+  const showActionSpinner = useDelayedPending(!!props.action)
   const dates = weekDates(today)
   const [override, setOverride] = useState<{ date: string; id: string } | null>(null)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
@@ -254,7 +256,7 @@ export function HomeView(props: HomeViewProps) {
     <HomeHeader>{props.header}</HomeHeader>
     {props.headerActions}
     {props.issue && <StatusNotice error>{props.issue}</StatusNotice>}
-    {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy} loading={props.action === 'resume'} onResume={props.onResume} />}
+    {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy || props.action === 'resume'} loading={props.action === 'resume' && showActionSpinner} onResume={props.onResume} />}
       {!active && <Card hero className={`${styles.today} ${styles.planCard}`} aria-label="오늘의 루틴" aria-busy={!data && !!loading}>
         {!data ? loading ? <HomePlaceholder area="today" /> : <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
         <div className={styles.kicker}><span>TODAY'S ROUTINE</span><time dateTime={today}>{today.slice(5).replace('-', '.')} {weekdays[dayOfWeek(today) - 1]}</time></div>
@@ -266,9 +268,9 @@ export function HomeView(props: HomeViewProps) {
       {chosenId && routineRefresh && (routineRefresh.failed
         ? <StatusNotice error>승인한 중량은 저장되었습니다. 최신 루틴을 확인하지 못했습니다. <Button onClick={() => props.onRetryRoutineRefresh?.(chosenId)}>루틴 다시 조회</Button></StatusNotice>
         : <StatusNotice>승인한 중량이 반영된 루틴을 확인하는 중입니다.</StatusNotice>)}
-      {!props.active && (!data && !props.attempt ? <HomePlaceholder area="action" /> : <Button className={styles.start} variant="primary" loading={props.action === 'start' || props.action === 'retry'}
+      {!props.active && (!data && !props.attempt ? <HomePlaceholder area="action" /> : <Button className={styles.start} variant="primary" data-transition-pending={!!props.action || undefined} loading={showActionSpinner}
         data-click-action={props.attempt ? 'retry-start' : 'start'}
-        disabled={props.busy || (props.attempt ? !props.localReady : !props.canStart || props.protectedView || !!routineRefresh || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length)}
+        disabled={!!props.action || props.busy || (props.attempt ? !props.localReady : !props.canStart || props.protectedView || !!routineRefresh || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length)}
         onClick={() => { if (props.attempt) props.onRetry(); else if (chosen) void props.onStart(chosen) }}>
         {props.action === 'retry' || props.attempt && props.action !== 'start' ? '기존 시작 요청 다시 확인' : '운동 시작'}</Button>)}
       {props.attempt && !props.action && <StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice>}

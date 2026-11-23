@@ -221,15 +221,33 @@ test('initial schedule metadata after reload does not restart an in-flight month
 })
 test('calendar period changes abort old reads and late responses cannot replace the selected range',async t=>{
   const f=setup(t);await f.respond(1);f.open('activity');await f.respond(2)
+  const committed = f.control().value
+  const committedSets = f.view().props.data.summary.completedSets
   f.period({mode:'week',anchor:'2026-10-20'});const earlier=f.requests.at(-1)
   f.period({mode:'month',anchor:'2026-09-20'});const selected=f.requests.findLast(r=>r.period.fromDate==='2026-09-01')
   assert.equal(earlier.signal.aborted,true)
-  assert.equal(f.view().props.activityState,'loading','the activity view stays mounted with scoped placeholders')
-  assert.equal(f.view().props.data,null,'a previous period cannot fill the selected period shell')
-  assert(nodes(f.render()).some(n=>n.props?.['data-activity-state']==='loading'))
+  assert.deepEqual(f.control().value,committed,'dates and chart stay on the same confirmed period while asking for a new one')
+  assert.equal(f.view().props.data.summary.completedSets,committedSets,'the prior chart remains present under its own date labels')
   selected.respond(20);await flush();f.render();earlier.respond(99);await flush();f.render()
+  assert.deepEqual(f.control().value,{mode:'month',anchor:'2026-09-20'})
   assert.equal(f.view().props.data.summary.completedSets,'20')
   assert.equal(f.view().props.activityState,undefined)
+})
+test('cold muscle statistics retains the Records menu until the overview settles and cached reentry is immediate',async t=>{
+  const f=setup(t)
+  const initial=f.requests[0]
+  f.open('muscles')
+  assert.equal(f.view().props.screen,'summary')
+  assert.equal(initial.signal.aborted,false)
+  assert(!nodes(f.render()).some(n=>n.type?.name==='StatisticsWait'&&n.props.skeleton))
+  await f.respond(2)
+  assert.equal(f.view().props.screen,'muscles')
+  assert.equal(f.view().props.data.summary.completedSets,'2')
+  f.back('주간 근육 통계')
+  const previous=f.requests.length
+  f.open('muscles')
+  assert.equal(f.view().props.screen,'muscles')
+  assert.equal(f.requests.length,previous)
 })
 test('revisiting a period renders its own ready snapshot through refresh and a transient failure',async t=>{
   const f=setup(t);await f.respond(3);f.open('activity')

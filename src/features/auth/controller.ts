@@ -285,8 +285,9 @@ export class AuthController {
       if (signal.aborted || this.generation !== generation) throw obsolete()
       let failure = error
       if (current() && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code)) {
-        // The tab can show its own read error if the authenticated session is still reachable.
-        if (method !== 'GET' || globalThis.navigator?.onLine === false) this.networkUnavailable()
+        const workoutTransition = method === 'POST' && /^\/api\/v1\/workout-sessions(?:\/[0-9a-f-]+\/finish)?$/.test(path)
+        // START and FINISH can reconcile a lost write response while the session is still reachable.
+        if (globalThis.navigator?.onLine === false || method !== 'GET' && !workoutTransition) this.networkUnavailable()
         else {
           try { await this.checkSessionAfterReadFailure(generation, expected) }
           catch (sessionError) {

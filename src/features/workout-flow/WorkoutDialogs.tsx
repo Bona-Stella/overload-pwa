@@ -17,13 +17,13 @@ import styles from './WorkoutFlow.module.css'
 import editStyles from '../workout-online/RoutineEdit.module.css'
 import orderStyles from '../workout-online/Presets.module.css'
 
-export function ConfirmWorkoutAction({ title, action, message, onClose, onConfirm, saveIssue, loading = false }: {
-  title: string; action: string; message: string; saveIssue?: ReactNode; loading?: boolean; onClose: () => void; onConfirm: () => void
+export function ConfirmWorkoutAction({ title, action, message, onClose, onConfirm, saveIssue, loading = false, pending = false }: {
+  title: string; action: string; message: string; saveIssue?: ReactNode; loading?: boolean; pending?: boolean; onClose: () => void; onConfirm: () => void
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
   return <Dialog title={title} onClose={onClose} initialFocus={cancel}>
     <div className="stack"><p>{message}</p>{saveIssue}<div className={styles.actions}>
-      <button type="button" className="outline" ref={cancel} onClick={onClose}>취소</button><Button variant="primary" loading={loading} onClick={onConfirm}>{action}</Button>
+      <button type="button" className="outline" ref={cancel} disabled={pending} onClick={onClose}>취소</button><Button variant="primary" disabled={pending} data-transition-pending={pending || undefined} loading={loading} onClick={onConfirm}>{action}</Button>
     </div></div>
   </Dialog>
 }

@@ -4,7 +4,7 @@ import { durationLabel, durationMinutesLabel } from '../../components/duration.t
 import { RecordChart } from './RecordChart.tsx'
 import { ActivityTrendChart } from './ActivityTrendChart.tsx'
 import { displayDecimal, sumDecimals } from './display-decimal.ts'
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session, Scope, ClosedPage } from '../workout-online/types.ts'
 import type { Statistics, StatisticsApi, WeightStats, Overview } from './api.ts'
@@ -16,6 +16,7 @@ import { SearchList } from '../../components/SearchList.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import { RecordFeed } from '../history/RecordFeed.tsx'
+import { restoreParentScroll } from '../history/useRecordDetailHistory.ts'
 import { WeeklyMusclePlan, WeeklyMuscleStatistics } from './MuscleAnalysis.tsx'
 import { muscleGroups } from './muscle-analysis.ts'
 import { PeriodControls } from './PeriodControls.tsx'
@@ -31,8 +32,8 @@ import styles from './RecordMain.module.css'
 import activityStyles from './Activity.module.css'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { SearchScopePopover } from './SearchScopePopover.tsx'
-import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { boundaryError, readAccessDenied } from '../home/load.ts'
+import { StatisticsWait } from './StatisticsWait.tsx'
 
 const wordmark = new URL('../../assets/OVERLOAD_white_transparent_4x.png', import.meta.url).href
 
@@ -215,11 +216,14 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   </>
 }
 
-export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, onInvalid, workoutApi, schedule = null, definitions = [], initialPreset, enabled=true }: { enabled?:boolean;
+export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, onInvalid, workoutApi, schedule = null, scheduleLoading, scheduleIssue, onRetrySchedule, definitions = [], initialPreset, enabled=true }: { enabled?:boolean;
   api: StatisticsApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; workoutApi?: WorkoutApi; schedule?: LiveSchedule | null; definitions?: StandardExercise[]
   recentContent?: ReactNode
   initialPreset?: string
   dataRevision?: string
+  scheduleLoading?: boolean
+  scheduleIssue?: string
+  onRetrySchedule?: () => void
 }) {
   const preview = useRecordPreview()
   const [closedPage,setClosedPage]=useState<ClosedPage|null>(null)
@@ -227,7 +231,11 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   const recordCache={page:closedPage,set:setClosedPage,details:recordDetails}
   const identity = scope.userId + ':' + scope.dataGeneration
   const [screen, setScreen] = useScreenHistory<RecordScreen>('records:' + identity + (initialPreset ? ':preset:' + initialPreset : ''), initialPreset ? 'plan' : 'summary')
-  useEffect(() => { window.scrollTo?.(0,0) }, [screen])
+  const panel = useRef<HTMLElement>(null)
+  const [entry, setEntry] = useState<{screen: RecordScreen; scroll: number; presented?: boolean} | null>(null)
+  const [planReady, setPlanReady] = useState(false)
+  const [retainPlan, setRetainPlan] = useState(screen === 'plan')
+  if (screen === 'plan' && !retainPlan) setRetainPlan(true)
   const [activityPeriod, setActivityPeriod] = useScreenHistory<PeriodSelection>('activity-period:' + identity + (preview?.activity ? ':sample' : ''), { mode:'week', anchor:preview?.activity?.period.fromDate??preview?.today??localToday() })
   type Mode = PeriodSelection['mode']
   const inActivity = screen === 'activity'
@@ -243,8 +251,12 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   useEffect(() => { invalid.current = onInvalid }, [onInvalid])
   const { userId, dataGeneration } = scope
   const weekAnchor = inActivity ? activityPeriod.anchor : preview?.today ?? localToday()
-  const { fromDate: weekFrom, toDateExclusive: weekTo } = selectedPeriod({ mode: 'week', anchor: weekAnchor })
-  const { fromDate: monthFrom, toDateExclusive: monthTo } = selectedPeriod({ mode: 'month', anchor: activityPeriod.anchor })
+  const { fromDate: weekFrom, toDateExclusive: weekTo } = selectedPeriod({ mode: 'week', anchor: pending?.mode === 'week' ? pending.anchor : weekAnchor })
+  const { fromDate: monthFrom, toDateExclusive: monthTo } = selectedPeriod({ mode: 'month', anchor: pending?.mode === 'month' ? pending.anchor : activityPeriod.anchor })
+  const cachedPeriod = (value: PeriodSelection) => {
+    const {fromDate, toDateExclusive} = selectedPeriod(value)
+    return overviews.find(item => item.key === [identity, fromDate, toDateExclusive].join(':'))?.data ?? null
+  }
   const weekKey = [identity, weekFrom, weekTo].join(':')
   const monthKey = [identity, monthFrom, monthTo].join(':')
   const appliedVersion = schedule?.appliedVersion
@@ -259,12 +271,27 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   // The monthly view still uses the selected anchor's week for routine achievement.
   const readWeek = enabled && !['growth', 'plan', 'history'].includes(screen)
   const readMonth = enabled && inActivity && (activityPeriod.mode === 'month' || pending?.mode === 'month')
-  const weekly = overviews.find(item => item.key === weekKey)?.data ?? null
-  const monthly = overviews.find(item => item.key === monthKey)?.data ?? null
+  const weekly = cachedPeriod({ mode: 'week', anchor: weekAnchor })
+  const monthly = cachedPeriod({ mode: 'month', anchor: activityPeriod.anchor })
   const current = inActivity && activityPeriod.mode === 'month' ? monthly : weekly
+  const summaryOverview = cachedPeriod({ mode: 'week', anchor: preview?.today ?? localToday() })
   const failedMode = inActivity ? pending?.mode ?? activityPeriod.mode : 'week'
   const issue = failures[failedMode] === (failedMode === 'week' ? weekRequest : monthRequest)
   const activityState = inActivity && !current ? issue ? 'error' : 'loading' : undefined
+  const waitingForScreen = !preview && entry?.screen === screen && !entry.presented && (
+    (screen === 'activity' || screen === 'muscles') && !current && !issue ||
+    screen === 'plan' && !!workoutApi && (schedule ? !planReady : scheduleLoading)
+  )
+  if (entry?.screen === screen && !entry.presented && !waitingForScreen) setEntry({ ...entry, presented: true })
+  const shown = waitingForScreen ? 'summary' : screen
+  const previousScreen = useRef<RecordScreen | null>(null)
+  useLayoutEffect(() => {
+    const previous = previousScreen.current
+    previousScreen.current = shown
+    if (previous === shown || !panel.current?.getClientRects().length) return
+    if (shown === 'summary' && entry?.screen === previous) return restoreParentScroll(entry.scroll)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }, [shown, entry])
   const flights = useRef<Partial<Record<Mode, AbortController>>>({})
 
   const settleOverview = useEffectEvent((mode: Mode, key: string, request: string, result: { data: Overview } | { error: unknown }) => {
@@ -313,16 +340,19 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   const retry = (mode: Mode) => setRetryCount(previous => ({ ...previous, [mode]: previous[mode] + 1 }))
   function changePeriod(value: PeriodSelection) {
     if (!selectionKey) return
-    if (value.mode !== activityPeriod.mode && value.anchor === activityPeriod.anchor && !(value.mode === 'week' ? weekly : monthly)) {
+    const samePeriod = value.mode === activityPeriod.mode && value.anchor === activityPeriod.anchor
+    if (!samePeriod && !cachedPeriod(value)) {
       setQueuedPeriod({ origin: selectionKey, value })
-      if (failures[value.mode] === (value.mode === 'week' ? weekRequest : monthRequest)) retry(value.mode)
+      const {fromDate, toDateExclusive} = selectedPeriod(value)
+      const failed = JSON.stringify([[identity, fromDate, toDateExclusive].join(':'), overviewRevision, retryCount[value.mode]])
+      if (failures[value.mode] === failed) retry(value.mode)
       return
     }
     setQueuedPeriod(null)
     setActivityPeriod(value, true)
   }
   const [evidence,setEvidence]=useState<{key:string;weekly:Overview;rows:Session[]}|null>(null)
-  const evidenceKey=weekKey
+  const evidenceKey=[identity, weekly?.statistics.fromDate, weekly?.statistics.toDateExclusive].join(':')
   const evidenceIds=JSON.stringify([...new Set(weekly?.plannedDays.flatMap(day => day.effectiveDay === '0' && day.selectedSessionId ? [day.selectedSessionId] : []))])
   useEffect(()=>{
     if(!enabled||!workoutApi||preview||screen!=='activity'||!weekly||evidenceIds==='[]')return
@@ -339,18 +369,34 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   const currentEvidence=weekly && evidence?.key === evidenceKey ? evidence : null
   const achievement=preview || !workoutApi || evidenceIds==='[]' ? weekly : currentEvidence?.weekly ?? null
   const back = () => navigateBack(() => setScreen('summary', true))
-  return <section className={`stack statistics record-screen ${screen==='summary'?styles.main:''} ${screen==='activity'?activityStyles.page:''}`} aria-label="운동 기록·분석">
-    {screen === 'activity' || screen === 'plan' || screen === 'muscles' || screen === 'history' ? <RecordSubpageHeader title={screen==='activity'?'운동 현황':screen==='plan'?'주간 근육 계획':screen==='muscles'?'주간 근육 통계':'전체 운동 이력'} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} /> : null}
-    {screen === 'activity' && <PeriodControls variant="activity" days={current?.plannedDays} value={activityPeriod} pendingMode={issue ? undefined : pending?.mode} onChange={changePeriod} />}
-    {screen === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} />
-      : screen === 'plan' ? workoutApi ? <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} /> : <p role="status">주간 계획 데이터 연결을 기다리고 있습니다.</p>
-      : screen === 'history' ? workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
-      : <>{(current || screen === 'summary' || screen === 'activity') ? <div className="stack record-statistics-body" data-activity-state={activityState}>
-          {activityState === 'loading' && <span role="status" className="sr-only">선택 기간의 운동 통계를 불러오는 중입니다.</span>}
-          <StatisticsView achievementPlanning={achievement} achievementAnchor={activityPeriod.anchor} evidence={currentEvidence?.rows} data={current?.statistics ?? null} planning={current ?? null} identity={identity} screen={screen} onScreen={setScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions} activityState={activityState}/>
-        </div> : !issue && <LoadingSkeleton layout="detail" label="운동 통계를 불러오는 중입니다." />}
-        {issue&&<Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={() => retry(failedMode)}>다시 조회</Button></Card>}
-        {screen === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>setScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button variant="quiet" onClick={() => setScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
-    {preview&&screen!=='plan'&&screen!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
+  function openScreen(next: RecordScreen) {
+    if (waitingForScreen && next === screen) return
+    if (next !== 'history') setEntry({ screen: next, scroll: window.scrollY ?? 0 })
+    if (next === 'plan') setPlanReady(false)
+    setScreen(next, waitingForScreen)
+  }
+  function openRecent(id: string) {
+    if (waitingForScreen) setScreen('summary', true)
+    onOpen(id)
+  }
+  const displayed = shown === 'summary' ? summaryOverview : current
+  return <section ref={panel} className={`stack statistics record-screen ${shown==='summary'?styles.main:''} ${shown==='activity'?activityStyles.page:''}`} aria-label="운동 기록·분석">
+    {shown === 'activity' || shown === 'plan' || shown === 'muscles' || shown === 'history' ? <RecordSubpageHeader title={shown==='activity'?'운동 현황':shown==='plan'?'주간 근육 계획':shown==='muscles'?'주간 근육 통계':'전체 운동 이력'} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} /> : null}
+    {shown === 'activity' && <PeriodControls variant="activity" days={current?.plannedDays} value={activityPeriod} pendingMode={issue ? undefined : pending?.mode} pendingValue={issue ? undefined : pending ?? undefined} onChange={changePeriod} />}
+    {shown === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} />
+      : shown === 'plan' ? !workoutApi ? <p role="status">운동 계획 데이터 연결을 기다리고 있습니다.</p>
+        : !schedule && scheduleIssue ? <Card><p role="alert">{scheduleIssue}</p><Button onClick={onRetrySchedule}>다시 조회</Button></Card> : null
+      : shown === 'history' ? workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
+      : <>{(displayed || shown === 'summary' || shown === 'activity') ? <div className="stack record-statistics-body" data-activity-state={shown === 'activity' ? activityState : undefined}>
+          {shown === 'activity' && activityState === 'loading' && <span role="status" className="sr-only">선택 기간의 운동 통계를 불러오는 중입니다.</span>}
+          <StatisticsView achievementPlanning={achievement} achievementAnchor={activityPeriod.anchor} evidence={currentEvidence?.rows} data={displayed?.statistics ?? null} planning={displayed} identity={identity} screen={shown} onScreen={openScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions} activityState={activityState}/>
+        </div> : !issue && <StatisticsWait pending skeleton label="운동 통계를 불러오는 중입니다." />}
+        {issue && <Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={() => retry(failedMode)}>다시 조회</Button></Card>}
+        {shown === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={openRecent} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>openScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button variant="quiet" onClick={() => openScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
+    {retainPlan && workoutApi && <div hidden={shown !== 'plan'} className="statistics-plan">
+      <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} active={enabled && screen === 'plan'} onReadSettled={setPlanReady} />
+    </div>}
+    <StatisticsWait pending={!!waitingForScreen || shown === 'plan' && !schedule && !!scheduleLoading} label="운동 통계를 불러오는 중입니다." />
+    {preview&&shown!=='plan'&&shown!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
   </section>
 }

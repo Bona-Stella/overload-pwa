@@ -58,6 +58,8 @@ function useTabBarCollapse(tab: AppTab, visible: boolean) {
       if (frame === 0) frame = requestAnimationFrame(measure)
     }
     window.addEventListener('scroll', onScroll, { passive: true })
+    // A route change can reach the top while the collapsed listener is being replaced.
+    if (collapsed && previous === 0) onScroll()
     return () => {
       window.removeEventListener('scroll', onScroll)
       cancelAnimationFrame(frame)
@@ -67,8 +69,10 @@ function useTabBarCollapse(tab: AppTab, visible: boolean) {
   return { navigation, collapsed, expand: () => setState({ tab, visible, collapsed: false }) }
 }
 
-export function AppShell({ children, tab, onNavigate, authenticated, focused = false, busy = false, displayTheme = 'normal' }: {
-  children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; busy?: boolean; displayTheme?: DisplayTheme
+const routineReturnWindow = 275
+
+export function AppShell({ children, tab, onNavigate, authenticated, focused = false, routineEditor = false, busy = false, displayTheme = 'normal' }: {
+  children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; routineEditor?: boolean; busy?: boolean; displayTheme?: DisplayTheme
 }) {
   const shell = useRef<HTMLDivElement>(null)
   const pressed = useRef<{ button: HTMLButtonElement | null; pointerId: number; action?: string } | null>(null)
@@ -76,6 +80,18 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
   const reserveTabs = authenticated && !focused
   const showTabs = reserveTabs && !keyboardOpen
   const { navigation, collapsed, expand } = useTabBarCollapse(tab, showTabs)
+  const wasRoutineEditor = useRef(false)
+  const lastRoutineClick = useRef<{ x: number; y: number; at: number } | null>(null)
+  const revealedTabs = useRef<{ x: number; y: number; until: number } | null>(null)
+  useLayoutEffect(() => {
+    const last = lastRoutineClick.current
+    const now = performance.now()
+    if (wasRoutineEditor.current && !routineEditor && !focused && tab === 'routines' && last && now - last.at <= routineReturnWindow) {
+      revealedTabs.current = { x: last.x, y: last.y, until: now + routineReturnWindow }
+    } else if (routineEditor || tab !== 'routines' || focused) revealedTabs.current = null
+    if (!routineEditor) lastRoutineClick.current = null
+    wasRoutineEditor.current = routineEditor
+  }, [focused, routineEditor, tab])
   return <div ref={shell} className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme} data-keyboard-open={keyboardOpen || undefined}
     onPointerDownCapture={event => {
       if (!event.isPrimary || event.button !== 0) return
@@ -85,10 +101,15 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
       const start = pressed.current
       pressed.current = null
       // Async content can move under a finger between pointerdown and click.
-      if (event.detail === 0 || !start || !(event.target instanceof Element)) return
-      if ('pointerId' in event.nativeEvent && event.nativeEvent.pointerId !== start.pointerId) return
+      if (event.detail === 0 || !(event.target instanceof Element)) return
       const button = event.target.closest('button')
-      if (button && (button !== start.button || button.dataset.clickAction !== start.action)) { event.preventDefault(); event.stopPropagation() }
+      if (start && (!('pointerId' in event.nativeEvent) || event.nativeEvent.pointerId === start.pointerId)
+        && button && (button !== start.button || button.dataset.clickAction !== start.action)) { event.preventDefault(); event.stopPropagation(); return }
+      const recent = revealedTabs.current
+      if (recent && button?.dataset.tab && performance.now() < recent.until && Math.hypot(event.clientX - recent.x, event.clientY - recent.y) <= 24) {
+        event.preventDefault(); event.stopPropagation(); return
+      }
+      if (routineEditor && button) lastRoutineClick.current = { x: event.clientX, y: event.clientY, at: performance.now() }
     }}>
     <main className={`${styles.content} ${reserveTabs ? styles.withTabs : ''} ${authenticated && !focused && tab === 'home' ? styles.homeContent : ''} page`}>
       <EditorViewportOccluded value={occluded}>{children}</EditorViewportOccluded>

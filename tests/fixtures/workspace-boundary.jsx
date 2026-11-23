@@ -4,7 +4,8 @@ import { createRoot } from 'react-dom/client'
 import { AuthContext } from '../../src/features/auth/context.ts'
 import { WorkoutWorkspace } from '../../src/features/workout-online/WorkoutWorkspace.tsx'
 import { navigateTabRoot, useScreenHistory } from '../../src/app/navigation.ts'
-import { bootstrap, session, USER, OTHER, DEVICE } from './workout-online-data.mjs'
+import { AppShell } from '../../src/app/AppShell.tsx'
+import { bootstrap, routine, session, USER, OTHER, DEVICE, EXERCISE, PLACEMENT, ROUTINE } from './workout-online-data.mjs'
 
 const host = document.getElementById('root')
 let root = createRoot(host)
@@ -27,7 +28,7 @@ window.boundaryWeightReview = (scope, id) => new Promise((resolve, reject) => {
   window.finishBoundaryWeightReview = scenario => {
     window.finishBoundaryWeightReview = null
     if (scenario === 'error') return reject(new Error('saved review unavailable'))
-    const { detail } = window.boundaryState
+    const detail = window.boundaryState.detail ?? window.recordScenario
     const plan = detail.initialPlan.weightExercises[0]
     const advice = scenario === 'maintain' ? 'MAINTAIN' : scenario === 'unavailable' ? 'UNAVAILABLE' : 'INCREASE'
     const candidate = advice === 'INCREASE'
@@ -47,7 +48,7 @@ function FinishRouteHarness() {
   const [tab] = useScreenHistory('boundary-tab', 'home')
   const [, setWorkout] = useScreenHistory('workout-view:' + scope.userId + ':' + scope.dataGeneration, null)
   return <><button id="test-open-workout" onClick={() => setWorkout(detail.id)}>운동 열기</button>
-    <WorkoutWorkspace tab={tab} onNavigate={async (next, replace, children) => {
+    <WorkoutWorkspace tab={tab} renderShell={(content, focused) => <AppShell authenticated tab={tab} focused={focused} onNavigate={() => {}}>{content}</AppShell>} onNavigate={async (next, replace, children) => {
       navigateTabRoot('boundary-tab', next, children, undefined, replace)
       return true
     }} />
@@ -60,10 +61,64 @@ window.renderBoundary = (owner = 'A', generation = '0', active = false, finishFl
     ? { status: 'FINISHED', endedAt: '2026-10-31T12:30:00Z', closedAt: '2026-10-31T12:30:01Z' } : {}) }) : null
   window.boundaryState = { userId, scope, data: { ...bootstrap, scope, routines: [] }, selected: null,
     active: detail?.status === 'ACTIVE' ? detail : null, detail, deviceId: DEVICE,
-    attempt: null, status: refreshing ? 'loading' : 'ready', busy: refreshing, localReady: true, copySaved: false, issue: null, notice: '' }
+    attempt: null, status: refreshing ? 'loading' : 'ready', busy: refreshing, localReady: true, copySaved: finishFlow && !!detail, issue: null, notice: '' }
   root.render(<AuthContext value={{ state: window.boundaryAuth, controller: authentication }}>
     {finishFlow ? <FinishRouteHarness /> : <WorkoutWorkspace tab={tab} />}
   </AuthContext>)
+}
+window.startBoundary = () => {
+  window.resetBoundary()
+  window.recordScenario = null
+  navigateTabRoot('boundary-tab','home')
+  const scope = {userId:USER,dataGeneration:'0'}
+  const selected = {...routine,...scope}
+  window.boundaryAuth = {status:'authenticated',pending:null,userId:USER,accountOpen:false,localWorkoutUserId:null}
+  window.boundaryState = {userId:USER,scope,data:{...bootstrap,scope},selected,active:null,detail:null,
+    deviceId:DEVICE,attempt:null,status:'ready',busy:false,localReady:true,copySaved:false,issue:null,notice:''}
+  window.startScenario = {listeners:new Set(),routine:selected,session:session({...scope,editorDeviceId:DEVICE}),posts:0}
+  root.render(<AuthContext value={{state:window.boundaryAuth,controller:authentication}}>
+    <WorkoutWorkspace tab="home" renderShell={(content,focused)=><AppShell authenticated tab="home" focused={focused} onNavigate={()=>{}}>{content}</AppShell>} />
+  </AuthContext>)
+}
+window.openRecordBoundary = tab => {
+  window.resetBoundary()
+  navigateTabRoot('boundary-tab', tab)
+  const scope = { userId: USER, dataGeneration: '0' }
+  const ended = new Date()
+  const workoutDate = ended.toISOString().slice(0, 10)
+  window.recordScenario = { ...session({ ...scope, editorDeviceId: DEVICE, status: 'FINISHED', workoutDate,
+    endedAt: ended.toISOString(), closedAt: ended.toISOString() }), routineName: '검수 루틴' }
+  window.renderBoundary('A', '0', false, true, tab)
+}
+window.openGraphBoundary = () => {
+  window.openRecordBoundary('history')
+  const scope = window.boundaryState.scope
+  const exercise = { standardExerciseId: EXERCISE, name: '벤치프레스', lastPerformedAt: null }
+  const placement = { routineId: ROUTINE, placementId: PLACEMENT, routineName: routine.name, deleted: false }
+  window.graphBoundary = {
+    schedule: { activeId: ROUTINE, presets: [
+      { id: ROUTINE, version: '1', name: '테스트 계획', assignments: [{ routineId: ROUTINE }] },
+      { id: DEVICE, version: '1', name: '빈 계획', assignments: [] },
+    ] },
+    routineReads: 0,
+    routine: () => new Promise(resolve => {
+      window.graphBoundary.routineReads++
+      window.releasePlan = () => resolve({ ...routine, ...scope })
+    }),
+    exerciseDetail: async () => ({ id: EXERCISE, primaryMuscles: [], secondaryMuscles: [], frontBackSplit: 'FRONT', pplSplit: 'PUSH' }),
+    growth: {
+      search: async () => ({ exercises: [exercise], nextOffset: null }),
+      options: async () => ({ placements: [placement] }),
+      history: (_owner, _id, _placement, period) => new Promise((resolve, reject) => {
+        window.releaseGrowth = (failed = false) => {
+          window.releaseGrowth = null
+          if (failed) { reject(Error('unavailable')); return }
+          resolve({ points: [{ id: PLACEMENT, approvedWeightKg: period === 'all' ? '30' : '25', previousWeightKg: '20',
+            occurredAt: '2026-10-31T12:00:00Z', sessionId: null, connectFromPrevious: false }], nextOffset: null })
+        }
+      }),
+    },
+  }
 }
 window.resetBoundary = () => { root.unmount(); host.replaceChildren(); root = createRoot(host); window.boundaryRequests.length = 0; held.length = 0 }
 window.renderBoundary()

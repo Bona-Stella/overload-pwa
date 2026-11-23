@@ -4,7 +4,7 @@ import type { AppTab } from '../../app/types.ts'
 
 type RecordRoute = { id: string; returnScroll?: number; summary?: boolean; backLabel?: string }
 
-function restoreParentScroll(position: number) {
+export function restoreParentScroll(position: number) {
   const restore = () => {
     window.scrollTo(0, position)
     return Math.abs(window.scrollY - position) <= 1
@@ -26,7 +26,7 @@ function restoreParentScroll(position: number) {
   return stop
 }
 
-export function useRecordDetailHistory(key: string, tab: AppTab) {
+export function useRecordDetailHistory(key: string, tab: AppTab, resetOnOpen = true) {
   const [route, setRoute] = useScreenHistory<RecordRoute | null>(key, null)
   const id = route?.id
   const returnScroll = route?.returnScroll
@@ -34,11 +34,11 @@ export function useRecordDetailHistory(key: string, tab: AppTab) {
   useLayoutEffect(() => {
     const parent = previous.current
     previous.current = { key, returnScroll, tab }
-    if (id) window.scrollTo(0, 0)
-    else if (parent.key === key && parent.tab === tab && parent.returnScroll !== undefined) {
+    if (id && resetOnOpen) window.scrollTo(0, 0)
+    if (!id && parent.key === key && parent.tab === tab && parent.returnScroll !== undefined) {
       return restoreParentScroll(parent.returnScroll)
     }
-  }, [id, key, returnScroll, tab])
+  }, [id, key, returnScroll, tab, resetOnOpen])
   const open = (id: string, returnScroll = window.scrollY) => setRoute({ id, returnScroll })
   const back = () => navigateBack(() => setRoute(null, true))
   return { route, open, back }

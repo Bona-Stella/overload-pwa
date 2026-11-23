@@ -1,10 +1,11 @@
 import { RecordChart } from './RecordChart.tsx'
 import { sumDecimals, displayDecimal } from './display-decimal.ts'
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { Routine, Scope, StandardExercise, StandardExerciseDetail } from '../workout-online/types.ts'
 import type { LiveSchedule } from './weekly-schedule.ts'
+import { StatisticsWait } from './StatisticsWait.tsx'
 import { actualAnalysis, muscleGroups, plannedAnalysis, muscleSubtotal } from './muscle-analysis.ts'
 import type { AnalysisData, AnalysisRow } from './muscle-analysis.ts'
 import type { Statistics } from './api.ts'
@@ -94,27 +95,42 @@ export function MuscleAnalysisView({ data, plan, presets = [], selected, onSelec
   </section>
 }
 
-export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshKey, onInvalid, definitions = [] }: { api: WorkoutApi; scope: Scope; schedule: LiveSchedule | null | undefined; initialPreset?: string; refreshKey: string; onInvalid: (error: unknown) => void; definitions?: StandardExercise[] }) {
+
+type SchedulePreset = LiveSchedule['presets'][number]
+type PlanSource = { key: string; routines: Map<string, Routine>; catalog: StandardExerciseDetail[] }
+
+export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshKey, onInvalid, definitions = [], active = true, onReadSettled }: { api: WorkoutApi; scope: Scope; schedule: LiveSchedule | null | undefined; initialPreset?: string; refreshKey: string; onInvalid: (error: unknown) => void; definitions?: StandardExercise[]; active?: boolean; onReadSettled?: (ready: boolean) => void }) {
   const preview = useRecordPreview()
-  const stateKey = scope.userId + ':' + scope.dataGeneration + ':plan:' + (initialPreset ?? 'records')
+  const { userId, dataGeneration } = scope
+  const stateKey = userId + ':' + dataGeneration + ':plan:' + (initialPreset ?? 'records')
   const [selected, setSelected] = useScreenHistory(stateKey, initialPreset ?? schedule?.activeId ?? '')
-  const preset = schedule?.presets.find(p => p.id === selected) ?? schedule?.presets.find(p => p.id === schedule.activeId)
+  const presets = schedule?.presets ?? []
+  const preset = presets.find(p => p.id === selected) ?? presets.find(p => p.id === schedule?.activeId)
   const presetId = preset?.id
-  const [loaded, setLoaded] = useState(() => new Map<string, { key: string; routines: Map<string, Routine>; catalog: StandardExerciseDetail[] }>())
-  const [issue, setIssue] = useState<string | null>(null), [reload, setReload] = useState(0)
+  const [loaded, setLoaded] = useState(() => new Map<string, PlanSource>())
+  const [shownId, setShownId] = useState<string>()
+  const [issue, setIssue] = useState<string | null>(null)
+  const [reload, setReload] = useState(0)
   const ids = JSON.stringify([...new Set(preset?.assignments.map(a => a.routineId) ?? [])])
-  const key = [scope.userId, scope.dataGeneration, preset?.id, preset?.version, ids].join(':')
+  const sourceKey = (value?: SchedulePreset) => JSON.stringify([stateKey, refreshKey, value?.id, value?.version, value?.assignments.map(a => a.routineId)])
+  const key = sourceKey(preset)
+  const current = presetId ? loaded.get(presetId) : null
+  const confirmed = current?.key === key ? current : null
+  const failed = issue === key
+  const ready = !!schedule && (!!preview || !preset || !!confirmed || failed)
+  if ((preview || confirmed) && presetId !== shownId) setShownId(presetId)
+
+  useLayoutEffect(() => { if (active) onReadSettled?.(ready) }, [active, onReadSettled, ready])
   useEffect(() => {
-    if (preview || !presetId) return
+    if (!active || preview || !presetId || confirmed) return
     const abort = new AbortController()
     const routineIds: string[] = JSON.parse(ids)
     void (async () => {
-      const routines = new Map<string, Routine>()
-      for (const id of routineIds) routines.set(id, await api.routine({ userId:scope.userId, dataGeneration:scope.dataGeneration }, id, abort.signal))
+      const routines = new Map(await Promise.all(routineIds.map(async id => [id, await api.routine({ userId, dataGeneration }, id, abort.signal)] as const)))
       const exercises = [...new Set([...routines.values()].flatMap(r => r.weightPlacements.filter(p => !p.deletedAt).map(p => p.standardExerciseId)))]
       const catalog: StandardExerciseDetail[] = []; let index = 0
       await Promise.all(Array.from({ length: Math.min(4, exercises.length) }, async () => {
-        while (index < exercises.length && !abort.signal.aborted) catalog.push(await api.exerciseDetail(scope.userId, exercises[index++], abort.signal))
+        while (index < exercises.length && !abort.signal.aborted) catalog.push(await api.exerciseDetail(userId, exercises[index++], abort.signal))
       }))
       if (!abort.signal.aborted) { setLoaded(previous => new Map([...previous, [presetId, { key, routines, catalog }]])); setIssue(null) }
     })().catch(error => {
@@ -124,13 +140,21 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
       if (boundaryError(error)) onInvalid(error)
     })
     return () => abort.abort()
-  }, [api, scope.userId, scope.dataGeneration, ids, key, onInvalid, preview, presetId, refreshKey, reload])
-  if (!schedule) return <div aria-busy="true" />
+  }, [active, api, userId, dataGeneration, ids, key, onInvalid, preview, presetId, confirmed, reload])
+
+  if (!schedule) return null
   if (!preset) return <Card><p>분석할 주간 프리셋이 없습니다.</p></Card>
-  const current = loaded.get(preset.id)
-  const data = preview ? preview.plan(preset.id) : current?.key === key ? plannedAnalysis(preset, current.routines, current.catalog, definitions.flatMap(e => e.muscles ?? [])) : null
-  return <><MuscleAnalysisView stateKey={stateKey} data={data} plan presets={schedule.presets} selected={preset.id} onSelect={id => setSelected(id,true)} loading={!data && issue !== key} />
-    {issue === key && <Card><p role="alert">계획을 조회하지 못했습니다.</p><Button onClick={() => { setIssue(null); setReload(n => n + 1) }}>다시 조회</Button></Card>}</>
+  const previous = presets.find(p => p.id === shownId)
+  const previousSource = previous && loaded.get(previous.id)
+  const keepPrevious = !!previous && previousSource?.key === sourceKey(previous)
+  const displayed = preview || confirmed || !keepPrevious ? preset : previous
+  const source = confirmed ?? (keepPrevious ? previousSource : null)
+  const data = preview ? preview.plan(displayed.id) : source ? plannedAnalysis(displayed, source.routines, source.catalog, definitions.flatMap(e => e.muscles ?? [])) : null
+  return <>
+    {(data || failed) && <MuscleAnalysisView stateKey={stateKey} data={data} plan presets={presets} selected={displayed.id} onSelect={id => setSelected(id,true)} />}
+    {failed && <Card><p role="alert">계획을 조회하지 못했습니다.</p><Button onClick={() => { setIssue(null); setReload(n => n + 1) }}>다시 조회</Button></Card>}
+    <StatisticsWait pending={active && !ready} label="주간 근육 계획을 불러오는 중입니다." />
+  </>
 }
 
 export function WeeklyMuscleStatistics({ data }: { data: Statistics }) { const preview=useRecordPreview(); return <MuscleAnalysisView stateKey={data.userId + ':' + data.dataGeneration + ':actual'} data={preview?.actual??actualAnalysis(data)} plan={false} period={data} /> }
