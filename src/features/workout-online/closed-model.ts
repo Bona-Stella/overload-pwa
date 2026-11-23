@@ -56,8 +56,18 @@ export function closedWriteFact(write: ClosedWrite, server: Session, changes: Ch
     return !!current && sameRecord(record, current) // Already present needs no new write or resurrection.
   })
   const b = write.body
-  const corrected = (items: (RecordEdit['setCorrections'][number] | RecordEdit['cardioCorrections'][number])[], kind: 'SET' | 'CARDIO') => items.every(c => events.some(e => e.recordKind === kind && e.recordId === c.id && e.changeKind === 'CORRECTED' && e.after
-    && Object.entries(c).every(([key, value]) => JSON.stringify(e.after![key]) === JSON.stringify(value))))
+  const corrected = (kind: 'SET' | 'CARDIO', id: string) => events.find(e => e.recordKind === kind && e.recordId === id && e.changeKind === 'CORRECTED')?.after
+  const setsMatch = b.setCorrections.every(c => {
+    const after = corrected('SET', c.id) as Partial<PerformedSet> | undefined
+    return after?.weightKg === c.weightKg && after.reps === c.reps
+      && (c.bodyweightLoad === undefined || after.bodyweightLoad?.additionalWeightKg === c.bodyweightLoad.additionalWeightKg)
+  })
+  const cardioMatches = b.cardioCorrections.every(c => {
+    const result = (corrected('CARDIO', c.id) as Extract<CardioResult, { status: 'COMPLETED' }> | undefined)?.result
+    return result?.activeMs === c.activeMs && result.corrected === c.corrected && result.distanceKm === c.distanceKm && result.averageBpm === c.averageBpm
+      && (c.measurement === undefined || result.measurement?.actualSpeedKmh === c.measurement.actualSpeedKmh
+        && result.measurement?.distanceSource === c.measurement.distanceSource)
+  })
   const deleted = (ids: string[], kind: 'SET' | 'CARDIO') => ids.every(id => events.some(e => e.recordKind === kind && e.recordId === id && e.changeKind === 'DELETED'))
-  return corrected(b.setCorrections, 'SET') && corrected(b.cardioCorrections, 'CARDIO') && deleted(b.deletedPerformedSetIds, 'SET') && deleted(b.deletedCardioResultIds, 'CARDIO')
+  return setsMatch && cardioMatches && deleted(b.deletedPerformedSetIds, 'SET') && deleted(b.deletedCardioResultIds, 'CARDIO')
 }

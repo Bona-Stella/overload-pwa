@@ -146,10 +146,18 @@ export class ClosedWorkoutController {
     } catch (error) { this.failure(error); return false }
   }
   retry = async () => {
-    const pending = this.state.pending
-    if (!pending || pending.status !== 'PENDING' || !this.canWrite() || this.state.busy || this.state.server?.deletedAt) return
+    if (this.state.pending?.status !== 'PENDING' || !this.canWrite() || this.state.busy) return
     this.set({ busy: true, issue: null })
-    try { await this.send(pending) } catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
+    try {
+      await this.read()
+      const pending = this.state.pending
+      if (!this.canWrite() || pending?.status !== 'PENDING') return
+      const server = this.state.server
+      if (!server || server.deletedAt || server.version !== pending.body.expectedVersion) {
+        this.conflict('기록이 바뀌었습니다. 최신 기록과 변경 이력을 확인한 뒤 다시 선택해 주세요.')
+      }
+      await this.send(pending)
+    } catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
   }
   reviewed = async () => {
     const pending = this.state.pending

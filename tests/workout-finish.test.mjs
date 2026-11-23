@@ -170,6 +170,10 @@ async function closed(options={}){
     if(body.expectedVersion!==server.version)throw{status:409,code:'SESSION_VERSION_CONFLICT'}
     server.version=String(BigInt(server.version)+1n)
     for(const c of body.setCorrections){events.push({id:crypto.randomUUID(),recordId:c.id,recordKind:'SET',changeKind:'CORRECTED',before:null,after:clone(c),changeContext:{sessionVersion:server.version},recordedAt:new Date(at).toISOString()})}
+    for(const {id,measurement,...values} of body.cardioCorrections){
+      const result={timerMs:60000,...values,measurement:measurement&&{distanceSource:measurement.distanceSource,actualSpeedKmh:measurement.actualSpeedKmh}}
+      events.push({id:crypto.randomUUID(),recordId:id,recordKind:'CARDIO',changeKind:'CORRECTED',before:null,after:{id,result},changeContext:{sessionVersion:server.version},recordedAt:new Date(at).toISOString()})
+    }
     const ack={...scope,sessionId:server.id,status:server.status,version:server.version,changed:true,changeEventIds:events.map(e=>e.id),recoveredIds:[],alreadyPresentIds:[],deletedAt:null}
     if(options.lose)throw Error('lost response');return ack
   }}
@@ -180,10 +184,43 @@ async function closed(options={}){
 test('closed corrections persist exact request before HTTP and confirm response loss by matching history',async()=>{
   const e=await closed({lose:true});assert.equal(await e.c.edit(e.body()),true);assert.equal(e.calls.length,1);assert.equal(e.read().status,'CONFIRMED');assert.equal(e.read().requestJson,JSON.stringify(e.calls[0]));e.c.stop()
 })
+test('a lost cardio correction response is confirmed by the nested server result and measurement',async()=>{
+  const e=await closed({lose:true})
+  const body={...e.body(),setCorrections:[],cardioCorrections:[{id:OTHER,activeMs:30000,corrected:true,distanceKm:'0.1',averageBpm:92,measurement:{actualSpeedKmh:null,distanceSource:'MANUAL'}}]}
+  assert.equal(await e.c.edit(body),true)
+  assert.equal(e.read().status,'CONFIRMED');assert.equal(e.calls.length,1);e.c.stop()
+})
+test('a different cardio measurement in the matching event is not accepted as confirmation',()=>{
+  const correction={id:OTHER,activeMs:30000,corrected:true,distanceKm:'0.1',averageBpm:92,measurement:{actualSpeedKmh:null,distanceSource:'MANUAL'}}
+  const {id, ...result}=correction
+  const write={kind:'records',body:{expectedVersion:'1',setCorrections:[],cardioCorrections:[correction],deletedPerformedSetIds:[],deletedCardioResultIds:[]}}
+  const changes={events:[{recordId:id,recordKind:'CARDIO',changeKind:'CORRECTED',changeContext:{sessionVersion:'2'},after:{id,result:{...result,measurement:{actualSpeedKmh:'12',distanceSource:'CALCULATED'}}}}]}
+  assert.equal(closedWriteFact(write,session({version:'2'}),changes),false)
+})
+test('checking a missing correction response reads history before any repeat write',async()=>{
+  const e=await closed({lose:true}), detail=e.api.detail
+  e.api.detail=async()=>{throw Error('read unavailable after write')}
+  assert.equal(await e.c.edit(e.body()),false);assert.equal(e.read().status,'PENDING')
+  await e.c.retry();assert.equal(e.read().status,'PENDING');assert.equal(e.calls.length,1)
+  e.api.detail=detail
+  await e.c.retry();assert.equal(e.read().status,'CONFIRMED');assert.equal(e.calls.length,1);e.c.stop()
+})
 test('closed version conflict keeps original expectedVersion and requires explicit latest-record review',async()=>{
   const e=await closed(),body=e.body();e.setVersion('2');assert.equal(await e.c.edit(body),false);assert.equal(e.read().status,'PENDING');assert.equal(e.calls[0].expectedVersion,'1')
-  await e.c.refresh();assert.equal(e.calls.length,1);assert.equal(await e.c.edit(e.body()),false)
+  await e.c.retry();assert.equal(e.calls.length,1);assert.equal(await e.c.edit(e.body()),false)
   await e.c.reviewed();assert.equal(await e.c.edit(e.body()),true);assert.deepEqual(e.calls.map(c=>c.expectedVersion),['1','2']);e.c.stop()
+})
+test('a pending correction blocks a repeated submit or different deletion, and navigation ignores the late response',async()=>{
+  const hold=gate(),e=await closed({sendGate:hold}),body=e.body()
+  const pending=e.c.edit(body)
+  await tick()
+  assert.equal(await e.c.edit(body),false)
+  assert.equal(await e.c.edit({...body,setCorrections:[],deletedPerformedSetIds:[OTHER]}),false)
+  assert.equal(await e.c.delete(body.expectedVersion),false)
+  assert.equal(e.calls.length,1)
+  e.c.stop();hold.resolve()
+  assert.equal(await pending,false)
+  assert.equal(e.read().status,'PENDING');assert.equal(e.read().ack,undefined)
 })
 test('closed local-save failure never dispatches; ACK/result-save failure retains request for later history check',async()=>{
   const e=await closed();e.fail(()=>true);assert.equal(await e.c.edit(e.body()),false);assert.equal(e.calls.length,0)
