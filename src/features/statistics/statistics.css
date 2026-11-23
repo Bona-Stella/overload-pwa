@@ -57,7 +57,6 @@
 .analysis-track { position: relative; padding-top: 12px; }
 .analysis-start { position: absolute; top: -2px; transform: translateX(-50%); font-size: 11px; line-height: 12px; color: var(--accent) !important; }
 .analysis-track .statistics-bar { margin-top: 0; }
-dialog [data-dialog-heading]:focus { outline: none; }
 @media(max-width:374px) { .record-menu button { padding: 12px; } .record-menu strong { font-size: 14px; } .muscle-analysis h1 { font-size: 20px; } .record-days { gap: 3px; } }
 
 /* Record layouts follow the approved HTML; theme roles remain Onyx. */

@@ -319,6 +319,10 @@ test('independent common UI preview renders reusable controls and handles intera
       return input === document.activeElement && input.getAttribute('aria-invalid') === 'true' &&
         document.getElementById(input.getAttribute('aria-describedby')).textContent === '루틴 이름을 입력해 주세요.'
     })()`), true)
+    assert.deepEqual(await evaluate(`(() => {
+      const style = getComputedStyle(document.activeElement)
+      return [style.borderColor, style.outlineColor, style.outlineOffset]
+    })()`), ['rgb(177, 123, 131)', 'rgb(177, 123, 131)', '-2px'], 'invalid input keeps one error-colored focus indicator')
     await capture('393-field-error', 'form')
     await send('Input.insertText', { text: '나의 루틴' })
     assert.equal(await evaluate("document.querySelector('form input').hasAttribute('aria-invalid')"), false)
@@ -386,6 +390,10 @@ test('independent common UI preview renders reusable controls and handles intera
     assert.equal(await evaluate(`document.querySelector('${search} [role="group"] [aria-pressed="true"]').innerText`), longTag)
     await capture('393-search-long-tag', search)
     await evaluate(`document.querySelector('${search} input').focus()`)
+    assert.deepEqual(await evaluate(`(() => {
+      const style = getComputedStyle(document.activeElement)
+      return [style.outlineColor, style.outlineStyle, style.outlineOffset]
+    })()`), ['rgb(108, 147, 198)', 'solid', '-2px'], 'the searchable text field uses the shared field focus style')
     await send('Input.insertText', { text: '페이스' })
     assert.equal(await evaluate(`document.querySelector('${search} input').value`), '페이스')
     assert.equal(await evaluate(`document.querySelector('${search} li strong').innerText`), '페이스 풀')

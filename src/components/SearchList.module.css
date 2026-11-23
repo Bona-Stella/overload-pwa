@@ -4,8 +4,7 @@
 .search .controls input,.search .controls select { height:42px; min-height:42px; padding:8px; }
 .search .controls > .disclosure { position:static; display:grid; place-items:center; width:42px; height:42px; min-height:42px; padding:0; border:1px solid var(--border-focus); border-radius:50%; background:var(--accent-soft); color:var(--accent); line-height:1; }
 .disclosure > svg { display:block; }
-.search .controls > .disclosure:focus:not(:focus-visible) { outline:none; box-shadow:none; }
-.search .controls > .disclosure:focus-visible { outline:2px solid var(--border-focus); outline-offset:2px; }
+.search .controls > .disclosure:focus-visible { outline-offset:2px; }
 
 .search .results {padding-right:8px;scrollbar-gutter:stable;}
 .search .results > li {display:flex;align-items:center;gap:4px;}

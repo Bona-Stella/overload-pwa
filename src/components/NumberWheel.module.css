@@ -32,3 +32,4 @@
 .viewport .scroll > button[data-distance='1'] {opacity:.62;}
 .viewport .scroll > button[data-distance='2'] {opacity:.35;}
 .viewport .scroll > button[data-distance='3'] {opacity:.2;}
+.viewport .scroll > button:focus-visible { opacity: 1; outline-offset: -2px; }

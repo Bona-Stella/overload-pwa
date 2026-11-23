@@ -155,6 +155,7 @@ dialog { width: min(calc(100% - 24px), 480px); max-height: calc(100dvh - 32px); 
 dialog::backdrop { background: #000b; backdrop-filter: blur(5px); }
 :root:has(dialog[open][data-editor-dialog]) { overflow-y: hidden; }
 dialog[data-editor-dialog] { overscroll-behavior: contain; }
+dialog [data-dialog-heading]:focus { outline: none; }
 dialog[open][data-edit-keyboard] {
   position: fixed;
   inset-block: var(--editor-viewport-top) auto;
