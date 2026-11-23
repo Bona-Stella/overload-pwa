@@ -9,6 +9,8 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 import { Dialog } from '../../components/Dialog.tsx'
+import { createRepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
+import type { RepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import { WorkoutApi } from './api.ts'
 import { WorkoutStore } from './storage.ts'
 import { ClosedWorkoutController } from './closed-controller.ts'
@@ -155,6 +157,7 @@ type EditTarget = { kind: 'SET'; record: PerformedSet } | { kind: 'CARDIO'; reco
 export function ClosedWorkoutView({ state, controller, manufacturers = [], definitions = [], onBack = () => {}, backLabel, summary = false, reviewContent, takeInitialScroll }: { reviewContent?:ReactNode; summary?: boolean; takeInitialScroll?: () => boolean; state: ClosedState; controller: ClosedWorkoutController; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string }) {
   const [mode, setMode] = useState<'correction' | 'history' | null>(null)
   const [dialog, setDialog] = useState<'delete' | 'recovery' | EditTarget | null>(null)
+  const [deleteCloseGuard] = useState(createRepeatPointerGuard)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const server = state.server, disabled = state.busy || !state.writable || !!server?.deletedAt || state.pending?.status === 'PENDING'
   useEffect(() => {
@@ -186,11 +189,14 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
   const menu = <details className={styles.recordMenu} ref={menuRef}><summary aria-label="운동 기록 메뉴"><span aria-hidden="true">⋮</span></summary><div>
     <Button disabled={disabled} onClick={()=>menuAction(()=>setMode('correction'))}>기록 정정</Button>
     <Button disabled={disabled || !state.copies.length || !state.changes} onClick={()=>menuAction(()=>setDialog('recovery'))}>누락 수행 복구</Button>
-    <Button data-danger disabled={disabled} onClick={()=>menuAction(()=>setDialog('delete'))}>기록 전체 삭제</Button>
+    <Button data-danger disabled={disabled} onClick={event => {
+      deleteCloseGuard.arm(event)
+      menuAction(() => setDialog('delete'))
+    }}>기록 전체 삭제</Button>
     <Button onClick={()=>menuAction(()=>setMode('history'))}>평가 변경 이력</Button>
   </div></details>
   const dialogs = <>
-    {dialog==='delete' && <DeleteDialog server={server} controller={controller} busy={state.busy} onClose={()=>setDialog(null)}/>}
+    {dialog==='delete' && <DeleteDialog server={server} controller={controller} busy={state.busy} closePointerGuard={deleteCloseGuard} onClose={()=>setDialog(null)}/>}
     {dialog==='recovery' && state.changes && state.copies.length>0 && <RecoveryDialog state={state} controller={controller} manufacturers={manufacturers} definitions={definitions} onClose={()=>setDialog(null)}/>}
     {dialog && typeof dialog==='object' && <CorrectionDialog target={dialog} server={server} controller={controller} busy={state.busy} manufacturers={manufacturers} definitions={definitions} onClose={()=>setDialog(null)}/>}
   </>
@@ -232,9 +238,9 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     {status}
   </WorkoutSummary>{!summary&&dialogs}</>
 }
-function DeleteDialog({ server, controller, busy, onClose }: { server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void }) {
+function DeleteDialog({ server, controller, busy, onClose, closePointerGuard }: { server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void; closePointerGuard: RepeatPointerGuard }) {
   const [version] = useState(server.version)
-  return <Dialog title="운동 전체를 삭제할까요?" onClose={() => { if (!busy) onClose() }}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p><Button variant="primary" loading={busy} onClick={async () => { if (await controller.delete(version)) onClose() }}>운동 삭제</Button></div></Dialog>
+  return <Dialog title="운동 전체를 삭제할까요?" closePointerGuard={closePointerGuard} onClose={() => { if (!busy) onClose() }}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p><Button variant="primary" loading={busy} onClick={async () => { if (await controller.delete(version)) onClose() }}>운동 삭제</Button></div></Dialog>
 }
 function ClosedApproval({ server, id, controller, disabled }: { server: Session; id: string; controller: ClosedWorkoutController; disabled: boolean }) {
   const [weight, setWeight] = useState('')

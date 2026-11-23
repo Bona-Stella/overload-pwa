@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useId, useRef } from 'react'
 import { useDialogHistory } from '../app/navigation.ts'
 import type { ReactNode, RefObject } from 'react'
+import type { RepeatPointerGuard } from './repeatPointerGuard.ts'
 
-export function Dialog({ title, onClose, children, initialFocus, className, descriptionId }: {
+export function Dialog({ title, onClose, children, initialFocus, className, descriptionId, closePointerGuard }: {
   title: string; onClose: () => void; children: ReactNode; initialFocus?: RefObject<HTMLElement | null>
-  className?: string; descriptionId?: string
+  className?: string; descriptionId?: string; closePointerGuard?: RepeatPointerGuard
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -19,7 +20,10 @@ export function Dialog({ title, onClose, children, initialFocus, className, desc
     return () => { dialog?.close(); if (previous instanceof HTMLElement) previous.focus({ preventScroll: true }) }
   }, [initialFocus])
   return <dialog ref={ref} className={className} data-editor-dialog onCancel={event => { event.preventDefault(); event.stopPropagation(); onClose() }} aria-labelledby={titleId} aria-describedby={descriptionId}>
-    <div className="section-heading"><h2 id={titleId} ref={titleRef} tabIndex={-1} data-dialog-heading>{title}</h2><button type="button" className="icon-button" data-close-text aria-label="닫기" onClick={onClose}>×</button></div>
+    <div className="section-heading"><h2 id={titleId} ref={titleRef} tabIndex={-1} data-dialog-heading>{title}</h2>
+      <button type="button" className="icon-button" data-close-text aria-label="닫기"
+        onPointerDown={closePointerGuard?.pointerDown} onPointerCancel={closePointerGuard?.pointerCancel}
+        onClick={event => { if (!closePointerGuard?.blocksClick(event)) onClose() }}>×</button></div>
     {children}
   </dialog>
 }

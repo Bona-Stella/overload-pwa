@@ -871,6 +871,43 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await expectCounts(3,0)
     assert.deepEqual(await approveButton(),['전체 승인',false])
     assert.equal(await checkedCount(),3)
+    const approvalClose = 'dialog[open] button[aria-label="닫기"]'
+    for (const width of [393,1280]) {
+      const mobile = width < 500
+      await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile})
+      await send('Emulation.setTouchEmulationEnabled',{enabled:mobile})
+      const press = (point, down) => mobile
+        ? send('Input.dispatchTouchEvent',{type:down?'touchStart':'touchEnd',touchPoints:down?[point]:[]})
+        : send('Input.dispatchMouseEvent',{type:down?'mousePressed':'mouseReleased',button:'left',clickCount:1,...point})
+      const tap = async point => { await press(point,true); await press(point,false) }
+      // Locate the real overlap without altering either button's layout.
+      await click('전체 승인')
+      const close = await evaluate(`document.querySelector('${approvalClose}').getBoundingClientRect().toJSON()`)
+      await click('취소')
+      const point = await evaluate(`(()=>{
+        const opener = document.querySelector('${reviewCard} .approval-toolbar button'), close=${JSON.stringify(close)}
+        const before = opener.getBoundingClientRect()
+        window.scrollBy({top:before.top+before.height/2-close.top-close.height/2,behavior:'instant'})
+        const r=opener.getBoundingClientRect(), x=Math.round((Math.max(r.left,close.left)+Math.min(r.right,close.right))/2)
+        const y=Math.round((Math.max(r.top,close.top)+Math.min(r.bottom,close.bottom))/2)
+        return {x,y}
+      })()`)
+      await tap(point)
+      await wait(()=>evaluate(`document.elementFromPoint(${point.x},${point.y})?.closest('button')?.matches('${approvalClose}')`))
+      await new Promise(resolve=>setTimeout(resolve,60))
+      await press(point,true)
+      if (mobile) await new Promise(resolve=>setTimeout(resolve,280))
+      await press(point,false)
+      assert.equal(await evaluate(`!!document.querySelector('${approvalClose}')`),true,'a distinct second press must not close the approval dialog')
+      assert.equal(await evaluate(`(()=>{const btn=document.querySelector('${approvalClose}');return !btn.disabled && getComputedStyle(btn).opacity==='1'})()`),true)
+      await new Promise(resolve=>setTimeout(resolve,300))
+      assert.equal(await evaluate(`!!document.querySelector('${approvalClose}')`),true,'a discarded click is not replayed')
+      await tap(point)
+      await wait(()=>evaluate(`!document.querySelector('${approvalClose}')`))
+      assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),0)
+    }
+    await viewport(393)
+    await send('Emulation.setTouchEmulationEnabled',{enabled:false})
     assert.equal(await evaluate(`document.querySelectorAll('${reviewCard} .approval-toolbar button').length`),1)
     for(const direction of ['increase','decrease']) {
       const colors=await evaluate(`(()=>{

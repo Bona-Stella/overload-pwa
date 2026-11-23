@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
+import { createRepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import type { SchedulePreset } from './preset-schedule.ts'
 import { activeWeights, activeCardio } from '../home/model.ts'
 import { scheduleRoutineLabel } from '../home/tags.ts'
@@ -28,8 +29,17 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
   const [day, setDay] = useState<number | null>(null)
   const [vertical, setVertical] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [detailPointerGuard] = useState(createRepeatPointerGuard)
   const root = useRef<HTMLDivElement>(null)
   const closeMenus = () => root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { menu.open = false })
+  function deleteFromMenu(event: MouseEvent<HTMLButtonElement>, id: string) {
+    event.currentTarget.closest('details')!.open = false
+    const revealed = event.detail > 0
+      ? document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLButtonElement>('button[data-routine-detail]')
+      : null
+    detailPointerGuard.arm(event, revealed && root.current?.contains(revealed) ? revealed : null)
+    onDelete?.(id)
+  }
   useEffect(() => {
     const outside = (event: PointerEvent) => root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { if (event.target instanceof Node && !menu.contains(event.target)) menu.open = false })
     const scroll = () => root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { menu.open = false })
@@ -89,10 +99,12 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
           <div className={styles.cardTop}><span className={styles.eyebrow}>ROUTINE {String(newest.findIndex(x => x.id === r.id) + 1).padStart(2, '0')}</span>{r.tag && <span className={styles.tag}>{r.tag}</span>}{!presetAssignments && <span className={styles.cardDays} title={days}>{days}</span>}
             {(onEdit || onDelete) && <details className={styles.cardMenu} onToggle={e => { const current = e.currentTarget; if (current.open) root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { if (menu !== current) menu.open = false }) }}><summary aria-label={`${r.name} 메뉴`}>⋯</summary><div>
               {onEdit && <button type="button" disabled={busy || managementBlocked} onClick={e => { e.currentTarget.closest('details')!.open = false; onEdit(r.id) }}>수정</button>}
-              {onDelete && <button type="button" className="danger" disabled={busy || managementBlocked} onClick={e => { e.currentTarget.closest('details')!.open = false; onDelete(r.id) }}>삭제</button>}
+              {onDelete && <button type="button" className="danger" disabled={busy || managementBlocked} onClick={event => deleteFromMenu(event, r.id)}>삭제</button>}
             </div></details>}
           </div>
-          <button type="button" className={styles.cardBody} aria-label={`${r.name} 상세`} onClick={() => { closeMenus(); onSelect(r.id) }}><span className={styles.cardName}>{r.name}</span><span className={styles.exerciseLine}><b>WEIGHT</b><span title={summary?.weight.text}>{summary?.weight.text}</span></span><span className={styles.exerciseLine}><b>CARDIO</b><span title={summary?.cardio.text}>{summary?.cardio.text}</span></span></button>
+          <button type="button" className={styles.cardBody} aria-label={`${r.name} 상세`} data-routine-detail
+            onPointerDown={detailPointerGuard.pointerDown} onPointerCancel={detailPointerGuard.pointerCancel}
+            onClick={event => { if (!detailPointerGuard.blocksClick(event)) { closeMenus(); onSelect(r.id) } }}><span className={styles.cardName}>{r.name}</span><span className={styles.exerciseLine}><b>WEIGHT</b><span title={summary?.weight.text}>{summary?.weight.text}</span></span><span className={styles.exerciseLine}><b>CARDIO</b><span title={summary?.cardio.text}>{summary?.cardio.text}</span></span></button>
           {presetAssignments?.(r.id)}
         </article>
       })}</div>

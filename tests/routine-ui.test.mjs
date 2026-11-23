@@ -666,6 +666,48 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'})
     assert.equal(await evaluate(`document.querySelector('article[aria-label^="상체 PUSH"] details').open`),false)
     assert.equal(await evaluate(`document.activeElement.matches('article summary')`),true)
+    const routineMenuCard = 'article[aria-label^="상체 PUSH"]'
+    for (const width of [393,1280]) {
+      const mobile = width < 500
+      await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile})
+      await send('Emulation.setTouchEmulationEnabled',{enabled:mobile})
+      await evaluate(`document.querySelector('${routineMenuCard}').scrollIntoView({block:'center',behavior:'instant'})`)
+      await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
+      await evaluate("window.listUi.confirmDelete=false")
+      await tap(routineMenuCard+' summary')
+      const point = await evaluate(`(()=>{
+        const card=document.querySelector('${routineMenuCard}')
+        const action=card.querySelector('details button:last-child').getBoundingClientRect()
+        const link=card.querySelector('button[aria-label$="상세"]').getBoundingClientRect()
+        return {x:Math.round((Math.max(action.left,link.left)+Math.min(action.right,link.right))/2),
+          y:Math.round((Math.max(action.top,link.top)+Math.min(action.bottom,link.bottom))/2)}
+      })()`)
+      const tapAt = async ({x,y}) => {
+        if (mobile) {
+          await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]})
+          await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+        } else {
+          await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',x,y,clickCount:1})
+          await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',x,y,clickCount:1})
+        }
+      }
+      const count = await evaluate('window.listUi.deleted.length')
+      await tapAt(point)
+      await wait(()=>evaluate(`!document.querySelector('${routineMenuCard} details').open`))
+      assert.equal(await evaluate(`document.elementFromPoint(${point.x},${point.y})?.closest('button')?.matches('[aria-label$="상세"]')`),true)
+      await new Promise(resolve=>setTimeout(resolve,55))
+      await tapAt(point)
+      assert.equal(await evaluate(`!!document.querySelector('${detail}')`),false,'a distinct second press must not open the routine')
+      await new Promise(resolve=>setTimeout(resolve,300))
+      assert.equal(await evaluate(`!!document.querySelector('${detail}')`),false,'a discarded click is not replayed')
+      await tapAt(point)
+      await wait(()=>evaluate(`!!document.querySelector('${detail}')`))
+      assert.equal(await evaluate('window.listUi.deleted.length'),count)
+      await closeDetail()
+    }
+    await viewport(393)
+    await send('Emulation.setTouchEmulationEnabled',{enabled:false})
+    await evaluate("window.listUi.confirmDelete=true")
     const selectedBeforeMenuAction=await evaluate('window.listUi.selected.length')
     await evaluate('window.scrollTo(0,0)')
     await wait(()=>evaluate('!!document.querySelector("nav button[data-tab=home]:not([inert])")'))
