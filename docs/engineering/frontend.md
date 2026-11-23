@@ -1060,6 +1060,14 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 - 현재 `e88c90c`에는 `viewport-fit=cover`, Onyx `#111216` 테마·배경, standalone manifest, 셸의 기존 `env(safe-area-inset-top)` 처리가 있다. 검수 과정의 상태바 스타일 강제 메타와 상단 42px 보정은 현재 소스에 없다. iOS 전용 변경은 별도 커밋이나 이번 문서 갱신 시작 시 미커밋 소스에 없었다. [HTML](../../index.html) · [앱 셸 CSS](../../src/app/AppShell.module.css) · [PWA manifest](../../public/manifest.webmanifest)
 - 당시 4173 Chrome에서 320·375·393·430·1280px, 모의 상단 inset 0·44·59·62px의 로고·오늘 카드·스크롤·탭 이동·새로고침·복귀와 운동 START/FINISH를 확인했다. 당시 FRONT 빌드와 PWA 관련 테스트 24/24가 통과했다 (`ios-edge-browser.log`, `ios-edge-workout.log`, `ios-edge-build.log`, `ios-edge-pwa-tests.log`). iPhone Safari 재검수와 설치형 PWA 재검수는 각각 미확인이다. HTTP LAN에서는 앱 배치·이동을 확인하고 신뢰된 HTTPS에서 설치형 PWA의 상태바·캐시·복귀를 구분해 확인한다. 최종 해결 및 사용자 승인은 대기 상태다. [4173 검수 절차](#review-4173)
 
+#### FRONT 18 · 1단계 일반 페이지 가로 배치 — 2026-11-24
+
+- 홈의 기존 `AppShell`을 기준으로 일반 페이지 본문을 정렬한다. 셸 너비는 `min(100%, 520px)`이고, 본문 좌우 패딩은 `--space-page`의 20px를 사용한다. 374px 이하에서는 같은 토큰이 14px다. 설정 메인·계정·로그인된 기기와 루틴 상세의 페이지 여백 재정의를 제거했다.
+- 실제 4173 Chrome에서 320·375·393·430·1280·1440px의 일반 화면 17개를 계측했다. 홈의 기존 좌우 좌표와 모든 대상 본문의 좌우 경계가 일치했다. 가로 스크롤은 관찰되지 않았다. 공통 하단 탭과 루틴 생성·편집의 전용 배치는 기존 좌표를 유지했다.
+- 375px에서 계정 설정의 첫 카드 문구가 한 줄 더 줄바꿈되며 카드 높이가 18px 늘어났다. 카드 높이와 내부 패딩의 CSS 규칙은 유지했다.
+- LAN 검수에서 393·1280px 운동 화면의 상단 타이머와 하단 액션이 기존 전체 너비를 사용했다. Spring START 201, 스냅샷 200, 이어하기·새로고침 및 FINISH를 확인했다. 검증에 생성한 운동만 앱 계약에 따라 논리 삭제한 뒤 진행 중 운동 0건을 확인했다.
+- PC와 iPhone 사용자 최종 UI 승인 대기 상태다. iPhone Safari와 설치형 PWA 실기기 검증은 남아 있다.
+
 #### 현황 갱신
 
 Frontend 작업 담당자는 [공통 갱신 기준](../../../overload-server/docs/engineering/backend.md#현황-갱신)에 따라 이 절의 해당 항목을 갱신한다. 화면 작업은 [UI 단계 A~D](#181-기본-ui-개발-절차), 사용자 승인과 실기기 검증 범위를 함께 기록한다. 서버 쪽 상태는 [Backend 개발 현황](../../../overload-server/docs/engineering/backend.md#11-현재-개발-현황)으로 연결한다.

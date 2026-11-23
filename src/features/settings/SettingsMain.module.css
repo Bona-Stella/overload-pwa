@@ -1,4 +1,4 @@
-.page { display: grid; gap: 16px; min-width: 0; margin-inline: calc(12px - var(--space-page)); }
+.page { display: grid; gap: 16px; min-width: 0; }
 .page .account, .page .rows, .page .install, .page .logout {
   min-width: 0; margin: 0; border: 1px solid var(--border-subtle);
   border-radius: 5px; background: var(--surface-card);

@@ -1,4 +1,4 @@
-.page { display: grid; gap: 12px; min-width: 0; margin-inline: calc(12px - var(--space-page)); }
+.page { display: grid; gap: 12px; min-width: 0; }
 .page h2, .page h3, .page p { margin: 0; }
 .page h2 { font-size: 14px; font-weight: 650; }
 .page .card { display: grid; gap: 12px; min-width: 0; padding: 12px; border-radius: 5px; }
