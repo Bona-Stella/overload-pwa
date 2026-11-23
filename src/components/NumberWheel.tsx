@@ -11,6 +11,7 @@ type Props = {
   adjust: (value: string, direction: -1 | 1) => string | null
   validate: (value: string) => string; start: string; stepLabel?: string; plainSteps?: boolean; hideSteps?: boolean
   compactStepper?: boolean; stepAdjust?: Props['adjust']; preview?: boolean
+  suggestion?: string; pending?: boolean; confirmUnchanged?: boolean
 }
 
 export function NumberWheel(props: Props) {
@@ -19,29 +20,36 @@ export function NumberWheel(props: Props) {
 
 function EditableNumberWheel(props: Props) {
   const [seed, setSeed] = useState<string | null>(null)
-  return <NumberWheelControls {...props} open={() => setSeed(props.value || props.start)}>
+  return <NumberWheelControls {...props} open={() => setSeed(props.value || props.suggestion || props.start)}>
     {seed !== null && <WheelDialog {...props} seed={seed} onClose={() => setSeed(null)} />}
   </NumberWheelControls>
 }
 
-function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, stepLabel = '', plainSteps, hideSteps, compactStepper, stepAdjust = adjust, open, children }:
+function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, stepLabel = '', plainSteps, hideSteps, compactStepper, stepAdjust = adjust, suggestion, pending, open, children }:
   Omit<Props, 'onChange' | 'validate' | 'start'> & { onChange?: Props['onChange']; open?: () => void; children?: React.ReactNode }) {
+  const stepValue = value || suggestion || ''
+  const unavailable = disabled || pending
+  const showSuggestion = !pending && !value && suggestion !== undefined
   const change = (direction: -1 | 1) => {
-    const next = stepAdjust(value, direction)
+    const next = stepAdjust(stepValue, direction)
     if (next !== null) onChange?.(next)
   }
-  const display = <>{value || '입력'}{value && <small> {unit}</small>}</>
+  const display = pending ? <span className={styles.unconfirmed}>확인 중</span> : showSuggestion
+    ? <span className={styles.unconfirmed}>{suggestion}<small> {unit} (미정)</small></span>
+    : <>{value || '입력'}{value && <small> {unit}</small>}</>
+  const description = pending ? '기존 기록 확인 중' : showSuggestion ? suggestion + unit + ' (미정)' : undefined
   return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''} ${hideSteps ? styles.hideSteps : ''} ${compactStepper ? styles.compactStepper : ''}`} role="group" aria-label={label}>
-    {!hideSteps&&<Button aria-label={label + ' 감소'} disabled={disabled || stepAdjust(value, -1) === null} onClick={onChange && (() => change(-1))}>−{stepLabel}</Button>}
-    <Button className={compactStepper ? styles.valueButton : undefined} aria-label={label} disabled={disabled} onClick={open}>
+    {!hideSteps&&<Button aria-label={label + ' 감소'} disabled={unavailable || stepAdjust(stepValue, -1) === null} onClick={onChange && (() => change(-1))}>−{stepLabel}</Button>}
+    <Button className={compactStepper ? styles.valueButton : undefined} aria-label={label} aria-description={description} disabled={unavailable} onClick={open}>
       {compactStepper ? <><span>{display}</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="m3 4.5 3 3 3-3" /></svg></> : display}
     </Button>
-    {!hideSteps&&<Button aria-label={label + ' 증가'} disabled={disabled || stepAdjust(value, 1) === null} onClick={onChange && (() => change(1))}>+{stepLabel}</Button>}
+    {!hideSteps&&<Button aria-label={label + ' 증가'} disabled={unavailable || stepAdjust(stepValue, 1) === null} onClick={onChange && (() => change(1))}>+{stepLabel}</Button>}
     {children}
   </div>
 }
 
-function WheelDialog({ label, seed, value, unit, adjust, validate, onChange, onClose }: Pick<Props, 'label' | 'value' | 'unit' | 'adjust' | 'validate' | 'onChange'> & { seed: string; onClose: () => void }) {
+function WheelDialog({ label, seed, value, unit, adjust, validate, onChange, suggestion, confirmUnchanged, onClose }:
+  Pick<Props, 'label' | 'value' | 'unit' | 'adjust' | 'validate' | 'onChange' | 'suggestion' | 'confirmUnchanged'> & { seed: string; onClose: () => void }) {
   const [direct, setDirect] = useState(false)
   const [draft, setDraft] = useState(value)
   const [selected, setSelected] = useState(seed)
@@ -88,21 +96,25 @@ function WheelDialog({ label, seed, value, unit, adjust, validate, onChange, onC
     setSelected(next)
   }
   function confirm() {
-    if (!touched.current || apply(centered())) onClose()
+    const changed = touched.current
+    if ((!changed && !confirmUnchanged) || apply(changed ? centered() : seed)) onClose()
+  }
+  function confirmDirect() {
+    if (suggestion !== undefined && !value && !draft.trim() || apply(draft)) onClose()
   }
 
-  return <Dialog title={label} onClose={onClose}>
+  return <Dialog title={label} onClose={onClose} dismissOnBackdrop={confirmUnchanged}>
     {direct ? <div className={styles.body} onKeyDown={event => {
       if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
       event.preventDefault()
       event.stopPropagation()
-      if (apply(draft)) onClose()
+      confirmDirect()
     }}>
       <label>{label} ({unit})<input inputMode={unit === 'kg' ? 'decimal' : 'numeric'} value={draft} autoFocus onChange={event => setDraft(event.target.value)} /></label>
       {issue && <p className="notice error" role="alert">{issue}</p>}
       <div className={styles.actions}>
         <Button onClick={onClose}>취소</Button>
-        <Button variant="primary" onClick={() => { if (apply(draft)) onClose() }}>확인</Button>
+        <Button variant="primary" onClick={confirmDirect}>확인</Button>
       </div>
     </div> : <div className={styles.body}>
       <div className={styles.viewport}>

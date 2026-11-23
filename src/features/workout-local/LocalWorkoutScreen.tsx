@@ -20,7 +20,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
   onReady?: (workout: LocalWorkout) => void; onWorkoutChange?: (workout: LocalWorkout) => void
   onOpened?: (session: Session) => void; preparingSummary?: boolean
-  offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[]
+  offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[] | null
   assessmentApi?: Pick<WorkoutApi, 'progressAssessment'>; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
 }) {
   const [initial] = useState(() => ({ server, policy, onReady, onOpened }))

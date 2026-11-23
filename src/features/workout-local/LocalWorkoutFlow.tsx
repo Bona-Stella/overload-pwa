@@ -36,7 +36,7 @@ const REST_TRANSITION_GUARD_MS = 275
 const FINAL_SET_REVIEW_WINDOW_MS = 750
 export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, progressAssessmentPending = false, referenceRecords = [], referenceRoutine = null, createSetId, preparingSummary = false, confirmingFinish = false }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
-  activities?: CardioActivity[]; history?: Session[]; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
+  activities?: CardioActivity[]; history?: Session[] | null; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
   progressAssessment?: ProgressAssessment; progressAssessmentPending?: boolean; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
   createSetId?: () => string; preparingSummary?: boolean; confirmingFinish?: boolean
 }) {
@@ -333,8 +333,9 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const issue = state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : null
   const syncNotice = state.syncStatus && ['WAITING', 'APPROVAL', 'CHECK', 'OTHER'].includes(state.syncStatus) ? SYNC_LABEL[state.syncStatus] : null
   const pendingLabel = showFinishWait && modal !== 'end' && !allDone ? (preparingSummary ? '운동 기록 요약을 불러오고 있습니다.' : '서버 종료 결과를 확인하고 있습니다.') : null
-  const statusNote = state.issue || state.unsavedDrafts || state.syncIssue || syncNotice || Children.count(notices) > 0
-    ? <aside className="muted small" role="status">{state.issue ? '최근 변경 미확정' : state.unsavedDrafts ? '입력 보존 확인 필요' : syncNotice}
+  const draftsNeedRetry = state.unsavedDrafts && state.pending === 0
+  const statusNote = state.issue || draftsNeedRetry || state.syncIssue || syncNotice || Children.count(notices) > 0
+    ? <aside className="muted small" role="status">{state.issue ? '최근 변경 미확정' : draftsNeedRetry ? '입력 보존 확인 필요' : syncNotice}
       {state.syncIssue && <p>{state.syncIssue}</p>}{notices}{issue}</aside> : undefined
   const renderExercise = (at: number, preview = false) => {
     const exercise = exercises[at]

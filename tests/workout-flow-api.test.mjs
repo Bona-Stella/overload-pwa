@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { flowWeights, flowCardio, inputDraft, isWeightDone, plannedOrdinals } from '../src/features/workout-local/flow-data.ts'
+import { suggestedReps } from '../src/features/workout/reps.ts'
 import { createLocalWorkout, addWeight, applyLocalChange, editDraft, completeSet, undoSet, addCardio, timerAction } from '../src/features/workout-local/model.ts'
 import { summaryData, setVolume } from '../src/features/workout-online/summary-data.ts'
 import { localWorkout } from '../src/features/workout-local/validation.ts'
@@ -48,6 +49,34 @@ test('recent real records match equipment and preserve explicitly empty or pendi
   assert.equal(view.sets[0].draft.reps,'0011');assert.equal(view.sets[0].previous.reps,'9')
   previous.snapshot.state.performedSets[0].loadType='BODYWEIGHT'
   assert.equal(flowWeights(state(w),[previous])[0].sets[0].previous,undefined)
+})
+test('rep suggestions round valid ranges and never enter the set draft or completion',()=>{
+  for (const [min,max,expected] of [[6,10,'8'],[6,9,'8'],[8,12,'10'],[10,15,'13'],[1,1,'1'],[2147483647,2147483647,'2147483647'],
+    [null,null,'0'],[6,undefined,'0'],[10,6,'0'],[6.5,9,'0'],[0,9,'0'],[1,2147483648,'0']]) {
+    assert.equal(suggestedReps(min,max),expected)
+  }
+  const w=local(), before=structuredClone(w)
+  const view=flowWeights(state(w))[0]
+  assert.equal(suggestedReps(view.min,view.max),'8')
+  assert.equal(view.sets[0].draft.reps,'')
+  assert.throws(()=>completeSet(w,E,1,at),/양의 정수/)
+  assert.deepEqual(w,before)
+})
+test('existing drafts appear while history is pending and retain priority when history arrives',()=>{
+  const w=local(), historical=local()
+  editDraft(historical,E,1,{reps:'6'})
+  completeSet(historical,E,1,at)
+  editDraft(historical,E,2,{reps:'7'})
+  completeSet(historical,E,2,at+1000)
+  const record=session({status:'FINISHED',snapshot:{...session().snapshot,state:historical.snapshot}})
+  editDraft(w,E,1,{reps:'9'})
+  const pending=flowWeights(state(w),null)[0].sets
+  assert.deepEqual(pending.map(s=>[s.draft.reps,s.repsPending]),[['9',false],['',true],['',true]])
+  const latest={...state(w),drafts:{[E+':1']:{weight:'60',reps:'11'}}}
+  const restored=flowWeights(latest,[record])[0].sets
+  assert.deepEqual(restored.map(s=>[s.draft.reps,s.repsPending]),[['11',false],['7',false],['',false]])
+  assert.equal(restored[0].previous.reps,'6')
+  assert.equal(flowWeights(state(w),[record])[0].sets[0].draft.reps,'9')
 })
 test('sparse exclusions never renumber completed ordinals and huge counts stay bounded',()=>{
   const w=local();w.excludedSetOrdinals={[E]:[2]};w.snapshot.appliedPlan.weightExercises[0].setCount=2

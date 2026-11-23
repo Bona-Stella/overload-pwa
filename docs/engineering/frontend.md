@@ -643,8 +643,10 @@ iPhone의 화면 구조를 고려합니다.
 | 현행 영역 | 실제 모듈·연결 | 남은 범위 |
 |---|---|---|
 | 검색 | SearchList의 IDLE/EDITING/SELECTED, ExerciseSearch·SearchExerciseDetails, GrowthPanel·RecordFeed | 호출부별 초기화 다름. 전체 이력의 실제 운동명 검색 미연결 |
+| 운동 종목 보기(UI-26) | 목록 화면에 기존 공통 헤더를 재사용한다. 결과 목록은 화면의 남은 공간을 사용하며 높이 600px 이하에서는 페이지가 세로 스크롤을 맡는다. | 2차 4173 사용자 검수 대기. 휴식 설정과 재진입용 카탈로그의 React 키 충돌을 수정했다. Chrome에서 `세트 사이 휴식 → 뒤로 → 운동 종목 보기`를 12회 반복해 휴식 화면 DOM 잔존 0건을 확인했다. iPhone Safari·설치형 PWA 실기기 미검증 |
 | 루틴 | RoutineForm → 온라인 루틴 API. 명시 weightApprovals, 조합 변경 NEW, 초안·고정 요청 보호 | 최근 실제값 자동 제안 없음 |
 | 운동·시간 | LocalWorkoutController·LocalWorkoutFlow → IndexedDB/snapshot/FINISH, weight-timing·record-summary | 미관찰 시간/과거 구간 미확인, 기기 간 로컬 초안 복원 보장 아님 |
+| 일반 운동 반복 입력(UI-05) | 미완료 세트의 기존 반복 초안을 우선 표시한다. 과거 수행 이력에 따른 자동 입력은 별도 평가 응답 전에 반영하고, 조회 중에는 `확인 중`을 표시한다. 미입력 상태의 중간값은 회색 한 줄로 표시하고 `(미정)`은 단위 스타일을 사용한다. 휠의 `확인`은 움직임 없이도 선택값을 로컬 초안으로 반영한다. 정상 저장 중에는 입력 보존 안내를 표시하지 않으며 실패한 초안은 재시도할 수 있다. | 3차 UI 보완 및 4173 사용자 검수 대기. 실제 iPhone Safari·설치형 PWA 및 다른 숫자 입력의 UI-22 적용은 별도 |
 | 권고·승인 | reference-reminder·SavedWeightReview → GET weight-review / POST weight-review-approvals, 승인 후 재조회 | 공식 evaluate의 전체 조합 제외·대체 슬롯 인정은 미완성 |
 | 달성·기록 | achievement·display-achievement·achievementReasons, RecordFeed/ClosedWorkout, 최초/현재 평가 구분 | loaded closed 페이지 범위. UI 이유는 파생값이며 서버 영구 판정 사건 아님 |
 | 기록 메인 UI | `594cf25`의 주간 요약·분석 2×2·최근 3행 및 전용 CSS Modules. 사용자 디자인 승인·커밋 완료 | 총 운동 시간 미제공으로 미확인. 완료 종목 수·기존 조회/판정 유지. 색상 통합 검토·하위 기능 경계는 별도 |

@@ -12,6 +12,9 @@ import type { SyncOptions, SyncStatus } from './sync.ts'
 type Store = Pick<WorkoutStore, 'openLocal' | 'readLocal' | 'saveLocal'> & Partial<Pick<WorkoutStore, 'saveSyncLocal' | 'saveSession'>>
 export type EditorState = { workout: LocalWorkout | null; writable: boolean; loading: boolean; pending: number; issue: string | null;
   drafts: Record<string, SetDraft>; cardioDrafts: Record<string, Partial<CardioTimer>>; memos: Record<string, string>; unsavedDrafts: boolean; syncStatus?: SyncStatus; syncIssue?: string | null }
+type DraftCollections = Pick<EditorState, 'drafts' | 'cardioDrafts' | 'memos'>
+type DraftPatch = Partial<DraftCollections & Pick<EditorState, 'unsavedDrafts'>>
+type DraftWrite = { queued?: DraftPatch; committed: () => DraftPatch | undefined }
 /** Serial local transactions. Completion UI only observes committed documents; the sender follows durable changes. */
 export class LocalWorkoutController {
   private state: EditorState = { workout: null, writable: false, loading: true, pending: 0, issue: null, drafts: {}, cardioDrafts: {}, memos: {}, unsavedDrafts: false }
@@ -74,11 +77,11 @@ export class LocalWorkoutController {
   change = (transform: (workout: LocalWorkout, now: number) => void): Promise<boolean> => {
     return this.update(transform, false, Date.now())
   }
-  private update(transform: (workout: LocalWorkout, now: number) => void, sync: boolean,at?:number): Promise<boolean> {
+  private update(transform: (workout: LocalWorkout, now: number) => void, sync: boolean, at?: number, draft?: DraftWrite): Promise<boolean> {
     if (!this.allowed() || !this.state.writable) return Promise.resolve(false)
     const generation = this.generation
     const allowed = () => generation === this.generation && this.allowed()
-    this.set({ pending: this.state.pending + 1 })
+    this.set({ pending: this.state.pending + 1, ...draft?.queued })
     const operation = this.tail.then(async () => {
       if (!allowed() || !this.state.workout || !this.state.writable || !sync && this.state.workout.finish) return false
       try {
@@ -93,7 +96,7 @@ export class LocalWorkoutController {
           await this.store.saveSyncLocal(next, previous.editVersion, allowed)
         } else await this.store.saveLocal(next, previous.editVersion, allowed)
         if (!allowed()) return false
-        this.set({ workout: next, issue: null })
+        this.set({ workout: next, issue: null, ...draft?.committed() })
         if (!sync && (next.localRevision !== previous.localRevision || !previous.finish && next.finish)) this.synchronizer?.request()
         return true
       } catch (error) {
@@ -105,52 +108,47 @@ export class LocalWorkoutController {
     }).finally(() => this.set({ pending: Math.max(0, this.state.pending - 1) }))
     this.tail = operation; return operation
   }
-  draft(id: string, ordinal: number, value: SetDraft) {
-    if (!this.allowed() || !this.state.writable || this.state.workout?.finish) return
-    const key = `${id}:${ordinal}`; this.draftSerial++
-    this.set({ drafts: { ...this.state.drafts, [key]: value }, unsavedDrafts: true })
-    void this.change(workout => editDraft(workout, id, ordinal, value)).then(saved => {
-      if (saved && this.state.drafts[key] === value) {
-        const drafts = { ...this.state.drafts }; delete drafts[key]
-        this.set({ drafts, unsavedDrafts: Object.keys(drafts).length + Object.keys(this.state.cardioDrafts).length + Object.keys(this.state.memos).length > 0 })
-      }
-    })
-  }
-  cardioDraft(id: string, patch: Pick<Partial<CardioTimer>, 'distance' | 'distanceSource' | 'speed' | 'speedSource' | 'bpm' | 'correctedSeconds'>) {
+  private saveDraft<K extends keyof DraftCollections>(collection: K, key: string, value: DraftCollections[K][string],
+    transform: (workout: LocalWorkout) => void) {
     if (!this.allowed() || !this.state.writable || this.state.workout?.finish) return
     this.draftSerial++
+    void this.update(transform, false, Date.now(), {
+      queued: { [collection]: { ...this.state[collection], [key]: value }, unsavedDrafts: true },
+      committed: () => {
+        // An older commit must leave the newest optimistic value in place.
+        if (this.state[collection][key] !== value) return
+        const remaining = { ...this.state[collection] }
+        delete remaining[key]
+        const outstanding = { ...this.state, [collection]: remaining }
+        const { drafts, cardioDrafts, memos } = outstanding
+        return { [collection]: remaining, unsavedDrafts: Object.keys(drafts).length + Object.keys(cardioDrafts).length + Object.keys(memos).length > 0 }
+      },
+    })
+  }
+  draft(id: string, ordinal: number, value: SetDraft) {
+    this.saveDraft('drafts', `${id}:${ordinal}`, value, workout => editDraft(workout, id, ordinal, value))
+  }
+  cardioDraft(id: string, patch: Pick<Partial<CardioTimer>, 'distance' | 'distanceSource' | 'speed' | 'speedSource' | 'bpm' | 'correctedSeconds'>) {
     const value = { ...this.state.cardioDrafts[id], ...patch }
-    this.set({ cardioDrafts: { ...this.state.cardioDrafts, [id]: value }, unsavedDrafts: true })
-    void this.change(workout => { workout.timers[id] = { ...(workout.timers[id] ?? emptyTimer()), ...value } }).then(saved => {
-      if (saved && this.state.cardioDrafts[id] === value) {
-        const cardioDrafts = { ...this.state.cardioDrafts }; delete cardioDrafts[id]
-        this.set({ cardioDrafts, unsavedDrafts: Object.keys(cardioDrafts).length + Object.keys(this.state.drafts).length + Object.keys(this.state.memos).length > 0 })
-      }
+    this.saveDraft('cardioDrafts', id, value, workout => {
+      workout.timers[id] = { ...(workout.timers[id] ?? emptyTimer()), ...value }
     })
   }
   memo(id: string, value: string) {
-    if (!this.allowed() || !this.state.writable || this.state.workout?.finish) return
-    this.draftSerial++
-    this.set({ memos: { ...this.state.memos, [id]: value }, unsavedDrafts: true })
-    void this.change(w => {
+    this.saveDraft('memos', id, value, w => {
       if (!w.snapshot.appliedPlan.weightExercises.some(e => e.sessionExerciseId === id)) throw new Error('현재 종목을 확인해 주세요.')
       w.equipmentMemos = { ...w.equipmentMemos, [id]: value }
-    }).then(saved => {
-      if (saved && this.state.memos[id] === value) {
-        const memos = { ...this.state.memos }; delete memos[id]
-        this.set({ memos, unsavedDrafts: Object.keys(memos).length + Object.keys(this.state.drafts).length + Object.keys(this.state.cardioDrafts).length > 0 })
-      }
     })
   }
   async retryDrafts() {
     const drafts = { ...this.state.drafts }, cardioDrafts = { ...this.state.cardioDrafts }, memos = { ...this.state.memos }, serial = this.draftSerial
-    const saved = await this.change(workout => {
+    return this.update(workout => {
       for (const [key, value] of Object.entries(drafts)) { const at = key.lastIndexOf(':'); editDraft(workout, key.slice(0, at), Number(key.slice(at + 1)), value) }
       for (const [id, value] of Object.entries(cardioDrafts)) workout.timers[id] = { ...(workout.timers[id] ?? emptyTimer()), ...value }
       workout.equipmentMemos = { ...workout.equipmentMemos, ...memos }
+    }, false, Date.now(), {
+      committed: () => this.draftSerial === serial ? { drafts: {}, cardioDrafts: {}, memos: {}, unsavedDrafts: false } : undefined,
     })
-    if (saved && this.draftSerial === serial) this.set({ drafts: {}, cardioDrafts: {}, memos: {}, unsavedDrafts: false })
-    return saved
   }
   async complete(transform: (workout: LocalWorkout, now: number) => void) {
     // A failed draft must never silently complete using the older persisted input.

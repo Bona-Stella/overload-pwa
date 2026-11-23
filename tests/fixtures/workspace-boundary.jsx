@@ -43,6 +43,17 @@ window.boundaryWeightReview = (scope, id) => new Promise((resolve, reject) => {
   }
 })
 const authentication = { getSnapshot: () => window.boundaryAuth, invalidateLocalWorkoutAccess() {} }
+
+function SettingsRouteHarness() {
+  const [view, setView] = useScreenHistory('boundary-settings', null)
+  return <>
+    <button onClick={() => setView('rest')}>휴식 화면 열기</button>
+    <button onClick={() => setView('catalog')}>카탈로그 화면 열기</button>
+    <WorkoutWorkspace tab="settings" restOpen={view === 'rest'} catalogOpen={view === 'catalog'}
+      onSettingsBack={() => history.back()} onRestExitGuard={guard => { window.settingsExitGuard = guard }} />
+  </>
+}
+
 function FinishRouteHarness() {
   const { scope, detail } = window.boundaryState
   const [tab] = useScreenHistory('boundary-tab', 'home')
@@ -63,7 +74,7 @@ window.renderBoundary = (owner = 'A', generation = '0', active = false, finishFl
     active: detail?.status === 'ACTIVE' ? detail : null, detail, deviceId: DEVICE,
     attempt: null, status: refreshing ? 'loading' : 'ready', busy: refreshing, localReady: true, copySaved: finishFlow && !!detail, issue: null, notice: '' }
   root.render(<AuthContext value={{ state: window.boundaryAuth, controller: authentication }}>
-    {finishFlow ? <FinishRouteHarness /> : <WorkoutWorkspace tab={tab} />}
+    {finishFlow ? <FinishRouteHarness /> : tab === 'settings' ? <SettingsRouteHarness /> : <WorkoutWorkspace tab={tab} />}
   </AuthContext>)
 }
 window.startBoundary = () => {

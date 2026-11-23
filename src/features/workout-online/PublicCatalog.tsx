@@ -4,6 +4,7 @@ import type { Ref } from 'react'
 import { ReviewExerciseMediaContext } from '../../app/review-context.ts'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
+import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import type { WorkoutApi } from './api.ts'
 import { catalogDetailView, primaryMuscles } from './catalog-browse.ts'
 import type { CatalogBrowseExercise, CatalogMuscle } from './catalog-browse.ts'
@@ -87,8 +88,8 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
   }, [selectedId])
 
   return <>
-    <div className={styles.screen} hidden={!!selectedId}>
-      <CatalogHeading title="운동 종목 보기" backLabel="설정으로 돌아가기" onBack={onBack} headingRef={listTitle} />
+    <div className={`${styles.screen} ${styles.catalogList}`} hidden={!!selectedId}>
+      <RecordSubpageHeader title="운동 종목 보기" backLabel="설정으로 돌아가기" onBack={onBack} headingRef={listTitle} />
       <Card className={styles.catalogCard}>
         <div className={styles.sectionHeader}><h2>표준 운동 DB</h2><span className={styles.tag}>조회 전용</span></div>
         <p className={styles.description}>등록·편집·삭제는 관리자가 수행합니다. 사용자는 이름·별칭으로 검색하고 정보를 확인합니다.</p>

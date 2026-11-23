@@ -335,6 +335,22 @@ test('IndexedDB failure leaves completion, rest and revision unconfirmed while r
   assert.equal(await e.c.complete(x=>m.completeSet(x,E,1,at)),false)
   assert.equal(e.c.getSnapshot().workout.snapshot.performedSets.length,0);assert.equal(e.stored().localRevision,'0');assert.equal(e.stored().drafts[E+':1'].weight,'00062.500000');assert.equal(m.exerciseRest(e.c.getSnapshot().workout),undefined);e.c.stop()
 })
+test('queued repetition drafts publish their save status and keep newer input through older commits',async()=>{
+  const e=await editor(), disk=gate(), snapshots=[]
+  e.gate(disk)
+  const unsubscribe=e.c.subscribe(()=>snapshots.push(e.c.getSnapshot()))
+  e.c.draft(E,1,{weight:'60',reps:'9'})
+  e.c.draft(E,1,{weight:'60',reps:'10'})
+  await settle()
+  assert.equal(e.c.getSnapshot().pending,2)
+  assert.equal(e.c.getSnapshot().drafts[E+':1'].reps,'10')
+  disk.resolve();await e.c.settled()
+  assert.ok(snapshots.every(state=>state.pending > 0 || !state.unsavedDrafts))
+  assert.equal(snapshots.find(state=>state.workout.drafts[E+':1']?.reps==='9').drafts[E+':1'].reps,'10')
+  assert.equal(e.stored().drafts[E+':1'].reps,'10')
+  assert.equal(e.stored().localRevision,'0')
+  unsubscribe();e.c.stop()
+})
 test('failed unsaved draft cannot complete older values; retry preserves multiple slot inputs',async()=>{
   const e=await editor();e.fail(true);e.c.draft(E,1,{weight:'65.',reps:'9'});await e.c.settled()
   e.fail(false);e.c.draft(E,2,{weight:'60',reps:'10'});await e.c.settled();assert.equal(e.c.getSnapshot().unsavedDrafts,true)

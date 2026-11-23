@@ -6,7 +6,7 @@ import { resolve, relative, isAbsolute } from 'node:path'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 
-test('real React reconciliation removes statistics across workout, account, generation and late-response boundaries', { timeout: 60000 }, async () => {
+test('real React reconciliation respects workout, settings, account, generation and late-response boundaries', { timeout: 60000 }, async () => {
   const directory = resolve('logs/workspace-boundary'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
   await mkdir(profile, { recursive: true })
   const stub = `import {createElement, useEffect, useState} from 'react';
@@ -17,6 +17,7 @@ test('real React reconciliation removes statistics across workout, account, gene
     export class WorkoutApi {
       cardioActivities=async()=>[];closed=async scope=>({...scope,sessions:window.recordScenario?[window.recordScenario]:[],next:null});detail=async()=>window.recordScenario;
       routine=(...args)=>window.graphBoundary.routine(...args);exerciseDetail=(...args)=>window.graphBoundary.exerciseDetail(...args);
+      publicCatalog=async()=>[];
     };
     export class WorkoutOnlineController {
       getSnapshot=()=>window.boundaryState;
@@ -234,6 +235,29 @@ test('real React reconciliation removes statistics across workout, account, gene
     await wait(() => evaluate(`document.querySelector('${plot}')===window.previousPlot && document.querySelector('.growth-latest').textContent==='30kg'`))
     await evaluate('window.graphBoundary=null')
     await send('Emulation.clearDeviceMetricsOverride')
+    await evaluate("window.renderBoundary('A','0',false,false,'settings')")
+    const restPage = 'section[aria-label="세트 사이 휴식"]'
+    const openSettings = title => evaluate(`Array.from(document.querySelectorAll('button')).find(button=>button.textContent===${JSON.stringify(title)}).click()`)
+    const catalogVisible = () => evaluate(`Array.from(document.querySelectorAll('h1')).some(heading=>heading.textContent==='운동 종목 보기' && heading.getClientRects().length)`)
+    await wait(() => evaluate(`document.body.innerText.includes('카탈로그 화면 열기')`))
+    await openSettings('카탈로그 화면 열기')
+    await wait(catalogVisible)
+    for (let visit = 0; visit < 3; visit++) {
+      await evaluate('history.back()')
+      await wait(async () => !(await catalogVisible()))
+      await openSettings('휴식 화면 열기')
+      await wait(() => evaluate(`!!document.querySelector('${restPage}')`))
+      await evaluate(`window.restPage=document.querySelector('${restPage}');window.restPage.querySelector('form button').click()`)
+      await wait(() => evaluate('typeof window.settingsExitGuard === "function"'))
+      await evaluate('history.back()')
+      await wait(() => evaluate(`!history.state.overloadNavigation.values['boundary-settings']`))
+      await evaluate('new Promise(requestAnimationFrame)')
+      assert.equal(await evaluate('window.restPage.isConnected'), false, 'leaving Rest Settings must disconnect its DOM even when the catalog is retained')
+      assert.equal(await evaluate('window.settingsExitGuard'), null, 'an unmounted Rest Settings page must release its edit guard')
+      await openSettings('카탈로그 화면 열기')
+      await wait(catalogVisible)
+      assert.equal(await evaluate(`document.querySelectorAll('${restPage}').length`), 0)
+    }
     await evaluate('window.startBoundary()')
     await wait(() => evaluate('document.body.innerText.includes("운동 시작")'))
     await evaluate(`window.startFrames=[];window.watchStart=true;requestAnimationFrame(function sample(){

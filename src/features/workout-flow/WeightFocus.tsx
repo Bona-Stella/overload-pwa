@@ -4,7 +4,7 @@ import type { ReactNode, RefObject } from 'react'
 import { Button, Card, Help } from '../../components/ui.tsx'
 import { CircleCheck } from '../../components/common-ui/CircleCheck.tsx'
 import { NumberWheel } from '../../components/NumberWheel.tsx'
-import { adjustRepsDraft } from '../workout/reps.ts'
+import { adjustRepsDraft, suggestedReps } from '../workout/reps.ts'
 import { halfWeight } from '../workout/weight.ts'
 import { adjust } from '../workout-online/cardio-draft.ts'
 import { countDraft, decimalDraft } from '../workout-online/validation.ts'
@@ -22,7 +22,7 @@ function adjustKg(value: string, direction: -1 | 1, step?: 1 | 2.5) {
   } catch { return null }
 }
 function adjustReps(value: string, direction: -1 | 1) {
-  if (!value) return direction > 0 ? '1' : null
+  if (!value || value === '0') return direction > 0 ? '1' : null
   const next = adjustRepsDraft(value, direction)
   return next !== null && Number(next) <= 2147483647 ? next : null
 }
@@ -47,6 +47,8 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
 }) {
   const completed = weight.sets.filter(s => s.result).length
   const count = weight.plannedCount ?? weight.sets.length
+  const repsSuggestion = suggestedReps(weight.min, weight.max)
+  const noPreviousRecord = !weight.sets.some(set => !set.result && (set.previous || set.repsPending))
   const title = `${String(position).padStart(2, '0')}. ${weight.name}`
   const titleRef = useFitWorkoutTitle(title, !preview)
   const manufacturer = manufacturers.find(m => m.id === weight.manufacturerId)
@@ -82,7 +84,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       </div>}
       <div className={styles.equipment} aria-label="현재 장비"><span>{manufacturer?.name ?? '제조사 미지정'}</span><span>{weight.loadType ? LOAD_LABELS[weight.loadType] : '부하 미지정'}</span></div>
     </Card>
-    {weight.sets.some(set => !set.result) && !weight.sets.some(set => !set.result && set.previous) &&
+    {weight.sets.some(set => !set.result) && noPreviousRecord &&
       <p className="muted small">비교 가능한 기준이 없습니다. 이번 반복 횟수를 직접 입력해 주세요.</p>}
     <Card className={styles.sets}>
       <div className={styles.setsHeading}><h2>세트 기록</h2><span>{weight.min}–{weight.max}회 × {count}세트</span><b>{completed}/{count}{completed >= count ? ' 완료' : ''}</b></div>
@@ -100,7 +102,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
             <span role="cell" className={styles.prior}>{set.previous ? set.previous.reps + '회' : '—'}</span>
             <div role="cell" className={styles.setValues}>{result ? <strong>{result.reps}회</strong> :
               <NumberWheel preview={preview} label={`${ordinal}세트 이번 반복 횟수`} value={set.draft.reps}
-                onChange={reps => onDraft(set.id, { reps })} unit="회" start="1" plainSteps
+                onChange={reps => onDraft(set.id, { reps })} unit="회" start="0" suggestion={repsSuggestion} pending={set.repsPending} confirmUnchanged plainSteps
                 adjust={adjustReps} validate={value => value.trim() ? String(countDraft(value)) : ''} />
             }
               {additionalInput && weight.loadType === 'BODYWEIGHT' && (result

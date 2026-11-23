@@ -1,7 +1,8 @@
 
 .control { display: grid; grid-template-columns: 44px minmax(44px, 1fr) 44px; gap: 2px; width: 100%; }
 .control > button { min-width: 0; padding: 0 2px; overflow-wrap: anywhere; font-size: 16px; }
-.control > button > small { font-size: 10px; }
+.control > button > small, .unconfirmed > small { font-size: 10px; }
+.unconfirmed { display: block; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hideSteps { grid-template-columns: minmax(0,1fr); }
 .plainSteps > button { border: 0; }
 .plainSteps > button:is(:nth-child(1), :nth-child(3)):active:not(:disabled) { background: var(--accent-soft); }

@@ -3,11 +3,17 @@ import { useDialogHistory } from '../app/navigation.ts'
 import type { ReactNode, RefObject } from 'react'
 import type { RepeatPointerGuard } from './repeatPointerGuard.ts'
 
-export function Dialog({ title, onClose, children, initialFocus, className, descriptionId, closePointerGuard, dismissBlocked = false }: {
+function isBackdrop(dialog: HTMLDialogElement, event: Pick<MouseEvent, 'target' | 'clientX' | 'clientY'>) {
+  const { left, top, right, bottom } = dialog.getBoundingClientRect()
+  return event.target === dialog && (event.clientX < left || event.clientX >= right || event.clientY < top || event.clientY >= bottom)
+}
+
+export function Dialog({ title, onClose, children, initialFocus, className, descriptionId, closePointerGuard, dismissBlocked = false, dismissOnBackdrop = false }: {
   title: string; onClose: () => void; children: ReactNode; initialFocus?: RefObject<HTMLElement | null>
-  className?: string; descriptionId?: string; closePointerGuard?: RepeatPointerGuard; dismissBlocked?: boolean
+  className?: string; descriptionId?: string; closePointerGuard?: RepeatPointerGuard; dismissBlocked?: boolean; dismissOnBackdrop?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const backdropPressed = useRef(false)
   const titleId = useId()
   const titleRef = useRef<HTMLHeadingElement>(null), dismissal = useRef({ onClose, dismissBlocked })
   useLayoutEffect(() => { dismissal.current = { onClose, dismissBlocked } }, [onClose, dismissBlocked])
@@ -21,7 +27,13 @@ export function Dialog({ title, onClose, children, initialFocus, className, desc
     ;(initialFocus?.current ?? titleRef.current)?.focus({ preventScroll: true })
     return () => { dialog?.close(); if (previous instanceof HTMLElement) previous.focus({ preventScroll: true }) }
   }, [initialFocus])
-  return <dialog ref={ref} className={className} data-editor-dialog onCancel={event => { event.preventDefault(); event.stopPropagation(); requestClose() }} aria-labelledby={titleId} aria-describedby={descriptionId}>
+  return <dialog ref={ref} className={className} data-editor-dialog onCancel={event => { event.preventDefault(); event.stopPropagation(); requestClose() }}
+    onPointerDown={dismissOnBackdrop ? event => { backdropPressed.current = isBackdrop(event.currentTarget, event) } : undefined}
+    onClick={dismissOnBackdrop ? event => {
+      if (backdropPressed.current && isBackdrop(event.currentTarget, event)) requestClose()
+      backdropPressed.current = false
+    } : undefined}
+    aria-labelledby={titleId} aria-describedby={descriptionId}>
     <div className="section-heading"><h2 id={titleId} ref={titleRef} tabIndex={-1} data-dialog-heading>{title}</h2>
       <button type="button" className="icon-button" data-close-text aria-label="닫기" disabled={dismissBlocked} data-button-pending={dismissBlocked || undefined}
         onPointerDown={closePointerGuard?.pointerDown} onPointerCancel={closePointerGuard?.pointerCancel}

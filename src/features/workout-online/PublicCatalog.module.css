@@ -12,7 +12,29 @@
 .back span { margin-right: 4px; font-size: 1.2em; }
 .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .description, .aliases { color: var(--text-muted); font-size: 13px; }
+.catalogList {
+  display: flex;
+  flex-direction: column;
+  max-block-size: calc(100dvh - var(--page-top-inset, 0px) - var(--page-bottom-inset, 0px));
+}
+.catalogCard,
+.catalogCard > :global(.exercise-search),
+.catalogCard :global(.record-search) {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+}
 .catalogCard { gap: 14px; }
+.catalogList > header,
+.catalogCard > :not(:global(.exercise-search)),
+.catalogCard :global(.record-search) > :not(.results) { flex-shrink: 0; }
+.catalogCard :global(.record-search) > .results { max-height: none; }
+
+/* When the controls leave little room for results, let the page scroll as one. */
+@media (max-height: 600px) {
+  .catalogList { max-block-size: none; }
+  .catalogCard :global(.record-search) > .results { overflow-y: visible; }
+}
 .results, .muscles { list-style: none; margin: 0; padding: 0; }
 .results li + li, .muscles li + li { border-top: 1px solid var(--border-subtle); }
 .results .result {

@@ -30,6 +30,44 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
 
 
     await wait(()=>evaluate('!!window.feedback?.ready'))
+    await t.test('repeat stepping keeps the viewport stable while a healthy draft is queued and committed', async () => {
+      await send('Emulation.setDeviceMetricsOverride',{width:320,height:480,deviceScaleFactor:1,mobile:true})
+      await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1})
+      const inspect = () => evaluate(`(() => {
+        const plus=document.querySelector('[data-swipe-current] button[aria-label="1세트 이번 반복 횟수 증가"]')
+        const row=plus.closest('[role=row]'),frame=plus.closest('[data-workout-frame]')
+        const box=el=>{const {x,y,width,height}=el.getBoundingClientRect();return [x,y,width,height]}
+        return {scroll:scrollY, height:document.scrollingElement.scrollHeight, plus:box(plus),minus:box(plus.parentElement.firstElementChild),
+          row:box(row),card:box(row.closest('[role=table]').parentElement),header:box(frame.querySelector('[data-keyboard-header]')),
+          footer:box(frame.querySelector('footer')),notice:frame.querySelector(':scope > aside')?.textContent??'',
+          value:plus.previousElementSibling.textContent,focused:document.activeElement?.ariaLabel}
+      })()`)
+      const tap = async ([x,y,width,height]) => {
+        await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:x+width/2,y:y+height/2}]})
+        await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+      }
+      try {
+        const unscrolled = await inspect()
+        await evaluate(`window.scrollBy(0,${unscrolled.plus[1] - 160});window.feedback.hold();void 0`)
+        const before = await inspect()
+        await tap(before.plus)
+        await wait(()=>evaluate('window.feedback.c.getSnapshot().pending === 1'))
+        const during = await inspect()
+        assert.equal(during.value,'9 회')
+        assert.equal(during.focused,'1세트 이번 반복 횟수 증가')
+        const geometry = ({ value, focused, ...layout }) => layout
+        assert.deepEqual(geometry(during),geometry(before))
+        await evaluate('window.feedback.release()')
+        await wait(()=>evaluate('!window.feedback.c.getSnapshot().unsavedDrafts'))
+        await tap(before.minus)
+        await wait(async()=> (await inspect()).value === '8 회')
+        assert.deepEqual(geometry(await inspect()),geometry(before))
+      } finally {
+        await evaluate('window.feedback.release();window.scrollTo(0,0)')
+        await send('Emulation.setTouchEmulationEnabled',{enabled:false})
+        await send('Emulation.clearDeviceMetricsOverride')
+      }
+    })
     await t.test('transient button locks keep geometry and defer progress without leaving a stale spinner', async () => {
       await evaluate('window.feedback.mountButtonProbe()')
       await wait(()=>evaluate('!!document.querySelector("#pending-primary")'))
@@ -330,7 +368,12 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(await evaluate(`!!document.querySelector('[data-memo-keyboard-space]')`),false,'returning to the workout does not reuse the previous screen’s temporary clearance')
     assert.deepEqual(await workoutIdentity(),beforeKeyboard,'leaving during keyboard dismissal preserves the session')
     await verifyKeyboardField('[data-workout-memo]')
-    await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').click()`)
+    const repeatInput = 'button[aria-label="1세트 이번 반복 횟수"]'
+    await evaluate(`(() => {
+      const trigger = document.querySelector(${JSON.stringify(repeatInput)})
+      trigger.focus({preventScroll:true})
+      trigger.click()
+    })()`)
     await click('직접 입력')
     await verifyKeyboardField('dialog[open] input',true)
     assert.equal(await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(workoutFooter)})).display`),'none')
@@ -338,6 +381,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await click('취소')
     await closeKeyboard()
     await wait(()=>evaluate(`!document.querySelector('dialog[open]')&&document.querySelector(${JSON.stringify(workoutFooter)}).getClientRects().length>0`))
+    assert.equal(await evaluate(`document.activeElement.matches(${JSON.stringify(repeatInput)})`),true,'closing the wheel restores focus to its trigger')
     assert.ok(Math.abs(await evaluate('scrollY - Math.min('+modalPosition+', document.documentElement.scrollHeight-innerHeight)'))<=1,'moving to a numeric input discards the prior memo restoration')
     assert.deepEqual(await workoutIdentity(),beforeKeyboard,'keyboard and cancel retain the workout identity, draft revision and rest state')
     const plate = () => evaluate(`(() => {

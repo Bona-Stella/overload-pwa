@@ -471,7 +471,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       void controller.showDetail(detailId)
     }
   }, [detailId, accountReady, state.status, state.busy, state.detail?.id, controller])
-  const [referenceHistory, setReferenceHistory] = useState<{ key: string; sessions: Session[]; references:ReferenceRecord[]; routine:Routine|null } | null>(null)
+  const [repHistory, setRepHistory] = useState<{ key: string; sessions: Session[] } | null>(null)
+  const [referenceHistory, setReferenceHistory] = useState<{ key: string; references: ReferenceRecord[]; routine: Routine } | null>(null)
   const referenceUser = accountReady && session?.status === 'ACTIVE' ? session.userId : null
   const referenceGeneration = referenceUser ? session!.dataGeneration : null
   const referenceId = referenceUser ? session!.id : null
@@ -481,23 +482,43 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
   useEffect(() => {
     if (!referenceUser || !referenceGeneration || !referenceKey || !referenceRoutineId) return
     const abort = new AbortController(), scope = { userId: referenceUser, dataGeneration: referenceGeneration }
-    void (async()=>{
-      const routine=await api.routine(scope,referenceRoutineId,abort.signal)
-      const references:ReferenceRecord[]=[], sessions:Session[]=[]
-      let cursor:Parameters<WorkoutApi['closed']>[1]=null
+    const loadSessions = async () => {
+      const sessions: Session[] = []
+      let cursor: Parameters<WorkoutApi['closed']>[1] = null
       do {
-        const page=await api.closed(scope,cursor,abort.signal),rows=page.sessions.filter(s=>!s.deletedAt&&s.status==='FINISHED')
-        let at=0
-        await Promise.all(Array.from({length:Math.min(4,rows.length)},async()=>{
-          while(at<rows.length&&!abort.signal.aborted){const id=rows[at++].id,record=await api.detail(scope,id,abort.signal)
-            sessions.push(record)
-            if(record.initialPlan.routineId===routine.id)references.push({session:record,assessment:await api.assessment(scope,id,abort.signal)})
-          }
-        }))
-        cursor=page.next
-      }while(cursor&&!abort.signal.aborted)
-      if(!abort.signal.aborted)setReferenceHistory({key:referenceKey,sessions,references,routine})
-    })().catch(error=>{if(!abort.signal.aborted){setReferenceHistory({key:referenceKey,sessions:[],references:[],routine:null});controller.invalidateScope(error)}})
+        const page = await api.closed(scope, cursor, abort.signal)
+        const rows = page.sessions.filter(s => !s.deletedAt && s.status === 'FINISHED')
+        for (let at = 0; at < rows.length && !abort.signal.aborted; at += 4) {
+          sessions.push(...await Promise.all(rows.slice(at, at + 4).map(row => api.detail(scope, row.id, abort.signal))))
+        }
+        cursor = page.next
+      } while (cursor && !abort.signal.aborted)
+      return sessions
+    }
+    const history = loadSessions().then(sessions => {
+      // Repetition defaults only need the performed sets.
+      if (!abort.signal.aborted) setRepHistory({ key: referenceKey, sessions })
+      return sessions
+    }).catch(error => {
+      if (!abort.signal.aborted) {
+        setRepHistory({ key: referenceKey, sessions: [] })
+        controller.invalidateScope(error)
+      }
+      return null
+    })
+    const loadReferences = async () => {
+      const [sessions, routine] = await Promise.all([history, api.routine(scope, referenceRoutineId, abort.signal)])
+      if (!sessions || abort.signal.aborted) return
+      const records = sessions.filter(record => record.initialPlan.routineId === routine.id)
+      const references: ReferenceRecord[] = []
+      for (let at = 0; at < records.length && !abort.signal.aborted; at += 4) {
+        references.push(...await Promise.all(records.slice(at, at + 4).map(async session => ({
+          session, assessment: await api.assessment(scope, session.id, abort.signal),
+        }))))
+      }
+      if (!abort.signal.aborted) setReferenceHistory({ key: referenceKey, references, routine })
+    }
+    void loadReferences().catch(error => { if (!abort.signal.aborted) controller.invalidateScope(error) })
     return () => abort.abort()
   }, [api, controller, referenceUser, referenceGeneration, referenceKey, referenceRoutineId])
   const focused = visible && !opening && !!session && session.status === 'ACTIVE' && (localOnly || workoutRoute === session.id)
@@ -514,10 +535,10 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
   useEffect(() => {
     if (handoff && !summaryPending) void onNavigate?.('history', true, { [recordKey]: { id: handoff.id, summary: true, backLabel: tab === 'routines' ? '루틴으로' : '홈으로' } }, false)
   }, [handoff, summaryPending, onNavigate, recordKey, tab])
-  const settingsDetail = onSettingsBack && <>{restOpen && !shellFocused && <RestSettings key={state.userId + ':' + state.scope?.dataGeneration}
+  const settingsDetail = onSettingsBack && <>{restOpen && !shellFocused && <RestSettings key={'rest-settings:' + state.userId + ':' + state.scope?.dataGeneration}
     settings={state.userId === auth.userId && !state.revalidatingScope ? state.data?.settings : undefined} hidden={auth.status !== 'authenticated'} busy={!accountReady || state.busy} loadIssue={state.issue}
     onBack={onSettingsBack} onRequest={controller.requestRestSettings} onExitGuard={onRestExitGuard} />}
-    {(catalogOpen || cardioKey && catalogScope === cardioKey) && <PublicCatalog key={cardioKey} api={api} userId={cardioScope?.userId ?? null}
+    {(catalogOpen || cardioKey && catalogScope === cardioKey) && <PublicCatalog key={'public-catalog:' + cardioKey} api={api} userId={cardioScope?.userId ?? null}
       active={!localOnly && !shellFocused && tab === 'settings' && catalogOpen} enabled={accountReady} onInvalid={controller.invalidateScope} onBack={onSettingsBack} />}</>
   if (!retainOnlineViews && !preserveDrafts) return present(auth.status === 'authenticated' && auth.pending === null && !auth.accountOpen && tab === 'home'
     ? <HomeStartup /> : settingsDetail)
@@ -618,7 +639,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
     {localSession && <LocalWorkoutScreen key={editorIdentity(localSession)}
       assessmentApi={localOnly ? undefined : api}
       visible={focused || summaryPending} preparingSummary={summaryPending} onHome={leaveWorkout} backLabel={tab === 'routines' ? '루틴' : undefined}
-      history={referenceHistory?.key === localReferenceKey ? referenceHistory.sessions : []}
+      history={repHistory?.key === localReferenceKey ? repHistory.sessions : referenceKey && referenceKey === localReferenceKey ? null : []}
       referenceRecords={referenceHistory?.key===localReferenceKey?referenceHistory.references:[]} referenceRoutine={referenceHistory?.key===localReferenceKey?referenceHistory.routine:null}
       server={localSession} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline} onWorkoutChange={setHomeWorkout} onOpened={onEditorOpened}
       sync={{ api, online: () => { const a = authentication.getSnapshot(), s = controller.getSnapshot(); return a.status === 'authenticated' && a.pending === null && a.userId === localSession.userId && s.status === 'ready' && !s.busy }, onServer: controller.observeSession, onInvalid: controller.invalidateScope }} authenticated={!localOnly && auth.pending === null && state.status === 'ready' && !state.busy} />}

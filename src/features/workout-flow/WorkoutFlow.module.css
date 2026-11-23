@@ -120,7 +120,11 @@
 .setsHeading > b { text-align: right; font-size: 13px; white-space: nowrap; }
 .sets > :is(div, progress) { margin-inline: 3px; }
 .setProgress { width: calc(100% - 6px); margin-block: 0; }
-.setHead, .setRow { display: grid; grid-template-columns: minmax(26px, .5fr) minmax(44px, .85fr) minmax(136px, 2fr) 44px; gap: 3px; align-items: center; text-align: center; }
+.setHead, .setRow { display: grid; grid-template-columns: minmax(var(--set-number-min, 26px), .5fr) minmax(44px, .85fr) minmax(176px, 2fr) 44px; gap: 3px; align-items: center; text-align: center; }
+@media (max-width: 350px) {
+  .sets > [role="table"] { margin-inline: -8px; }
+  .setHead, .setRow { --set-number-min: 22px; column-gap: 1px; }
+}
 .setHead { color: var(--text-muted); font-size: 10px; padding: 9px 0 3px; }
 .setRow { border-top: 1px solid var(--line); padding-block: 6px; font-size: 12px; }
 .setValues { display: grid; gap: 3px; min-width: 0; }

@@ -543,6 +543,8 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.deepEqual(await optionFonts('[aria-label="루틴 태그 선택"] [role="option"]'), homeOptionFonts)
     await click('루틴 태그', 'ariaLabel')
     await click('+ 웨이트 종목 추가')
+    await wait(() => evaluate(`!!document.querySelector('[aria-label="표준 운동 목록"] button')`), 'routine picker opened')
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"]')).maxHeight`), '218px')
     await wait(() => evaluate('document.querySelector("[aria-label=\'표준 운동 목록\'] button")?.click() || !!document.querySelector("[aria-label=\'웨이트 1\']")'), 'choose weight')
     await click('설정 중량', 'ariaLabel'); await click('직접 입력'); await set('dialog[open] input', '20'); await click('확인', 'textContent', 'dialog[open] button')
     await click('+ 유산소 종목 추가'); await click('달리기')
@@ -836,6 +838,15 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     const names = () => evaluate(`[...document.querySelectorAll('${list} strong')].map(row => row.textContent)`)
     const query = '.exercise-search input[type="search"]'
     const parts = ['전체', '가슴', '등', '어깨', '팔', '하체', '코어', '유산소', '기타']
+    await verifyWidth(393)
+    const catalogLayout = await evaluate(`(() => {
+      const title=document.activeElement, header=title.closest('header'), list=document.querySelector('${list}')
+      const picker=header.querySelector('button'), icon=picker.querySelector('svg')
+      return {header:header.offsetHeight, button:picker.offsetWidth, icon:icon.getBoundingClientRect().width,
+        list:list.clientHeight, scrollable:list.scrollHeight>list.clientHeight}
+    })()`)
+    assert.deepEqual([catalogLayout.header,catalogLayout.button,catalogLayout.icon],[44,44,24])
+    assert.ok(catalogLayout.list>218 && catalogLayout.scrollable)
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${group} button')].map(b=>b.textContent)`),parts)
     assert.deepEqual(await tagAppearance(group), homeTagAppearance)
     assert.equal(await evaluate('document.querySelectorAll(".exercise-search select").length'),0)

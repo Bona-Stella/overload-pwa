@@ -10,16 +10,18 @@
   color: var(--text-primary);
 }
 .shell .content {
+  --page-top-inset: calc(20px + env(safe-area-inset-top));
+  --page-bottom-inset: calc(28px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: calc(20px + env(safe-area-inset-top)) var(--space-page) calc(28px + env(safe-area-inset-bottom) + var(--editor-keyboard-space, 0px));
+  padding: var(--page-top-inset) var(--space-page) calc(var(--page-bottom-inset) + var(--editor-keyboard-space, 0px));
   min-width: 0;
 }
 .content > * { min-width: 0; }
-.shell .homeContent { padding-top: calc(18px + env(safe-area-inset-top)); padding-inline: var(--space-page); }
+.shell .homeContent { --page-top-inset: calc(18px + env(safe-area-inset-top)); }
 .content > :global(#auth-feedback:empty) { position: absolute; width: 1px; height: 1px; overflow: hidden; }
-.shell .withTabs { padding-bottom: calc(var(--tabs-height) + var(--tabs-offset) + 16px + var(--editor-keyboard-space, 0px)); }
+.shell .withTabs { --page-bottom-inset: calc(var(--tabs-height) + var(--tabs-offset) + 16px); }
 .shell[data-keyboard-open], .shell:has([data-workout-frame] [data-workout-memo]:focus, [data-memo-keyboard-space]:not([hidden]) [data-workout-memo]) { overflow-anchor: none; }
 /* WorkoutFrame owns the measured fixed-action and Safe Area clearance. */
 .shell .content:has(> [data-workout-frame]:not([hidden])),

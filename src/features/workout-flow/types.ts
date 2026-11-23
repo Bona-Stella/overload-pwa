@@ -5,7 +5,7 @@ import type { CardioMeasurementDraft } from '../workout-online/cardio-measuremen
 export type WeightMode = 'approved' | 'today' | 'progression'
 export type SetDraft = { kg: string; reps: string; additional: string }
 export type SetResult = Equipment & { kg: string; reps: number; additionalKg: string | null; mode: WeightMode; at: number }
-export type SetRow = { id: number; draft: SetDraft; previous?: SetDraft; result?: SetResult }
+export type SetRow = { id: number; draft: SetDraft; previous?: SetDraft; result?: SetResult; repsPending?: boolean }
 export type WeightFocusData = Equipment & {
   id: string; standardId: string; name: string; min: number; max: number
   working: string; approved: string | null; mode: WeightMode; sets: SetRow[]; memo: string

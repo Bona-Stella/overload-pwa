@@ -4,6 +4,7 @@ import type { EditorState } from './controller.ts'
 import type { CardioTimer, LocalWorkout } from './types.ts'
 import { slotKey } from './types.ts'
 import { draftFor, elapsed, emptyTimer } from './model.ts'
+import { count } from '../workout-online/validation.ts'
 
 export function workoutExerciseName(id: string, snapshot: LocalWorkout['snapshot'], initialPlan: LocalWorkout['initialPlan'],
   definitions: StandardExercise[], names?: LocalWorkout['exerciseNames']) {
@@ -29,8 +30,12 @@ export function previousRecords(history: Session[], workout: LocalWorkout, id: s
   }
   return new Map()
 }
-export function inputDraft(workout: LocalWorkout, id: string, ordinal: number, history: Session[]) {
-  return workout.drafts[slotKey(id, ordinal)] ?? { ...draftFor(workout, id, ordinal), reps: previousRecords(history, workout, id).get(ordinal)?.reps ?? '' }
+function draftFromPrevious(workout: LocalWorkout, id: string, ordinal: number, previous?: string) {
+  return { ...draftFor(workout, id, ordinal), reps: previous !== undefined && count(Number(previous)) ? previous : '' }
+}
+export function inputDraft(workout: LocalWorkout, id: string, ordinal: number, history: Session[] | null) {
+  return workout.drafts[slotKey(id, ordinal)]
+    ?? draftFromPrevious(workout, id, ordinal, history ? previousRecords(history, workout, id).get(ordinal)?.reps : undefined)
 }
 /** Keep the server's full count, but bound pending controls as in the existing real editor. */
 export function plannedOrdinals(workout: LocalWorkout, id: string) {
@@ -41,14 +46,14 @@ export function plannedOrdinals(workout: LocalWorkout, id: string) {
   for (let ordinal = 1; ordinals.size < visible; ordinal++) if (!excluded.has(ordinal)) ordinals.add(ordinal)
   return [...ordinals].sort((a, b) => a - b)
 }
-export function flowWeights(state: EditorState, history: Session[] = [], definitions: StandardExercise[] = []): WeightFocusData[] {
+export function flowWeights(state: EditorState, history: Session[] | null = [], definitions: StandardExercise[] = []): WeightFocusData[] {
   const w = state.workout!
   return w.snapshot.appliedPlan.weightExercises.map(plan => {
     const id = plan.sessionExerciseId, initial = w.initialPlan.weightExercises.find(p => p.sessionExerciseId === id)
     const working = w.weights[id]
     const requests = w.snapshot.approvalRequests.filter(r => r.sessionExerciseId === id)
     const applied = requests.filter(r => w.approvalResults.some(a => a.id === r.id && a.status === 'APPLIED')).at(-1)
-    const previous = previousRecords(history, w, id)
+    const previous = previousRecords(history ?? [], w, id)
     const performed = w.snapshot.performedSets.filter(s => s.sessionExerciseId === id)
     return { id, standardId: w.snapshot.sessionExercises.find(e => e.id === id)?.standardExerciseId ?? '',
       plannedCount: plan.setCount,
@@ -58,10 +63,13 @@ export function flowWeights(state: EditorState, history: Session[] = [], definit
       mode: working?.context.kind === 'INITIAL_APPROVED' ? 'approved' : working?.context.kind === 'APPROVAL_REQUEST' ? 'progression' : 'today',
       memo: state.memos?.[id] ?? w.equipmentMemos?.[id] ?? '',
       sets: plannedOrdinals(w, id).map(ordinal => {
-        const value = state.drafts[slotKey(id, ordinal)] ?? inputDraft(w, id, ordinal, history)
+        const key = slotKey(id, ordinal)
+        const existing = state.drafts[key] ?? w.drafts[key]
+        const prior = previous.get(ordinal)
+        const value = existing ?? draftFromPrevious(w, id, ordinal, prior?.reps)
         const result = performed.find(s => s.ordinal === ordinal)
         return { id: ordinal, draft: { kg: value.weight, reps: value.reps, additional: value.additionalWeight ?? '' },
-          previous: previous.get(ordinal), ...(result ? { result: resultView(result) } : {}) }
+          previous: prior, repsPending: history === null && !existing, ...(result ? { result: resultView(result) } : {}) }
       }) }
   })
 }
