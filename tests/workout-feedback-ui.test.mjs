@@ -30,6 +30,59 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
 
 
     await wait(()=>evaluate('!!window.feedback?.ready'))
+    await t.test('transient button locks keep geometry and defer progress without leaving a stale spinner', async () => {
+      await evaluate('window.feedback.mountButtonProbe()')
+      await wait(()=>evaluate('!!document.querySelector("#pending-primary")'))
+      const trace = (duration, fail = false) => evaluate(`(async () => {
+        const button=document.querySelector('#pending-primary'),peer=document.querySelector('#pending-peer'),unavailable=document.querySelector('#pending-unavailable')
+        const sample=()=>{
+          const style=getComputedStyle(button), {x,y,width,height}=button.getBoundingClientRect()
+          return {position:[x,y,width,height],background:style.backgroundColor,opacity:style.opacity,
+            spinner:!!button.querySelector('[data-button-spinner]'),color:style.color,label:button.textContent,
+            peerOpacity:getComputedStyle(peer).opacity,unavailableOpacity:getComputedStyle(unavailable).opacity,
+            busy:button.getAttribute('aria-busy'),disabled:button.disabled}
+        }
+        const trial=window.feedback.buttonTrial={calls:0,fail:${fail}},before=sample(),frames=[]
+        const started=performance.now()
+        button.click()
+        await new Promise(requestAnimationFrame)
+        button.click()
+        const timer=setTimeout(()=>trial.finish(),Math.max(0,${duration}-(performance.now()-started)))
+        try{
+          while(performance.now()-started<2000){
+            frames.push({...sample(),elapsed:performance.now()-started})
+            if(!button.disabled)break
+            await new Promise(requestAnimationFrame)
+          }
+        }finally{clearTimeout(timer)}
+        return {before,frames,calls:trial.calls,issue:!!document.querySelector('#pending-primary ~ [role=alert]')}
+      })()`)
+      try {
+        for(const ms of [80,195,275,650,625]){
+          const fail=ms===625,{before,frames,calls,issue}=await trace(ms,fail)
+          assert.equal(calls,1);assert.equal(issue,fail)
+          const locked=frames.filter(frame=>frame.disabled)
+          assert.ok(locked.length>0 && locked.every(frame=>frame.busy==='true'))
+          for(const frame of locked){
+            assert.deepEqual(frame.position,before.position)
+            assert.equal(frame.background,before.background)
+            assert.equal(frame.opacity,'1');assert.equal(frame.peerOpacity,'1');assert.equal(frame.unavailableOpacity,'0.42')
+            assert.equal(frame.label,before.label)
+            if(!frame.spinner)assert.equal(frame.color,before.color)
+          }
+          const firstSpinner=locked.find(frame=>frame.spinner)
+          if(ms<300)assert.equal(firstSpinner,undefined)
+          else assert.ok(firstSpinner && firstSpinner.elapsed>=290 && firstSpinner.elapsed<550)
+          assert.equal(frames.at(-1).disabled,false);assert.equal(frames.at(-1).spinner,false)
+        }
+        await evaluate(`window.feedback.buttonTrial={calls:0};document.querySelector('#pending-primary').click()`)
+        await wait(()=>evaluate('document.querySelector("#pending-primary").disabled'))
+        await evaluate('window.feedback.unmountButtonProbe();window.feedback.mountButtonProbe()')
+        await wait(()=>evaluate('!!document.querySelector("#pending-primary")'))
+        await new Promise(resolve=>setTimeout(resolve,350))
+        assert.equal(await evaluate(`!document.querySelector('#pending-primary').disabled && !document.querySelector('#pending-primary [data-button-spinner]')`),true)
+      } finally { await evaluate('window.feedback.unmountButtonProbe()') }
+    })
     const click=async text=>{await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled).click()`)}
     const viewport = width => send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true})
     const closeKeyboard = async () => {
@@ -937,9 +990,14 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await evaluate('Object.assign(window.feedback.approvalNetwork,{rejectPost:false,failAfterPost:true,holdPost:true})')
     await click('선택 승인'); await click('승인 확인')
     await wait(()=>evaluate('!!window.feedback.approvalNetwork.resumePost'))
-    assert.deepEqual(await approveButton(),['선택 승인 처리 중…',true])
+    assert.deepEqual(await approveButton(),['선택 승인',true])
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('${reviewCard} .approval-toolbar button')).backgroundColor`),'rgba(0, 0, 0, 0)')
-    await evaluate('[...document.querySelectorAll("dialog[open] button")].find(b=>b.textContent==="저장 확인 중…").click()')
+    assert.deepEqual(await evaluate(`(() => {
+      const button = document.querySelector('dialog[open] button[aria-busy="true"]')
+      return [button.textContent,button.disabled,getComputedStyle(button).opacity,!!button.querySelector('[data-button-spinner]')]
+    })()`), ['승인 확인',true,'1',false])
+    await evaluate('document.querySelector(\'dialog[open] button[aria-busy="true"]\').click()')
+    await wait(()=>evaluate('!!document.querySelector("dialog[open] [data-button-spinner]")'))
     assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),2)
     await evaluate('window.feedback.approvalNetwork.holdPost=false;window.feedback.approvalNetwork.resumePost()')
     await wait(()=>evaluate('document.querySelector("dialog[open] [role=alert]")?.textContent.includes("서버가 승인 요청을 수락했습니다")'))

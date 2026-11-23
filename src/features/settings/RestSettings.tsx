@@ -111,7 +111,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
             <h2>반복 구간별 휴식 시간</h2>
             <p>{draft ? '구간별 휴식 시간을 수정할 수 있어요.' : '목표 반복 횟수에 따른 휴식 기준'}</p>
           </div>
-          <Button className={styles.cardAction} disabled={busy || saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>
+          <Button className={styles.cardAction} disabled={busy && !saving} pending={saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>
         </div>
         {draft ? <>
           <div className={`${styles.columns} ${styles.labels}`} aria-hidden="true"><span>시작 세트</span><span>끝 세트</span><span>휴식 (초)</span></div>
@@ -147,7 +147,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
       {draft && <>
         {issue && <StatusNotice error>{issue}</StatusNotice>}
         {refreshed && <StatusNotice>최신 저장값은 {bands.map(({ field }) => `${settings[field]}초`).join(' · ')}입니다. 입력한 값을 확인한 뒤 다시 저장해 주세요.</StatusNotice>}
-        <Button type="submit" className={styles.save} disabled={busy} loading={saving}>
+        <Button type="submit" className={styles.save} disabled={busy && !saving} loading={saving}>
           {reloading ? '최신 설정 다시 확인' : '변경 사항 저장'}
         </Button>
       </>}

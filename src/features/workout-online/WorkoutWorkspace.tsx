@@ -86,7 +86,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const [editorRetry, setEditorRetry] = useState(0)
   const [startingRoutine, setStartingRoutine] = useState<string | null>(null)
   const startWaiting = !!startingRoutine || openingWorkout
-  const showStartSpinner = useDelayedPending(startWaiting)
+  const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
   const startPending = useRef(false)
   const setEditor = (next: RoutineEditorState | null, fromDetail = false) => {
     setEditorData(next)
@@ -205,15 +205,18 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     }
   }
   async function deleteRoutine(id: string) {
-    if (managementBlocked) return
+    if (managementBlocked || deletingRoutine) return
     const origin = window.history.state?.overloadNavigation
-    await controller.select(id)
-    const current = controller.getSnapshot()
-    if (window.history.state?.overloadNavigation !== origin || current.active || current.attempt || current.selected?.id !== id ||
-      !window.confirm('이 루틴을 삭제할까요? 모든 주간 일정의 배정이 해제되며 기존 운동 기록은 보존합니다.')) return
-    await controller.deleteRoutine()
-    training.refresh()
-    if (!controller.getSnapshot().selected && editorRoute) backFromEditor()
+    setDeletingRoutine(id)
+    try {
+      await controller.select(id)
+      const current = controller.getSnapshot()
+      if (window.history.state?.overloadNavigation !== origin || current.active || current.attempt || current.selected?.id !== id ||
+        !window.confirm('이 루틴을 삭제할까요? 모든 주간 일정의 배정이 해제되며 기존 운동 기록은 보존합니다.')) return
+      await controller.deleteRoutine()
+      training.refresh()
+      if (!controller.getSnapshot().selected && editorRoute) backFromEditor()
+    } finally { setDeletingRoutine(null) }
   }
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
@@ -275,13 +278,13 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         navigationKey={scheduleKey} onClose={closeScheduleEditor} onReload={() => { if (schedule) setScheduleEditor({ type: 'order', base: schedule }, true) }}
         onSave={async entries => !!await training.write({ type: 'rotate', enabled: scheduleEditor.base.autoEnabled, entries }, scheduleEditor.base)} />}
       {editor?.readOnly && editor.routine && <RoutineDetail routine={editor.routine} exercises={state.data.exercises} activities={activities} manufacturers={state.data.manufacturers}
-        presets={schedule?.presets} scheduleLoading={training.loading} timeZone={schedule?.timeZone ?? undefined} managementBlocked={managementBlocked}
+        presets={schedule?.presets} scheduleLoading={training.loading} timeZone={schedule?.timeZone ?? undefined} managementBlocked={managementBlocked} deleting={deletingRoutine === editor.routine.id}
         onBack={backFromEditor} onEdit={() => { if (!managementBlocked) setEditor({ ...editor, readOnly: false }, true) }}
         onDelete={() => { if (editor.routine) void deleteRoutine(editor.routine.id) }}
         start={<>
           {editorRefresh?.failed && <Button onClick={() => controller.retryRoutineRefresh(editor.routine!.id)}>루틴 다시 조회</Button>}
-          <Button variant="primary" data-transition-pending={startWaiting || undefined} loading={showStartSpinner || !!editorRefresh && !editorRefresh.failed}
-            disabled={!supportsWorkoutEditing() || managementBlocked || !state.localReady || startWaiting || !!editorRefresh}
+          <Button variant="primary" loading={startWaiting || !!editorRefresh && !editorRefresh.failed}
+            disabled={!startWaiting && (!supportsWorkoutEditing() || managementBlocked || !state.localReady || !!editorRefresh?.failed)}
             onClick={() => void startRoutine(editor.routine!)}>온라인으로 운동 시작</Button>
         </>} />}
       {editor && !editor.readOnly && <RoutineForm key={editor.routine?.id ?? 'new'} routine={editor.routine} activities={activities}
@@ -317,16 +320,17 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             }}>최신 버전 사용</button></>
           : <p role="status">이 일정이 삭제되었거나 더 이상 조회할 수 없습니다.</p>)}
         <div className="row">
-          <button type="button" className="outline" disabled={busy} onClick={() => setRenaming(null)}>취소</button>
-          <button className="primary" disabled={scheduleBlocked || !!renameStale}>{busy ? '저장 중…' : '저장'}</button>
+          <button type="button" className="outline" disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setRenaming(null)}>취소</button>
+          <button className="primary" disabled={scheduleBlocked || !!renameStale} aria-busy={training.busy || undefined} data-button-pending={training.busy && !renameStale || undefined}>저장</button>
         </div>
       </form>
     </Dialog>}
     {enabled && deleting && deletingPreset && <Dialog title="주간 일정 삭제" onClose={() => { if (!busy) setDeleting(null) }}>
       <p>“{deletingPreset.name}” 일정을 삭제할까요? 이 일정에 저장된 요일 배정이 사라집니다.</p>
       {training.writeIssue && <p role="alert">{training.writeIssue}</p>}
-      <div className="row"><button type="button" disabled={busy} onClick={() => setDeleting(null)}>취소</button>
+      <div className="row"><button type="button" disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setDeleting(null)}>취소</button>
         <button type="button" className="danger" disabled={scheduleBlocked || deleting.base.version !== schedule?.version}
+          aria-busy={training.busy || undefined} data-button-pending={training.busy && deleting.base.version === schedule?.version || undefined}
           onClick={async () => { if (await training.write({ type: 'delete', id: deleting.id }, deleting.base)) setDeleting(null) }}>일정 삭제</button></div>
     </Dialog>}
   </section>

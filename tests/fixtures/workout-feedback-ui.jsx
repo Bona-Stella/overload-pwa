@@ -205,6 +205,27 @@ const authInput = new URLSearchParams(location.search).get('input')
 const now = Date.now()
 const challenge = authInput === 'otp' ? { id:'fixture', email:'sample@example.invalid', expiresAt:now+300000 } : null
 const root = createRoot(document.getElementById('root'))
+function ButtonTimingProbe() {
+  const [loading,setLoading]=useState(false), [issue,setIssue]=useState(false)
+  return <section className="theme">
+    <Button id="pending-primary" variant="primary" loading={loading} onClick={()=>{
+      const trial=window.feedback.buttonTrial
+      trial.calls++
+      setIssue(false)
+      setLoading(true)
+      trial.finish=()=>{setIssue(trial.fail);setLoading(false)}
+    }}>버튼 처리 확인</Button>
+    <Button id="pending-peer" pending={loading}>취소</Button>
+    <Button id="pending-unavailable" disabled loading={loading}>실행 불가</Button>
+    {issue&&<p role="alert">실패 예시</p>}
+  </section>
+}
+window.feedback.mountButtonProbe=()=>{
+  const host=document.body.appendChild(document.createElement('div'))
+  const probe=createRoot(host)
+  probe.render(<ButtonTimingProbe/>)
+  window.feedback.unmountButtonProbe=()=>{probe.unmount();host.remove()}
+}
 if(authInput==='rest-safety')root.render(<RestSafetyFixture/>)
 else if(authInput) void import('../../src/features/auth/auth.css').then(()=>root.render(<AppShell authenticated={false} tab="home" onNavigate={()=>{}}>
   <LoginScreens state={{pending:null,challenge,resendAt:0,verifyAt:0,notice:'',updatedAt:now}} controller={{}} now={now} onLegal={()=>{}} />

@@ -29,10 +29,10 @@ function ExerciseHeading({ index, name }: { index: number; name: string }) {
   </h3>
 }
 
-export function RoutineDetail({ routine, exercises, activities, manufacturers, presets, scheduleLoading, timeZone, managementBlocked, onBack, onEdit, onDelete, start }: {
+export function RoutineDetail({ routine, exercises, activities, manufacturers, presets, scheduleLoading, timeZone, managementBlocked, deleting, onBack, onEdit, onDelete, start }: {
   routine: Routine; exercises: StandardExercise[]; activities: CardioActivity[]; manufacturers: Manufacturer[]; presets?: SchedulePreset[]
   scheduleLoading?: boolean; timeZone?: string; managementBlocked: boolean
-  onBack: () => void; onEdit: () => void; onDelete: () => void; start?: ReactNode
+  onBack: () => void; onEdit: () => void; onDelete: () => void; start?: ReactNode; deleting?: boolean
 }) {
   const weights = activeWeights(routine)
   const cardio = activeCardio(routine)
@@ -114,7 +114,7 @@ export function RoutineDetail({ routine, exercises, activities, manufacturers, p
     </section>
     <div className={styles.actions}>
       {start}
-      <Button variant="danger" className={styles.delete} disabled={managementBlocked} onClick={onDelete}>
+      <Button variant="danger" className={styles.delete} disabled={managementBlocked && !deleting} loading={deleting} onClick={onDelete}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 7h14m-9 0V4h4v3m-7 0 1 13h8l1-13m-6 3v7m3-7v7" /></svg>
         루틴 삭제
       </Button>

@@ -1,10 +1,7 @@
 .button { min-height: 44px; padding: 11px 16px; transition: background-color .15s, border-color .15s; }
-.button[data-transition-pending]:disabled { opacity: 1; cursor: pointer; }
-.button[data-transition-pending]:disabled:hover { filter: brightness(1.13); }
 .loadingButton { position: relative; }
-.busyLabel { display: contents; opacity: 0; }
 .loadingButton { color: transparent !important; }
-.busyLabel > * { opacity: 0; }
+.loadingButton > :not([data-button-spinner]) { opacity: 0; }
 .buttonSpinner { position: absolute; inset: 0; margin: auto; width: 1em; height: 1em; border: 2px solid var(--text-muted); border-top-color: var(--text-primary); border-radius: 50%; animation: button-spin .75s linear infinite; }
 @keyframes button-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) { .buttonSpinner { animation: none; } }

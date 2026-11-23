@@ -7,7 +7,7 @@ export function RecordSubpageHeader({ title, onBack, backLabel = '기록으로',
   brandImage?: { src: string; alt: string; width: number; height: number }
 }) {
   return <header className={styles.header}>
-    {onBack&&<Button variant="quiet" className={styles.back} aria-label={backLabel} onClick={onBack} disabled={backDisabled}>
+    {onBack&&<Button variant="quiet" className={styles.back} aria-label={backLabel} onClick={onBack} pending={backDisabled}>
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
     </Button>}
     <h1 className={styles.title} ref={headingRef} tabIndex={headingRef ? -1 : undefined}>{title}</h1>

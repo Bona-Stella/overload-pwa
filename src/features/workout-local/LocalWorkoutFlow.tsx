@@ -254,8 +254,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   })
   const finalActions = <>{allWeights && <Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>}
     {pending ? <><Button variant="primary" onClick={() => go(pending.id)}>다음 종목으로</Button>
-      {allWeights && <Button variant="quiet" disabled={finishInFlight} data-transition-pending={finishInFlight || undefined} loading={showFinishWait && modal !== 'end'} onClick={() => void end()}>남은 유산소 건너뛰고 종료</Button>}</>
-      : <Button variant="primary" disabled={finishInFlight} data-transition-pending={finishInFlight || undefined} loading={showFinishWait && modal !== 'end'} onClick={() => void end()}>운동 종료 및 요약</Button>}</>
+      {allWeights && <Button variant="quiet" pending={finishInFlight} loading={finishInFlight && modal !== 'end'} onClick={() => void end()}>남은 유산소 건너뛰고 종료</Button>}</>
+      : <Button variant="primary" pending={finishInFlight} loading={finishInFlight && modal !== 'end'} onClick={() => void end()}>운동 종료 및 요약</Button>}</>
   const candidate = (finishInFlight ? finishAssessment : progressAssessment)?.evaluation?.exercises.find(e => e.sessionExerciseId === id)
   const advice = weight && completeWeight && weight.mode !== 'today' && candidate?.eligible && candidate.comparisonContext
     && decimalDraft(weight.working) === candidate.comparisonContext.approvedWeightKg ? candidate : null
@@ -277,7 +277,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     onEnd={endRest}
     onExtend={() => { if (!manualEndPending.current) void act(w => { const current = model.exerciseRest(w, id); if (current) current.endsAt = new Date(Date.parse(current.endsAt) + 30000).toISOString() }) }} />
   else if (weight && nextSet) actions = <Button className={restProtected || endingRest ? styles.restProtected : undefined}
-    variant="primary" data-click-action={id + ':complete:' + nextSet.id} disabled={restProtected || endingRest}
+    variant="primary" data-click-action={id + ':complete:' + nextSet.id} pending={restProtected || endingRest}
     loading={completingSet === nextSet.id} onClick={() => complete(nextSet.id)}>{nextSet.id}세트 완료</Button>
   else if (weight) actions = finalActions
   else if (activity?.phase === 'review') actions = <Button variant="primary" onClick={() => void completeExercise((w, at) => model.completeCardio(w, id, at, createSetId)).then(saved => { if (saved && controller.getSnapshot().workout?.currentExerciseId === id) window.scrollTo(0, 0) })}>유산소 기록 확정</Button>
@@ -412,6 +412,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         if (w.timers[id]) w.timers[id].reviewing = false
       }, true)} />}
     {modal === 'end' && <ConfirmWorkoutAction saveIssue={issue} title="운동을 종료할까요?" message="완료한 수행과 실제 종료 시각을 보존한 뒤 서버 종료 결과를 확인합니다. 미완료 수행은 자동 완료하지 않습니다."
-      action="운동 종료 및 요약" pending={finishing} loading={finishing && showFinishWait} onClose={() => { if (!finishing) setModal(null) }} onConfirm={() => void end()} />}
+      action="운동 종료 및 요약" pending={finishing} onClose={() => { if (!finishing) setModal(null) }} onConfirm={() => void end()} />}
   </>
 }

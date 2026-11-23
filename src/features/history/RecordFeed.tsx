@@ -131,7 +131,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
       const detail=preview?.sessions.find(s=>s.id===row.id)??(cached?.userId===userId&&cached.dataGeneration===dataGeneration&&cached.version===row.version?cached:undefined)
       return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={detail} onOpen={onOpen} timeZone={zone}/></Fragment>
     })}</div>
-    {page?.next && <Button loading={loadingMore} disabled={busy} onClick={() => void load(page.next)}>이전 기록 더 불러오기</Button>}
+    {page?.next && <Button loading={loadingMore} disabled={!enabled || busy && !loadingMore} onClick={() => void load(page.next)}>이전 기록 더 불러오기</Button>}
     {issue && <Button disabled={!enabled || busy} onClick={() => void load()}>다시 조회</Button>}
   </section>
 }

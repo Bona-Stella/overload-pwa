@@ -211,13 +211,20 @@ test('independent common UI preview renders reusable controls and handles intera
     await click('알림 닫기')
 
     await click('삭제 확인')
+    const deleteStyle = await evaluate(`(() => {
+      const button = document.querySelector('dialog button[data-appearance="danger-primary"]')
+      return [getComputedStyle(button).backgroundColor, button.getBoundingClientRect().toJSON()]
+    })()`)
     await click('삭제', 'dialog button')
-    assert.equal(await evaluate(`(() => {
+    const deleteButton = `(() => {
       const button = document.querySelector('dialog button[aria-busy="true"]')
-      if (!button?.disabled || button.innerText !== '삭제 중') return false
       button.click()
-      return getComputedStyle(button).backgroundColor === 'rgb(48, 33, 39)'
-    })()`), true)
+      return { disabled:button.disabled, label:button.innerText, opacity:getComputedStyle(button).opacity, spinner:!!button.querySelector('[data-button-spinner]'),
+        style:[getComputedStyle(button).backgroundColor, button.getBoundingClientRect().toJSON()] }
+    })()`
+    assert.deepEqual(await evaluate(deleteButton), { disabled:true, label:'삭제', opacity:'1', spinner:false, style:deleteStyle })
+    await waitFor(() => evaluate("!!document.querySelector('dialog button [data-button-spinner]')"), 'delayed delete spinner')
+    assert.deepEqual(await evaluate(deleteButton), { disabled:true, label:'삭제 중', opacity:'1', spinner:true, style:deleteStyle })
     await modalClosed()
     await status('삭제 동작이 완료됐어요.')
     await click('알림 닫기')
@@ -225,6 +232,8 @@ test('independent common UI preview renders reusable controls and handles intera
     await click('저장 처리 중')
     await click('저장', 'dialog button')
     assert.equal(await evaluate("document.querySelector('dialog button[aria-busy=true]').disabled"), true)
+    assert.equal(await evaluate("document.querySelector('dialog button[aria-busy=true]').innerText"), '저장')
+    await waitFor(() => evaluate("!!document.querySelector('dialog button [data-button-spinner]')"), 'delayed save spinner')
     assert.equal(await evaluate("document.querySelector('dialog button[aria-busy=true]').innerText"), '저장 중')
     await modalClosed()
     await status('변경 사항이 저장됐어요.')
@@ -253,6 +262,7 @@ test('independent common UI preview renders reusable controls and handles intera
     await capture('393-buttons', 'button[data-size=regular]')
     await click('변경 사항 저장', 'button[data-size=regular]')
     assert.equal(await evaluate("document.querySelector('button[aria-busy=true]').disabled"), true)
+    await waitFor(() => evaluate("!!document.querySelector('button [data-button-spinner]')"), 'delayed common spinner')
     await capture('393-loading-button', 'button[aria-busy=true]')
     await waitFor(() => evaluate("!document.querySelector('button[aria-busy=true]')"), 'save completed')
     await click('알림 닫기')

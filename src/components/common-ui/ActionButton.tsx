@@ -1,4 +1,5 @@
 import type { ComponentPropsWithoutRef } from 'react'
+import { useDelayedPending } from '../useDelayedPending'
 import styles from './ActionButton.module.css'
 
 type ActionButtonProps = ComponentPropsWithoutRef<'button'> & {
@@ -13,19 +14,22 @@ export function ActionButton({
   disabled, type = 'button', className, children, ...props
 }: ActionButtonProps) {
   const hasLoadingState = loading !== undefined || loadingLabel !== undefined
+  const pending = !!loading && !disabled
+  const showSpinner = useDelayedPending(pending)
   return <button
     {...props}
     type={type}
     className={className ? `${styles.button} ${className}` : styles.button}
     data-appearance={appearance}
     data-size={size}
+    data-button-pending={pending || undefined}
     disabled={disabled || loading}
     aria-busy={loading || undefined}
   >
-    <span className={styles.content} aria-hidden={loading || undefined}>{children}</span>
-    {hasLoadingState && <span className={styles.content} aria-hidden={loading ? undefined : true}>
-      <span className={styles.spinner} aria-hidden="true" />
-      {loadingLabel ?? '처리 중'}
+    <span className={styles.content} data-progress-hidden={showSpinner && !loadingLabel || undefined} aria-hidden={showSpinner && !!loadingLabel || undefined}>{children}</span>
+    {hasLoadingState && <span className={styles.content} data-progress-visible={showSpinner ? true : undefined} aria-hidden={!showSpinner || !loadingLabel || undefined}>
+      <span className={styles.spinner} data-button-spinner={showSpinner || undefined} aria-hidden="true" />
+      {loadingLabel}
     </span>}
   </button>
 }

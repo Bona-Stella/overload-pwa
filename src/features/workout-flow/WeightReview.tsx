@@ -61,10 +61,10 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
   return <Card className={readOnly ? styles.reviewCard : `${styles.reviewCard} ${detailStyles.pendingReview}`} aria-label={readOnly?"당시 중량 검토":"중량 검토 카드"}>
     <div className="section-heading approval-toolbar">
       <h2 className={detailStyles.reviewTitle}>{readOnly?'당시 중량 검토':'중량 변경 검토 사항'}</h2>
-      {!readOnly && <Button className={styles.approveButton} disabled={disabled||saving||!onApprove&&!preview||!targets.length}
-        aria-busy={saving || undefined} title={preview?'서버에 저장하지 않는 합성 승인 시연':undefined}
+      {!readOnly && <Button className={styles.approveButton} disabled={!targets.length||!onApprove&&!preview||disabled&&!saving} pending={saving}
+        title={preview?'서버에 저장하지 않는 합성 승인 시연':undefined}
         onClick={event => { closePointerGuard.arm(event); setConfirmationIssue(''); setConfirming(targets.map(w => w.id)) }}>
-        {approvalLabel}{saving && ' 처리 중…'}
+        {approvalLabel}
       </Button>}
     </div>
     {readOnly&&<p className="muted small">운동 종료 당시 저장된 판정 · 현재 승인 중량과 정정 후 평가는 별개입니다.</p>}
@@ -91,12 +91,12 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
           <CircleCheck label={weight.name + ' 승인 선택'} disabled={disabled||saving} checked={!excluded.includes(weight.id)}
             onCheckedChange={checked => setExcluded(ids => checked ? ids.filter(id => id !== weight.id) : [...ids, weight.id])} />
           <h3 title={weight.name}>{weight.name}</h3>
-          <Button className={styles.reviewButton} disabled={disabled||saving} onClick={event => { closePointerGuard.arm(event); setModal(weight.id) }}>무게 수정</Button>
+          <Button className={styles.reviewButton} disabled={disabled&&!saving} pending={saving} onClick={event => { closePointerGuard.arm(event); setModal(weight.id) }}>무게 수정</Button>
           <div className={styles.reviewValues}>{change}<div className={styles.reviewEvidence}>{sets}{' · '}{reps}</div></div>
         </div>}
       </section>
     })}
-    {confirmedTargets.length > 0 && (onApprove||preview) && <Dialog title={preview?'합성 승인 시연':'중량 승인'} closePointerGuard={closePointerGuard} onClose={()=>{if(!submitting.current)setConfirming([])}}><p>{onApprove&&!preview?<>선택한 {confirmedTargets.length}종목의 중량을 현재 루틴에 저장합니다.</>:<>선택한 {confirmedTargets.length}종목의 승인 화면을 시연합니다. 서버·DB에는 저장하지 않습니다.</>}</p>{(approvalIssue||confirmationIssue)&&<p role="alert">{approvalIssue||confirmationIssue}</p>}<div className="row"><Button disabled={saving} onClick={()=>setConfirming([])}>취소</Button><Button variant="primary" disabled={disabled||saving} onClick={async()=>{
+    {confirmedTargets.length > 0 && (onApprove||preview) && <Dialog title={preview?'합성 승인 시연':'중량 승인'} closePointerGuard={closePointerGuard} onClose={()=>{if(!submitting.current)setConfirming([])}}><p>{onApprove&&!preview?<>선택한 {confirmedTargets.length}종목의 중량을 현재 루틴에 저장합니다.</>:<>선택한 {confirmedTargets.length}종목의 승인 화면을 시연합니다. 서버·DB에는 저장하지 않습니다.</>}</p>{(approvalIssue||confirmationIssue)&&<p role="alert">{approvalIssue||confirmationIssue}</p>}<div className="row"><Button pending={saving} onClick={()=>setConfirming([])}>취소</Button><Button variant="primary" disabled={disabled&&!saving} loading={saving} onClick={async()=>{
       if(submitting.current)return
       submitting.current=true;setSaving(true);setConfirmationIssue('')
       try {
@@ -107,7 +107,7 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
       }
       catch{setConfirmationIssue('승인 저장을 확인하지 못했습니다. 연결 상태와 최신 이력을 확인해 주세요.')}
       finally{submitting.current=false;setSaving(false)}
-    }}>{saving?'저장 확인 중…':preview?'시연 확인':'승인 확인'}</Button></div></Dialog>}
+    }}>{preview?'시연 확인':'승인 확인'}</Button></div></Dialog>}
     {current && <ApprovalWeightDialog weight={current} value={nextWeight(current)} closePointerGuard={closePointerGuard}
       onClose={() => setModal(null)} onConfirm={value => { setDrafts(values => ({ ...values, [current.id]:value })); setModal(null) }} />}
   </Card>

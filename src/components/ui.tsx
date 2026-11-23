@@ -1,10 +1,21 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode } from 'react'
+import { useDelayedPending } from './useDelayedPending.ts'
 import styles from './ui.module.css'
 
-export function Button({ variant = 'secondary', className = '', type = 'button', children, loading = false, disabled, ...props }: ComponentPropsWithoutRef<'button'> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger'; loading?: boolean }) {
-  return <button {...props} disabled={disabled || loading} aria-busy={loading || props['aria-busy']} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined} type={type} className={`${styles.button} ${loading ? styles.loadingButton : ''} ${variant === 'secondary' ? 'outline' : variant} ${className}`}>
-    {loading ? <><span className={styles.busyLabel}>{children}</span><span className={styles.buttonSpinner} aria-hidden="true" /></> : children}
+export function Button({ variant = 'secondary', className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithoutRef<'button'> & {
+  variant?: 'primary' | 'secondary' | 'quiet' | 'danger'
+  /** This button initiated a task and may show delayed progress. */
+  loading?: boolean
+  /** Temporarily lock this button while leaving its normal appearance. */
+  pending?: boolean
+}) {
+  const showSpinner = useDelayedPending(loading && !disabled)
+  return <button {...props} disabled={disabled || loading || pending} aria-busy={loading || props['aria-busy']}
+    data-button-pending={!disabled && (loading || pending) || undefined} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined}
+    type={type} className={`${styles.button} ${showSpinner ? styles.loadingButton : ''} ${variant === 'secondary' ? 'outline' : variant} ${className}`}>
+    {children}
+    {showSpinner && <span className={styles.buttonSpinner} data-button-spinner aria-hidden="true" />}
   </button>
 }
 export function Card({ hero = false, className = '', ...props }: ComponentPropsWithRef<'section'> & { hero?: boolean }) {

@@ -137,8 +137,8 @@ export function RestActions({ remaining, flash, onEnd, onExtend, disabled }: {
       <b>다음 세트 준비</b><strong>{remaining}초</strong>
     </div>}
     <div className={`${styles.actions} ${styles.restActions}`}>
-      <Button variant="primary" disabled={disabled} onClick={onEnd}>휴식 종료</Button>
-      <Button disabled={disabled} onClick={onExtend}>+30초</Button>
+      <Button variant="primary" pending={disabled} onClick={onEnd}>휴식 종료</Button>
+      <Button pending={disabled} onClick={onExtend}>+30초</Button>
     </div>
   </>
 }

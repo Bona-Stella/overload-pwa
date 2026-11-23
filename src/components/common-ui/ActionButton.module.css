@@ -36,8 +36,8 @@ button.button[data-appearance='danger-primary'] {
 
 button.button[data-size='modal'] { min-height: 44px; padding-inline: 8px; border-radius: 999px; }
 button.button[data-size='small'] { min-height: 36px; padding-inline: 12px; font-size: 13px; }
-button.button:hover:not(:disabled) { border-color: currentColor; filter: none; }
-button.button[data-appearance='danger-primary']:hover:not(:disabled) {
+button.button:hover:is(:not(:disabled), [data-button-pending]) { border-color: currentColor; filter: none; }
+button.button[data-appearance='danger-primary']:hover:is(:not(:disabled), [data-button-pending]) {
   --danger-button-fill: #b4374a;
   border-color: var(--danger-button-fill);
 }
@@ -50,20 +50,18 @@ button.button[data-appearance='contrast-outline']:active:not(:disabled) {
   box-shadow: inset 0 0 0 1px currentColor;
 }
 
-button.button:disabled {
+button.button:disabled:not([data-button-pending]) {
   opacity: 1;
   background: var(--surface-input);
   border-color: var(--border-subtle);
   color: color-mix(in srgb, var(--text-muted) 65%, var(--surface-input));
 }
 
-button.button[aria-busy='true'] { color: var(--text-muted); cursor: progress; }
-button.button[data-appearance='contrast-outline']:disabled { background: transparent; }
-button.button[data-appearance='danger-primary']:disabled {
+button.button[data-appearance='contrast-outline']:disabled:not([data-button-pending]) { background: transparent; }
+button.button[data-appearance='danger-primary']:disabled:not([data-button-pending]) {
   background: var(--surface-danger);
   border-color: color-mix(in srgb, var(--status-missed) 35%, var(--surface-danger));
 }
-button.button[data-appearance='danger-primary'][aria-busy='true'] { color: var(--status-danger-text); }
 
 .content {
   grid-area: 1 / 1;
@@ -75,7 +73,8 @@ button.button[data-appearance='danger-primary'][aria-busy='true'] { color: var(-
   overflow-wrap: anywhere;
 }
 
-.content[aria-hidden='true'] { visibility: hidden; }
+.content[data-progress-hidden] { opacity: 0; }
+.content[aria-hidden='true']:not([data-progress-visible]) { visibility: hidden; }
 
 .spinner {
   flex: none;

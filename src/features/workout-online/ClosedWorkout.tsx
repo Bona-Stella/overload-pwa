@@ -177,10 +177,10 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     {server.deletedAt && <StatusNotice>삭제된 운동입니다. 기록 변경과 복구를 할 수 없습니다.</StatusNotice>}
     {!state.writable && <StatusNotice>읽기 전용</StatusNotice>}
     {state.issue && <StatusNotice error>{state.issue}</StatusNotice>}
-    {state.notice && <StatusNotice>{state.notice}</StatusNotice>}
-    {state.pending?.status === 'PENDING' && <Card><p>이전 변경의 저장 결과를 확인해 주세요. 입력은 보존되어 있습니다.</p>
-      <Button disabled={state.busy || !state.writable || !!server.deletedAt} onClick={() => void controller.retry()}>저장 결과 다시 확인</Button>
-      <Button variant="quiet" disabled={state.busy || !state.writable} onClick={() => { if(window.confirm('현재 기록과 변경 이력을 확인했나요?'))void controller.reviewed() }}>현재 기록 확인 완료</Button></Card>}
+    {!dialog && state.notice && <StatusNotice>{state.notice}</StatusNotice>}
+    {state.pending?.status === 'PENDING' && !(state.busy && dialog) && <Card><p>이전 변경의 저장 결과를 확인해 주세요. 입력은 보존되어 있습니다.</p>
+      <Button disabled={!state.writable || !!server.deletedAt} pending={state.busy} onClick={() => void controller.retry()}>저장 결과 다시 확인</Button>
+      <Button variant="quiet" disabled={!state.writable} pending={state.busy} onClick={() => { if(window.confirm('현재 기록과 변경 이력을 확인했나요?'))void controller.reviewed() }}>현재 기록 확인 완료</Button></Card>}
     {!server.deletedAt && state.copies.filter(c=>c.finish?.request&&!c.finish.ack).map((c,i)=><Button key={i}
       disabled={state.busy || !state.writable || server.status!=='FINISHED' || c.writerEpoch!==server.writerEpoch || c.editorDeviceId!==server.editorDeviceId}
       onClick={()=>void controller.confirmFinish(c)}>운동 종료 저장 결과 확인</Button>)}
@@ -205,7 +205,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     <Card hero><p>{server.workoutDate} · {new Date(server.workoutDate+'T12:00:00Z').toLocaleDateString('ko-KR',{weekday:'long',timeZone:'UTC'})}</p>
       <h1>{server.deletedAt?'삭제된 운동':server.status==='FINISHED'?'운동 완료':'운동 자동 마감'}</h1><p>{server.initialPlan.routineName}</p>
       <dl className={styles.recordTimes}><div><dt>운동 시작</dt><dd>{clockTime(server.startedAt,server.startedTimeZone)}</dd></div><div><dt>운동 종료</dt><dd>{clockTime(server.endedAt,server.startedTimeZone)}</dd></div></dl>
-      <Button disabled={state.busy} onClick={()=>void controller.refresh()}>기록 새로고침</Button>
+      <Button pending={state.busy} onClick={()=>void controller.refresh()}>기록 새로고침</Button>
     </Card>
     {status}
     {mode==='correction' && !server.deletedAt && <Card className={styles.completedRecords}><h2>완료 수행</h2>
@@ -253,6 +253,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
   const [seconds, setSeconds] = useState(cardio ? String(cardio.activeMs / 1000) : ''), [corrected, setCorrected] = useState(cardio?.corrected ?? false)
   const [measurements, setMeasurements] = useState(() => cardio ? cardioMeasurementDraft(cardio) : { distance: '', speed: '' })
   const [bpm, setBpm] = useState(cardio?.averageBpm == null ? '' : String(cardio.averageBpm)), [issue, setIssue] = useState('')
+  const [action, setAction] = useState<'save' | 'remove' | null>(null)
   const kind = target.kind === 'CARDIO' ? initial.snapshot.state.appliedPlan.cardioActivities.find(p => p.sessionActivityId === target.record.sessionActivityId)?.plan.kind ?? initial.initialPlan.cardioActivities.find(p => p.sessionActivityId === target.record.sessionActivityId)?.plan.kind : undefined
   const supportsDistance = kind !== undefined && supportsCardioMotion(kind)
   const submit = async (remove: boolean) => {
@@ -272,7 +273,10 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
           ...(cardio?.measurement !== undefined || measurements.speedSource !== undefined || measurements.distanceSource === 'manual' ? { measurement: measured.measurement } : {}) })
       }
       if (window.confirm(remove ? '이 수행을 삭제할까요? 기록과 통계에서 제외됩니다.' : '입력한 실제 수행값으로 변경할까요? 운동 계획과 수행 시각은 유지됩니다.')) {
-        if (await controller.edit(body)) onClose()
+        setAction(remove ? 'remove' : 'save')
+        const confirmed = await controller.edit(body)
+        setAction(null)
+        if (confirmed) onClose()
         else setIssue('저장 결과를 확인해 주세요. 입력은 유지했습니다. 이 창을 닫고 최신 기록과 변경 이력을 확인할 수 있습니다.')
       }
     } catch (error) { setIssue(error instanceof Error ? error.message : '입력을 확인해 주세요.') }
@@ -293,8 +297,8 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
       </> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
     </fieldset>
     {issue && <StatusNotice error>{issue}</StatusNotice>}
-    <div className={styles.actions}><Button disabled={busy} onClick={onClose}>취소</Button>{target.kind!=='SKIPPED'&&<Button variant="primary" loading={busy} onClick={()=>void submit(false)}>변경 저장</Button>}</div>
-    <Button variant="danger" disabled={busy} onClick={()=>void submit(true)}>이 수행 삭제</Button>
+    <div className={styles.actions}><Button pending={busy} onClick={onClose}>취소</Button>{target.kind!=='SKIPPED'&&<Button variant="primary" pending={busy} loading={busy && action === 'save'} onClick={()=>void submit(false)}>변경 저장</Button>}</div>
+    <Button variant="danger" pending={busy} loading={busy && action === 'remove'} onClick={()=>void submit(true)}>이 수행 삭제</Button>
   </div></Dialog>
 }
 function RecoveryDialog({ state, controller, onClose, manufacturers, definitions }: { state: ClosedState; controller: ClosedWorkoutController; manufacturers: Manufacturer[]; definitions: StandardExercise[]; onClose: () => void }) {
@@ -313,11 +317,11 @@ function RecoveryDialog({ state, controller, onClose, manufacturers, definitions
     <section aria-label="복구 가능한 수행">{rows.filter(r=>r.selectable).map(renderRow)}{!rows.some(r=>r.selectable)&&<p className="muted small">복구 가능한 누락 수행이 없습니다.</p>}</section>
     {rows.some(r=>!r.selectable)&&<details><summary>복구할 수 없는 기록 확인</summary>{rows.filter(r=>!r.selectable).map(renderRow)}</details>}
     {issue&&<StatusNotice error>{issue}</StatusNotice>}
-    <div className={styles.actions}><Button disabled={state.busy} onClick={onClose}>취소</Button><Button variant="primary" disabled={state.busy||!selected.length} onClick={async()=>{
+    <div className={styles.actions}><Button pending={state.busy} onClick={onClose}>취소</Button><Button variant="primary" disabled={!selected.length} loading={state.busy} onClick={async()=>{
       if(window.confirm('선택한 완료 수행 '+selected.length+'건을 복구할까요? 원래 중량·반복·완료 시각을 그대로 사용합니다.')){
         if(await controller.recover(copy,selected,initial.server!.version))onClose()
         else setIssue('복구 결과를 확인하지 못했습니다. 선택한 기록은 유지됩니다. 창을 닫고 최신 기록을 확인해 주세요.')
       }
-    }}>{state.busy?'복구 중':'선택한 수행 복구'}</Button></div>
+    }}>선택한 수행 복구</Button></div>
   </div></Dialog>
 }

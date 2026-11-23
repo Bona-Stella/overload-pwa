@@ -200,7 +200,7 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
       {issue && <><p role="alert">{issue}</p><Button onClick={() => setRetry(value => value + 1)}>다시 조회</Button></>}
       {view?.moreIssue && <p role="alert">{view.moreIssue}</p>}
       {view?.next != null && <><p className="muted small">일부 승인 이력입니다. 이전 이력을 더 불러올 수 있습니다.</p>
-        <Button disabled={pending || !!issue || view.moreBusy} onClick={() => void more()}>이전 승인 더 보기</Button></>}
+        <Button disabled={pending || !!issue} loading={view.moreBusy} onClick={() => void more()}>이전 승인 더 보기</Button></>}
     </GrowthAnalysis>
     {view?.placement && <GrowthHistoryCard points={view.points} name={exercise.name} zone={zone} onOpen={onOpen} busy={view.moreBusy} partial={view.next !== null} />}
     <StatisticsWait pending={pending} label="승인 이력을 불러오는 중입니다." />
