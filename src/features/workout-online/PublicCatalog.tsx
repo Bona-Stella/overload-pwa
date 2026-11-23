@@ -91,8 +91,7 @@ export function CatalogView({ items, failed = false, reviewNote, instructionNote
     <div className={`${styles.screen} ${styles.catalogList}`} hidden={!!selectedId}>
       <RecordSubpageHeader title="운동 종목 보기" backLabel="설정으로 돌아가기" onBack={onBack} headingRef={listTitle} />
       <Card className={styles.catalogCard}>
-        <div className={styles.sectionHeader}><h2>표준 운동 DB</h2><span className={styles.tag}>조회 전용</span></div>
-        <p className={styles.description}>등록·편집·삭제는 관리자가 수행합니다. 사용자는 이름·별칭으로 검색하고 정보를 확인합니다.</p>
+        <div className={styles.sectionHeader}><h2>표준 운동</h2><span className={styles.tag}>조회 전용</span></div>
         {items === null && !failed ? <div aria-busy="true" /> :
           <ExerciseSearch exercises={items ?? []} failed={failed && !items} resetOnSelect={false} defaultOpen
             onSelect={(item, event) => { selectedRow.current = event.currentTarget; listScroll.current = window.scrollY; setSelected(item.id) }} />}

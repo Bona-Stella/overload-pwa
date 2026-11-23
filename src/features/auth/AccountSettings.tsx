@@ -53,7 +53,7 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
           <AccountItem icon="email" title={contact.maskedEmail} description="계정 재인증에 사용하는 이메일" />
           <div className={styles.divider}><Button className={styles.action} disabled={locked || wait > 0} onClick={() => { clear(); void controller?.requestEmailProof() }}><AccountIcon name="email" />{state.pending === 'proof-request' ? '인증코드를 보내는 중…' : wait > 0 ? `${wait}초 후 요청 가능` : '이메일로 재인증'}</Button></div>
           <AccountNote>이메일 등록과 최근 재인증 완료 여부는 별개예요.</AccountNote></>
-          : contact ? <><p className="notice">대표 이메일 등록 필요 · REQUIRED</p><p className="muted small">재인증에 사용할 이메일을 실제 OTP로 확인해야 합니다. 주소를 직접 입력하거나 변경할 수 없습니다.</p>
+          : contact ? <><p className="notice">대표 이메일 등록 필요</p><p className="muted small">재인증에 사용할 이메일을 실제 OTP로 확인해야 합니다. 주소를 직접 입력하거나 변경할 수 없습니다.</p>
             {contact.status === 'REQUIRED' && contact.candidate ? <><AccountItem icon="email" title={contact.candidate.maskedEmail} description="확인된 등록 후보" />
               <p className="muted small">아직 등록되지 않았습니다. 이 후보로 메일을 요청하고 OTP를 검증해야 등록됩니다.</p>
               <button className="primary full" disabled={locked || wait > 0} onClick={() => { clear(); void controller?.requestEmailProof() }}>{state.pending === 'proof-request' ? '인증코드를 보내는 중…' : wait > 0 ? `${wait}초 후 요청 가능` : '후보 이메일로 등록 코드 요청'}</button></>

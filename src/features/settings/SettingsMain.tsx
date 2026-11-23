@@ -49,7 +49,7 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
         <span className={styles.estimateStatus} aria-hidden="true">{estimate ? '켜짐' : '꺼짐'}</span>
       </button>}
       {estimateError && <p className="notice error" role="alert">이 기기에 자동 추정 설정을 저장하지 못했습니다.</p>}
-      <SettingsRow icon="weight" title="운동 종목 보기" description="관리자 표준 운동 DB · 조회 전용" onClick={onCatalog} busy={busy} />
+      <SettingsRow icon="weight" title="운동 종목 보기" description="운동 이름과 별칭으로 검색" onClick={onCatalog} busy={busy} />
       <SettingsRow icon="sliders" title="디로딩 설정" description="추천 분석 설정 · 적용률 안내" />
     </Card>
     <Card className={styles.rows} aria-label="데이터 및 앱">

@@ -221,17 +221,18 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
   const renameStale = renaming && (renaming.base.version !== schedule?.version || renaming.version !== latestName?.version)
-  const showToolbar = !editorRoute || !!training.issue
   return <section className={`stack workout-online ${editor ? detailStyles.workspace : ''}`}
-    aria-labelledby={showToolbar ? 'online-title' : undefined} aria-label={showToolbar ? undefined : '루틴'}
+    aria-label="루틴"
     data-tab-overview={!focused && !planPreset || undefined}>
-    {showToolbar && <div className="section-heading"><span id="online-title" className="muted small">ROUTINES</span>
-      <button type="button" className="quiet" disabled={busy} onClick={() => { training.refresh(); if (!focused) void controller.refresh() }}>다시 조회</button></div>}
     {!state.data && !state.issue && <div aria-busy="true" />}
     {protection && <p className="notice" role="status">{protection === 'ACTIVE' ? '디로딩 진행 중' : '디로딩 완료 당일'} · 일반 루틴과 주간 일정은 조회 전용입니다.</p>}
-    {training.issue && <p className="notice error" role="alert">{training.issue}</p>}
+    {training.issue && <StatusNotice error>{training.issue}{' '}
+      <Button variant="quiet" disabled={busy || training.loading} onClick={training.refresh}>일정 다시 조회</Button>
+    </StatusNotice>}
     {training.writeIssue && !renaming && <p className="notice error" role="alert">{training.writeIssue}</p>}
-    {state.issue && <p className="notice error" role="alert">{state.issue}</p>}{state.notice && !startWaiting && <p className="notice" role="status">{state.notice}</p>}
+    {state.issue && <StatusNotice error>{state.issue}
+      {!focused && <> <Button variant="quiet" disabled={busy} onClick={() => void controller.refresh()}>루틴 다시 조회</Button></>}
+    </StatusNotice>}{state.notice && !startWaiting && <p className="notice" role="status">{state.notice}</p>}
     {state.data && state.scope && <>
       <div hidden={focused || !!planPreset}>
         {created && <RoutineCreatedNotice name={created.name} onLater={() => setCreated(null)} onAssign={() => openSchedule(created.id)} blocked={scheduleBlocked} />}

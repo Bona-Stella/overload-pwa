@@ -102,7 +102,8 @@ for (const providers of [['email'], ['google'], ['email','google'], []]) test(`a
 })
 test('REQUIRED with EMAIL-only explains normal OTP login instead of inventing an address-registration form',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'email'}],contact:{status:'REQUIRED'}})
-  assert.match(html,/이메일 OTP로 다시 로그인/);assert.doesNotMatch(html,/type="email"|Google로 등록 이메일 확인|이메일로 재인증/)
+  assert.match(html,/대표 이메일 등록 필요/);assert.match(html,/이메일 OTP로 다시 로그인/)
+  assert.doesNotMatch(html,/REQUIRED|type="email"|Google로 등록 이메일 확인|이메일로 재인증/)
 })
 test('Google contact uses a fixed CSRF-protected POST form with hidden internal identity only',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'REQUIRED'},form:{identityId:ID,csrf:'fake-form-csrf'}})

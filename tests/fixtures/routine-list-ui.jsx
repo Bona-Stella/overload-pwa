@@ -37,6 +37,7 @@ const transport = { workoutRequest: async (owner, path, method, body) => {
   if (path === '/api/v1/deload-periods/current') return { status: 200, data: { ...scope, period: null } }
   if (path === '/api/v1/deload-analysis') return { status: 200, data: { ...scope, enabled: true, calculationStatus: 'INITIAL', confirmedWeeks: null, recommendationThreshold: { numerator: '8', denominator: '1' } } }
   ui.requests.push({ path, method, body: structuredClone(body) })
+  if (method === 'GET' && path === '/api/v1/weekly-schedule' && ui.scheduleReadError) throw Error('Schedule is temporarily unavailable')
   if (method === 'PUT') {
     if (path !== '/api/v1/weekly-schedule/presets/' + presetId + '/assignments') throw Error('Fixture requires V30 assignment endpoint')
     if (ui.activeError) throw new WorkoutApiError('ACTIVE_SESSION_EXISTS', 409)
