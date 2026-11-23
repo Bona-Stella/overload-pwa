@@ -3,7 +3,10 @@
 :root { scrollbar-gutter: stable; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 0; }
-button, input, textarea, select { font: inherit; -webkit-tap-highlight-color: transparent; }
+button, input, textarea, select { font: inherit; }
+:where(button, a[href], input, textarea, select, summary, [tabindex], [role="button"], [role="link"], [role="option"], [role="menuitem"]) {
+  -webkit-tap-highlight-color: transparent;
+}
 button { cursor: pointer; }
 button:disabled { opacity: .42; cursor: default; }
 button[data-button-pending]:disabled { opacity: 1; cursor: pointer; }
@@ -11,6 +14,10 @@ button[data-button-pending]:disabled { opacity: 1; cursor: pointer; }
 :where(button, a[href], input, textarea, select, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid var(--border-focus, #87b5ff);
   outline-offset: 3px;
+}
+/* Tapping the already focused control can leave :focus-visible matched. */
+.app-shell[data-focus-input="pointer"] :is(button, a[href], input, textarea, select, summary, [tabindex], [role="button"], [role="link"]):focus:not(:read-write) {
+  outline: none;
 }
 /* Editable fields use a single highlight at the existing border for every input method. */
 :where(input, textarea):read-write:focus {

@@ -71,6 +71,7 @@ function useTabBarCollapse(tab: AppTab, visible: boolean) {
 }
 
 const routineReturnWindow = 275
+const modifierKeys = new Set(['Alt', 'AltGraph', 'Control', 'Meta', 'Shift'])
 
 export function AppShell({ children, tab, onNavigate, authenticated, focused = false, routineEditor = false, busy = false, displayTheme = 'normal' }: {
   children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; routineEditor?: boolean; busy?: boolean; displayTheme?: DisplayTheme
@@ -86,6 +87,14 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
   const revealedTabs = useRef<{ x: number; y: number; until: number } | null>(null)
   const [expandedTabGuard] = useState(createRepeatPointerGuard)
   useLayoutEffect(() => {
+    // Tab can start at the document body after a tap on a non-focusable area.
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.isTrusted && !modifierKeys.has(event.key)) shell.current?.removeAttribute('data-focus-input')
+    }
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => document.removeEventListener('keydown', onKeyDown, true)
+  }, [])
+  useLayoutEffect(() => {
     const last = lastRoutineClick.current
     const now = performance.now()
     if (wasRoutineEditor.current && !routineEditor && !focused && tab === 'routines' && last && now - last.at <= routineReturnWindow) {
@@ -96,10 +105,15 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
   }, [focused, routineEditor, tab])
   return <div ref={shell} className={`${styles.shell} ${theme.theme} app-shell auth-app`} data-theme={displayTheme} data-keyboard-open={keyboardOpen || undefined}
     onPointerDownCapture={event => {
+      if (event.isTrusted && event.isPrimary) event.currentTarget.dataset.focusInput = 'pointer'
       if (!event.isPrimary || event.button !== 0) return
       const button = event.target instanceof Element ? event.target.closest('button') : null
       pressed.current = { button: button?.matches(':disabled') ? null : button, pointerId: event.pointerId, action: button?.dataset.clickAction }
     }} onPointerCancelCapture={() => { pressed.current = null }} onClickCapture={event => {
+      // Keyboard and assistive activation can arrive as trusted clicks without a pointer.
+      if (event.isTrusted && event.detail === 0 && !('pointerType' in event.nativeEvent && event.nativeEvent.pointerType)) {
+        event.currentTarget.removeAttribute('data-focus-input')
+      }
       const start = pressed.current
       pressed.current = null
       // Async content can move under a finger between pointerdown and click.

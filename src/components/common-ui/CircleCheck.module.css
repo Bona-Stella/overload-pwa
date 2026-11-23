@@ -31,5 +31,6 @@
   cursor: pointer;
 }
 .choice:has(input:focus-visible) { outline: 2px solid var(--border-focus); outline-offset: 2px; border-radius: var(--radius-control); }
+:global(.app-shell[data-focus-input='pointer']) .choice:has(input:focus-visible) { outline: none; }
 .choice:has(input:disabled) { opacity: .42; }
 .choice > input:disabled { cursor: default; }

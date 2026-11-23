@@ -59,15 +59,42 @@
 .sectionTitle > span { font-size: 11px; color: var(--text-muted); }
 .sectionTitle > button { font-size: 11px; padding: 6px 8px; min-height: 32px; }
 .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-top: 11px; }
-.home .days button { display: flex; flex-direction: column; align-items: center; min-height: 78px; min-width: 0; padding: 8px 1px; border: 1px solid var(--border-subtle); border-radius: 0; background: transparent; color: var(--text-primary); }
+.home .days button { display: flex; flex-direction: column; align-items: center; min-height: 78px; min-width: 0; padding: 8px 1px; border: 1px solid transparent; border-radius: 0; background: transparent; color: var(--text-primary); }
 .days small { font-size: 11px; color: var(--text-muted); line-height: 14px; }
 .days strong { display: block; min-height: 17px; line-height: 17px; margin-top: 5px; font-size: 13px; font-weight: 700; }
 .days strong[data-status='complete'] { color: var(--status-done); font-size: 17px; }
 .days strong[data-status='missed'] { color: var(--status-missed); font-size: 17px; }
 .days [data-past='true'] { color: #858A94; }
 .days span { display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 7px; font-size: 8px; text-align: center; }
-.home .days button[aria-current='date'] { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
-.home .days button[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); }
+/* Keep today's existing content inset at either visible stroke width. */
+.home .days button[aria-current='date'] { border-width: 2px; }
+.days button[aria-current='date'] > small,
+.days button[data-pointer-highlight] > small,
+.days:not([data-pointer-input]) button:not([aria-current='date']):focus-visible > small { color: var(--accent); }
+.days button[aria-current='date'] > :is(strong, span) { color: var(--text-primary); }
+/* A click can retain the keyboard outline on an already focused date. */
+.days[data-pointer-input] button:focus-visible { outline: none; }
+.days button:is([aria-current='date'], [data-pointer-highlight]) { position: relative; }
+/* Round the visible border while keeping the button's corners clickable. */
+.days button:is([aria-current='date'], [data-pointer-highlight])::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  pointer-events: none;
+}
+.days button[aria-current='date']::after { inset: -2px; }
+.days:is(:has(> button[data-pointer-highlight]), :not([data-pointer-input]):has(> button:not([aria-current='date']):focus-visible)) button[aria-current='date']::after {
+  border-width: 1px;
+  border-color: var(--border-subtle);
+}
+.days:is(:has(> button[data-pointer-highlight]), :not([data-pointer-input]):has(> button:not([aria-current='date']):focus-visible)) button[aria-current='date'] > small {
+  opacity: .9;
+}
+.days:is(:has(> button[data-pointer-highlight]), :not([data-pointer-input]):has(> button:not([aria-current='date']):focus-visible)) button[aria-current='date'] > :is(strong, span) {
+  color: var(--text-muted);
+}
 .dayDetail { margin: 8px 0 0; padding: 10px; border: 1px solid var(--border-subtle); background: var(--surface-input); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .home .dayLink { display: inline; min-height: 24px; padding: 2px 4px; font-size: 11px; color: var(--accent); }
 .recent { display: grid; gap: 7px; }

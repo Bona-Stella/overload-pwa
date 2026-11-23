@@ -227,6 +227,8 @@ export function HomeView(props: HomeViewProps) {
   const dates = weekDates(today)
   const [override, setOverride] = useState<{ date: string; routineId: string | null } | null>(null)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [datePointer, setDatePointer] = useState<{ date: string | null } | null>(null)
+  const dayGrid = useRef<HTMLDivElement>(null)
   const { presetFilter } = props
   const filterContext = presetFilter ? presetFilter.activeId + ':' + presetFilter.visit : ''
   const [filter, setFilter] = useState<{ context: string; value: string } | null>(null)
@@ -252,6 +254,16 @@ export function HomeView(props: HomeViewProps) {
   const routineRefresh = chosenId && !props.active && !props.attempt ? props.routineRefreshes?.get(chosenId) : undefined
   const selected = dates.includes(selectedDay ?? '') ? selectedDay! : today
   const overview = props.week?.overview ?? data?.overview
+  const pointerDateSelected = !!overview && selected === datePointer?.date
+  useEffect(() => {
+    if (!pointerDateSelected) return
+    const dismiss = (event: PointerEvent) => {
+      const button = event.target instanceof Element ? event.target.closest('button') : null
+      if (!dayGrid.current?.contains(button)) setDatePointer({ date: null })
+    }
+    document.addEventListener('pointerdown', dismiss, true)
+    return () => document.removeEventListener('pointerdown', dismiss, true)
+  }, [pointerDateSelected])
   const evidence = props.week?.evidence ?? data?.recent
   const day = overview?.plannedDays.find(d => d.date === selected)
   const selectedEvidence=day?.selectedSessionId?evidence?.get(day.selectedSessionId):undefined
@@ -310,11 +322,17 @@ export function HomeView(props: HomeViewProps) {
       <Card aria-label="이번 주 일정" className={styles.week} aria-busy={!overview && !props.weekFailed}>
         {!overview ? props.weekFailed ? <><StatusNotice error>이번 주 일정을 확인하지 못했습니다.</StatusNotice><Button onClick={props.onRefresh}>다시 조회</Button></> : <HomePlaceholder area="week" /> : <>
         <div className={styles.sectionTitle}><h2>이번 주 일정</h2><span>{dates[0].slice(5).replace('-', '.')} – {dates[6].slice(5).replace('-', '.')}</span></div>
-        <div className={styles.days}>{dates.map((date, index) => {
+        <div className={styles.days} ref={dayGrid} data-pointer-input={datePointer !== null || undefined} onFocus={event => {
+          if (event.target.matches(':focus-visible')) setDatePointer(null)
+        }} onKeyDown={() => setDatePointer(null)}>{dates.map((date, index) => {
           const planned = overview.plannedDays.find(d => d.date === date)
           const session = planned?.selectedSessionId ? evidence?.get(planned.selectedSessionId) : undefined
           const state = dayStatus(planned, date, today, session ? partialAchievement(session) : 'unknown')
-          return <button type="button" key={date} aria-pressed={selected === date} aria-label={`${date} ${weekdays[index]} ${planned?.plan?.name ?? ''} ${state.label}`} aria-current={date === today ? 'date' : undefined} onClick={() => setSelectedDay(date)}>
+          return <button type="button" key={date} aria-pressed={selected === date} aria-label={`${date} ${weekdays[index]} ${planned?.plan?.name ?? ''} ${state.label}`} aria-current={date === today ? 'date' : undefined}
+            data-pointer-highlight={pointerDateSelected && selected === date && date !== today ? true : undefined} onClick={event => {
+              setSelectedDay(date)
+              setDatePointer(event.detail > 0 ? { date } : null)
+            }}>
             <small data-past={date < today}>{date.slice(8)}</small><strong data-status={state.mark === 'X' ? 'missed' : state.kind}>{state.mark}</strong><span data-past={date < today}>{planned?.plan ? scheduleRoutineLabel(planned.plan.name, planned.plan.tag??undefined) : planned?.status === 'REST' ? '휴식' : '미확인'}</span>
           </button>
         })}</div>

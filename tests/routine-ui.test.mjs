@@ -661,11 +661,31 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await closeDetail()
     await evaluate('window.listUi.staleSelection()');await new Promise(r=>setTimeout(r,80))
     assert.doesNotMatch(await evaluate(`document.querySelector('article[aria-label^="상체 PUSH"]').textContent`),/STALE EXERCISE/,'an older selected detail must not replace the current card preview')
-    await tap('article[aria-label^="상체 PUSH"] summary')
-    await evaluate(`document.querySelector('article[aria-label^="상체 PUSH"] summary').focus()`)
+    const routineSummary = 'article[aria-label^="상체 PUSH"] summary'
+    await tap(routineSummary)
+    await evaluate(`document.querySelector('${routineSummary}').focus()`)
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'});await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape'})
     assert.equal(await evaluate(`document.querySelector('article[aria-label^="상체 PUSH"] details').open`),false)
     assert.equal(await evaluate(`document.activeElement.matches('article summary')`),true)
+    const summaryStyle = () => evaluate(`(() => {
+      const summary = document.querySelector('${routineSummary}'), style = getComputedStyle(summary)
+      return [summary === document.activeElement, style.outlineStyle, style.webkitTapHighlightColor]
+    })()`)
+    assert.deepEqual(await summaryStyle(), [true, 'solid', 'rgba(0, 0, 0, 0)'])
+    const menuPoint = await evaluate(`(() => {
+      const summary = document.querySelector('${routineSummary}')
+      summary.scrollIntoView({ block: 'center', behavior: 'instant' })
+      const { x, y, width, height } = summary.getBoundingClientRect()
+      return { x: x + width / 2, y: y + height / 2 }
+    })()`)
+    await send('Emulation.setTouchEmulationEnabled', { enabled: true })
+    await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [menuPoint] })
+    await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    assert.equal(await evaluate(`document.querySelector('${routineSummary}').parentElement.open`), true)
+    assert.deepEqual(await summaryStyle(), [true, 'none', 'rgba(0, 0, 0, 0)'], 'touching the focused menu hides its ring without blurring it')
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape' })
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Escape', code: 'Escape' })
+    assert.deepEqual(await summaryStyle(), [true, 'solid', 'rgba(0, 0, 0, 0)'], 'returning to the keyboard restores the menu focus ring')
     const routineMenuCard = 'article[aria-label^="상체 PUSH"]'
     for (const width of [393,1280]) {
       const mobile = width < 500

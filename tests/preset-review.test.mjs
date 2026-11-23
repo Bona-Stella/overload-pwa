@@ -325,6 +325,69 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /02 하체 중심.* · 화/)
     await navTo('홈')
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /상체 푸시/)
+    const weekCard = '[aria-label="이번 주 일정"]'
+    const todayDate = weekCard + ' button[aria-current="date"]'
+    const otherDate = weekCard + ' button[aria-pressed]:not([aria-current])'
+    const dateDetail = () => evaluate(`document.querySelector('${weekCard} > p').textContent`)
+    const dateCapsules = () => evaluate(`[...document.querySelectorAll('${weekCard} button[aria-pressed]')].flatMap(button => {
+      const capsule = getComputedStyle(button, '::after')
+      return capsule.content === 'none' ? [] : [[button.ariaCurrent === 'date', capsule.borderTopWidth, capsule.borderTopColor, capsule.borderTopLeftRadius]]
+    })`)
+    const dateInk = selector => evaluate(`[...document.querySelector(${JSON.stringify(selector)}).children].map(text => getComputedStyle(text).color)`)
+    const dateNumberOpacity = selector => evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(selector + ' > small')})).opacity`)
+    const todayFill = () => evaluate(`(() => {
+      const button = document.querySelector('${todayDate}')
+      return [getComputedStyle(button).backgroundColor, getComputedStyle(button, '::after').backgroundColor]
+    })()`)
+    const blueDate = 'rgb(108, 147, 198)'
+    const activeTodayInk = [blueDate, 'rgb(240, 241, 244)', 'rgb(240, 241, 244)']
+    const inactiveTodayInk = [blueDate, 'rgb(169, 173, 183)', 'rgb(169, 173, 183)']
+    const todayActive = [[true, '2px', 'rgb(108, 147, 198)', '999px']]
+    const pressWeekDate = async selector => {
+      const point = await evaluate(`(() => {
+        const target = document.querySelector(${JSON.stringify(selector)})
+        target.scrollIntoView({ block: 'center' })
+        const bounds = target.getBoundingClientRect()
+        return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 }
+      })()`)
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', ...point, button: 'left', buttons: 1, clickCount: 1 })
+      await send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...point, button: 'left', clickCount: 1 })
+    }
+    assert.deepEqual(await dateCapsules(), todayActive)
+    await pressWeekDate(todayDate)
+    const todayDetail = await dateDetail()
+    assert.deepEqual(await dateInk(todayDate), activeTodayInk)
+    assert.equal(await dateNumberOpacity(todayDate), '1')
+    assert.deepEqual(await todayFill(), ['rgba(0, 0, 0, 0)', 'rgba(0, 0, 0, 0)'])
+    await pressWeekDate(otherDate)
+    assert.deepEqual(await dateCapsules(), [
+      [false, '2px', 'rgb(108, 147, 198)', '999px'],
+      [true, '1px', 'rgb(53, 57, 65)', '999px'],
+    ])
+    assert.deepEqual(await dateInk(todayDate), inactiveTodayInk)
+    assert.equal(await dateNumberOpacity(todayDate), '0.9')
+    assert.equal((await dateInk(otherDate))[0], blueDate)
+    assert.equal(await dateNumberOpacity(otherDate), '1')
+    const otherDetail = await dateDetail()
+    assert.notEqual(otherDetail, todayDetail)
+    await pressWeekDate(weekCard + ' h2')
+    assert.deepEqual(await dateCapsules(), todayActive)
+    assert.deepEqual(await dateInk(todayDate), activeTodayInk)
+    assert.equal(await dateNumberOpacity(todayDate), '1')
+    assert.equal(await dateDetail(), otherDetail, 'leaving the date grid clears the highlight only')
+    assert.equal(await evaluate(`document.querySelector('${otherDate}').ariaPressed`), 'true')
+    await pressWeekDate(todayDate)
+    assert.deepEqual(await dateCapsules(), todayActive)
+    assert.equal(await dateDetail(), todayDetail)
+    await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
+    await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 })
+    const keyboardDate = otherDate + ':focus-visible'
+    assert.equal((await dateInk(keyboardDate))[0], blueDate)
+    assert.deepEqual(await dateInk(todayDate), inactiveTodayInk)
+    assert.equal(await dateNumberOpacity(todayDate), '0.9')
+    assert.equal(await dateDetail(), todayDetail)
+    await pressWeekDate(todayDate)
+    await evaluate('window.scrollTo(0, 0)')
     const weekTop = () => evaluate(`document.querySelector('[aria-label="이번 주 일정"]').getBoundingClientRect().top + scrollY`)
     const triggerLayout = () => evaluate(`(() => {
       const button = document.querySelector(${JSON.stringify(chooserTrigger)})
