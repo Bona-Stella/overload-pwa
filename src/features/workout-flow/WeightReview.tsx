@@ -96,7 +96,7 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
         </div>}
       </section>
     })}
-    {confirmedTargets.length > 0 && (onApprove||preview) && <Dialog title={preview?'합성 승인 시연':'중량 승인'} closePointerGuard={closePointerGuard} onClose={()=>{if(!submitting.current)setConfirming([])}}><p>{onApprove&&!preview?<>선택한 {confirmedTargets.length}종목의 중량을 현재 루틴에 저장합니다.</>:<>선택한 {confirmedTargets.length}종목의 승인 화면을 시연합니다. 서버·DB에는 저장하지 않습니다.</>}</p>{(approvalIssue||confirmationIssue)&&<p role="alert">{approvalIssue||confirmationIssue}</p>}<div className="row"><Button pending={saving} onClick={()=>setConfirming([])}>취소</Button><Button variant="primary" disabled={disabled&&!saving} loading={saving} onClick={async()=>{
+    {confirmedTargets.length > 0 && (onApprove||preview) && <Dialog title={preview?'합성 승인 시연':'중량 승인'} closePointerGuard={closePointerGuard} dismissBlocked={saving} onClose={()=>{if(!submitting.current)setConfirming([])}}><p>{onApprove&&!preview?<>선택한 {confirmedTargets.length}종목의 중량을 현재 루틴에 저장합니다.</>:<>선택한 {confirmedTargets.length}종목의 승인 화면을 시연합니다. 서버·DB에는 저장하지 않습니다.</>}</p>{(approvalIssue||confirmationIssue)&&<p role="alert">{approvalIssue||confirmationIssue}</p>}<div className="row"><Button pending={saving} onClick={()=>setConfirming([])}>취소</Button><Button variant="primary" disabled={disabled&&!saving} loading={saving} onClick={async()=>{
       if(submitting.current)return
       submitting.current=true;setSaving(true);setConfirmationIssue('')
       try {

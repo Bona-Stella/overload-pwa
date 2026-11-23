@@ -240,7 +240,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
 }
 function DeleteDialog({ server, controller, busy, onClose, closePointerGuard }: { server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void; closePointerGuard: RepeatPointerGuard }) {
   const [version] = useState(server.version)
-  return <Dialog title="운동 전체를 삭제할까요?" closePointerGuard={closePointerGuard} onClose={() => { if (!busy) onClose() }}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p><Button variant="primary" loading={busy} onClick={async () => { if (await controller.delete(version)) onClose() }}>운동 삭제</Button></div></Dialog>
+  return <Dialog title="운동 전체를 삭제할까요?" closePointerGuard={closePointerGuard} dismissBlocked={busy} onClose={onClose}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p><Button variant="primary" loading={busy} onClick={async () => { if (await controller.delete(version)) onClose() }}>운동 삭제</Button></div></Dialog>
 }
 function ClosedApproval({ server, id, controller, disabled }: { server: Session; id: string; controller: ClosedWorkoutController; disabled: boolean }) {
   const [weight, setWeight] = useState('')
@@ -282,7 +282,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
     } catch (error) { setIssue(error instanceof Error ? error.message : '입력을 확인해 주세요.') }
   }
   const id = target.kind==='SET'?target.record.sessionExerciseId:target.record.sessionActivityId
-  return <Dialog title="기록 정정" onClose={() => { if (!busy) onClose() }}><div className={styles.recordForm}>
+  return <Dialog title="기록 정정" dismissBlocked={busy} onClose={onClose}><div className={styles.recordForm}>
     <Card><h3>{recordName(initial,id,definitions)}{target.kind==='SET'&&' · '+String(target.record.ordinal).padStart(2,'0')+'세트'}</h3>
       <RecordFacts record={target.record} server={initial} manufacturers={manufacturers}/></Card>
     <fieldset disabled={busy} className="online-fieldset stack">
@@ -311,7 +311,7 @@ function RecoveryDialog({ state, controller, onClose, manufacturers, definitions
       <div><h4>{recordName(initial.server!,id,definitions)}{'ordinal' in record&&' · '+String(record.ordinal).padStart(2,'0')+'세트'}</h4>
         <p className="muted small">{RECOVERY_LABEL[row.state]}</p><RecordFacts record={row.record} server={initial.server!} manufacturers={manufacturers}/></div></label>
   }
-  return <Dialog title="누락 수행 복구" onClose={()=>{if(!state.busy)onClose()}}><div className={styles.recordForm}>
+  return <Dialog title="누락 수행 복구" dismissBlocked={state.busy} onClose={onClose}><div className={styles.recordForm}>
     <p className="muted small">이 기기에 남은 완료 기록 중 누락된 수행만 선택해 복구합니다. 이미 저장되거나 삭제된 수행은 복구할 수 없습니다.</p>
     <label>보관된 운동 기록<select value={copyIndex} disabled={state.busy} onChange={e=>{setCopyIndex(Number(e.target.value));setSelected([]);setIssue('')}}>{initial.copies.map((c,i)=><option value={i} key={i}>{time(c.startedAt)} · {c.snapshot.performedSets.length}세트</option>)}</select></label>
     <section aria-label="복구 가능한 수행">{rows.filter(r=>r.selectable).map(renderRow)}{!rows.some(r=>r.selectable)&&<p className="muted small">복구 가능한 누락 수행이 없습니다.</p>}</section>

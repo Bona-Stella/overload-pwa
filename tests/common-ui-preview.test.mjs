@@ -132,6 +132,34 @@ test('independent common UI preview renders reusable controls and handles intera
     await send('Page.navigate', { url: origin + '/common-ui-preview' })
     await waitFor(() => evaluate("document.querySelector('h1')?.textContent === '공통 UI Preview'"), 'preview mounted')
 
+    await send('Emulation.setDeviceMetricsOverride', { width:393,height:852,deviceScaleFactor:1,mobile:true })
+    await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1})
+    const tabBar='nav[aria-label="기본 탐색"]'
+    const tabPoint = selector => evaluate(`(() => {
+      const r=document.querySelector(${JSON.stringify(tabBar+' '+selector)}).getBoundingClientRect()
+      return {x:r.x+r.width/2,y:r.y+r.height/2}
+    })()`)
+    const touchTab = async (x,y) => {
+      await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]})
+      await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+    }
+    await evaluate('scrollTo({top:document.scrollingElement.scrollHeight,behavior:"instant"})')
+    await waitFor(()=>evaluate(`document.querySelector(${JSON.stringify(tabBar)}).dataset.collapsed==='true'`),'tabs collapse on scroll')
+    await delay(385)
+    const compact=await tabPoint('[aria-current="page"]')
+    const point={x:compact.x+10,y:compact.y-5}
+    await touchTab(point.x,point.y)
+    await waitFor(()=>evaluate(`!!document.elementFromPoint(${point.x},${point.y})?.closest('button[data-tab]:not([aria-current])')`),'the same point reveals another action')
+    await touchTab(point.x,point.y)
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(tabBar+' [aria-current="page"]')}).dataset.tab`),'settings')
+    const homeTab=await tabPoint('[data-tab="home"]')
+    assert.ok(Math.hypot(homeTab.x-point.x,homeTab.y-point.y)>24)
+    await touchTab(homeTab.x,homeTab.y)
+    await waitFor(()=>evaluate(`!!document.querySelector(${JSON.stringify(tabBar+' [data-tab="home"][aria-current="page"]')})`),'separate location can navigate')
+    await click('설정',tabBar+' button')
+    await evaluate('scrollTo({top:0,behavior:"instant"})')
+    await send('Emulation.setTouchEmulationEnabled',{enabled:false})
+
     for (const width of [320, 375, 393, 430, 1280]) {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: width < 500 })
       assert.equal(await fit(width), true)

@@ -5,14 +5,14 @@ type Guard = () => boolean | Promise<boolean>
 const listeners = new Set<() => void>()
 const guards = new Map<Guard, string | undefined>()
 let current: Entry | null = null
-let rollbackIndex: number | null = null
+let rollback: { index: number; dialog?: string } | null = null
 let checking = false
 let requested: Entry | null = null
 let backRequested = false
 let closeOnly = false
 const deferredNavigation: (() => void)[] = []
 const afterDialogClose = (action: () => void) => { if (closeOnly) deferredNavigation.push(action); else action() }
-const layers: { id: string; close: () => void }[] = []
+const layers: { id: string; close: () => void; canClose: () => boolean }[] = []
 const read = (): Entry => window.history.state?.overloadNavigation ?? { index: 0, values: {} }
 const publish = () => listeners.forEach(listener => listener())
 function write(values: Entry['values'], replace: boolean, url?: string, tabRoot = false) {
@@ -35,7 +35,7 @@ export function navigateToCurrentTabRoot(fallback: () => void) {
 function traverseToParent(distance: number, fallback: () => void) {
   initialize()
   if (closeOnly) { deferredNavigation.push(() => traverseToParent(distance, fallback)); return }
-  if (backRequested || checking || rollbackIndex !== null) return
+  if (backRequested || checking || rollback) return
   if (!distance || current!.index < distance) { fallback(); return }
   backRequested = true
   window.history.go(-distance)
@@ -50,7 +50,7 @@ export function observeNavigation(listener: () => void) {
 export function changeScreenPath(url: string, replace = false) {
   initialize()
   afterDialogClose(() => {
-    if (!checking && rollbackIndex === null) write(current!.values, replace, url)
+    if (!checking && !rollback) write(current!.values, replace, url)
   })
 }
 
@@ -58,7 +58,7 @@ export function changeScreenPath(url: string, replace = false) {
 export function navigateTabRoot(key: string, value: unknown, children: Record<string, unknown> = {}, url?: string, replace = false) {
   initialize()
   afterDialogClose(() => {
-    if (checking || rollbackIndex !== null) return
+    if (checking || rollback) return
     const values = { ...current!.values }
     for (const name of Object.keys(values)) {
       if (/^(exercise-detail:|records:|record-detail:|routine-plan:|routine-editor:|routine-schedule:|workout-view:|account-devices:|review-settings$|review-record$|__dialog$)/.test(name)) delete values[name]
@@ -92,7 +92,7 @@ async function settleTraversal() {
     if (!next) return
     if (!allowed) {
       const delta = current!.index - next.index
-      if (delta) { rollbackIndex = current!.index; window.history.go(delta) }
+      if (delta) { rollback = { index: current!.index }; window.history.go(delta) }
       return
     }
     current = next
@@ -110,9 +110,18 @@ function initialize() {
   window.addEventListener('popstate', () => {
     const next = read(), previous = current!
     backRequested = false
-    if (rollbackIndex !== null) {
-      if (next.index === rollbackIndex) { rollbackIndex = null; return }
-      window.history.go(rollbackIndex - next.index)
+    if (rollback) {
+      if (next.index === rollback.index) {
+        const dialog = rollback.dialog
+        rollback = null
+        // A request can settle and close its dialog while Forward restores its entry.
+        if (dialog && !layers.some(layer => layer.id === dialog)) {
+          closeOnly = true
+          window.history.back()
+        }
+        return
+      }
+      window.history.go(rollback.index - next.index)
       return
     }
     if (closeOnly) {
@@ -123,7 +132,17 @@ function initialize() {
       return
     }
     const layer = layers.at(-1)
-    if (layer && next.values.__dialog !== layer.id && next.index === previous.index - 1) { current = next; layer.close(); publish(); return }
+    if (layer && previous.values.__dialog === layer.id && next.values.__dialog !== layer.id && next.index === previous.index - 1) {
+      if (!layer.canClose()) {
+        rollback = { index: previous.index, dialog: layer.id }
+        window.history.forward()
+      } else {
+        current = next
+        layer.close()
+        publish()
+      }
+      return
+    }
     requested = next
     if (!checking) void settleTraversal()
   })
@@ -145,7 +164,7 @@ export function useScreenHistory<T>(key: string, initial: T): [T, (next: T | ((v
   const change = useCallback((next: T | ((value: T) => T), replace = false) => {
     initialize()
     afterDialogClose(() => {
-      if (checking || rollbackIndex !== null) return
+      if (checking || rollback) return
       const old = fromEntry(current!)
       const result = typeof next === 'function' ? (next as (value: T) => T)(old) : next
       if (JSON.stringify(result) === JSON.stringify(old)) return
@@ -161,15 +180,15 @@ export function useNavigationGuard(guard: Guard, key?: string) {
   useEffect(() => { guards.set(guard, key); return () => { guards.delete(guard) } }, [guard, key])
 }
 
-export function useDialogHistory(id: string, close: () => void) {
+export function useDialogHistory(id: string, close: () => void, canClose: () => boolean) {
   useEffect(() => {
     let cancelled = false, pushedIndex: number | null = null
-    const layer = { id, close }
+    const layer = { id, close, canClose }
     void Promise.resolve().then(() => {
       if (cancelled) return
       initialize()
       afterDialogClose(() => {
-        if (cancelled || checking || rollbackIndex !== null) return
+        if (cancelled || checking || rollback) return
         layers.push(layer)
         current = { ...current!, index: current!.index + 1, values: { ...current!.values, __dialog: id } }
         window.history.pushState({ ...window.history.state, overloadNavigation: current }, '')
@@ -179,7 +198,7 @@ export function useDialogHistory(id: string, close: () => void) {
     return () => {
       cancelled = true
       const index = layers.indexOf(layer); if (index >= 0) layers.splice(index,1)
-      if (pushedIndex !== null && read().index === pushedIndex && read().values.__dialog === id) { closeOnly = true; window.history.back() }
+      if (rollback?.dialog !== id && pushedIndex !== null && read().index === pushedIndex && read().values.__dialog === id) { closeOnly = true; window.history.back() }
     }
-  }, [id, close])
+  }, [id, close, canClose])
 }

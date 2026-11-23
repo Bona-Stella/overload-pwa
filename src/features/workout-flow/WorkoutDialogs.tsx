@@ -21,7 +21,7 @@ export function ConfirmWorkoutAction({ title, action, message, onClose, onConfir
   title: string; action: string; message: string; saveIssue?: ReactNode; pending?: boolean; onClose: () => void; onConfirm: () => void
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
-  return <Dialog title={title} onClose={onClose} initialFocus={cancel}>
+  return <Dialog title={title} onClose={onClose} dismissBlocked={pending} initialFocus={cancel}>
     <div className="stack"><p>{message}</p>{saveIssue}<div className={styles.actions}>
       <button type="button" className="outline" ref={cancel} disabled={pending} data-button-pending={pending || undefined} onClick={onClose}>취소</button><Button variant="primary" loading={pending} onClick={onConfirm}>{action}</Button>
     </div></div>

@@ -292,7 +292,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers}
         busy={busy} controller={controller} onClose={() => setEditor(null)} navigationKey={editorKey} backLabel={editorRoute?.fromDetail ? '루틴 상세로' : undefined} managementBlocked={managementBlocked} />}
     </>}
-    {enabled && renaming && <Dialog title="주간 일정 이름 변경" onClose={() => { if (!busy) setRenaming(null) }}>
+    {enabled && renaming && <Dialog title="주간 일정 이름 변경" dismissBlocked={busy} onClose={() => setRenaming(null)}>
       <form className="stack" onSubmit={async event => {
         event.preventDefault()
         if (scheduleBlocked || renameStale) return
@@ -325,7 +325,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         </div>
       </form>
     </Dialog>}
-    {enabled && deleting && deletingPreset && <Dialog title="주간 일정 삭제" onClose={() => { if (!busy) setDeleting(null) }}>
+    {enabled && deleting && deletingPreset && <Dialog title="주간 일정 삭제" dismissBlocked={busy} onClose={() => setDeleting(null)}>
       <p>“{deletingPreset.name}” 일정을 삭제할까요? 이 일정에 저장된 요일 배정이 사라집니다.</p>
       {training.writeIssue && <p role="alert">{training.writeIssue}</p>}
       <div className="row"><button type="button" disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setDeleting(null)}>취소</button>

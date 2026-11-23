@@ -998,6 +998,30 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     })()`), ['승인 확인',true,'1',false])
     await evaluate('document.querySelector(\'dialog[open] button[aria-busy="true"]\').click()')
     await wait(()=>evaluate('!!document.querySelector("dialog[open] [data-button-spinner]")'))
+    const lockedLayer = await evaluate(`(() => {
+      const entry = history.state.overloadNavigation
+      window.modalBackTrace = []
+      window.recordModalBack = () => window.modalBackTrace.push(history.state?.overloadNavigation?.index)
+      window.addEventListener('popstate', window.recordModalBack)
+      return { index:entry.index, dialog:entry.values.__dialog, depth:history.length }
+    })()`)
+    assert.ok(lockedLayer.dialog)
+    for(let turn=1;turn<=2;turn++){
+      await evaluate('history.back()')
+      await wait(()=>evaluate(`window.modalBackTrace.length===${turn*2}`))
+      assert.deepEqual(await evaluate(`(() => {
+        const entry=history.state.overloadNavigation
+        return { index:entry.index, dialog:entry.values.__dialog, depth:history.length }
+      })()`),lockedLayer)
+    }
+    await evaluate(`window.removeEventListener('popstate',window.recordModalBack)`)
+    assert.deepEqual(await evaluate(`(() => {
+      const dialog=document.querySelector('dialog[open]'), close=dialog.querySelector('[aria-label="닫기"]')
+      close.click()
+      const escape=new Event('cancel',{cancelable:true})
+      dialog.dispatchEvent(escape)
+      return [close.disabled,getComputedStyle(close).opacity,dialog.open,escape.defaultPrevented]
+    })()`),[true,'1',true,true])
     assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),2)
     await evaluate('window.feedback.approvalNetwork.holdPost=false;window.feedback.approvalNetwork.resumePost()')
     await wait(()=>evaluate('document.querySelector("dialog[open] [role=alert]")?.textContent.includes("서버가 승인 요청을 수락했습니다")'))
@@ -1005,7 +1029,9 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(await draft(),'47.5kg')
     assert.deepEqual(await confirmedVersions(),[])
     assert.ok(await evaluate('[...document.querySelectorAll("dialog[open] button")].some(b=>b.textContent==="승인 확인"&&b.disabled)'))
-    await click('취소')
+    await evaluate('history.back()')
+    await wait(()=>evaluate('!document.querySelector("dialog[open]") && !history.state.overloadNavigation.values.__dialog'))
+    assert.equal(await evaluate('history.state.overloadNavigation.index'),lockedLayer.index-1)
     await evaluate('Object.assign(window.feedback.approvalNetwork,{failAfterPost:false,failReads:false})')
     await click('다시 조회')
     await expectCounts(2,1)

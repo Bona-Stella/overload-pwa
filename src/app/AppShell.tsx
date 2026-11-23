@@ -4,6 +4,7 @@ import type { AppTab, DisplayTheme } from './types'
 import styles from './AppShell.module.css'
 import theme from './theme.module.css'
 import { EditorViewportOccluded, useEditorKeyboard } from '../components/useEditorKeyboard.ts'
+import { createRepeatPointerGuard } from '../components/repeatPointerGuard.ts'
 
 const tabs: { id: AppTab; label: string; path: string }[] = [
   { id: 'home', label: '홈', path: 'm3 10 9-7 9 7v11h-6v-7H9v7H3Z' },
@@ -83,6 +84,7 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
   const wasRoutineEditor = useRef(false)
   const lastRoutineClick = useRef<{ x: number; y: number; at: number } | null>(null)
   const revealedTabs = useRef<{ x: number; y: number; until: number } | null>(null)
+  const [expandedTabGuard] = useState(createRepeatPointerGuard)
   useLayoutEffect(() => {
     const last = lastRoutineClick.current
     const now = performance.now()
@@ -125,9 +127,16 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
           const hidden = collapsed && !active
           return <div className={styles.tabSlot} key={item.id} style={{ '--item-index': index } as CSSProperties}>
             <button type="button" data-tab={item.id}
+              data-click-action={expandsMenu ? 'expand-tabs' : item.id}
               aria-label={expandsMenu ? '하단 메뉴 펼치기' : item.label} aria-current={active ? 'page' : undefined}
               aria-expanded={expandsMenu ? false : undefined} inert={hidden} aria-hidden={hidden || undefined} disabled={busy && !expandsMenu}
-              onClick={expandsMenu ? expand : () => onNavigate(item.id)}>
+              onPointerDown={expandedTabGuard.pointerDown} onPointerCancel={expandedTabGuard.pointerCancel}
+              onClick={event => {
+                if (expandsMenu) {
+                  expandedTabGuard.arm(event)
+                  expand()
+                } else if (!expandedTabGuard.blocksClick(event)) onNavigate(item.id)
+              }}>
               <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} fillRule="evenodd" stroke={filled ? 'none' : 'currentColor'} strokeWidth={active && !filled ? 3 : 1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d={item.path} />
               </svg>
