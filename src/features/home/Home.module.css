@@ -31,19 +31,30 @@
 .emptyPlan { font-size: 11px; color: var(--text-muted); line-height: 1.55; margin: 11px 0; }
 .home :is(.start, .resume) { min-height: 44px; padding: 12px 7px; font-size: 15px; border: 1.5px solid var(--accent); border-radius: 2px; font-weight: 700; }
 .home .resume { width: 100%; margin-top: 14px; border-radius: 5px; }
-.chooser summary { display: flex; align-items: center; justify-content: space-between; list-style: none; cursor: pointer; min-height: 56px; padding: 14px 12px; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--surface-card); font-size: 12px; }
-.chooser summary::-webkit-details-marker { display: none; }
-.plus::before { content: '+'; display: block; font-size: 19px; font-weight: 400; line-height: 20px; }
-.chooser[open] .plus::before { content: '−'; }
-.choices { margin-top: 4px; max-height: 250px; overflow-y: auto; border: 1px solid var(--border-subtle); border-radius: 5px; }
+.chooser > [role='region'] {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-inline: 0;
+}
+.chooserContent { display: flex; flex-direction: column; min-block-size: 0; }
+.chooserContent > p { margin: 8px 10px; font-size: 12px; color: var(--text-muted); }
+.chooserContent > button { align-self: flex-start; margin-inline: 6px; }
+.choices {
+  min-block-size: 0;
+  padding: 5px 6px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
 .home .choices button { display: block; text-align: left; width: 100%; min-width: 0; min-height: 56px; padding: 10px; border: 0; border-bottom: 1px solid var(--border-subtle); background: var(--surface-card); color: var(--text-primary); border-radius: 0; }
-.choices button:last-child { border-bottom: 0; }
-.choiceTitle { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
+.home .choices button:last-child { border-bottom: 0; }
+.choiceTitle { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
 .choiceTitle strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.choiceTitle > span { flex: none; font-size: 11px; color: var(--text-muted); }
-.choices small { display: block; margin-top: 4px; font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choiceTitle > span { flex: none; }
+.choices small { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .home .choices button[aria-pressed='true'] { background: var(--accent-soft); }
-.home .week { display: block; min-block-size: 230px; padding: 13px; border-radius: 5px; }
+.choices button[aria-pressed='true'] strong { color: var(--accent); }
+.home .week { display: block; padding: 13px; border-radius: 5px; }
 .sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
 .sectionTitle > span { font-size: 11px; color: var(--text-muted); }
 .sectionTitle > button { font-size: 11px; padding: 6px 8px; min-height: 32px; }
@@ -59,9 +70,6 @@
 .home .days button[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); }
 .dayDetail { margin: 8px 0 0; padding: 10px; border: 1px solid var(--border-subtle); background: var(--surface-input); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 .home .dayLink { display: inline; min-height: 24px; padding: 2px 4px; font-size: 11px; color: var(--accent); }
-.weekFooter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 6px; margin-top: 6px; }
-.weekFooter span { color: var(--text-muted); font-size: 10px; }
-.weekFooter button { padding: 6px; font-size: 11px; min-height: 32px; }
 .recent { display: grid; gap: 7px; }
 .home .record { display:grid; grid-template-columns:minmax(0,1fr) max-content 18px 6px; align-items:center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; text-align: left; padding: 10px; background: var(--surface-card); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: 5px; }
 .recordDate { grid-column:1 / -1; font-size:11px; white-space:nowrap; color: var(--accent); }
@@ -73,13 +81,22 @@
 .recordState[data-state='complete'] { color: var(--status-done); }
 .recordState[data-state='incomplete'] { color: var(--status-missed); }
 .home .sectionTitle h2 { font-size: 14px; }
-.chooser summary { font-size: 14px; }
 .tools { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
 .tools > button { font-size: 11px; padding: 6px; min-height: 32px; }
 .tools > span { font-size: 10px; }
 .httpNote { margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-muted); }
-.choiceFilters { display:flex; flex-wrap:wrap; gap:4px; margin-block:6px 10px; }
-.choiceFilters button { min-width:44px; min-height:44px; padding:4px 8px; }
+.choiceFilters { flex: none; flex-wrap: wrap; margin: 0 6px 1px; }
+.home .choiceFilters > button[aria-pressed] {
+  align-items: start;
+  grid-template-columns: minmax(0, 1fr);
+  width: 50px;
+  min-width: 0;
+  min-height: 44px;
+  /* Preserve the title-to-pill gap while keeping the full button and focus area. */
+  padding-block-start: 1.5px;
+  border-radius: 999px;
+}
+.choiceFilters > button > span { justify-content: center; }
 .routineTag { display:inline-block; margin-bottom:8px; color:var(--accent); font-size:11px; }
 .trainingGauge { display:flex; align-items:center; gap:6px; flex:1; min-width:0; font-size:12px; }
 .trainingGauge b { white-space:nowrap; }

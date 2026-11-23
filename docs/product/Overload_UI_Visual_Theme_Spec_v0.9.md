@@ -264,3 +264,8 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 [버튼](../../src/components/common-ui/ActionButton.module.css) · [모달](../../src/components/common-ui/ActionDialog.module.css) · [스켈레톤·피드백](../../src/components/common-ui/ContentFeedback.module.css) · [검색](../../src/features/statistics/Activity.module.css) · [루틴 태그](../../src/components/common-ui/RoutineTagList.module.css) · [헤더](../../src/components/RecordSubpageHeader.module.css) · [OVERLOAD 투명 PNG](../../src/assets/OVERLOAD_white_transparent_4x.png) · [토스트](../../src/components/common-ui/Toast.module.css)
 
 서비스 화면에서는 기존 홈 왼쪽의 로고 규격을 유지한다. 기록 메인 `운동 분석` 오른쪽에 같은 PNG를 `width: clamp(108px, 32vw, 132px)`, `height: auto`로 수직 중앙 정렬한다. `운동 분석`과 `최근 운동` 제목은 20px·600·줄 높이 1.25·`--text-primary`다. 서비스 하위 페이지의 공통 헤더는 뒤로가기와 제목을 표시하며 화면에 따른 기존 액션을 유지한다. [홈 CSS](../../src/features/home/Home.module.css) · [기록 메인 CSS](../../src/features/statistics/RecordMain.module.css)
+
+## 17. 홈 연결형 드롭다운 시각 규칙 — 2026-11-23
+
+- 56px 트리거는 제목과 펼침 아이콘을 수직 중앙에 놓고 개폐 시 정렬을 유지한다. 같은 너비의 패널을 바로 아래에 연결하며 `--surface-card`와 `--border-subtle`을 쓴다. 패널은 화면 경계 안에서 최대 340px까지 펼친다. [공통 드롭다운 CSS](../../src/components/common-ui/ConnectedDropdown.module.css)
+- 홈 필터는 운동 종목 검색과 Pill 스타일을 공유한다. 홈에서는 50×27px로 표시하고 높이 44px의 터치 영역을 제공한다. 간격은 6px이며 선택 상태는 `--accent`와 `--on-accent`를 쓴다. 루틴명은 실제 루틴 편집의 태그 선택과 같은 14px·900, 보조 설명과 배정 요일은 12px·400이다. [공통 필터 CSS](../../src/components/common-ui/FilterTags.module.css) · [공통 목록 글자](../../src/components/common-ui/RoutineOptionText.module.css) · [홈 적용](../../src/features/home/Home.module.css)

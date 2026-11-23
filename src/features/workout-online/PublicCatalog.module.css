@@ -110,8 +110,6 @@
 .filterLabel { color: var(--text-muted); font-size: 13px; font-weight: 600; }
 
 .filterStrip {
-  display: flex;
-  gap: 6px;
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
@@ -119,29 +117,4 @@
   scrollbar-color: var(--border-subtle) transparent;
   padding-inline: 2px;
 }
-.filters .filterStrip button {
-  display: grid;
-  align-items: center;
-  flex: 0 0 auto;
-  min-width: 53px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  font-size: 12px;
-  white-space: nowrap;
-}
 .filterStrip button:focus-visible { outline-offset: -3px; }
-.filterStrip span {
-  display: grid;
-  place-items: center;
-  min-height: 27px;
-  padding-inline: 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  background: var(--surface-input);
-}
-.filterStrip [aria-pressed='true'] span {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--on-accent);
-}

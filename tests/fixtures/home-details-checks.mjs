@@ -6,6 +6,7 @@ import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { loadRecent } from '../../src/features/home/recent.ts'
 import { hasActualPerformance, sessionAchievement } from '../../src/features/home/achievement.ts'
+import { chooserRows, chooserTrigger, openHomeChooser } from './home-chooser.mjs'
 
 export async function runHomeDetails(d){
   const {send,evaluate,click,api,screenshot,wait,passed,directory,evidence}=d
@@ -21,9 +22,9 @@ export async function runHomeDetails(d){
   const routines=[];for(const row of list.routines)routines.push((await api('GET','/api/v1/routines/'+row.id)).body)
   const selected=routines.find(r=>r.weightPlacements.length&&r.cardioPlacements.length)||routines[0]
   const choose=async()=>{
-    await evaluate(`document.querySelector('[aria-label="홈"] details').open=true`)
-    await evaluate(`(()=>{const b=[...document.querySelectorAll('[aria-label="홈"] details button[aria-pressed]')].find(b=>b.querySelector('strong').title===${JSON.stringify(selected.name)});b.click()})()`)
-    await wait(()=>evaluate(`document.querySelector('[aria-label="오늘의 루틴"] h2').textContent===${JSON.stringify(selected.name)}&&!document.querySelector('[aria-label="홈"] details').open`),'selection applied and chooser collapsed')
+    await openHomeChooser(d)
+    await evaluate(`(()=>{const b=[...document.querySelectorAll(${JSON.stringify(chooserRows)})].find(b=>b.querySelector('strong').title===${JSON.stringify(selected.name)});b.click()})()`)
+    await wait(()=>evaluate(`document.querySelector('[aria-label="오늘의 루틴"] h2').textContent===${JSON.stringify(selected.name)}&&document.querySelector(${JSON.stringify(chooserTrigger)}).getAttribute('aria-expanded')==='false'`),'selection applied and chooser collapsed')
   }
   const existing=(await api('GET','/api/v1/workout-sessions/active')).body.session
   if(!existing)await choose()

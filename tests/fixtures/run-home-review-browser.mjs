@@ -7,6 +7,7 @@ import { resolve, relative, isAbsolute } from 'node:path'
 import { verifyV22Ownership, withV22Connection } from './v22-environment.mjs'
 import { runHomeDesign } from './home-design-checks.mjs'
 import { runHomeDetails } from './home-details-checks.mjs'
+import { chooserRows, openHomeChooser } from './home-chooser.mjs'
 import { runHomeFinal } from './home-final-checks.mjs'
 import { runHomePolish } from './home-polish-checks.mjs'
 const routines = process.argv.includes('--routines')
@@ -107,10 +108,9 @@ try {
   await click('홈')
   passed.push('Home recent record opens the existing real record detail in the history tab')
   const scheduleBefore = (await api('GET', '/api/v1/weekly-schedule?timeZone=Asia%2FSeoul')).body
-  await evaluate('document.querySelector("[aria-label=홈] details").open=true')
-  await wait(() => evaluate('document.querySelector("[aria-label=홈] details button")?.getClientRects().length'), 'routine chooser')
+  await openHomeChooser({ evaluate, wait })
   await screenshot('routine-chooser-393')
-  const chosenName = await evaluate('(()=>{const b=[...document.querySelectorAll("[aria-label=홈] details button")].find(b=>b.getAttribute("aria-pressed")==="false"&&!b.disabled);window.homeChosenName=b.querySelector("strong").textContent;b.click();return window.homeChosenName})()')
+  const chosenName = await evaluate(`(()=>{const b=[...document.querySelectorAll(${JSON.stringify(chooserRows)})].find(b=>b.getAttribute('aria-pressed')==='false'&&!b.disabled);window.homeChosenName=b.querySelector('strong').textContent;b.click();return window.homeChosenName})()`)
   await wait(() => evaluate(`document.querySelector('[aria-label="오늘의 루틴"] h2').textContent===${JSON.stringify(chosenName)}`), 'today-only selection')
   assert.deepEqual((await api('GET', '/api/v1/weekly-schedule?timeZone=Asia%2FSeoul')).body, scheduleBefore)
   await screenshot('before-start-393'); passed.push('Today-only routine changes the real plan while current and pending schedule versions remain byte-equivalent')
@@ -150,8 +150,8 @@ try {
   await login(`v22-${runId}@example.invalid`)
   await wait(() => evaluate('document.querySelector("[aria-label=홈]")?.innerText.includes("표시할 운동 기록이 없습니다")'), 'real empty account')
   await screenshot('empty-real-account-393')
-  assert.equal(await evaluate('[...document.querySelectorAll("[aria-label=홈] button")].find(b=>b.textContent.trim()==="운동 시작").disabled'), true)
-  passed.push('Existing isolated empty account uses real OTP/API and shows no fabricated plan/history; START disabled')
+  assert.equal(await evaluate('!!document.querySelector(\'[aria-label="홈"] [data-click-action="start"]\')'), false)
+  passed.push('Existing isolated empty account uses real OTP/API, shows an empty plan and history, and omits START')
   assert.deepEqual(errors, [])
   await verifyV22Ownership(evidence)
   await writeFile(resolve(directory, 'browser-result.json'), JSON.stringify({ runId, passed, requests, realData: true, faultScreenshots: ['loading-injected-393','error-injected-393'], reviewAccountActiveSessionAfterTest: null, browser: 'headless Chrome', realIPhone: false }, null, 2))

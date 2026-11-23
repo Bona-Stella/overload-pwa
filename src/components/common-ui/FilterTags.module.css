@@ -1,0 +1,32 @@
+.strip {
+  display: flex;
+  gap: 6px;
+}
+
+.strip > button[aria-pressed] {
+  display: grid;
+  align-items: center;
+  flex: 0 0 auto;
+  min-width: 53px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.strip span {
+  display: grid;
+  place-items: center;
+  min-height: 27px;
+  padding-inline: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-input);
+}
+
+.strip [aria-pressed='true'] span {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}

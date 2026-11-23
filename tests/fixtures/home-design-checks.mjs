@@ -3,6 +3,7 @@ import { readdir, readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { sessionAchievement } from '../../src/features/home/achievement.ts'
 import { addDays, weekDates } from '../../src/features/home/model.ts'
+import { chooserRows, chooserTrigger, openHomeChooser } from './home-chooser.mjs'
 
 export async function runHomeDesign(d) {
   const { send, evaluate, click, api, screenshot, wait, passed, directory, evidence, requests } = d
@@ -20,7 +21,7 @@ export async function runHomeDesign(d) {
   assert.equal(await evaluate(`document.querySelector('[aria-label="홈"]').innerText.includes('오늘도, 한 걸음 더.')`), false)
   assert.equal(await evaluate(`document.querySelectorAll('[data-review-sample="deload-header"]').length`), 1)
   assert.equal(await evaluate(`document.querySelector('[data-review-sample] button')===null`), true)
-  const selectors = { header: '[aria-label="홈"] header', today: '[aria-label="오늘의 루틴"]', start: '[aria-label="홈"] button.primary', chooser: '[aria-label="홈"] summary', week: '[aria-label="이번 주 일정"]', recent: '[aria-label="최근 운동"]', tabs: 'nav' }
+  const selectors = { header: '[aria-label="홈"] header', today: '[aria-label="오늘의 루틴"]', start: '[aria-label="홈"] button.primary', chooser: chooserTrigger, week: '[aria-label="이번 주 일정"]', recent: '[aria-label="최근 운동"]', tabs: 'nav' }
   const actual = await geometry(selectors)
   assert.equal(actual.header.height,36); assert.equal(actual.chooser.height,56); assert(actual.week.height<270)
   assert.equal(await evaluate('document.documentElement.scrollWidth<=393'),true)
@@ -47,10 +48,20 @@ export async function runHomeDesign(d) {
   passed.push('Official HTML and React captured at identical 393px content width, with measured layout comparison')
   await send('Page.navigate',{url:'http://127.0.0.1:3000/'})
   await wait(()=>evaluate(`!!document.querySelector('[aria-label="오늘의 루틴"]')`),'persisted authenticated session')
-  await evaluate(`document.querySelector('[aria-label="홈"] details').open=true`); await screenshot('react-chooser-393')
+  const weekBeforeOpen = (await geometry({ week: selectors.week })).week.y
+  await openHomeChooser(d)
+  const overlay = await evaluate(`(() => {
+    const trigger = document.querySelector(${JSON.stringify(chooserTrigger)})
+    const a = trigger.getBoundingClientRect()
+    const b = document.getElementById(trigger.getAttribute('aria-controls')).getBoundingClientRect()
+    return { sameWidth: a.left === b.left && a.right === b.right, joined: a.bottom === b.top }
+  })()`)
+  assert.deepEqual(overlay, { sameWidth: true, joined: true })
+  assert.equal((await geometry({ week: selectors.week })).week.y, weekBeforeOpen)
+  await screenshot('react-chooser-393')
   const scheduleBefore=(await api('GET','/api/v1/weekly-schedule?timeZone=Asia%2FSeoul')).body
   if (!activeBefore) {
-    await evaluate(`(()=>{const b=[...document.querySelectorAll('[aria-label="홈"] details button[aria-pressed]')].find(b=>b.getAttribute('aria-pressed')==='false'&&!b.disabled);b.click()})()`)
+    await evaluate(`(()=>{const b=[...document.querySelectorAll(${JSON.stringify(chooserRows)})].find(b=>b.getAttribute('aria-pressed')==='false'&&!b.disabled);b.click()})()`)
     assert.deepEqual((await api('GET','/api/v1/weekly-schedule?timeZone=Asia%2FSeoul')).body,scheduleBefore)
   }
   await send('Emulation.setDeviceMetricsOverride',{width:320,height:740,deviceScaleFactor:1,mobile:true}); assert.equal(await evaluate('document.documentElement.scrollWidth<=320'),true); await screenshot('react-home-320')

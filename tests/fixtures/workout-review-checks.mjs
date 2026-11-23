@@ -927,6 +927,15 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   for(const w of [320,375,390,430]){await verifyWidth(w);await verifyFrameClearance('benchmark')}
   await click('운동 종료');await dialogClick('운동 종료 및 요약');await has('운동 기록 요약');await click('홈', 'ariaLabel', 'nav button')
   await set(scenario, 'workout-edited')
+  await has('진행 중인 운동')
+  assert(await evaluate(`(() => {
+    const card = document.querySelector('[aria-label="진행 중인 운동"]')
+    const { top, bottom } = card.getBoundingClientRect()
+    const resume = card.lastElementChild
+    return resume.textContent === '운동 이어가기' &&
+      Math.abs(card.firstElementChild.getBoundingClientRect().top - top - 17) <= 1 &&
+      Math.abs(bottom - resume.getBoundingClientRect().bottom - 17) <= 1
+  })()`))
   await click('운동 이어가기')
   await has('승인 중량 25 kg · 오늘만 적용')
   assert.equal(await rowContains(1, '원판식'), false)
@@ -936,7 +945,8 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('‹ 홈')
   await click('검토 초기화')
   await set(scenario, 'workout-rest-day')
-  assert.equal(await evaluate(`[...document.querySelectorAll('button')].find(b => b.textContent === '운동 시작').disabled`), true)
+  assert.equal(await evaluate(`!!document.querySelector('[aria-label="홈"] [data-click-action="start"]')`), false)
+  await has('정해진 휴식일입니다. 다른 루틴을 선택할 수 있습니다.')
   await set(scenario, 'active')
   await click('운동 시작')
   await click('준비운동 완료')

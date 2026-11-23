@@ -8,6 +8,7 @@ import { createReviewFixtureServer } from './fixtures/review-server.mjs'
 import { verifyWorkoutReview } from './fixtures/workout-review-checks.mjs'
 import { verifyExerciseSwipe } from './fixtures/workout-swipe-checks.mjs'
 import { verifyWorkoutProcess } from './fixtures/workout-process-checks.mjs'
+import { chooserPanel, chooserRows, chooserTrigger } from './fixtures/home-chooser.mjs'
 
 test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support their workflows', { timeout: 150000 }, async () => {
   const root = resolve('logs/preset-review')
@@ -50,7 +51,6 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   const body = () => evaluate("document.body?.innerText ?? ''")
   const scenario = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(1) select'
   const fault = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(2) select'
-  const chooser = '[aria-label="홈"] details'
   const editor = 'form[aria-label="주간 일정 편집"]'
   const preset = number => click(number + '번 프리셋 보기', 'ariaLabel')
   const menu = () => click('주간 루틴 일정 메뉴', 'ariaLabel', 'summary')
@@ -325,24 +325,134 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /02 하체 중심.* · 화/)
     await navTo('홈')
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /상체 푸시/)
-    await click('오늘만 다른 루틴 선택', 'textContent', chooser + ' summary')
+    const weekTop = () => evaluate(`document.querySelector('[aria-label="이번 주 일정"]').getBoundingClientRect().top + scrollY`)
+    const triggerLayout = () => evaluate(`(() => {
+      const button = document.querySelector(${JSON.stringify(chooserTrigger)})
+      const title = document.createRange()
+      title.selectNode(button.firstChild)
+      const bounds = element => {
+        const { x, y, width, height } = element.getBoundingClientRect()
+        return [x, y + scrollY, width, height]
+      }
+      return { button: bounds(button), title: bounds(title), icon: bounds(button.firstElementChild),
+        padding: getComputedStyle(button).padding }
+    })()`)
+    const weekBeforeOpen = await weekTop()
+    const closedTrigger = await triggerLayout()
+    const verticalCenter = ([, y, , height]) => y + height / 2
+    assert(Math.abs(verticalCenter(closedTrigger.title) - verticalCenter(closedTrigger.button)) <= 0.5)
+    assert.equal(verticalCenter(closedTrigger.icon), verticalCenter(closedTrigger.button))
+    assert(await evaluate(`(() => {
+      const card = document.querySelector('[aria-label="이번 주 일정"]')
+      const { top, bottom } = card.getBoundingClientRect()
+      return !card.textContent.includes('주간 일정 관리') &&
+        card.firstElementChild.getBoundingClientRect().top - top === bottom - card.lastElementChild.getBoundingClientRect().bottom
+    })()`))
+    for (const expanded of ['true', 'false', 'true']) {
+      await click('오늘만 다른 루틴 선택', 'textContent', chooserTrigger)
+      assert.equal(await evaluate(`document.querySelector(${JSON.stringify(chooserTrigger)}).ariaExpanded`), expanded)
+      assert.deepEqual(await triggerLayout(), closedTrigger)
+      assert.equal(await weekTop(), weekBeforeOpen)
+    }
+    assert(await evaluate(`(() => {
+      const trigger = document.querySelector(${JSON.stringify(chooserTrigger)}).getBoundingClientRect()
+      const panel = document.querySelector(${JSON.stringify(chooserPanel)}).getBoundingClientRect()
+      return trigger.left === panel.left && trigger.right === panel.right && trigger.bottom === panel.top
+    })()`))
     const activeFilter = () => evaluate('document.querySelector("[aria-label=\'루틴 일정 필터\'] [aria-pressed=true]").textContent')
+    const homeTitle = () => evaluate('document.querySelector(\'[aria-label="오늘의 루틴"] h2\').textContent')
+    const todayCardHeight = () => evaluate(`document.querySelector('[aria-label="오늘의 루틴"]').getBoundingClientRect().height`)
+    const hasStart = () => evaluate('!!document.querySelector(\'[aria-label="홈"] [data-click-action="start"]\')')
+    const chooserOpen = () => evaluate(`document.querySelector(${JSON.stringify(chooserTrigger)}).ariaExpanded === 'true'`)
+    const weekText = () => evaluate('document.querySelector(\'[aria-label="이번 주 일정"]\').textContent')
+    const openChooser = () => click('오늘만 다른 루틴 선택', 'textContent', chooserTrigger)
     assert.equal(await activeFilter(), '01')
-    assert.deepEqual(await evaluate('[...document.querySelectorAll("[aria-label=\'루틴 일정 필터\'] button")].map(b=>b.textContent)'), ['전체', '미배정', '01', '02', '03'])
-    assert.equal(await evaluate('!!document.querySelector("[aria-label=홈] details input[type=search]")'), false)
-    assert.equal(await evaluate('document.querySelectorAll("[aria-label=홈] details button strong").length'), 1)
+    const filterGroup = '[aria-label="루틴 일정 필터"]'
+    const filterButtons = filterGroup + ' button'
+    const tagAppearance = selector => evaluate(`(() => {
+      const group = document.querySelector(${JSON.stringify(selector)})
+      const state = pressed => {
+        const pill = group.querySelector('button[aria-pressed="' + pressed + '"] span')
+        const style = getComputedStyle(pill)
+        return [pill.getBoundingClientRect().height, style.borderRadius, style.backgroundColor,
+          style.border, style.color, style.fontSize, style.fontWeight, style.paddingInline]
+      }
+      return { gap: getComputedStyle(group).gap, selected: state(true), unselected: state(false) }
+    })()`)
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll(${JSON.stringify(filterButtons)})].map(b => b.textContent)`), ['전체', '미배정', '01', '02', '03', '휴식'])
+    assert(await evaluate(`[...document.querySelectorAll(${JSON.stringify(filterButtons)})].every(button => {
+      const rect = button.getBoundingClientRect()
+      const pill = button.firstElementChild.getBoundingClientRect()
+      return rect.width === 50 && rect.height === 44 && pill.width === 50 && pill.height === 27
+    })`))
+    const homeTagAppearance = await tagAppearance(filterGroup)
+    assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(chooserPanel + ' input[type=search]')})`), false)
+    const routineNames = () => evaluate(`[...document.querySelectorAll(${JSON.stringify(chooserRows + ' strong')})].map(e => e.textContent)`)
+    assert.equal((await routineNames()).length, 1)
+    const originalTitle = await homeTitle()
+    const originalHeight = await todayCardHeight()
+    assert(originalHeight >= 176)
+    const plannedWeek = await weekText()
+    assert.equal(await hasStart(), true)
+    const filterRest = () => click('휴식', 'textContent', filterButtons)
+    const chooseRest = () => click('휴식', 'textContent', chooserRows + ' strong')
+    await filterRest()
+    assert.equal(await chooserOpen(), true)
+    assert.equal(await homeTitle(), originalTitle)
+    assert.equal(await hasStart(), true)
+    assert.deepEqual(await routineNames(), ['휴식'])
+    assert.match(await body(), /오늘은 운동하지 않고 쉬어갑니다\./)
+    await chooseRest()
+    assert.equal(await chooserOpen(), false)
+    assert.equal(await homeTitle(), '오늘은 쉬어가는 날')
+    assert.equal(await hasStart(), false)
+    assert.equal(await evaluate(`document.querySelector('[aria-label="오늘의 루틴"] p').textContent`), '정해진 휴식일입니다. 다른 루틴을 선택할 수 있습니다.')
+    assert(await evaluate(`(() => {
+      const card = document.querySelector('[aria-label="오늘의 루틴"]')
+      const { top, bottom } = card.getBoundingClientRect()
+      const first = card.firstElementChild.getBoundingClientRect()
+      const last = card.querySelector('p').getBoundingClientRect()
+      return bottom - top < 176 && Math.abs((first.top - top) - (bottom - last.bottom)) <= 1
+    })()`))
+    assert.equal(await weekText(), plannedWeek)
+    await openChooser()
+    assert.equal(await evaluate(`document.querySelector(${JSON.stringify(chooserRows)}).ariaPressed`), 'true')
+    await click('오늘의 원래 일정으로')
+    assert.equal(await homeTitle(), originalTitle)
+    assert.equal(await todayCardHeight(), originalHeight)
+    assert.equal(await hasStart(), true)
+    assert.equal(await weekText(), plannedWeek)
+    await chooseRest()
+    await openChooser()
     await click('미배정')
-    assert.deepEqual(await evaluate('[...document.querySelectorAll("[aria-label=홈] details button strong")].map(e=>e.textContent)'), ['등과 팔 중심 회복 루틴'])
+    assert.deepEqual(await routineNames(), ['등과 팔 중심 회복 루틴'])
     await click('전체')
     assert.match(await body(), /가벼운 러닝\s*다른 일정 배정/)
+    const optionFonts = selector => evaluate(`(() => {
+      const row = document.querySelector(${JSON.stringify(selector)})
+      return ['strong', 'small'].map(tag => {
+        const { fontSize, fontWeight } = getComputedStyle(row.querySelector(tag))
+        return [fontSize, fontWeight]
+      })
+    })()`)
+    const homeOptionFonts = await optionFonts(chooserRows)
+    assert(await evaluate(`(() => {
+      const panel = document.querySelector(${JSON.stringify(chooserPanel)})
+      const list = panel.querySelector('[aria-label="선택할 루틴"]')
+      const filters = panel.querySelector(${JSON.stringify(filterGroup)})
+      return getComputedStyle(panel).overflowY === 'hidden' && getComputedStyle(list).overflowY === 'auto' &&
+        getComputedStyle(list).overscrollBehaviorY === 'contain' && !list.contains(filters)
+    })()`))
     await click('03')
     assert.match(await body(), /가벼운 러닝/)
-    assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /상체 푸시/)
-    await wait(() => evaluate('document.querySelector("[aria-label=홈] details button strong[title=\'가벼운 러닝\']")?.closest("button").click() || document.querySelector("[aria-label=홈] details button strong[title=\'가벼운 러닝\']") !== null'), 'today only')
-    assert.equal(await evaluate('document.querySelector("[aria-label=홈] details").open'), false)
+    assert.equal(await homeTitle(), '오늘은 쉬어가는 날')
+    await click('가벼운 러닝', 'title', chooserRows + ' strong')
+    assert.equal(await chooserOpen(), false)
+    assert.equal(await homeTitle(), '가벼운 러닝')
+    assert.equal(await hasStart(), true)
     await navTo('루틴'); await click('02번 주간 일정으로 즉시 전환', 'ariaLabel')
     await wait(async () => (await body()).includes('진행중'), 'manual activation')
-    await navTo('홈'); await click('오늘만 다른 루틴 선택', 'textContent', chooser + ' summary')
+    await navTo('홈'); await click('오늘만 다른 루틴 선택', 'textContent', chooserTrigger)
     assert.equal(await activeFilter(), '02')
     await tuesday()
     assert.match(await body(), /11\.10 · 휴식/)
@@ -429,6 +539,9 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await evaluate('document.querySelector("details[open]").open=false')
     const createdName = '시연용 새 루틴 ' + 'TEST'.repeat(12)
     await click('+ 새 루틴'); await set('input[placeholder="나의 루틴"]', createdName)
+    await click('루틴 태그', 'ariaLabel')
+    assert.deepEqual(await optionFonts('[aria-label="루틴 태그 선택"] [role="option"]'), homeOptionFonts)
+    await click('루틴 태그', 'ariaLabel')
     await click('+ 웨이트 종목 추가')
     await wait(() => evaluate('document.querySelector("[aria-label=\'표준 운동 목록\'] button")?.click() || !!document.querySelector("[aria-label=\'웨이트 1\']")'), 'choose weight')
     await click('설정 중량', 'ariaLabel'); await click('직접 입력'); await set('dialog[open] input', '20'); await click('확인', 'textContent', 'dialog[open] button')
@@ -528,6 +641,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /디로딩 완료 당일/)
     await set(scenario, 'unassigned')
     assert.match(await body(), /주간 일정 미배정/)
+    assert.equal(await hasStart(), false)
     await set(scenario, 'read-error'); await navTo('홈')
     assert.match(await body(), /홈 정보를 불러오지 못했습니다/)
     await click('홈 다시 불러오기')
@@ -723,6 +837,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     const query = '.exercise-search input[type="search"]'
     const parts = ['전체', '가슴', '등', '어깨', '팔', '하체', '코어', '유산소', '기타']
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${group} button')].map(b=>b.textContent)`),parts)
+    assert.deepEqual(await tagAppearance(group), homeTagAppearance)
     assert.equal(await evaluate('document.querySelectorAll(".exercise-search select").length'),0)
     await evaluate('document.querySelector(".exercise-search .search-disclosure").click()')
     assert.equal((await names()).length,0)

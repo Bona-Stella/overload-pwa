@@ -4,6 +4,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 import { resolve } from 'node:path'
 import { sessionAchievement } from '../../src/features/home/achievement.ts'
+import { chooserRows, chooserTrigger, openHomeChooser } from './home-chooser.mjs'
 
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex')
 export async function runHomePolish(d){
@@ -27,9 +28,9 @@ export async function runHomePolish(d){
   assert.equal(cursor,null)
   const mixed=details.find(r=>r.weightPlacements.some(w=>!w.deletedAt)&&r.cardioPlacements.some(c=>!c.deletedAt))
   assert(mixed)
-  await evaluate(`document.querySelector('[aria-label="홈"] details').open=true`)
-  await evaluate(`(()=>{const b=[...document.querySelectorAll('[aria-label="홈"] details button[aria-pressed]')].find(b=>b.querySelector('strong').title===${JSON.stringify(mixed.name)});b.click()})()`)
-  await wait(()=>evaluate(`document.querySelector('[aria-label="오늘의 루틴"] h2').textContent===${JSON.stringify(mixed.name)}&&!document.querySelector('[aria-label="홈"] details').open`),'today-only selection closes after render')
+  await openHomeChooser(d)
+  await evaluate(`(()=>{const b=[...document.querySelectorAll(${JSON.stringify(chooserRows)})].find(b=>b.querySelector('strong').title===${JSON.stringify(mixed.name)});b.click()})()`)
+  await wait(()=>evaluate(`document.querySelector('[aria-label="오늘의 루틴"] h2').textContent===${JSON.stringify(mixed.name)}&&document.querySelector(${JSON.stringify(chooserTrigger)}).getAttribute('aria-expanded')==='false'`),'today-only selection closes after render')
   const separator=await evaluate(`(()=>{const card=document.querySelector('[aria-label="오늘의 루틴"]'),sections=[...card.querySelectorAll('h3')].map(h=>h.parentElement);return sections.map(e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return {border:s.borderTop,color:s.borderTopColor,thickness:s.borderTopWidth,x:r.x,width:r.width,margin:s.marginTop,padding:s.paddingTop}})})()`)
   assert.equal(separator.length,2);assert.deepEqual(separator[0],separator[1]);assert.equal(separator[0].thickness,'1px')
   const iconGeometry=await evaluate(`(async()=>{await Promise.all([...document.querySelectorAll('[data-session-id] img')].map(i=>i.decode()));const row=document.querySelector('[data-session-id]'),groups=[...row.querySelectorAll('span[aria-label]')];return groups.map(e=>{const i=e.querySelector('img'),a=i.getBoundingClientRect(),b=e.getBoundingClientRect();return {label:e.getAttribute('aria-label'),width:a.width,height:a.height,centerDifference:(a.y+a.height/2)-(b.y+b.height/2),gap:getComputedStyle(e).gap,loaded:i.complete&&i.naturalWidth>0}})})()`)
@@ -52,11 +53,11 @@ export async function runHomePolish(d){
   await evaluate(`document.querySelector('[data-session-id]').click()`)
   await wait(()=>evaluate(`!!document.querySelector('.closed-workout')&&document.querySelector('.closed-workout').getClientRects().length>0`),'existing record detail')
   await click('홈')
-  await wait(()=>evaluate(`!!document.querySelector('[aria-label="홈"] details')&&!!document.querySelector('[aria-label="오늘의 루틴"]')`),'home render after history navigation')
+  await wait(()=>evaluate(`!!document.querySelector(${JSON.stringify(chooserTrigger)})&&!!document.querySelector('[aria-label="오늘의 루틴"]')`),'home render after history navigation')
   // Empty-section policy: actual unassigned home has no divider; choose each saved plan without writes.
   for(const routine of details){
-    await evaluate(`document.querySelector('[aria-label="홈"] details').open=true`)
-    await evaluate(`(()=>{const b=[...document.querySelectorAll('[aria-label="홈"] details button[aria-pressed]')].find(b=>b.querySelector('strong').title===${JSON.stringify(routine.name)});b.click()})()`)
+    await openHomeChooser(d)
+    await evaluate(`(()=>{const b=[...document.querySelectorAll(${JSON.stringify(chooserRows)})].find(b=>b.querySelector('strong').title===${JSON.stringify(routine.name)});b.click()})()`)
     await wait(()=>evaluate(`document.querySelector('[aria-label="오늘의 루틴"] h2').textContent===${JSON.stringify(routine.name)}`),'existing plan choice')
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="오늘의 루틴"] h3').length`),2)
   }

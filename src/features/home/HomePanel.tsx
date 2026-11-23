@@ -2,6 +2,7 @@ import { partialAchievement } from '../statistics/display-achievement.ts'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
+import { ConnectedDropdown } from '../../components/common-ui/ConnectedDropdown.tsx'
 import type { AppTab } from '../../app/types.ts'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { OnlineState } from '../workout-online/controller.ts'
@@ -23,7 +24,8 @@ import { presetNumber } from '../workout-online/preset-schedule.ts'
 import type { SchedulePreset } from '../workout-online/preset-schedule.ts'
 import type { ActiveWorkoutProgress, PlanWeight, PlanCardio } from './active-workout.ts'
 import { formatDuration } from '../workout/model.ts'
-import routineStyles from '../workout-online/Routine.module.css'
+import filterStyles from '../../components/common-ui/FilterTags.module.css'
+import optionText from '../../components/common-ui/RoutineOptionText.module.css'
 import styles from './Home.module.css'
 
 const wordmark = new URL('../../assets/OVERLOAD_white_transparent_4x.png', import.meta.url).href
@@ -223,15 +225,15 @@ export function HomeView(props: HomeViewProps) {
   const { data, today, loading } = props
   const active = props.progress?.confirmedFinished ? null : props.active
   const dates = weekDates(today)
-  const [override, setOverride] = useState<{ date: string; id: string } | null>(null)
+  const [override, setOverride] = useState<{ date: string; routineId: string | null } | null>(null)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
-  const chooser = useRef<HTMLDetailsElement>(null)
   const { presetFilter } = props
   const filterContext = presetFilter ? presetFilter.activeId + ':' + presetFilter.visit : ''
   const [filter, setFilter] = useState<{ context: string; value: string } | null>(null)
   const choice = filter?.context === filterContext ? filter.value : null
   const chosenPreset = presetFilter?.presets.find(preset => preset.id === choice)
-  const selectedFilter = choice === 'all' || choice === 'unassigned' ? choice : chosenPreset?.id ?? presetFilter?.activeId
+  const selectedFilter = choice === 'all' || choice === 'unassigned' || choice === 'rest' ? choice : chosenPreset?.id ?? presetFilter?.activeId
+  const restFilter = selectedFilter === 'rest'
   const filteredPreset = presetFilter?.presets.find(preset => preset.id === selectedFilter)
   const assignedIds = new Set(presetFilter?.presets.flatMap(preset => preset.assignments.map(a => a.routineId)))
   const candidates = data?.summaries.filter(routine => selectedFilter === 'unassigned'
@@ -239,9 +241,14 @@ export function HomeView(props: HomeViewProps) {
     : !filteredPreset || filteredPreset.assignments.some(a => a.routineId === routine.id))
   const chooseFilter = (value: string) => setFilter({ context: filterContext, value })
   const assignment = data?.schedule.assignments.find(a => a.dayOfWeek === dayOfWeek(today))
-  const overrideId = override?.date === today && data?.summaries.some(r => r.id === override.id) ? override.id : null
-  const chosenId = overrideId ?? assignment?.routineId
+  const temporaryRoutineId = override?.date === today ? override.routineId : undefined
+  const restSelected = temporaryRoutineId === null
+  const overrideId = temporaryRoutineId && data?.summaries.some(r => r.id === temporaryRoutineId) ? temporaryRoutineId : null
+  const chosenId = restSelected ? null : overrideId ?? assignment?.routineId
   const chosen = chosenId ? data?.routines.get(chosenId) : null
+  const restDay = restSelected || !chosenId && !!data && data.schedule.version !== '0'
+  const showStart = props.attempt || props.action === 'start' || !!chosenId
+  const chooserLocked = props.busy || !!props.action || !!props.active || props.attempt || props.protectedView
   const routineRefresh = chosenId && !props.active && !props.attempt ? props.routineRefreshes?.get(chosenId) : undefined
   const selected = dates.includes(selectedDay ?? '') ? selectedDay! : today
   const overview = props.week?.overview ?? data?.overview
@@ -249,48 +256,57 @@ export function HomeView(props: HomeViewProps) {
   const day = overview?.plannedDays.find(d => d.date === selected)
   const selectedEvidence=day?.selectedSessionId?evidence?.get(day.selectedSessionId):undefined
   const status = dayStatus(day, selected, today, selectedEvidence ? partialAchievement(selectedEvidence) : 'unknown')
-  useEffect(() => { if (override?.date === today && chosen?.id === override.id && chooser.current) chooser.current.open = false }, [override, chosen, today])
   return <section className={styles.home} aria-label="홈">
     <HomeHeader>{props.header}</HomeHeader>
     {props.headerActions}
     {props.issue && <StatusNotice error>{props.issue}</StatusNotice>}
     {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy} loading={props.action === 'resume'} onResume={props.onResume} />}
-      {!active && <Card hero className={`${styles.today} ${styles.planCard}`} aria-label="오늘의 루틴" aria-busy={!data && !!loading}>
+      {!active && <Card hero className={data && restDay && !props.todayNotice ? styles.today : `${styles.today} ${styles.planCard}`} aria-label="오늘의 루틴" aria-busy={!data && !!loading}>
         {!data ? loading ? <HomePlaceholder area="today" /> : <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
         <div className={styles.kicker}><span>TODAY'S ROUTINE</span><time dateTime={today}>{today.slice(5).replace('-', '.')} {weekdays[dayOfWeek(today) - 1]}</time></div>
-        <h2>{props.todayNotice ?? chosen?.name ?? (chosenId ? '루틴 확인 필요' : data.schedule.version !== '0' ? '오늘은 쉬어가는 날' : '첫 루틴을 준비해 보세요')}</h2>
+        <h2>{props.todayNotice ?? chosen?.name ?? (restDay ? '오늘은 쉬어가는 날' : chosenId ? '루틴 확인 필요' : '첫 루틴을 준비해 보세요')}</h2>
         {!props.todayNotice && chosen?.tag && <span className={styles.routineTag}>{chosen.tag}</span>}
-        {!props.todayNotice && (chosen ? <RoutinePlan routine={chosen} /> : <p className="muted small">{chosenId ? '이 루틴의 최신 구성을 확인하지 못했습니다. 새로고침하거나 다른 루틴을 선택하세요.' : data.schedule.version !== '0' ? '정해진 휴식일입니다. 원하면 오늘만 다른 루틴을 선택할 수 있습니다.' : '루틴 탭에서 운동과 주간 일정을 등록할 수 있습니다.'}</p>)}
+        {!props.todayNotice && (chosen ? <RoutinePlan routine={chosen} /> : <p className="muted small">{restDay ? '정해진 휴식일입니다. 다른 루틴을 선택할 수 있습니다.' : chosenId ? '이 루틴의 최신 구성을 확인하지 못했습니다. 새로고침하거나 다른 루틴을 선택하세요.' : '루틴 탭에서 운동과 주간 일정을 등록할 수 있습니다.'}</p>)}
         </>}
       </Card>}
       {chosenId && routineRefresh && (routineRefresh.failed
         ? <StatusNotice error>승인한 중량은 저장되었습니다. 최신 루틴을 확인하지 못했습니다. <Button onClick={() => props.onRetryRoutineRefresh?.(chosenId)}>루틴 다시 조회</Button></StatusNotice>
         : <StatusNotice>승인한 중량이 반영된 루틴을 확인하는 중입니다.</StatusNotice>)}
-      {!props.active && (!data && !props.attempt ? <HomePlaceholder area="action" /> : <Button className={styles.start} variant="primary" loading={!!props.action}
+      {!props.active && (showStart ? <Button className={styles.start} variant="primary" loading={!!props.action}
         data-click-action={props.attempt ? 'retry-start' : 'start'}
         disabled={!props.action && (props.busy || (props.attempt ? !props.localReady : !props.canStart || props.protectedView || !!routineRefresh || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length))}
         onClick={() => { if (props.attempt) props.onRetry(); else if (chosen) void props.onStart(chosen) }}>
-        {props.action === 'retry' || props.attempt && props.action !== 'start' ? '기존 시작 요청 다시 확인' : '운동 시작'}</Button>)}
+        {props.action === 'retry' || props.attempt && props.action !== 'start' ? '기존 시작 요청 다시 확인' : '운동 시작'}</Button>
+        : !data && loading && <HomePlaceholder area="action" />)}
       {props.attempt && !props.action && <StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice>}
-      {!props.hideChooser && (data ? <details className={styles.chooser} ref={chooser}><summary><b>오늘만 다른 루틴 선택</b><span className={styles.plus} aria-hidden="true" /></summary>
-        {!data.summaries.length && <><p>아직 루틴이 없습니다.</p><Button onClick={() => props.onNavigate('routines')}>루틴 만들러 가기</Button></>}
-        {presetFilter && <div className={styles.choiceFilters} role="group" aria-label="루틴 일정 필터">
-          <button type="button" className={routineStyles.chip} aria-pressed={selectedFilter === 'all'} onClick={() => chooseFilter('all')}>전체</button>
-          <button type="button" className={routineStyles.chip} aria-pressed={selectedFilter === 'unassigned'} onClick={() => chooseFilter('unassigned')}>미배정</button>
-          {presetFilter.presets.map((preset, index) => <button key={preset.id} type="button" className={routineStyles.chip} title={preset.name} aria-label={presetNumber(index) + '번 일정 · ' + preset.name} aria-pressed={selectedFilter === preset.id} onClick={() => chooseFilter(preset.id)}>{presetNumber(index)}</button>)}
+      {!props.hideChooser && (data ? <ConnectedDropdown className={styles.chooser} label="오늘만 다른 루틴 선택">{close => <div className={styles.chooserContent}>
+        {presetFilter && <div className={`${filterStyles.strip} ${styles.choiceFilters}`} role="group" aria-label="루틴 일정 필터">
+          <button type="button" aria-pressed={selectedFilter === 'all'} onClick={() => chooseFilter('all')}><span>전체</span></button>
+          <button type="button" aria-pressed={selectedFilter === 'unassigned'} onClick={() => chooseFilter('unassigned')}><span>미배정</span></button>
+          {presetFilter.presets.map((preset, index) => <button key={preset.id} type="button" title={preset.name} aria-label={presetNumber(index) + '번 일정 · ' + preset.name} aria-pressed={selectedFilter === preset.id} onClick={() => chooseFilter(preset.id)}><span>{presetNumber(index)}</span></button>)}
+          <button type="button" aria-pressed={restFilter} onClick={() => chooseFilter('rest')}><span>휴식</span></button>
         </div>}
+        {restFilter ? <div className={styles.choices} role="group" aria-label="선택할 루틴">
+          <button type="button" aria-pressed={restSelected} disabled={chooserLocked}
+            onClick={() => { setOverride({ date: today, routineId: null }); close() }}>
+            <span className={styles.choiceTitle}><strong className={optionText.title}>휴식</strong></span><small className={optionText.description}>오늘은 운동하지 않고 쉬어갑니다.</small>
+          </button>
+        </div> : <>
+        {!data.summaries.length && <><p>아직 루틴이 없습니다.</p><Button onClick={() => { close(); props.onNavigate('routines') }}>루틴 만들러 가기</Button></>}
         {props.chooserPending ? <p role="status">루틴 구성을 확인하는 중입니다.</p> : <>
         {!!data.summaries.length && !candidates?.length && <p role="status">조건에 맞는 루틴이 없습니다.</p>}
-        <div className={styles.choices}>{candidates?.map(r => {
+        {!!candidates?.length && <div className={styles.choices} role="group" aria-label="선택할 루틴">{candidates.map(r => {
           const detail = data.routines.get(r.id)
           const days = (filteredPreset ?? data.schedule).assignments.filter(a => a.routineId === r.id).map(a => weekdays[a.dayOfWeek - 1]).join('·')
           const assignmentLabel = days || (presetFilter ? assignedIds.has(r.id) ? '다른 일정 배정' : '미배정' : '요일 미지정')
-          return <button type="button" key={r.id} aria-pressed={chosenId === r.id} disabled={!detail || props.busy || !!props.active || props.attempt || props.protectedView} onClick={() => setOverride({ date: today, id: r.id })}>
-            <span className={styles.choiceTitle}><strong title={r.name}>{r.name}</strong><span>{assignmentLabel}</span></span><small title={detail ? representativeExercises(detail) : ''}>{detail ? representativeExercises(detail) : '구성 조회 실패'}</small>
+          return <button type="button" key={r.id} aria-pressed={chosenId === r.id} disabled={!detail || chooserLocked}
+            onClick={() => { setOverride({ date: today, routineId: r.id }); close() }}>
+            <span className={styles.choiceTitle}><strong className={optionText.title} title={r.name}>{r.name}</strong><span className={optionText.description}>{assignmentLabel}</span></span><small className={optionText.description} title={detail ? representativeExercises(detail) : ''}>{detail ? representativeExercises(detail) : '구성 조회 실패'}</small>
           </button>
-        })}</div></>}
-        {overrideId && <Button variant="quiet" onClick={() => setOverride(null)}>오늘의 원래 일정으로</Button>}
-      </details> : <HomePlaceholder area="chooser" />)}
+        })}</div>}</>}
+        </>}
+        {(restSelected || overrideId) && <Button variant="quiet" onClick={() => setOverride(null)}>오늘의 원래 일정으로</Button>}
+      </div>}</ConnectedDropdown> : <HomePlaceholder area="chooser" />)}
       <Card aria-label="이번 주 일정" className={styles.week} aria-busy={!overview && !props.weekFailed}>
         {!overview ? props.weekFailed ? <><StatusNotice error>이번 주 일정을 확인하지 못했습니다.</StatusNotice><Button onClick={props.onRefresh}>다시 조회</Button></> : <HomePlaceholder area="week" /> : <>
         <div className={styles.sectionTitle}><h2>이번 주 일정</h2><span>{dates[0].slice(5).replace('-', '.')} – {dates[6].slice(5).replace('-', '.')}</span></div>
@@ -307,7 +323,6 @@ export function HomeView(props: HomeViewProps) {
           : day?.status === 'REST' || day?.status === 'BEFORE_REGISTRATION' ? status.label
             : '당일 배정 확인 불가' + (day?.status === 'PENDING' ? ' · ' + status.label : '')}
           {day?.selectedSessionId && <Button className={styles.dayLink} variant="quiet" onClick={() => props.onOpen(day.selectedSessionId!)}>기록 ›</Button>}</p>
-        <div className={styles.weekFooter}><Button variant="quiet" onClick={() => props.onNavigate('routines')}>주간 일정 관리 ›</Button></div>
         </>}
       </Card>
       <section aria-label="최근 운동" className={styles.recent} aria-busy={!(props.recent?.recentRows ?? data?.recentRows) && !props.recentFailed}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button variant="quiet" onClick={() => props.onHistory?props.onHistory():props.onNavigate('history')}>전체 보기 ›</Button></div>

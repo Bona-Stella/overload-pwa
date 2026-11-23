@@ -1,0 +1,10 @@
+.title {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.description {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
