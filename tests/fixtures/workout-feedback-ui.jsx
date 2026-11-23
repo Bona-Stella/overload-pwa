@@ -151,16 +151,20 @@ function Preferences({ owner, onBack }) {
  const [alerts, save] = useRestAlertPreferences(owner)
  return <RestAlertSettings alerts={alerts} onChange={save} onBack={onBack}/>
 }
-function RestSafetyFixture() {
+function RestSafetyFixture({ finalFooter = false }) {
  const [fixture]=useState(()=>{
   const realNow=Date.now.bind(Date)
   const startedAt=new Date(realNow()-10000).toISOString()
   let server=session({startedAt,lastWorkoutSyncedAt:startedAt})
+  if(finalFooter){
+   Object.assign(server.initialPlan.weightExercises[0],{setCount:1,approvedWeightKg:'25'})
+   server.snapshot.state.appliedPlan.weightExercises[0].setCount=1
+  }
   let local=createLocalWorkout(server,bootstrap.settings), online=true, heldWrite, failRest=false
   local.warmupCompleted=true
   startExercise(local,local.currentExerciseId,realNow())
   for(const ordinal of [1,2,3])editDraft(local,local.currentExerciseId,ordinal,{reps:'8'})
-  const requests=[]
+  const requests=[], assessments=[], finishRequests=[]
   const saveLocal=async(value,expected,allowed)=>{
    if(heldWrite)await heldWrite.promise
    if(!allowed()||expected!==local.editVersion)throw new LocalStoreError()
@@ -168,7 +172,10 @@ function RestSafetyFixture() {
    local=structuredClone(value)
   }
   const store={openLocal:async()=>structuredClone(local),readLocal:async()=>structuredClone(local),saveLocal,saveSyncLocal:saveLocal,saveSession:async()=>{}}
-  const api={detail:async()=>structuredClone(server),snapshot:async(scope,id,body)=>{
+  const api={detail:async()=>structuredClone(server),finish:async(...args)=>{
+   finishRequests.push(args)
+   throw new Error('fixture retains the active session')
+  },snapshot:async(scope,id,body)=>{
    requests.push(structuredClone(body))
    const at=new Date().toISOString(),version=String(BigInt(server.version)+1n)
    server={...server,version,localRevision:body.localRevision,lastSnapshotSavedAt:at,lastWorkoutSyncedAt:at,
@@ -177,7 +184,16 @@ function RestSafetyFixture() {
     snapshotSavedAt:at,lastWorkoutSyncedAt:at,duplicate:false,approvalResults:[]}
   }}
   const newController=()=>new LocalWorkoutController(store,()=>true,async()=>({held:()=>true,release(){}}),{api,online:()=>online})
-  return {newController,server:()=>server,requests,local:()=>local,hold(fail=false){
+  const assessmentApi=finalFooter ? {progressAssessment:()=>new Promise((resolve,reject)=>{
+   const {id:sessionId,userId,dataGeneration,version,writerEpoch,localRevision}=server
+   const sessionExerciseId=server.initialPlan.weightExercises[0].sessionExerciseId
+   assessments.push({
+    answer:()=>resolve({sessionId,userId,dataGeneration,version,writerEpoch,localRevision,
+     evaluation:{exercises:[{sessionExerciseId,advice:'INCREASE',eligible:true,comparisonContext:{approvedWeightKg:'25'}}]}}),
+    fail:()=>reject(new Error('평가 조회 실패')),
+   })
+  })} : undefined
+  return {newController,assessmentApi,assessments,finishRequests,server:()=>server,requests,local:()=>local,hold(fail=false){
    failRest=fail
    let release
    const promise=new Promise(resolve=>{release=resolve})
@@ -191,13 +207,15 @@ function RestSafetyFixture() {
  })
  const [controller,replace]=useState(fixture.newController)
  const state=useSyncExternalStore(controller.subscribe,controller.getSnapshot)
+ const progress=useProgressAssessment(state.workout,fixture.assessmentApi)
  useEffect(()=>{
   void controller.open(fixture.server(),bootstrap.settings)
   return ()=>controller.stop()
  },[controller,fixture])
  window.restSafety={...fixture,controller,reopen:()=>replace(fixture.newController())}
  return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>
-  <LocalWorkoutView state={state} controller={controller} definitions={bootstrap.exercises}/>
+  <LocalWorkoutView state={state} controller={controller} definitions={bootstrap.exercises}
+   progressAssessment={progress.value} progressAssessmentPending={progress.pending}/>
  </AppShell>
 }
 function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={e=>{throw e}} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record?.startsWith('saved-review:') ? <SavedReviewFixture key={record} mode={record.split(':')[1]}/> : record?.startsWith('approval-summary:') ? <ApprovalSummaryFixture key={record} empty={record==='approval-summary:empty'}/> : record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
@@ -227,6 +245,7 @@ window.feedback.mountButtonProbe=()=>{
   window.feedback.unmountButtonProbe=()=>{probe.unmount();host.remove()}
 }
 if(authInput==='rest-safety')root.render(<RestSafetyFixture/>)
+else if(authInput==='final-footer')root.render(<RestSafetyFixture finalFooter/>)
 else if(authInput) void import('../../src/features/auth/auth.css').then(()=>root.render(<AppShell authenticated={false} tab="home" onNavigate={()=>{}}>
   <LoginScreens state={{pending:null,challenge,resendAt:0,verifyAt:0,notice:'',updatedAt:now}} controller={{}} now={now} onLegal={()=>{}} />
 </AppShell>))

@@ -73,5 +73,6 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   ].filter(Boolean)
   return <LocalWorkoutView state={state} controller={controller} definitions={definitions} manufacturers={manufacturers} activities={activities}
     referenceRecords={referenceRecords} referenceRoutine={referenceRoutine} history={history} visible={visible} onHome={onHome} backLabel={backLabel} notices={notices} progressAssessment={progress.value}
+    progressAssessmentPending={progress.pending}
     preparingSummary={preparingSummary} confirmingFinish={confirmingFinish} />
 }

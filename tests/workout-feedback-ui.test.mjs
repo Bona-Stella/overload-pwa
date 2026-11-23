@@ -646,13 +646,14 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await new Promise(r=>setTimeout(r,50));assert.equal(await evaluate('window.progressProbe.queries.length'),2,'same saved revision does not duplicate requests')
     await evaluate("window.progressProbe.revision('3',false)")
     await wait(()=>evaluate('document.querySelector("#progress-probe").textContent==="NONE"'))
-    for(const width of [320,393,1280]){
+    for(const width of [320,375,393,430,1280]){
       await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})
       for(const direction of ['increase','decrease']){
         await evaluate(`window.feedback.advice({direction:${JSON.stringify(direction)},kg:'99999999999999.999999'})`)
         await new Promise(r=>setTimeout(r,80))
         const size=await evaluate(`(()=>{const [a,b]=document.querySelector('footer').children,r=a.getBoundingClientRect(),s=b.getBoundingClientRect();return{card:[r.width,r.height],button:[s.width,s.height],gap:s.top-r.bottom,clipped:a.scrollHeight>a.clientHeight}})()`)
-        assert.deepEqual(size.card,size.button,'only a recommendation footer gives both rows the same outer size')
+        assert.equal(size.card[0],size.button[0])
+        assert.equal(size.button[1],50,'a taller recommendation cannot stretch the action')
         assert(size.card[1]>=64);assert.equal(size.gap,6);assert.equal(size.clipped,false)
       }
     }
@@ -1090,7 +1091,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         const { x, y, width, height } = button.getBoundingClientRect()
         const css = getComputedStyle(button)
         return { x, y, width, height, disabled: button.disabled, opacity: css.opacity, filter: css.filter,
-          hovered: button.matches(':hover'), cursor: css.cursor, busy: button.getAttribute('aria-busy'),
+          hovered: button.matches(':hover'), hoverCapable: matchMedia('(hover: hover)').matches,
+          cursor: css.cursor, busy: button.getAttribute('aria-busy'),
           appearance: [css.backgroundColor, css.color, css.padding, css.borderRadius],
           footerWidth: button.closest('footer').clientWidth }
       }, label)
@@ -1108,7 +1110,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           const css = getComputedStyle(button)
           const footer = button.closest('footer')
           const {x,y,width,height} = button.getBoundingClientRect()
-          window.restTransitionFrames.push({ disabled:button.disabled, hovered:button.matches(':hover'),
+          window.restTransitionFrames.push({ disabled:button.disabled, hovered:button.matches(':hover'), hoverCapable:matchMedia('(hover: hover)').matches,
             filter:css.filter, cursor:css.cursor, opacity:css.opacity, background:css.backgroundColor, color:css.color,
             padding:css.padding, radius:css.borderRadius, busy:button.getAttribute('aria-busy'), text:button.textContent.trim(),
             rect:[x,y,width,height],
@@ -1125,8 +1127,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         observer.observe(document.body, { childList: true, attributes: true, subtree: true })
       }, label)
       const afterAppearance = ms => run(ms => new Promise(resolve => setTimeout(resolve, Math.max(0, window.setShownAt + ms - performance.now()))), ms)
-      const checkAppearance = ({hovered,filter,cursor,...appearance}) => {
-        assert.equal(filter,hovered ? 'brightness(1.13)' : 'none')
+      const checkAppearance = ({hovered,hoverCapable,filter,cursor,...appearance}) => {
+        assert.equal(filter,hovered && hoverCapable ? 'brightness(1.13)' : 'none')
         assert.equal(cursor,'pointer')
         return appearance
       }
@@ -1143,6 +1145,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           assert.equal(frame.inlineOpacity,'1')
           assert.equal(frame.busy,null)
           assert.equal(frame.text,label)
+          assert.equal(frame.rect[3],50)
         }
       }
       const key = async (key, code, windowsVirtualKeyCode) => {
@@ -1165,11 +1168,55 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         const tap = async p => { await press(p,true); await press(p,false) }
         await send('Page.navigate',{url:origin+'/boundary?input=rest-safety'})
         const initial = await ready('1세트 완료')
-        if (!mobile) await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point(initial)})
+        const firstPress = {x:Math.round(initial.x + initial.width/4),y:point(initial).y}
+        if (!mobile) await send('Input.dispatchMouseEvent',{type:'mouseMoved',...firstPress})
         const first = await ready('1세트 완료')
         const originalPlan = await run(() => window.restSafety.local().initialPlan)
-        await tap(point(first))
+        await run(() => {
+          const frames=window.restEntryFrames=[]
+          let firstRest
+          const sample = () => {
+            const now=performance.now()
+            const button=document.querySelector('[data-workout-frame] footer button')
+            const label=button?.textContent
+            if(label==='1세트 완료'||label==='휴식 종료'){
+              const css=getComputedStyle(button), parent=getComputedStyle(button.parentElement)
+              if(label==='휴식 종료') firstRest ??= now
+              frames.push({label, elapsed:firstRest===undefined?null:now-firstRest, disabled:button.disabled, filter:css.filter,
+                opacity:css.opacity, background:css.backgroundColor, parentOpacity:parent.opacity, parentFilter:parent.filter,
+                transition:css.transition, spinner:!!button.querySelector('[data-button-spinner]'),
+                box:button.getBoundingClientRect().toJSON()})
+            }
+            if(firstRest===undefined||now-firstRest<500) requestAnimationFrame(sample)
+          }
+          sample()
+        })
+        if (width===393) await evaluate('window.restSafety.hold()')
+        await tap(firstPress)
+        if (width===393) {
+          await wait(()=>evaluate('window.restEntryFrames.some(frame=>frame.label==="1세트 완료"&&frame.spinner)'))
+          assert.equal(await action('휴식 종료'),null,'a pending local write keeps the original action')
+          await evaluate('window.restSafety.release()')
+        }
         const rest = await ready('휴식 종료')
+        const entryFrames=await wait(async ()=>{
+          const frames=await evaluate('window.restEntryFrames')
+          return frames.at(-1)?.elapsed>=500 && frames
+        })
+        const arrival=entryFrames.filter(frame=>frame.label==='휴식 종료')
+        assert.ok(arrival.length>1)
+        for(const frame of arrival){
+          assert.deepEqual(frame,{...arrival[0],elapsed:frame.elapsed})
+          assert.equal(frame.filter,'none','a pointer carried from the completed set does not highlight the rest button')
+          assert.equal(frame.opacity,'1')
+          assert.equal(frame.disabled,false)
+          assert.equal(frame.spinner,false)
+        }
+        if(mobile) assert.ok(entryFrames.filter(frame=>frame.label==='1세트 완료').every(frame=>frame.filter==='none'))
+        else {
+          await send('Input.dispatchMouseEvent',{type:'mouseMoved',...point(rest)})
+          assert.equal((await action('휴식 종료')).filter,'brightness(1.13)','deliberate mouse movement preserves hover feedback')
+        }
         const extension = await ready('+30초')
         assert.equal(rest.y + rest.height, first.y + first.height)
         assert.equal(extension.y, rest.y)
@@ -1272,6 +1319,57 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           await evaluate('window.restSafety.controller.syncSettled()')
           assert.deepEqual(await snap(),{local:[1,2,3],remote:[1,2,3],requests:[[1],[1,2],[1,2,3]]})
         }
+      }
+    })
+    await t.test('final set keeps one action row until confirmed advice or fallback, with synchronized reserve', async () => {
+      const run = (fn, ...args) => evaluate('(' + fn + ')(...' + JSON.stringify(args) + ')')
+      await send('Emulation.setDeviceMetricsOverride',{width:393,height:568,deviceScaleFactor:1,mobile:true})
+      await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1})
+      const action = label => run(label => {
+        const button=[...document.querySelectorAll('footer button')].find(button=>button.textContent===label)
+        if (!button) return null
+        const {x,y,width,height}=button.getBoundingClientRect()
+        return {point:{x:x+width/2,y:y+height/2},disabled:button.disabled,height}
+      },label)
+      const tap = async p => {
+        await send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]})
+        await send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+      }
+      for (const result of ['answer','fail','late']) {
+        await send('Page.navigate',{url:origin+'/boundary?input=final-footer'})
+        const first = await wait(async () => {
+          const button = await action('1세트 완료')
+          return button && !button.disabled && button
+        })
+        await run(() => {
+          const trace=window.finalFooterTrace=[]
+          const sample=()=>{
+            const frame=document.querySelector('[data-workout-frame]'), footer=frame?.querySelector('footer')
+            if (!footer) return
+            trace.push({ready:footer.textContent.includes('운동 종료 및 요약'),advice:footer.textContent.includes('증량 가능'),
+              height:footer.getBoundingClientRect().height,reserve:parseFloat(getComputedStyle(frame).paddingBottom)})
+            requestAnimationFrame(sample)
+          }
+          sample()
+        })
+        await tap(first.point)
+        await wait(()=>evaluate('window.restSafety.assessments.length===1'))
+        assert.deepEqual(await action('1세트 완료'),{...first,disabled:true})
+        assert.equal(await action('운동 종료 및 요약'),null)
+        assert.equal(await evaluate('window.restSafety.requests.length'),1)
+        if (result !== 'late') await run(result => window.restSafety.assessments[0][result](),result)
+        const finish = await wait(()=>action('운동 종료 및 요약'))
+        assert.equal(finish.height,first.height)
+        if (result === 'answer') await tap(first.point)
+        assert.equal(await evaluate('window.restSafety.finishRequests.length'),0)
+        assert.equal(await evaluate('!!window.restSafety.local().finish'),false)
+        if (result === 'late') await evaluate('window.restSafety.assessments[0].answer()')
+        if (result !== 'fail') await wait(()=>evaluate("document.querySelector('footer').textContent.includes('증량 가능')"))
+        await wait(()=>evaluate('window.finalFooterTrace.some(frame=>frame.ready)'))
+        const frames=await evaluate('window.finalFooterTrace')
+        assert.ok(frames.every(frame=>Math.abs(frame.reserve-frame.height-8)<0.1))
+        assert.equal(frames.find(frame=>frame.ready).advice,result==='answer')
+        assert.equal(await evaluate('window.restSafety.requests.length'),1)
       }
     })
     await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts,memoRunway,restSafetyGeometry},null,2))

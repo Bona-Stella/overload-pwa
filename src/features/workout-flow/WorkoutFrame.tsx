@@ -1,9 +1,10 @@
 
 import { suggestedApproval } from '../workout-online/approval-weight.ts'
 import type { LoadType } from '../workout-online/types.ts'
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
+import type { RepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import { formatDuration } from '../workout/model.ts'
 import { ExerciseSwipe } from './ExerciseSwipe.tsx'
 import type { ExerciseSwipeOptions } from './ExerciseSwipe.tsx'
@@ -13,9 +14,23 @@ type Step = { id: string; name: string }
 type Navigation = { previous?: Step; next?: Step; onGo: (id: string) => void }
 export type ExerciseScrollPosition = { exerciseId: string; top: number }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, hidden, cardioFocus, exerciseScroll }: {
+function measureWorkoutFrame(frame: HTMLElement, clock: HTMLElement | null, footer: HTMLElement | null) {
+  const clockHeight = clock?.getBoundingClientRect().height
+  const footerHeight = footer?.getBoundingClientRect().height
+  if (clockHeight && frame.style.getPropertyValue('--workout-clock-height') !== clockHeight + 'px') {
+    frame.style.setProperty('--workout-clock-height', clockHeight + 'px')
+  }
+  // Keep the last reservation while the keyboard temporarily hides the footer.
+  if (footerHeight || !footer) {
+    const height = (footerHeight ?? 0) + 'px'
+    if (frame.style.getPropertyValue('--workout-footer-height') !== height) frame.style.setProperty('--workout-footer-height', height)
+  }
+}
+
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, footerGuard, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, hidden, cardioFocus, exerciseScroll }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
   timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; dim?: number; children: ReactNode; actions?: ReactNode; actionsBlocked?: boolean
+  footerGuard?: RepeatPointerGuard
   onHome: () => void; backLabel?: string; onEnd: () => void; onRestInteraction?: () => void
   clockRef?: RefObject<HTMLDivElement | null>
   navigation?: Navigation; swipe?: ExerciseSwipeOptions; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
@@ -28,23 +43,18 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
   const hasActions = !!actions
   const timeBar = clockRef ?? ownClock
   const currentExercise = swipe?.currentId
-  // Measure the new footer before restoring the next exercise's scroll position.
   useLayoutEffect(() => {
-    const dock = timeBar.current
-    if (!dock) return
-    const measure = () => {
-      const clockHeight = dock.getBoundingClientRect().height
-      if (clockHeight) root.current?.style.setProperty('--workout-clock-height', clockHeight + 'px')
-      const height = footer.current?.getBoundingClientRect().height
-      if (height) root.current?.style.setProperty('--workout-footer-height', height + 'px')
-      else if (!footer.current) root.current?.style.setProperty('--workout-footer-height', '0px')
-    }
-    measure()
-    const observer = new ResizeObserver(measure)
+    const frame = root.current, dock = timeBar.current, actionBar = footer.current
+    if (!frame || !dock) return
+    const observer = new ResizeObserver(() => measureWorkoutFrame(frame, dock, actionBar))
     observer.observe(dock)
-    if (footer.current) observer.observe(footer.current)
+    if (actionBar) observer.observe(actionBar)
     return () => observer.disconnect()
-  }, [timeBar, hasActions, hidden, currentExercise])
+  }, [timeBar, hasActions])
+  // Read the committed rows before paint and before restoring the next exercise's scroll position.
+  useLayoutEffect(() => {
+    if (root.current) measureWorkoutFrame(root.current, timeBar.current, footer.current)
+  }, [timeBar, actions, cardioFocus, hidden])
   useLayoutEffect(() => {
     if (!exerciseScroll || exerciseScroll.exerciseId !== currentExercise || appliedScroll.current === exerciseScroll) return
     appliedScroll.current = exerciseScroll
@@ -81,7 +91,9 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     {reviewNote}
     {swipe ? <ExerciseSwipe options={swipe} cardio={cardioFocus}>{children}</ExerciseSwipe> : children}
     {dim !== undefined && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
-    {hasActions && <footer className={styles.footer} ref={footer} inert={actionsBlocked}>{actions}</footer>}
+    {hasActions && <footer className={styles.footer} ref={footer} inert={actionsBlocked}
+      onPointerDownCapture={footerGuard?.pointerDown} onPointerCancelCapture={footerGuard?.pointerCancel}
+      onClickCapture={footerGuard?.blocksClick}>{actions}</footer>}
   </div>
 }
 
@@ -132,12 +144,15 @@ export function RestCountdown({ seconds }: { seconds: number }) {
 export function RestActions({ remaining, flash, onEnd, onExtend, disabled }: {
   remaining: number; flash?: boolean; onEnd: () => void; onExtend: () => void; disabled?: boolean
 }) {
+  const [mouseHover, setMouseHover] = useState(false)
   return <>
     {remaining > 0 && remaining <= 10 && <div className={`${styles.prepare} ${styles.restFlashBar}`} data-flash={flash || undefined}>
       <b>다음 세트 준비</b><strong>{remaining}초</strong>
     </div>}
-    <div className={`${styles.actions} ${styles.restActions}`}>
-      <Button variant="primary" pending={disabled} onClick={onEnd}>휴식 종료</Button>
+    <div className={styles.actions}>
+      <Button variant="primary" className={styles.restEnd} data-mouse-hover={mouseHover || undefined} pending={disabled}
+        onPointerMove={event => { if (event.pointerType === 'mouse') setMouseHover(true) }}
+        onPointerLeave={() => setMouseHover(false)} onClick={onEnd}>휴식 종료</Button>
       <Button pending={disabled} onClick={onExtend}>+30초</Button>
     </div>
   </>
