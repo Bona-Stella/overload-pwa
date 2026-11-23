@@ -142,11 +142,19 @@ function ApprovalSummaryFixture({ empty }) {
  return <ClosedWorkoutView state={{...recordState,server}} controller={recordController} summary
   reviewContent={<SavedWeightReview api={fixture.api} session={server} readOnly={false} disabled={false} authorized={()=>true} onChanged={refresh} onRoutineApproved={onRoutineApproved}/>}/>
 }
+const growthRequests={ fail: false, hold: false, release: null, count: 0 }
+window.feedback.growthRequests=growthRequests
 const growthApi={
  search:async()=>({exercises:[{standardExerciseId:bootstrap.exercises[0].id,name:'승인 이력 검증을 위한 매우 긴 운동명',lastPerformedAt:recordServer.endedAt,lastApprovalAt:recordServer.endedAt}],nextOffset:null}),
  options:async()=>({placements:[{placementId:'placement',routineId:'routine',routineName:'검토 루틴',deleted:false}]}),
- history:async()=>({points:[{id:'second',previousWeightKg:'55.000001',approvedWeightKg:'52.500001',occurredAt:'2026-11-11T10:00:00Z',recordedAt:'2026-11-11T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:true,previousPointId:'first'},{id:'first',previousWeightKg:'50.000001',approvedWeightKg:'55.000001',occurredAt:'2026-11-01T10:00:00Z',recordedAt:'2026-11-01T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:false,previousPointId:null}],nextOffset:null})
+ history:async()=>{
+  growthRequests.count++
+  if(growthRequests.fail)throw new Error('검수용 조회 실패')
+  if(growthRequests.hold)await new Promise(resolve=>{growthRequests.release=resolve})
+  return {points:[{id:'second',previousWeightKg:'55.000001',approvedWeightKg:'52.500001',occurredAt:'2026-11-11T10:00:00Z',recordedAt:'2026-11-11T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:true,previousPointId:'first'},{id:'first',previousWeightKg:'50.000001',approvedWeightKg:'55.000001',occurredAt:'2026-11-01T10:00:00Z',recordedAt:'2026-11-01T10:00:01Z',source:'ROUTINE_EDITOR',sessionId:null,connectFromPrevious:false,previousPointId:null}],nextOffset:null}
+ }
 }
+const onGrowthInvalid=()=>{}
 function Preferences({ owner, onBack }) {
  const [alerts, save] = useRestAlertPreferences(owner)
  return <RestAlertSettings alerts={alerts} onChange={save} onBack={onBack}/>
@@ -218,7 +226,7 @@ function RestSafetyFixture({ finalFooter = false }) {
    progressAssessment={progress.value} progressAssessmentPending={progress.pending}/>
  </AppShell>
 }
-function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={e=>{throw e}} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record?.startsWith('saved-review:') ? <SavedReviewFixture key={record} mode={record.split(':')[1]}/> : record?.startsWith('approval-summary:') ? <ApprovalSummaryFixture key={record} empty={record==='approval-summary:empty'}/> : record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
+function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null);window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={onGrowthInvalid} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record?.startsWith('saved-review:') ? <SavedReviewFixture key={record} mode={record.split(':')[1]}/> : record?.startsWith('approval-summary:') ? <ApprovalSummaryFixture key={record} empty={record==='approval-summary:empty'}/> : record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises}/>} </AppShell>}
 const authInput = new URLSearchParams(location.search).get('input')
 const now = Date.now()
 const challenge = authInput === 'otp' ? { id:'fixture', email:'sample@example.invalid', expiresAt:now+300000 } : null

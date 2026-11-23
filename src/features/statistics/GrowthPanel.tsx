@@ -126,17 +126,18 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
 }) {
   const [view, setView] = useState<GrowthSelection | null>(null)
   const [placementId, setPlacementId] = useState('')
-  const [failure, setFailure] = useState<{ request: string; text: string } | null>(null)
+  const [failure, setFailure] = useState<{ selection: string; retry: number } | null>(null)
   const [retry, setRetry] = useState(0)
   const flight = useRef<AbortController | null>(null)
   const { userId, dataGeneration } = scope
   const standardId = exercise.standardExerciseId
   const optionKey = JSON.stringify([userId, dataGeneration, standardId, period, zone, refreshKey])
-  const request = JSON.stringify([optionKey, placementId, retry])
+  const selection = JSON.stringify([optionKey, placementId])
+  const request = JSON.stringify([selection, retry])
   const previous = useEffectEvent(() => view)
   const settled = view?.request === request
-  const issue = failure?.request === request ? failure.text : ''
-  const pending = !settled && !issue
+  const failedSelection = failure?.selection === selection ? failure : null
+  const pending = !settled && failedSelection?.retry !== retry
 
   useEffect(() => {
     const prior = previous()
@@ -158,10 +159,10 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
       if (abort.signal.aborted) return
       if (readAccessDenied(error) || boundaryError(error)) setView(null)
       onInvalid(error)
-      setFailure({ request, text: '승인 이력을 조회하지 못했습니다.' })
+      setFailure({ selection, retry })
     })
     return () => { abort.abort(); flight.current?.abort() }
-  }, [api, userId, dataGeneration, standardId, period, zone, optionKey, placementId, request, onInvalid])
+  }, [api, userId, dataGeneration, standardId, period, zone, optionKey, placementId, selection, retry, request, onInvalid])
 
   async function more() {
     if (!settled || !view?.placement || view.next === null || view.moreBusy) return
@@ -178,7 +179,7 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
       if (abort.signal.aborted) return
       if (readAccessDenied(error) || boundaryError(error)) {
         setView(null)
-        setFailure({ request, text: '승인 이력을 조회하지 못했습니다.' })
+        setFailure({ selection, retry })
       } else setView({ ...view, moreBusy: false, moreIssue: '이전 승인 이력을 불러오지 못했습니다.' })
       onInvalid(error)
     }
@@ -197,13 +198,16 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
       {view?.placement ? <GrowthChartSection points={view.points} zone={zone} />
         : view ? <p>이 기간의 승인 중량 변경 기록이 없습니다. 최초·현재 중량으로 과거 값을 만들지 않습니다.</p>
           : <p className="muted small">미전송 기록은 포함되지 않습니다.</p>}
-      {issue && <><p role="alert">{issue}</p><Button onClick={() => setRetry(value => value + 1)}>다시 조회</Button></>}
       {view?.moreIssue && <p role="alert">{view.moreIssue}</p>}
       {view?.next != null && <><p className="muted small">일부 승인 이력입니다. 이전 이력을 더 불러올 수 있습니다.</p>
-        <Button disabled={pending || !!issue} loading={view.moreBusy} onClick={() => void more()}>이전 승인 더 보기</Button></>}
+        <Button disabled={pending || !!failedSelection} loading={view.moreBusy} onClick={() => void more()}>이전 승인 더 보기</Button></>}
     </GrowthAnalysis>
     {view?.placement && <GrowthHistoryCard points={view.points} name={exercise.name} zone={zone} onOpen={onOpen} busy={view.moreBusy} partial={view.next !== null} />}
-    <StatisticsWait pending={pending} label="승인 이력을 불러오는 중입니다." />
+    {failedSelection && <Card>
+      <p role="alert">승인 이력을 조회하지 못했습니다.</p>
+      <Button loading={pending} onClick={() => setRetry(value => value + 1)}>다시 조회</Button>
+    </Card>}
+    <StatisticsWait pending={pending && !failedSelection} label="승인 이력을 불러오는 중입니다." />
   </>
 }
 export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack, backLabel }: Omit<Context, 'period' | 'zone'> & { onBack?: () => void; backLabel?: string }) {
