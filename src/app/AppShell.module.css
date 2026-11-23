@@ -19,7 +19,10 @@
   min-width: 0;
 }
 .content > * { min-width: 0; }
-.shell .homeContent { --page-top-inset: calc(18px + env(safe-area-inset-top)); }
+.shell .homeContent,
+.shell .content:has([data-tab-overview]:not([hidden], [hidden] *)) {
+  --page-top-inset: calc(18px + env(safe-area-inset-top));
+}
 .content > :global(#auth-feedback:empty) { position: absolute; width: 1px; height: 1px; overflow: hidden; }
 .shell .withTabs { --page-bottom-inset: calc(var(--tabs-height) + var(--tabs-offset) + 16px); }
 .shell[data-keyboard-open], .shell:has([data-workout-frame] [data-workout-memo]:focus, [data-memo-keyboard-space]:not([hidden]) [data-workout-memo]) { overflow-anchor: none; }

@@ -221,9 +221,10 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
   const renameStale = renaming && (renaming.base.version !== schedule?.version || renaming.version !== latestName?.version)
-  const showToolbar = !editor || !!training.issue
+  const showToolbar = !editorRoute || !!training.issue
   return <section className={`stack workout-online ${editor ? detailStyles.workspace : ''}`}
-    aria-labelledby={showToolbar ? 'online-title' : undefined} aria-label={showToolbar ? undefined : '루틴'}>
+    aria-labelledby={showToolbar ? 'online-title' : undefined} aria-label={showToolbar ? undefined : '루틴'}
+    data-tab-overview={!focused && !planPreset || undefined}>
     {showToolbar && <div className="section-heading"><span id="online-title" className="muted small">ROUTINES</span>
       <button type="button" className="quiet" disabled={busy} onClick={() => { training.refresh(); if (!focused) void controller.refresh() }}>다시 조회</button></div>}
     {!state.data && !state.issue && <div aria-busy="true" />}
@@ -623,7 +624,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       <WorkspaceView activities={activities} training={training} enabled={accountReady && visit.routines} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} routes={routineRoutes} onStart={startWorkout} openingWorkout={starting} />
     </div>}
 
-    <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'history'}>{retainOnlineViews && !localOnly &&
+    <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'history'}
+      data-tab-overview={(!state.scope || session?.status === 'ACTIVE') || undefined}>{retainOnlineViews && !localOnly &&
       (session?.status === 'ACTIVE' ? <StatusNotice>진행 중인 운동을 마치면 기록을 확인할 수 있습니다.</StatusNotice>
         : state.scope ? <StatisticsPanel enabled={accountReady && visit.history} key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
           workoutApi={api} schedule={training.schedule} scheduleLoading={training.loading} scheduleIssue={training.issue} onRetrySchedule={training.refresh}

@@ -24,7 +24,7 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
   const methods = account?.loginMethods ?? (account?.loginMethod ? [account.loginMethod] : [])
   const loginMethod = methods.map(method => method === 'google' ? 'Google SSO' : '이메일').join(' · ') || '확인 불가'
   const devices = account?.deviceCount === undefined ? '조회 미지원' : account.deviceCount + '대'
-  return <section aria-label="설정" className={styles.page} hidden={hidden}>
+  return <section aria-label="설정" className={styles.page} hidden={hidden} data-tab-overview>
     <Card className={styles.account} aria-busy={accountLoading}>
       <button type="button" className={styles.accountLink} onClick={onAccount} disabled={busy} aria-label="내 계정" aria-describedby={emailId}>
         <span className={styles.avatar} aria-hidden="true">{initial?.toUpperCase()}</span>

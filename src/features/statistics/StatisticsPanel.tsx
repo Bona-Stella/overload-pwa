@@ -380,7 +380,8 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
     onOpen(id)
   }
   const displayed = shown === 'summary' ? summaryOverview : current
-  return <section ref={panel} className={`stack statistics record-screen ${shown==='summary'?styles.main:''} ${shown==='activity'?activityStyles.page:''}`} aria-label="운동 기록·분석">
+  return <section ref={panel} className={`stack statistics record-screen ${shown==='summary'?styles.main:''} ${shown==='activity'?activityStyles.page:''}`}
+    aria-label="운동 기록·분석" data-tab-overview={shown === 'summary' || undefined}>
     {shown === 'activity' || shown === 'plan' || shown === 'muscles' || shown === 'history' ? <RecordSubpageHeader title={shown==='activity'?'운동 현황':shown==='plan'?'주간 근육 계획':shown==='muscles'?'주간 근육 통계':'전체 운동 이력'} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} /> : null}
     {shown === 'activity' && <PeriodControls variant="activity" days={current?.plannedDays} value={activityPeriod} pendingMode={issue ? undefined : pending?.mode} pendingValue={issue ? undefined : pending ?? undefined} onChange={changePeriod} />}
     {shown === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} />
