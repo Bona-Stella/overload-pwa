@@ -26,6 +26,7 @@ export function AuthApp() {
   const now = Math.max(clock, state.updatedAt)
   const [dialog, setDialog] = useState<string | null>(null)
   const [localExitIssue, setLocalExitIssue] = useState(false)
+  const [offlineWorkoutOpen, setOfflineWorkoutOpen] = useState(false)
   const [selection, setSelection] = useScreenHistory<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' | 'alerts' } | null>('app:' + state.userId, null)
   const [restAlerts, saveRestAlerts] = useRestAlertPreferences(state.status === 'authenticated' ? state.userId : null)
   const [navigating, setNavigating] = useState(false)
@@ -135,15 +136,17 @@ export function AuthApp() {
   })
   return <WorkoutWorkspace onExitGuard={registerExitGuard} tab={tab} onNavigate={navigate}
     catalogOpen={catalogOpen} restOpen={restOpen} onSettingsBack={settingsBack} onRestExitGuard={registerRestExit}
-    renderShell={(workspace, focused, routineEditor) => <AppShell authenticated={authenticated} tab={tab} onNavigate={navigateFromTabs}
+    renderShell={(workspace, focused, routineEditor) => {
+      const showingOfflineWorkout = state.status === 'unavailable' && (offlineWorkoutOpen || focused && !!state.localWorkoutUserId)
+      return <AppShell authenticated={authenticated} tab={tab} onNavigate={navigateFromTabs}
       focused={focused && !state.accountOpen} routineEditor={routineEditor} busy={busy || navigating}>
-    <div id="auth-feedback" aria-live="polite">
+    {!showingOfflineWorkout && <div id="auth-feedback" aria-live="polite">
       {state.issue && <div className="notice error" role="alert">{state.issue.message}</div>}
       {state.notice && !state.challenge && <p className="notice" role="status">{state.notice}</p>}
-    </div>
+    </div>}
     {state.status === 'checking' ? checkingHome
       ? <HomeStartup label="로그인 상태를 확인하고 있어요." /> : <LoadingSkeleton layout="auth" label="로그인 상태를 확인하고 있어요." />
-      : state.status === 'unavailable' ? <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
+      : state.status === 'unavailable' ? !showingOfflineWorkout && <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}
     {authenticated && tab === 'settings' && <SettingsMain userId={state.userId} hidden={!settingsMain || focused} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary}
@@ -155,11 +158,12 @@ export function AuthApp() {
       onLogout={() => setDialog('logout')} />}
     {restAlertsOpen && !focused && <RestAlertSettings alerts={restAlerts} onChange={saveRestAlerts} onBack={settingsBack} />}
     {workspace}
-    {state.status === 'unavailable' && state.offlineNetworkFailure && !state.localWorkoutUserId && <OfflineResume onExitGuard={registerExitGuard} />}
-    {localExitIssue && <p className="notice error" role="alert">입력 초안을 이 기기에 저장하지 못해 화면을 유지했습니다. 로컬 저장 오류를 해결한 뒤 다시 시도해 주세요.</p>}
+    {state.status === 'unavailable' && state.offlineNetworkFailure && !state.localWorkoutUserId && <OfflineResume onExitGuard={registerExitGuard}
+      onActiveChange={setOfflineWorkoutOpen} onReconnect={async () => { if (await flushLocal()) void controller.restore() }} />}
+    {localExitIssue && !showingOfflineWorkout && <p className="notice error" role="alert">입력 초안을 이 기기에 저장하지 못해 화면을 유지했습니다. 로컬 저장 오류를 해결한 뒤 다시 시도해 주세요.</p>}
     {dialog && <Dialog title={dialog === 'logout' ? '로그아웃할까요?' : dialog} dismissBlocked={busy} onClose={() => setDialog(null)}>
       {dialog === 'logout' ? <div className="stack"><p>이 브라우저의 로그인을 종료합니다. 서버 미전송 수행·입력 초안·타이머·로컬 사본·미확인 시작 요청은 보존하며, 재인증 전에는 표시하지 않습니다. 기존 데모 기록은 실제 계정과 연결되지 않습니다.</p>{localExitIssue && <p className="notice error" role="alert">초안을 저장하지 못했습니다. 로그아웃을 보류했습니다.</p>}<button className="primary" disabled={busy} onClick={async () => { if (await flushLocal()) { setDialog(null); void controller.logout() } }}>로그아웃 확인</button><button className="quiet" onClick={() => setDialog(null)}>취소</button></div>
         : <div className="stack"><p>서비스 이용 문서를 준비하고 있습니다. 정식 서비스 전에 안내할 예정입니다.</p><button data-close-text className="outline" onClick={() => setDialog(null)}>닫기</button></div>}
     </Dialog>}
-  </AppShell>} />
+  </AppShell> }} />
 }

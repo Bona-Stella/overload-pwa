@@ -8,6 +8,8 @@ import type { RepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import { formatDuration } from '../workout/model.ts'
 import { ExerciseSwipe } from './ExerciseSwipe.tsx'
 import type { ExerciseSwipeOptions } from './ExerciseSwipe.tsx'
+import { WorkoutSaveLabel } from './WorkoutSaveLabel.tsx'
+import type { WorkoutSaveStatus } from '../workout-local/save-status.ts'
 import styles from './WorkoutFlow.module.css'
 
 type Step = { id: string; name: string }
@@ -27,14 +29,15 @@ function measureWorkoutFrame(frame: HTMLElement, clock: HTMLElement | null, foot
   }
 }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, footerGuard, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, recovery, hidden, cardioFocus, exerciseScroll, feedback }: {
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, footerGuard, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, hidden, cardioFocus, exerciseScroll, feedback, dataStatus, onDataStatusDetails }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
   timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; dim?: number; children: ReactNode; actions?: ReactNode; actionsBlocked?: boolean
   footerGuard?: RepeatPointerGuard
   feedback?: ReactNode
   onHome: () => void; backLabel?: string; onEnd: () => void; onRestInteraction?: () => void
   clockRef?: RefObject<HTMLDivElement | null>
-  navigation?: Navigation; swipe?: ExerciseSwipeOptions; reviewNote?: ReactNode; recovery?: ReactNode; hidden?: boolean; cardioFocus?: boolean
+  navigation?: Navigation; swipe?: ExerciseSwipeOptions; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
+  dataStatus?: WorkoutSaveStatus; onDataStatusDetails?: () => void
   exerciseScroll?: ExerciseScrollPosition | null
 }) {
   const root = useRef<HTMLDivElement>(null)
@@ -73,7 +76,8 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     <div className={styles.clockDock} ref={timeBar} data-keyboard-header>
       <div className={`${styles.clock} ${styles.restFlash}`} data-flash={flash || undefined} aria-label="운동 시간">
         <div><small>전체 운동 시간</small><strong>{formatDuration(elapsed)}</strong></div>
-        <div><small>운동 진행</small><strong>{position ? `현재 ${position} / ${count}종목` : '준비운동'}</strong>
+        <div className={styles.clockProgress}>{dataStatus ? <WorkoutSaveLabel status={dataStatus} onDetails={onDataStatusDetails} /> : <small>운동 진행</small>}
+          <strong>{position ? `현재 ${position} / ${count}종목` : '준비운동'}</strong>
           <div className={styles.segments} aria-hidden="true">{Array.from({ length: count }, (_, i) =>
             <span key={i} data-filled={i < position || undefined} />)}</div>
         </div>
@@ -91,7 +95,6 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     </header>
     {reviewNote}
     {swipe ? <ExerciseSwipe options={swipe} cardio={cardioFocus}>{children}</ExerciseSwipe> : children}
-    {recovery}
     {dim !== undefined && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
     {hasActions && <footer className={styles.footer} ref={footer} inert={actionsBlocked}
       onPointerDownCapture={footerGuard?.pointerDown} onPointerCancelCapture={footerGuard?.pointerCancel}

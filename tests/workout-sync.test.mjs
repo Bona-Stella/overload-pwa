@@ -6,6 +6,7 @@ import * as m from '../src/features/workout-local/model.ts'
 import * as sync from '../src/features/workout-local/sync-state.ts'
 import * as v from '../src/features/workout-online/validation.ts'
 import { localWorkout } from '../src/features/workout-local/validation.ts'
+import { workoutSaveStatus } from '../src/features/workout-local/save-status.ts'
 import { session, scope, bootstrap, SESSION_EXERCISE as E, OTHER, routine } from './fixtures/workout-online-data.mjs'
 const time=Date.parse('2026-11-01T00:00:00Z')
 const gate=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve}}
@@ -39,6 +40,23 @@ async function setup(options={}){
   await c.open(server,bootstrap.settings);await c.syncSettled()
   return{c,store,api,writes,gets,statuses,read:()=>structuredClone(stored),remote:()=>structuredClone(server),setServer:value=>server=value,fail:fn=>fail=fn,authorize:value=>authorized=value,online:value=>online=value}
 }
+test('a detail-only read failure stays separate from failure to confirm a pending snapshot',async()=>{
+  const e=await setup()
+  e.api.detail=async()=>{throw new TypeError('network failure')}
+  await e.c.retrySync()
+  assert.equal(e.c.getSnapshot().syncStatus,'READ')
+  assert.equal(workoutSaveStatus(e.c.getSnapshot(),false),'saved')
+  e.online(false)
+  assert.equal(await e.c.change(w=>complete(w)),true)
+  assert.equal(workoutSaveStatus(e.c.getSnapshot(),false),'waiting')
+  e.online(true)
+  await e.c.retrySync()
+  assert.equal(e.c.getSnapshot().syncStatus,'WAITING')
+  assert.equal(workoutSaveStatus(e.c.getSnapshot(),false),'failed')
+  assert.equal(e.writes.length,0)
+  assert.equal(e.read().snapshot.performedSets.length,1)
+  e.c.stop()
+})
 test('frozen snapshot is exact V13, excludes input/timers, and sealing never changes revision',()=>{
   let w=change(local(),x=>complete(x));const revision=w.localRevision
   w=change(w,sync.sealSnapshot);assert.equal(w.localRevision,revision);assert.equal(w.pendingSnapshot.requestJson,JSON.stringify(w.pendingSnapshot.request))

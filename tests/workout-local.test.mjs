@@ -182,6 +182,26 @@ async function editor(options={}) {
   await c.open(session(),policy)
   return {c,store,stored:()=>stored,fail:v=>fail=v,gate:g=>gateWrite=g,allow:v=>allowed=v}
 }
+test('a rejected completion does not touch storage or replace an existing storage error',async()=>{
+  let writes=0
+  const e=await editor({store:{saveLocal:async()=>{writes++;throw new LocalStoreError()}}})
+  const failures=[]
+  const complete=(w,now)=>m.completeSet(w,E,1,now)
+  assert.equal(await e.c.complete(complete,error=>failures.push(error)),false)
+  assert.deepEqual(failures,[{kind:'action',message:'반복 횟수를 입력해 주세요.'}])
+  assert.equal(writes,0)
+  assert.equal(e.c.getSnapshot().issue,null)
+  assert.equal(await e.c.complete(w=>m.editDraft(w,E,1,{reps:'8'}),error=>failures.push(error)),false)
+  const issue=e.c.getSnapshot().issue
+  assert.equal(failures.at(-1).kind,'storage')
+  assert.ok(issue)
+  assert.equal(await e.c.complete(complete,error=>failures.push(error)),false)
+  assert.equal(failures.at(-1).kind,'action')
+  assert.equal(writes,1)
+  assert.equal(e.c.getSnapshot().issue,issue)
+  assert.equal(e.c.getSnapshot().pending,0)
+  e.c.stop()
+})
 test('last-set commit and automatic advance are atomic; preparation survives navigation and starts only on action',async()=>{
   const e=await editor()
   const current=()=>e.c.getSnapshot().workout

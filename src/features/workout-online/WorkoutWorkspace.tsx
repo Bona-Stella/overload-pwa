@@ -54,20 +54,20 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { useRoutineEditorRoutes } from './useRoutineEditorRoutes.ts'
 
-export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => Promise<void> }) {
+export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, issue, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => Promise<void>; issue?: string | null }) {
   const [confirm, confirmation] = useConfirmation()
   const otherEditor = session.editorDeviceId !== deviceId
   const label = session.status === 'ACTIVE' ? '진행 중' : session.status === 'FINISHED' ? '명시 종료' : '서버 자동 종료'
   return <section className="card stack" aria-labelledby="online-session-title"><div className="section-heading"><h2 id="online-session-title">{session.initialPlan.routineName}</h2><span className="online-session-badge">{label}</span></div>
     <p>{session.workoutDate} · <time dateTime={session.startedAt}>{session.startedAt}</time></p>
-    {session.status === 'ACTIVE' && <p className="notice">{otherEditor ? '다른 기기에서 편집 중입니다. 이 화면은 읽기 전용입니다.' : '이 기기의 운동입니다. 아래에서 기록하고 서버 저장 상태를 확인할 수 있습니다.'}</p>}
+    {session.status === 'ACTIVE' && otherEditor && <StatusNotice>다른 기기에서 편집 중입니다. 이 화면은 읽기 전용입니다.</StatusNotice>}
     {session.status === 'ACTIVE' && otherEditor && onTakeover && <button className="outline full" disabled={busy || !deviceId || !saved} onClick={() => void confirm({
       title: '이 기기에서 편집할까요?', description: <p>서버에 저장된 기록으로 편집을 시작합니다. 다른 기기의 미전송 기록은 자동으로 합치지 않습니다.</p>,
       confirmLabel: '편집 가져오기', onConfirm: onTakeover,
     })}>이 기기로 편집 가져오기</button>}
     {session.status === 'AUTO_CLOSED' && <p className="notice">서버가 마지막 저장 상태로 자동 종료했습니다. 사용자 종료 시각이나 최초 명시 종료 평가를 생성하지 않습니다.</p>}
     {session.deletedAt && <p className="notice">삭제된 운동입니다. 기록을 자동 복원하지 않습니다.</p>}
-    <p className="muted small" role="status">{saved ? '서버에서 확인한 세션 사본을 이 기기에 저장했습니다.' : '서버 세션의 로컬 보존을 확인하지 못했습니다. 수행 입력을 시작할 수 없습니다.'}</p>
+    {issue ? <StatusNotice error>{issue}</StatusNotice> : !saved && <StatusNotice error>이 기기에 운동을 열지 못해 수행 입력을 시작할 수 없습니다. 세션을 다시 확인해 주세요.</StatusNotice>}
     <details><summary>시작 당시 계획</summary><div className="stack">{session.initialPlan.weightExercises.map(e => <p key={e.sessionExerciseId}>{e.exerciseName} · {e.setCount}세트 · {e.minReps}~{e.maxReps}회 · 승인 {e.approvedWeightKg} kg · <Metadata>{equipmentLabel(e, manufacturers)}</Metadata></p>)}
       {session.initialPlan.cardioActivities.map(c => <p key={c.sessionActivityId}>{c.plan.name} · 목표 {c.plan.targetSeconds}초</p>)}</div></details>
     <details><summary>서버에서 마지막 확인한 적용 계획·수행</summary><div className="stack">{session.snapshot.state.appliedPlan.weightExercises.map(e => <p key={e.sessionExerciseId}>{session.initialPlan.weightExercises.find(x => x.sessionExerciseId === e.sessionExerciseId)?.exerciseName ?? '추가된 세션 종목'} · {e.setCount}세트 · {e.minReps}~{e.maxReps}회</p>)}
@@ -210,6 +210,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
       if (window.history.state?.overloadNavigation !== origin || latest.selected?.id !== routine.id || latest.scope !== scope) return
       if (latest.selected.version !== routine.version) {
         setEditorData({ routine: latest.selected, readOnly: true })
+        feedback.show('루틴이 변경되었습니다. 최신 계획을 확인하고 다시 시작해 주세요.', 'error')
         return
       }
       if (onStart) await onStart()
@@ -551,7 +552,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
     }).catch(error => {
       if (!abort.signal.aborted) {
         setRepHistory({ key: referenceKey, sessions: [] })
-        controller.invalidateScope(error)
+        if (boundaryError(error)) controller.invalidateScope(error)
       }
       return null
     })
@@ -567,7 +568,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       }
       if (!abort.signal.aborted) setReferenceHistory({ key: referenceKey, references, routine })
     }
-    void loadReferences().catch(error => { if (!abort.signal.aborted) controller.invalidateScope(error) })
+    void loadReferences().catch(error => { if (!abort.signal.aborted && boundaryError(error)) controller.invalidateScope(error) })
     return () => abort.abort()
   }, [api, controller, referenceUser, referenceGeneration, referenceKey, referenceRoutineId])
   const focused = visible && !opening && !!session && session.status === 'ACTIVE' && (localOnly || workoutRoute === session.id)
@@ -684,8 +685,9 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
           : state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : <section aria-label="운동 기록·분석" aria-busy="true" />)}</div>
     {showDetailWait && <div className={flowStyles.detailWait}><StatusNotice>운동 기록을 확인하는 중입니다.</StatusNotice></div>}
     {workoutLoading && <><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" />
-      {showWorkoutLoading && <LoadingSkeleton layout="workout" label="운동 정보를 확인하는 중입니다." />}</>}
-    {session && session.status === 'ACTIVE' && !editable && <div hidden={!focused}><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" /><details open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={controller.takeover} /></details></div>}
+      {state.issue && state.scope ? <StatusNotice error>{state.issue} <Button disabled={!accountReady} loading={state.busy} onClick={() => void controller.showDetail(workoutRoute)}>세션 상세 다시 확인</Button></StatusNotice>
+        : showWorkoutLoading && <LoadingSkeleton layout="workout" label="운동 정보를 확인하는 중입니다." />}</>}
+    {session && session.status === 'ACTIVE' && !editable && <div hidden={!focused}><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" /><details open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} issue={state.issue} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={controller.takeover} /></details></div>}
     {visible && !localSession && workoutPermissionIssue && <StatusNotice>{workoutPermissionIssue}</StatusNotice>}
     {summaryPending && !handoffEditor && <RecordSubpageHeader title="운동 기록 요약" onBack={leaveWorkout} />}
     {showSummaryWait && !handoffEditor && <StatusNotice>운동 기록 요약을 불러오고 있습니다.</StatusNotice>}
@@ -693,6 +695,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       assessmentApi={localOnly ? undefined : api}
       visible={focused || summaryPending} preparingSummary={summaryPending} onHome={leaveWorkout} backLabel={tab === 'routines' ? '루틴' : undefined}
       navigationIssue={workoutNavigationIssue} permissionIssue={workoutPermissionIssue}
+      accountIssue={localOnly ? auth.issue?.message : undefined} onReconnect={() => void authentication.restore()}
+      onRecheckSession={() => { void (async () => { if (await flush()) await controller.showDetail(localSession.id) })() }}
       history={repHistory?.key === localReferenceKey ? repHistory.sessions : referenceKey && referenceKey === localReferenceKey ? null : []}
       referenceRecords={referenceHistory?.key===localReferenceKey?referenceHistory.references:[]} referenceRoutine={referenceHistory?.key===localReferenceKey?referenceHistory.routine:null}
       server={localSession} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline} onWorkoutChange={setHomeWorkout} onOpened={onEditorOpened}
@@ -710,8 +714,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
           || window.history.state?.overloadNavigation?.values?.['workout-view:' + state.scope?.userId + ':' + state.scope?.dataGeneration] === recordId && s.detail?.id === recordId && s.detail.status === 'FINISHED')
     }} />}</div>
     {settingsDetail}
-    {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
-    {visible && state.issue && !(state.readIssue && (tab === 'routines' || tab === 'home' && !!state.data)) && <button type="button" className="outline" onClick={async () => {
+    {localOnly && !localSession && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
+    {visible && state.issue && !(state.scope && (workoutLoading || focused && !editable)) && !(state.readIssue && (tab === 'routines' || tab === 'home' && !!state.data)) && <button type="button" className="outline" onClick={async () => {
       await authentication.restore()
       // The same authenticated account may still need to retry its failed initial workout read.
       if (!controller.getSnapshot().data) await controller.refresh()

@@ -144,8 +144,8 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
   return <>
     {!showRecord && <>
       <RecordSubpageHeader title={summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={onBack} backLabel={backLabel} />
-      {issue ? <Card>{summary && session?.status === 'FINISHED' && <p>운동 기록은 서버에 저장되었습니다. 요약만 다시 조회합니다.</p>}<StatusNotice error>{issue}</StatusNotice>
-        <Button onClick={() => setRetry(value => value + 1)}>다시 조회</Button></Card>
+      {issue ? <Card>{summary && session?.status === 'FINISHED' && <p>운동 종료와 기록 저장을 확인했습니다. 운동 요약만 불러오지 못했습니다.</p>}<StatusNotice error>{issue}</StatusNotice>
+        <Button onClick={() => setRetry(value => value + 1)}>{summary ? '요약 다시 조회' : '다시 조회'}</Button></Card>
         : summary ? showSummaryWait && <StatusNotice>운동 기록 요약을 불러오고 있습니다.</StatusNotice>
           : <LoadingSkeleton layout="detail" label="운동 기록을 확인하는 중입니다." />}
     </>}
@@ -202,7 +202,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
   </div></details>
   const dialogs = <>
     {confirmation}
-    {dialog==='delete' && <DeleteDialog server={server} controller={controller} busy={state.busy} closePointerGuard={deleteCloseGuard} onClose={()=>setDialog(null)}/>}
+    {dialog==='delete' && <DeleteDialog server={server} controller={controller} busy={state.busy} issue={state.issue} resultPending={state.pending?.status === 'PENDING'} closePointerGuard={deleteCloseGuard} onClose={()=>setDialog(null)}/>}
     {dialog==='recovery' && state.changes && state.copies.length>0 && <RecoveryDialog state={state} controller={controller} manufacturers={manufacturers} definitions={definitions} onClose={()=>setDialog(null)}/>}
     {dialog && typeof dialog==='object' && <CorrectionDialog target={dialog} server={server} controller={controller} busy={state.busy} manufacturers={manufacturers} definitions={definitions} onClose={()=>setDialog(null)}/>}
   </>
@@ -244,9 +244,12 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     {status}
   </WorkoutSummary>{!summary&&dialogs}</>
 }
-function DeleteDialog({ server, controller, busy, onClose, closePointerGuard }: { server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void; closePointerGuard: RepeatPointerGuard }) {
+function DeleteDialog({ server, controller, busy, issue, resultPending, onClose, closePointerGuard }: { server: Session; controller: ClosedWorkoutController; busy: boolean; issue: string | null; resultPending: boolean; onClose: () => void; closePointerGuard: RepeatPointerGuard }) {
   const [version] = useState(server.version)
-  return <Dialog title="운동 전체를 삭제할까요?" closePointerGuard={closePointerGuard} dismissBlocked={busy} onClose={onClose}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p><Button variant="primary" loading={busy} onClick={async () => { if (await controller.delete(version)) onClose() }}>운동 삭제</Button></div></Dialog>
+  const [failed, setFailed] = useState(false)
+  return <Dialog title="운동 전체를 삭제할까요?" closePointerGuard={closePointerGuard} dismissBlocked={busy} onClose={onClose}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p>
+    {failed && <StatusNotice error>{resultPending ? '삭제 결과를 확인하지 못했습니다. 이 창을 닫고 기록에서 저장 결과를 다시 확인해 주세요.' : issue ?? '운동을 삭제하지 못했습니다. 최신 기록을 확인해 주세요.'}</StatusNotice>}
+    <Button variant="primary" loading={busy} disabled={resultPending && !busy} onClick={async () => { if (await controller.delete(version)) onClose(); else setFailed(true) }}>운동 삭제</Button></div></Dialog>
 }
 function ClosedApproval({ server, id, controller, disabled }: { server: Session; id: string; controller: ClosedWorkoutController; disabled: boolean }) {
   const [weight, setWeight] = useState('')

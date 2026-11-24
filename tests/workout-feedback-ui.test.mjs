@@ -68,34 +68,46 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         await send('Emulation.clearDeviceMetricsOverride')
       }
     })
-    await t.test('failed draft recovery keeps controls in place and preserves the latest input', async () => {
+    await t.test('save label and deliberate draft recovery keep all controls in place', async () => {
+      const status = () => evaluate(`document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus`)
       const layout = () => evaluate(`(() => {
         const frame = document.querySelector('[data-workout-frame]')
         const table = frame.querySelector('[data-swipe-current] [role=table]')
         const box = el => {const {x,y,width,height} = el.getBoundingClientRect(); return [x,y,width,height]}
-        return {scroll:scrollY, card:box(table.parentElement), input:box(table.querySelector('[aria-label="1세트 이번 반복 횟수 증가"]')),
+        const label=frame.querySelector('[data-workout-save-status]'), clock=label.parentElement
+        return {scroll:scrollY, label:box(label), center:box(clock), progress:box(clock.querySelector('strong')), segments:box(clock.querySelector('[aria-hidden="true"]:not(svg)')),
+          left:box(clock.previousElementSibling), right:box(clock.nextElementSibling), card:box(table.parentElement), input:box(table.querySelector('[aria-label="1세트 이번 반복 횟수 증가"]')),
           header:box(frame.querySelector('[data-keyboard-header]')), footer:box(frame.querySelector('footer')), action:box(frame.querySelector('footer button'))}
       })()`)
       try {
         for (const width of [320, 375, 393, 430, 1280]) {
           await send('Emulation.setDeviceMetricsOverride',{width,height:480,deviceScaleFactor:1,mobile:width<500})
           await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{scrollTo({top:120,behavior:"instant"});resolve()})))')
+          await wait(async()=>(await status())==='saved')
           const baseline = await layout()
-          await evaluate(`window.feedback.failDraft();document.querySelector('[data-swipe-current] [aria-label="1세트 이번 반복 횟수 증가"]').click()`)
+          await evaluate(`window.feedback.hold();window.feedback.failDraft();document.querySelector('[data-swipe-current] [aria-label="1세트 이번 반복 횟수 증가"]').click()`)
+          await wait(async()=>(await status())==='saving')
+          assert.deepEqual(await layout(),baseline,`local save pending at ${width}px`)
+          await evaluate('window.feedback.release()')
           await wait(()=>evaluate('!!window.feedback.c.getSnapshot().issue && !window.feedback.c.getSnapshot().pending'))
-          const failed = await layout()
-          assert.deepEqual(failed,baseline,`draft error at ${width}px`)
-          assert.equal(await evaluate('[...document.querySelectorAll("[data-workout-frame] [role=alert]")].filter(el=>el.textContent.includes(window.feedback.c.getSnapshot().issue)).length'),1)
+          assert.equal(await status(),'failed')
+          assert.deepEqual(await layout(),baseline,`draft error at ${width}px`)
+          assert.equal(await evaluate(`!!document.querySelector('dialog[open], [data-workout-frame] aside, [data-tone="error"]')`),false)
           assert.equal(await evaluate(`document.querySelector('[data-swipe-current] button[aria-label="1세트 이번 반복 횟수"]').textContent`),'9 회')
-          await evaluate(`[...document.querySelectorAll('[data-workout-frame] button')].find(b=>b.textContent==='입력 다시 저장').click()`)
+          await evaluate(`document.querySelector('button[aria-label="저장 실패 · 데이터 상태 확인"]').click()`)
+          await wait(()=>evaluate(`!!document.querySelector('dialog[open] [role=alert]')`))
+          assert.equal(await evaluate(`document.querySelectorAll('dialog[open] [role=alert]').length`),1)
+          await evaluate(`[...document.querySelectorAll('dialog[open] button')].find(b=>b.textContent==='입력 다시 저장').click()`)
           await wait(()=>evaluate('!window.feedback.c.getSnapshot().unsavedDrafts'))
+          await evaluate(`document.querySelector('dialog[open] button[aria-label="닫기"]').click()`)
+          await wait(async()=>(await status())==='saved')
           assert.deepEqual(await layout(),baseline,`draft recovery at ${width}px`)
           assert.equal(await evaluate('Object.values(window.feedback.stored().drafts)[0].reps'),'9')
           await evaluate(`document.querySelector('[data-swipe-current] [aria-label="1세트 이번 반복 횟수 감소"]').click()`)
           await wait(()=>evaluate('!window.feedback.c.getSnapshot().unsavedDrafts'))
         }
       } finally {
-        await evaluate('scrollTo(0,0)')
+        await evaluate('window.feedback.release();scrollTo(0,0)')
         await send('Emulation.clearDeviceMetricsOverride')
       }
     })
@@ -1472,6 +1484,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           await evaluate('window.restSafety.offline()')
           await tap(await pick('3세트 완료'))
           await wait(async () => (await snap()).local.length===3)
+          await wait(()=>evaluate(`document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus==='waiting'`))
+          assert.equal(await evaluate(`!!document.querySelector('dialog[open], [data-workout-frame] aside')`),false)
           assert.deepEqual(await snap(),{...secondSnapshot,local:[1,2,3]})
           await evaluate('window.restSafety.reopen()')
           await ready('운동 종료 및 요약')
@@ -1480,6 +1494,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           await evaluate('window.restSafety.online(); window.restSafety.controller.retrySync()')
           await wait(async () => (await snap()).remote.length===3)
           await evaluate('window.restSafety.controller.syncSettled()')
+          await wait(()=>evaluate(`document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus==='saved'`))
           assert.deepEqual(await snap(),{local:[1,2,3],remote:[1,2,3],requests:[[1],[1,2],[1,2,3]]})
         }
       }
@@ -1526,14 +1541,47 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         if (result === 'answer') await tap(first.point)
         assert.equal(await evaluate('window.restSafety.finishRequests.length'),0)
         assert.equal(await evaluate('!!window.restSafety.local().finish'),false)
+        // Capture the fallback frame before delivering the deliberately late response.
+        await wait(()=>evaluate('window.finalFooterTrace.some(frame=>frame.ready)'))
         if (result === 'late') await evaluate('window.restSafety.assessments[0].answer()')
         if (result !== 'fail') await wait(()=>evaluate("document.querySelector('footer').textContent.includes('증량 가능')"))
-        await wait(()=>evaluate('window.finalFooterTrace.some(frame=>frame.ready)'))
         const frames=await evaluate('window.finalFooterTrace')
         assert.ok(frames.every(frame=>Math.abs(frame.reserve-frame.height-8)<0.1))
         assert.equal(frames.find(frame=>frame.ready).advice,result==='answer')
         assert.equal(await evaluate('window.restSafety.requests.length'),1)
       }
+    })
+    await t.test('locally stored unsent work keeps the same header and footer through reconnection', async () => {
+      await send('Page.navigate',{url:origin+'/boundary?input=final-footer'})
+      await wait(()=>evaluate(`!!document.querySelector('[data-workout-frame] footer button:enabled')`))
+      const status = () => evaluate(`document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus`)
+      const screen = async width => {
+        await send('Emulation.setDeviceMetricsOverride',{width,height:568,deviceScaleFactor:1,mobile:width<500})
+        return evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          const frame=document.querySelector('[data-workout-frame]')
+          const label=frame.querySelector('[data-workout-save-status]')
+          const box=el=>{const {x,y,width,height}=el.getBoundingClientRect();return [x,y,width,height]}
+          resolve({label:box(label),center:box(label.parentElement),progress:box(label.parentElement.querySelector('strong')),header:box(frame.querySelector('[data-keyboard-header]')),
+            card:box(frame.querySelector('[role=table]').parentElement),footer:box(frame.querySelector('footer')),scroll:scrollY,
+            overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth})
+        })))`)
+      }
+      await evaluate(`window.restSafety.offline();document.querySelector('[data-workout-frame] footer button').click()`)
+      await wait(async()=>(await status())==='waiting')
+      assert.equal(await evaluate('window.restSafety.server().snapshot.state.performedSets.length'),0)
+      assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets.length'),1)
+      const waiting = new Map()
+      for(const width of [320,375,393,430,1280])waiting.set(width,await screen(width))
+      await evaluate(`document.querySelector('button[aria-label="전송 대기 · 데이터 상태 확인"]').click()`)
+      await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
+      await evaluate(`window.restSafety.online();[...document.querySelectorAll('dialog[open] button')].find(b=>b.textContent==='서버 저장 다시 확인').click()`)
+      await wait(async()=>(await status())==='saved')
+      await evaluate(`document.querySelector('dialog[open] button[aria-label="닫기"]').click()`)
+      for(const [width,before] of waiting){
+        assert.equal(before.overflow,false)
+        assert.deepEqual(await screen(width),before,`server ACK at ${width}px`)
+      }
+      assert.equal(await evaluate('window.restSafety.requests.length'),1)
     })
     await t.test('unconfirmed finish keeps its footer slot and offers a single retry', async () => {
       await send('Emulation.setDeviceMetricsOverride',{width:393,height:568,deviceScaleFactor:1,mobile:true})
@@ -1555,6 +1603,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       assert.equal(await click('운동 종료 및 요약'),true)
       await wait(()=>evaluate('!!window.restSafety.controller.getSnapshot().syncIssue'))
       assert.deepEqual(await geometry('서버 저장 상태 다시 확인'),before)
+      assert.equal(await evaluate(`document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus`),'failed')
       assert.equal(await evaluate(`document.querySelector('[data-workout-frame] footer button:first-child').disabled`),true)
       assert.equal(await evaluate(`[...document.querySelectorAll('[data-workout-frame] footer button')].filter(button=>!button.disabled).length`),1)
       assert.equal(await evaluate(`document.querySelectorAll('[data-workout-frame]').length`),1)
@@ -1586,6 +1635,119 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await confirm()
       await wait(issue)
       assert.equal(await evaluate(`document.querySelectorAll('[data-tone=success]').length`),0,'a prior success cannot overlap a failed later attempt')
+    })
+    await t.test('confirmed finish offers only a summary read after a failed summary', async () => {
+      await send('Page.navigate',{url:origin+'/boundary?input=confirmed-summary'})
+      const retry = await wait(()=>evaluate(`(() => {
+        const b=[...document.querySelectorAll('main button')].find(button=>button.textContent==='요약 다시 조회')
+        return !!b && document.querySelector('main').innerText.includes('운동 종료와 기록 저장을 확인했습니다.')
+      })()`))
+      assert.ok(retry)
+      await evaluate(`[...document.querySelectorAll('main button')].find(b=>b.textContent==='요약 다시 조회').click()`)
+      await wait(()=>evaluate(`window.feedback.summaryReads.includes('weightReview') && !document.querySelector('main [role=alert]')`))
+      assert.equal(await evaluate('window.feedback.summaryReads.includes("finish")'),false)
+      assert.equal(await evaluate('window.feedback.summaryReads.filter(x=>x==="assessment").length'),2)
+    })
+    await t.test('record deletion failure is visible in its dialog and points to result confirmation', async () => {
+      await send('Page.navigate',{url:origin+'/boundary?input=failed-delete'})
+      const action = (scope,label) => evaluate(`(() => {
+        const b=[...document.querySelectorAll(${JSON.stringify(scope+' button')})].find(b=>b.textContent===${JSON.stringify(label)})
+        if(!b||b.disabled)return false;b.click();return true
+      })()`)
+      await wait(()=>evaluate(`(() => { const menu=document.querySelector('summary[aria-label="운동 기록 메뉴"]'); if(!menu)return false;menu.click();return true })()`))
+      await wait(()=>action('main','기록 전체 삭제'))
+      await wait(()=>action('dialog[open]','운동 삭제'))
+      await wait(()=>evaluate(`document.querySelector('dialog[open] [role=alert]')?.textContent.includes('삭제 결과를 확인하지 못했습니다.')`))
+      assert.equal(await action('dialog[open]','운동 삭제'),false)
+      await evaluate(`document.querySelector('dialog[open] button[aria-label="닫기"]').click()`)
+      await wait(()=>evaluate(`!document.querySelector('dialog[open]') && [...document.querySelectorAll('main button')].some(b=>b.textContent==='저장 결과 다시 확인')`))
+    })
+    await t.test('unconfirmed repetitions and explicit failures stay independent of durable save status', async () => {
+      await send('Page.navigate',{url:origin+'/boundary?input=validation'})
+      const run=(fn,...args)=>evaluate('('+fn+')(...'+JSON.stringify(args)+')')
+      const status=()=>evaluate(`document.querySelector('[data-workout-save-status]')?.dataset.workoutSaveStatus`)
+      const toast=()=>evaluate(`document.querySelector('[data-tone="error"] p')?.textContent`)
+      const click=(label,scope='[data-workout-frame]')=>run((label,scope)=>{
+        const button=[...document.querySelectorAll(scope+' button')].find(button=>!button.disabled&&(button.getAttribute('aria-label')===label || button.textContent===label))
+        if(!button)throw Error('Missing enabled button: '+label)
+        button.click()
+      },label,scope)
+      const layout=()=>evaluate(`(() => {
+        const frame=document.querySelector('[data-workout-frame]'), table=frame.querySelector('[role=table]')
+        const box=el=>{const {x,y,width,height}=el.getBoundingClientRect();return [x,y,width,height]}
+        return {scroll:scrollY,card:box(table.parentElement),input:box(table.querySelector('[aria-label="1세트 이번 반복 횟수 증가"]')),
+          header:box(frame.querySelector('[data-keyboard-header]')),status:box(frame.querySelector('[data-workout-save-status]')),
+          footer:box(frame.querySelector('footer')),action:box(frame.querySelector('footer button'))}
+      })()`)
+      const complete=(scope='[data-workout-frame] footer')=>click('1세트 완료',scope)
+      const revision=()=>evaluate('window.restSafety.local().editVersion')
+      const missing='반복 횟수를 입력해 주세요.'
+      await wait(async()=>(await status())==='saved')
+      for(const width of [320,375,393,430,1280]){
+        await send('Emulation.setDeviceMetricsOverride',{width,height:568,deviceScaleFactor:1,mobile:width<500})
+        await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{scrollTo({top:120,behavior:"instant"});resolve()})))')
+        const before=await layout(), version=await revision()
+        await complete();await complete('[data-swipe-current]')
+        await wait(async()=>(await toast())===missing)
+        assert.equal(await status(),'saved')
+        assert.equal(await revision(),version)
+        assert.equal(await evaluate('window.restSafety.requests.length'),0)
+        assert.equal(await evaluate(`document.querySelectorAll('[data-tone="error"]').length`),1)
+        assert.deepEqual(await layout(),before)
+        assert.match(await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').textContent`),/8 회 \(미정\)/)
+        await click('알림 닫기')
+      }
+      await click('1세트 이번 반복 횟수')
+      await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
+      await click('직접 입력','dialog[open]');await click('취소','dialog[open]')
+      await wait(()=>evaluate(`!document.querySelector('dialog[open]')`))
+      await complete();assert.equal(await toast(),missing)
+      await click('1세트 이번 반복 횟수')
+      await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
+      await send('Input.dispatchMouseEvent',{type:'mousePressed',x:1,y:1,button:'left',clickCount:1})
+      await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:1,y:1,button:'left',clickCount:1})
+      await wait(()=>evaluate(`!document.querySelector('dialog[open]')`))
+      await complete();assert.equal(await toast(),missing)
+      await click('알림 닫기')
+      const draftSecond = () => evaluate(`(() => {const c=window.restSafety.controller,w=c.getSnapshot().workout;c.draft(w.currentExerciseId,2,{reps:'',weight:w.weights[w.currentExerciseId].value})})()`)
+      await evaluate('window.restSafety.hold()')
+      await draftSecond()
+      await wait(async()=>(await status())==='saving')
+      await complete();assert.equal(await toast(),missing);assert.equal(await status(),'saving')
+      await evaluate('window.restSafety.release()')
+      await wait(async()=>(await status())==='saved');assert.equal(await toast(),missing)
+      await click('알림 닫기')
+      await evaluate('window.restSafety.failNextWrite()')
+      await draftSecond()
+      await wait(async()=>(await status())==='failed');assert.equal(await toast(),undefined)
+      assert.equal(await evaluate(`!!document.querySelector('dialog[open], [data-workout-frame] aside')`),false)
+      await complete();assert.equal(await toast(),missing);assert.equal(await status(),'failed')
+      await click('1세트 이번 반복 횟수')
+      await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
+      await click('확인','dialog[open]')
+      await wait(()=>evaluate(`!document.querySelector('dialog[open]') && !document.querySelector('[data-tone="error"]')`))
+      assert.equal(await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').textContent`),'8 회')
+      await evaluate('window.restSafety.controller.retryDrafts()')
+      await wait(async()=>(await status())==='saved')
+      await evaluate('window.restSafety.failNextWrite()')
+      await complete()
+      await wait(async()=>(await status())==='failed' && !!await toast())
+      assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets.length'),0)
+      await evaluate('window.restSafety.offline()')
+      await complete()
+      await wait(async()=>(await status())==='waiting')
+      assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets[0].reps'),8)
+      await evaluate('window.restSafety.expire()')
+      await wait(()=>evaluate(`[...document.querySelectorAll('footer button')].some(b=>b.textContent==='2세트 완료'&&!b.disabled)`))
+      await click('2세트 완료','[data-workout-frame] footer')
+      await wait(async()=>(await toast())===missing)
+      assert.equal(await status(),'waiting')
+      assert.equal(await evaluate('window.restSafety.requests.length'),0)
+      await click('2세트 이번 반복 횟수 증가')
+      await wait(()=>evaluate(`!document.querySelector('[data-tone="error"]')`))
+      await click('2세트 완료','[data-workout-frame] footer')
+      await wait(()=>evaluate('window.restSafety.local().snapshot.performedSets.length===2'))
+      assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets[1].reps'),9)
     })
     await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts,memoRunway,restSafetyGeometry},null,2))
   } finally {

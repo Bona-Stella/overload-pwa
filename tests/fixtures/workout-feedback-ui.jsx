@@ -9,7 +9,7 @@ import {LocalStoreError} from '../../src/features/workout-online/storage.ts'
 import {changeEquipment,changeWeight,createLocalWorkout,editDraft,exerciseRest,startExercise} from '../../src/features/workout-local/model.ts'
 import {WorkoutFrame,WeightRecommendation} from '../../src/features/workout-flow/WorkoutFrame.tsx'
 import {Button} from '../../src/components/ui.tsx'
-import {ClosedWorkoutView} from '../../src/features/workout-online/ClosedWorkout.tsx'
+import {ClosedWorkout,ClosedWorkoutView} from '../../src/features/workout-online/ClosedWorkout.tsx'
 import {SavedWeightReview} from '../../src/features/workout-online/SavedWeightReview.tsx'
 import {LocalWorkoutView} from '../../src/features/workout-local/LocalWorkoutFlow.tsx'
 import {RestAlertSettings} from '../../src/features/settings/RestAlertSettings.tsx'
@@ -173,7 +173,7 @@ function Preferences({ owner, onBack }) {
  const [alerts, save] = useRestAlertPreferences(owner)
  return <RestAlertSettings alerts={alerts} onChange={save} onBack={onBack}/>
 }
-function RestSafetyFixture({ finalFooter = false }) {
+function RestSafetyFixture({ finalFooter = false, validation = false }) {
  const [fixture]=useState(()=>{
   const realNow=Date.now.bind(Date)
   const startedAt=new Date(realNow()-10000).toISOString()
@@ -182,14 +182,15 @@ function RestSafetyFixture({ finalFooter = false }) {
    Object.assign(server.initialPlan.weightExercises[0],{setCount:1,approvedWeightKg:'25'})
    server.snapshot.state.appliedPlan.weightExercises[0].setCount=1
   }
-  let local=createLocalWorkout(server,bootstrap.settings), online=true, heldWrite, failRest=false
+  let local=createLocalWorkout(server,bootstrap.settings), online=true, heldWrite, failRest=false, failNextWrite=false
   local.warmupCompleted=true
   startExercise(local,local.currentExerciseId,realNow())
-  for(const ordinal of [1,2,3])editDraft(local,local.currentExerciseId,ordinal,{reps:'8'})
+  if(!validation)for(const ordinal of [1,2,3])editDraft(local,local.currentExerciseId,ordinal,{reps:'8'})
   const requests=[], assessments=[], finishRequests=[]
   const saveLocal=async(value,expected,allowed)=>{
    if(heldWrite)await heldWrite.promise
    if(!allowed()||expected!==local.editVersion)throw new LocalStoreError()
+   if(failNextWrite){failNextWrite=false;throw new LocalStoreError()}
    if(failRest&&exerciseRest(local)&&!exerciseRest(value)){failRest=false;throw new LocalStoreError()}
    local=structuredClone(value)
   }
@@ -215,7 +216,7 @@ function RestSafetyFixture({ finalFooter = false }) {
     fail:()=>reject(new Error('평가 조회 실패')),
    })
   })} : undefined
-  return {newController,assessmentApi,assessments,finishRequests,server:()=>server,requests,local:()=>local,hold(fail=false){
+  return {newController,assessmentApi,assessments,finishRequests,server:()=>server,requests,local:()=>local,failNextWrite(){failNextWrite=true},hold(fail=false){
    failRest=fail
    let release
    const promise=new Promise(resolve=>{release=resolve})
@@ -266,8 +267,34 @@ window.feedback.mountButtonProbe=()=>{
   probe.render(<ButtonTimingProbe/>)
   window.feedback.unmountButtonProbe=()=>{probe.unmount();host.remove()}
 }
+const finishedSummarySource=session({status:'FINISHED',version:'1',endedAt:'2026-10-31T12:30:00.000Z',closedAt:'2026-10-31T12:30:01.000Z'})
+function ConfirmedSummaryFixture(){
+ const [cache]=useState(()=>new Map())
+ const [summaryReads]=useState(()=>[])
+ const [api]=useState(()=>({
+  async detail(){summaryReads.push('detail');return finishedSummarySource},
+  async assessment(){summaryReads.push('assessment');if(summaryReads.filter(x=>x==='assessment').length===1)throw new Error('summary read failed');return {...recordState.assessment,version:finishedSummarySource.version,weightReview:null}},
+  async changes(){summaryReads.push('changes');return {...recordState.changes,version:finishedSummarySource.version}},
+  async weightReview(){summaryReads.push('weightReview');return {userId:finishedSummarySource.userId,dataGeneration:finishedSummarySource.dataGeneration,sessionId:finishedSummarySource.id,version:finishedSummarySource.version,current:[],approvals:[],frozen:null}},
+  async finish(){summaryReads.push('finish');throw new Error('unexpected finish')},
+ }))
+ window.feedback.summaryReads=summaryReads
+ return <AppShell authenticated focused tab="home" onNavigate={()=>{}}><ClosedWorkout api={api} scope={finishedSummarySource} recordId={finishedSummarySource.id}
+  session={finishedSummarySource} cache={cache} authorized={()=>true} accountReady summary onServer={()=>{}} onRoutineApproved={()=>{}} /></AppShell>
+}
+function FailedDeleteFixture(){
+ const [state,setState]=useState(recordState)
+ const [controller]=useState(()=>({async delete(){
+  setState(current=>({...current,issue:'저장 결과를 확인하지 못했습니다.',pending:{status:'PENDING'}}))
+  return false
+ }}))
+ return <AppShell authenticated focused tab="history" onNavigate={()=>{}}><ClosedWorkoutView state={state} controller={controller}/></AppShell>
+}
 if(authInput==='rest-safety')root.render(<RestSafetyFixture/>)
 else if(authInput==='final-footer')root.render(<RestSafetyFixture finalFooter/>)
+else if(authInput==='validation')root.render(<RestSafetyFixture validation/>)
+else if(authInput==='confirmed-summary')root.render(<ConfirmedSummaryFixture/>)
+else if(authInput==='failed-delete')root.render(<FailedDeleteFixture/>)
 else if(authInput) void import('../../src/features/auth/auth.css').then(()=>root.render(<AppShell authenticated={false} tab="home" onNavigate={()=>{}}>
   <LoginScreens state={{pending:null,challenge,resendAt:0,verifyAt:0,notice:'',updatedAt:now}} controller={{}} now={now} onLegal={()=>{}} />
 </AppShell>))

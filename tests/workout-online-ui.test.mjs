@@ -90,8 +90,9 @@ test('INTEGER-sized planned count renders a bounded pending window rather than a
 })
 test('failed local write is never labeled as successful local saving',()=>{
   const html=render(LocalWorkoutView,{state:{...editorState(createLocalWorkout(session(),bootstrap.settings)),issue:'저장 실패'},controller:{},definitions:[]})
-  assert.equal((html.match(/저장 실패/g)??[]).length,1)
-  assert.match(html,/aria-label="운동 저장 및 복구"/);assert.doesNotMatch(html,/이 기기에 저장됨/)
+  assert.match(html,/data-workout-save-status="failed"/)
+  assert.match(html,/aria-label="저장 실패 · 데이터 상태 확인"/)
+  assert.doesNotMatch(html,/<aside|<dialog|이 기기에 저장됨/)
 })
 test('new account shows empty routines without demo seeds or workout input controls',()=>{
   const RoutineWorkspace=props=>React.createElement(WorkspaceView,{...props,routes:useRoutineEditorRoutes(props.state.scope)})
@@ -184,13 +185,16 @@ test('closed completed sets display the recorded manufacturer rather than the cu
   assert.match(html,/파나타 · 원판식/)
 })
 
-test('normal saved status reserves no notice while failures, offline and unsaved inputs stay visible',()=>{
+test('workout status reflects confirmed storage and offers details only when needed',()=>{
   const w=createLocalWorkout(session(),bootstrap.settings)
   const view=patch=>render(LocalWorkoutView,{state:{...editorState(w),...patch},controller:{},definitions:[]})
-  assert.doesNotMatch(view({syncStatus:'SAVED',syncIssue:null}),/서버에 저장됨|<aside/)
-  assert.match(view({syncStatus:'WAITING',syncIssue:'연결 복구 후 재시도'}),/연결 복구 후 재시도/)
-  assert.match(view({syncStatus:'CHECK',syncIssue:'서버 저장 실패'}),/서버 저장 실패/)
-  assert.match(view({unsavedDrafts:true}),/입력 보존 확인 필요/)
+  assert.match(view({syncStatus:'SAVED'}),/data-workout-save-status="saved"/)
+  assert.doesNotMatch(view({syncStatus:'WAITING'}),/데이터 상태 확인|<aside|<dialog/)
+  assert.match(view({pending:1,unsavedDrafts:true}),/data-workout-save-status="saving"/)
+  assert.match(view({workout:{...w,syncState:'UNSENT'},syncStatus:'WAITING'}),/전송 대기 · 데이터 상태 확인/)
+  assert.match(view({syncStatus:'CHECK',syncIssue:'서버 저장 실패'}),/저장 실패 · 데이터 상태 확인/)
+  assert.match(view({unsavedDrafts:true}),/data-workout-save-status="failed"/)
+  assert.doesNotMatch(view({unsavedDrafts:true}),/입력 다시 저장|<dialog|<aside/)
 })
 test('saved provisional recommendations distinguish increase, decrease and no advice without changing approval',()=>{
   let w=createLocalWorkout(session(),bootstrap.settings)

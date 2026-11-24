@@ -3,13 +3,17 @@ import { newId } from '../../id.ts'
 import type { LocalWorkout } from './types.ts'
 import { decimalDraft } from '../workout-online/validation.ts'
 import { increment } from './model.ts'
+import { WorkoutActionError } from './action-error.ts'
 
 export class SyncStateConflict extends Error {
-  constructor(message = '서버 상태 확인이 필요합니다. 이 기기의 기록은 보존했습니다.') { super(message); this.name = 'SyncStateConflict' }
+  readonly otherEditor: boolean
+  constructor(message = '서버 상태 확인이 필요합니다. 이 기기의 기록은 보존했습니다.', otherEditor = false) {
+    super(message); this.name = 'SyncStateConflict'; this.otherEditor = otherEditor
+  }
 }
 export function assertWriter(w: LocalWorkout, server: Session) {
   if (server.userId !== w.userId || server.dataGeneration !== w.dataGeneration || server.id !== w.sessionId) throw new SyncStateConflict('계정 또는 운동 데이터가 변경되었습니다. 이전 기록은 보존했습니다.')
-  if (server.writerEpoch !== w.writerEpoch || server.editorDeviceId !== w.editorDeviceId) throw new SyncStateConflict('다른 기기에서 편집 중입니다. 이 기기의 미전송 기록은 보존했습니다.')
+  if (server.writerEpoch !== w.writerEpoch || server.editorDeviceId !== w.editorDeviceId) throw new SyncStateConflict('다른 기기에서 편집 중입니다. 이 기기의 미전송 기록은 보존했습니다.', true)
   if (server.status !== 'ACTIVE' || server.deletedAt) throw new SyncStateConflict(server.status === 'AUTO_CLOSED' ? '서버가 마지막 저장 기록으로 운동을 자동 종료했습니다. 미전송 원본은 이 기기에 보존했습니다.' : '서버에서 종료되거나 삭제된 운동입니다. 로컬 원본은 보존했습니다.')
 }
 export function sealSnapshot(w: LocalWorkout) {
@@ -31,7 +35,7 @@ export function sealSnapshot(w: LocalWorkout) {
 export function intendFinish(w: LocalWorkout, now: number) {
   if (w.finish) return
   if (!Number.isSafeInteger(now) || now < Date.parse(w.startedAt) || w.snapshot.performedSets.some(s => Date.parse(s.completedAt) > now)
-    || w.snapshot.cardioResults.some(s => Date.parse(s.occurredAt) > now)) throw new SyncStateConflict('기기 시각과 마지막 수행 시각을 확인해 주세요. 종료 시각을 자동 보정하지 않습니다.')
+    || w.snapshot.cardioResults.some(s => Date.parse(s.occurredAt) > now)) throw new WorkoutActionError('기기 시각과 마지막 수행 시각을 확인해 주세요. 종료 시각을 자동 보정하지 않습니다.')
   w.finish = { endedAt: new Date(now).toISOString(), snapshot: structuredClone(w.snapshot) }
 }
 export function sealFinish(w: LocalWorkout) {

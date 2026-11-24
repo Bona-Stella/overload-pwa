@@ -5,10 +5,39 @@ import { suggestedReps } from '../src/features/workout/reps.ts'
 import { createLocalWorkout, addWeight, applyLocalChange, editDraft, completeSet, undoSet, addCardio, timerAction } from '../src/features/workout-local/model.ts'
 import { summaryData, setVolume } from '../src/features/workout-online/summary-data.ts'
 import { localWorkout } from '../src/features/workout-local/validation.ts'
+import { workoutSaveStatus } from '../src/features/workout-local/save-status.ts'
+import { cardioCompletionInput } from '../src/features/workout-local/completion-input.ts'
 import { session, bootstrap, SESSION_EXERCISE as E, EXERCISE, OTHER } from './fixtures/workout-online-data.mjs'
 const local=()=>createLocalWorkout(session(),bootstrap.settings)
 const state=w=>({workout:w,drafts:{},cardioDrafts:{},memos:{},writable:true})
 const at=Date.parse(session().startedAt)+1000
+test('save status distinguishes durable drafts, unconfirmed requests and acknowledged finish',()=>{
+  const workout=local(), editor={...state(workout),pending:0,unsavedDrafts:false}
+  assert.equal(workoutSaveStatus({...editor,syncStatus:'WAITING'},false),'saved')
+  assert.equal(workoutSaveStatus({...editor,syncStatus:'READ',syncIssue:'조회 실패'},false),'saved')
+  assert.equal(workoutSaveStatus({...editor,syncStatus:'READ',syncIssue:'이전 조회 실패',workout:{...workout,localRevision:'1'}},false),'waiting')
+  assert.equal(workoutSaveStatus({...editor,syncStatus:'APPROVAL'},false),'saved')
+  assert.equal(workoutSaveStatus({...editor,workout:{...workout,editVersion:'1'}},false),'saved')
+  assert.equal(workoutSaveStatus({...editor,pending:1,unsavedDrafts:true},false),'saving')
+  assert.equal(workoutSaveStatus({...editor,unsavedDrafts:true},false),'failed')
+  assert.equal(workoutSaveStatus({...editor,pending:1,issue:'로컬 저장 오류'},false),'failed')
+  assert.equal(workoutSaveStatus({...editor,syncStatus:'SENDING'},false),'saving')
+  assert.equal(workoutSaveStatus({...editor,workout:{...workout,localRevision:'1'}},false),'waiting')
+  assert.equal(workoutSaveStatus({...editor,workout:{...workout,pendingSnapshot:{rejected:true}}},false),'failed')
+  assert.equal(workoutSaveStatus({...editor,syncIssue:'결과 미확인',syncStatus:'WAITING'},false),'failed')
+  assert.equal(workoutSaveStatus({...editor,syncStatus:'OTHER',pending:1},false),'failed')
+  assert.equal(workoutSaveStatus(editor,true),'saving')
+  assert.equal(workoutSaveStatus({...editor,workout:{...workout,finish:{endedAt:session().startedAt}}},false),'waiting')
+  assert.equal(workoutSaveStatus({...editor,workout:{...workout,finish:{ack:{}}},syncIssue:'요약 조회 실패'},false),'saved')
+})
+test('cardio validation keeps optional measurements and explains invalid actual input',()=>{
+  const draft={distance:'',speed:'',bpm:'',correctedSeconds:null}
+  assert.equal(cardioCompletionInput(draft,'TREADMILL',1000).distanceKm,null)
+  assert.throws(()=>cardioCompletionInput(draft,'TREADMILL',0),/실제 활동 시간/)
+  assert.throws(()=>cardioCompletionInput({...draft,distance:'0.0001'},'TREADMILL',1000),/0.001~1000 km/)
+  assert.throws(()=>cardioCompletionInput({...draft,speed:'12',speedSource:'manual'},'TREADMILL',1000),/실제 거리를 입력/)
+  assert.throws(()=>cardioCompletionInput({...draft,bpm:'301'},'TREADMILL',1000),/20~300 BPM/)
+})
 test('applied order and stable exercise IDs survive mapping, completion and navigation',()=>{
   let w=local();addWeight(w,EXERCISE,'추가',()=>OTHER)
   w.snapshot.appliedPlan.weightExercises.reverse();w.currentExerciseId=E
@@ -59,7 +88,7 @@ test('rep suggestions round valid ranges and never enter the set draft or comple
   const view=flowWeights(state(w))[0]
   assert.equal(suggestedReps(view.min,view.max),'8')
   assert.equal(view.sets[0].draft.reps,'')
-  assert.throws(()=>completeSet(w,E,1,at),/양의 정수/)
+  assert.throws(()=>completeSet(w,E,1,at),/반복 횟수를 입력해 주세요/)
   assert.deepEqual(w,before)
 })
 test('existing drafts appear while history is pending and retain priority when history arrives',()=>{

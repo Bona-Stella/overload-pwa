@@ -3,9 +3,12 @@ import type { ActiveResolution, FinishRequest, Session, SnapshotRequest } from '
 import type { LocalWorkout } from './types.ts'
 import { LocalStoreError } from '../workout-online/storage.ts'
 import * as state from './sync-state.ts'
+import { hasPendingWorkoutSave } from './save-status.ts'
 
-export type SyncStatus = 'LOCAL' | 'SENDING' | 'SAVED' | 'WAITING' | 'APPROVAL' | 'CHECK' | 'OTHER'
-export const SYNC_LABEL: Record<SyncStatus, string> = { LOCAL: '이 기기에 저장됨', SENDING: '서버 전송 중', SAVED: '서버에 저장됨', WAITING: '연결되면 전송', APPROVAL: '승인 확인 필요', CHECK: '서버 상태 확인 필요', OTHER: '다른 기기에서 편집 중' }
+export type SyncStatus = 'LOCAL' | 'SENDING' | 'SAVED' | 'WAITING' | 'APPROVAL' | 'CHECK' | 'OTHER' | 'READ'
+class SessionReadError extends Error {
+  constructor(cause: unknown) { super('세션을 확인하지 못했습니다.', { cause }) }
+}
 export type SyncApi = Pick<WorkoutApi, 'detail' | 'snapshot' | 'resolve' | 'routine'> & Partial<Pick<WorkoutApi, 'finish'>>
 export type SyncOptions = { api: SyncApi; online: () => boolean; onServer?: (server: Session) => void; onInvalid?: (error: unknown) => void }
 type Access = { read: () => LocalWorkout | null; allowed: () => boolean; mutate: (fn: (w: LocalWorkout) => void) => Promise<boolean>;
@@ -26,8 +29,12 @@ export class WorkoutSynchronizer {
     if (!this.current() || !await this.access.mutate(fn)) throw new LocalStoreError()
     if (!this.current()) throw new state.SyncStateConflict()
   }
+  private async readSession(w: LocalWorkout) {
+    try { return await this.options.api.detail(w, w.sessionId, this.abort.signal) }
+    catch (error) { throw new SessionReadError(error) }
+  }
   private async detail() {
-    const w = this.document(), server = await this.options.api.detail(w, w.sessionId, this.abort.signal)
+    const w = this.document(), server = await this.readSession(w)
     if (!this.current()) throw new state.SyncStateConflict()
     // A closing session is published only after its duplicate FINISH ACK commits locally.
     if (w.finish && !w.finish.ack && !server.deletedAt && server.status === 'FINISHED' && w.finish.request
@@ -58,15 +65,21 @@ export class WorkoutSynchronizer {
     const work = this.pump(check).catch(error => this.failure(error)).finally(() => { if (this.running === work) this.running = null })
     this.running = work; return work
   }
-  private failure(error: unknown) {
+  private failure(failure: unknown) {
     if (this.stopped) return
     this.suspended = true
-    const code = (error as { code?: string })?.code
+    const readFailed = failure instanceof SessionReadError
+    const error = readFailed ? failure.cause : failure
+    const code = (error as { code?: string } | null)?.code
     if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED'].includes(code ?? '')) { this.access.block(); this.options.onInvalid?.(error) }
+    else if (readFailed && !hasPendingWorkoutSave(this.access.read())) {
+      this.access.status('READ', '운동 정보를 다시 확인하지 못했습니다. 저장된 기록은 유지됩니다.')
+      return
+    }
     const conflict = error instanceof state.SyncStateConflict
-    const http = (error as { status?: number })?.status ?? 0, rejected = http >= 400 && http < 500 && http !== 401 && http !== 403
+    const http = (error as { status?: number } | null)?.status ?? 0, rejected = http >= 400 && http < 500 && http !== 401 && http !== 403
     const message = conflict ? error.message : error instanceof LocalStoreError ? error.message : rejected ? code === 'CLOCK_CONTEXT_INVALID' ? '운동 시각에 모순이 있습니다. 기기 날짜·시간과 입력을 확인해 주세요. 원본은 보존했습니다.' : '서버가 요청을 적용하지 못했습니다. 입력과 현재 서버 상태를 확인해 주세요. 원본은 보존했습니다.' : '연결 또는 서버 저장 결과를 확인하지 못했습니다. 원래 기록을 보존했습니다.'
-    this.access.status(conflict ? message.startsWith('다른 기기') ? 'OTHER' : 'CHECK' : error instanceof LocalStoreError || rejected ? 'CHECK' : 'WAITING', message)
+    this.access.status(conflict ? error.otherEditor ? 'OTHER' : 'CHECK' : error instanceof LocalStoreError || rejected ? 'CHECK' : 'WAITING', message)
   }
   private async sendSnapshot() {
     const w = this.document(), pending = w.pendingSnapshot
@@ -135,7 +148,7 @@ export class WorkoutSynchronizer {
     }
   }
   private async publishFinished() {
-    const w = this.document(), server = await this.options.api.detail(w, w.sessionId, this.abort.signal)
+    const w = this.document(), server = await this.readSession(w)
     if (!this.current()) return
     await this.access.saveServer(server)
     if (!this.current()) return
