@@ -90,7 +90,8 @@ test('INTEGER-sized planned count renders a bounded pending window rather than a
 })
 test('failed local write is never labeled as successful local saving',()=>{
   const html=render(LocalWorkoutView,{state:{...editorState(createLocalWorkout(session(),bootstrap.settings)),issue:'저장 실패'},controller:{},definitions:[]})
-  assert.match(html,/최근 변경 미확정/);assert.doesNotMatch(html,/이 기기에 저장됨/)
+  assert.equal((html.match(/저장 실패/g)??[]).length,1)
+  assert.match(html,/aria-label="운동 저장 및 복구"/);assert.doesNotMatch(html,/이 기기에 저장됨/)
 })
 test('new account shows empty routines without demo seeds or workout input controls',()=>{
   const RoutineWorkspace=props=>React.createElement(WorkspaceView,{...props,routes:useRoutineEditorRoutes(props.state.scope)})

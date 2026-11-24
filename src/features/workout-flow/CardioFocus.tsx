@@ -80,7 +80,7 @@ function CardioReview({ draft, activeMs, plan, estimate, issue, onDraft, onCance
 }
 
 export function CardioFocus({ cardio, activeMs, estimate = false, navigation, issue, editing, editTools, onEdit, onDraft, onCancelReview, onUndo, preview = false }: {
-  cardio: CardioFocusData; activeMs: number; navigation: ReactNode; issue: ReactNode
+  cardio: CardioFocusData; activeMs: number; navigation: ReactNode; issue?: ReactNode
   editing: boolean; editTools: ReactNode; onEdit: () => void; onDraft: (value: Partial<CardioDraft>) => void
   onCancelReview: () => void; onUndo: () => void; preview?: boolean; estimate?: boolean
 }) {

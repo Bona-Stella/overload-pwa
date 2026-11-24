@@ -33,22 +33,24 @@ export function KgWheel({ label, value, onChange, editorStep, preview }: { label
     stepAdjust={editorStep === undefined ? undefined : (value, direction) => adjustKg(value, direction, editorStep)} />
 }
 
-export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, completionProtected, editing, editTools,
+export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, completionProtected, editing, editTools, referenceNoteBelowControls = false,
   onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, memoOpen = true, onMemoToggle, preview = false }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
-  issue: ReactNode; preparing?: boolean; resting: boolean; completionProtected?: boolean; editing: boolean; editTools: ReactNode
+  issue?: ReactNode; preparing?: boolean; resting: boolean; completionProtected?: boolean; editing: boolean; editTools: ReactNode
   onDraft: (id: number, draft: Partial<SetDraft>) => void; onComplete: (id: number) => void
   onUndo: (id: number) => void; onExcludeSet: (id: number) => void
   onAddSet: () => void; workingRef?: RefObject<HTMLElement | null>
   onWeight: () => void; onEdit: () => void; onMemo: (memo: string) => void
   onList: () => void; onEnd: () => void
   memoContent?: ReactNode; memoNote?: string; approvalNote?: string; additionalInput?: boolean; preview?: boolean
-  memoOpen?: boolean; onMemoToggle?: () => void
+  memoOpen?: boolean; onMemoToggle?: () => void; referenceNoteBelowControls?: boolean
 }) {
   const completed = weight.sets.filter(s => s.result).length
   const count = weight.plannedCount ?? weight.sets.length
   const repsSuggestion = suggestedReps(weight.min, weight.max)
   const noPreviousRecord = !weight.sets.some(set => !set.result && (set.previous || set.repsPending))
+  const referenceNote = weight.sets.some(set => !set.result) && noPreviousRecord &&
+    <p className="muted small">비교 가능한 기준이 없습니다. 이번 반복 횟수를 직접 입력해 주세요.</p>
   const title = `${String(position).padStart(2, '0')}. ${weight.name}`
   const titleRef = useFitWorkoutTitle(title, !preview)
   const manufacturer = manufacturers.find(m => m.id === weight.manufacturerId)
@@ -84,8 +86,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       </div>}
       <div className={styles.equipment} aria-label="현재 장비"><span>{manufacturer?.name ?? '제조사 미지정'}</span><span>{weight.loadType ? LOAD_LABELS[weight.loadType] : '부하 미지정'}</span></div>
     </Card>
-    {weight.sets.some(set => !set.result) && noPreviousRecord &&
-      <p className="muted small">비교 가능한 기준이 없습니다. 이번 반복 횟수를 직접 입력해 주세요.</p>}
+    {!referenceNoteBelowControls && referenceNote}
     <Card className={styles.sets}>
       <div className={styles.setsHeading}><h2>세트 기록</h2><span>{weight.min}–{weight.max}회 × {count}세트</span><b>{completed}/{count}{completed >= count ? ' 완료' : ''}</b></div>
       <progress className={styles.setProgress} aria-label="현재 종목 세트 진행률" value={completed} max={count} />
@@ -134,6 +135,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       {onMemoToggle ? <div id={memoId} hidden={!memoOpen}>{memo}</div> : memo}
     </section>
     <Button className={styles.endWorkout} onClick={preview ? undefined : onEnd}>운동 종료</Button>
+    {referenceNoteBelowControls && referenceNote}
   </>
 }
 

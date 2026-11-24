@@ -27,14 +27,14 @@ function measureWorkoutFrame(frame: HTMLElement, clock: HTMLElement | null, foot
   }
 }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, footerGuard, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, hidden, cardioFocus, exerciseScroll, feedback }: {
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, footerGuard, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, recovery, hidden, cardioFocus, exerciseScroll, feedback }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
   timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; dim?: number; children: ReactNode; actions?: ReactNode; actionsBlocked?: boolean
   footerGuard?: RepeatPointerGuard
   feedback?: ReactNode
   onHome: () => void; backLabel?: string; onEnd: () => void; onRestInteraction?: () => void
   clockRef?: RefObject<HTMLDivElement | null>
-  navigation?: Navigation; swipe?: ExerciseSwipeOptions; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
+  navigation?: Navigation; swipe?: ExerciseSwipeOptions; reviewNote?: ReactNode; recovery?: ReactNode; hidden?: boolean; cardioFocus?: boolean
   exerciseScroll?: ExerciseScrollPosition | null
 }) {
   const root = useRef<HTMLDivElement>(null)
@@ -91,6 +91,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     </header>
     {reviewNote}
     {swipe ? <ExerciseSwipe options={swipe} cardio={cardioFocus}>{children}</ExerciseSwipe> : children}
+    {recovery}
     {dim !== undefined && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
     {hasActions && <footer className={styles.footer} ref={footer} inert={actionsBlocked}
       onPointerDownCapture={footerGuard?.pointerDown} onPointerCancelCapture={footerGuard?.pointerCancel}
