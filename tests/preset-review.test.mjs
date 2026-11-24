@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createReviewFixtureServer } from './fixtures/review-server.mjs'
@@ -9,6 +9,7 @@ import { verifyWorkoutReview } from './fixtures/workout-review-checks.mjs'
 import { verifyExerciseSwipe } from './fixtures/workout-swipe-checks.mjs'
 import { verifyWorkoutProcess } from './fixtures/workout-process-checks.mjs'
 import { chooserPanel, chooserRows, chooserTrigger } from './fixtures/home-chooser.mjs'
+import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 
 test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support their workflows', { timeout: 150000 }, async () => {
   const root = resolve('logs/preset-review')
@@ -16,7 +17,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   const profile = await mkdtemp(resolve(root, 'browser-'))
   const vite = await createReviewFixtureServer()
   let browser, socket, next = 0
-  const pending = new Map(), apiRequests = [], errors = [], responses = new Map()
+  const pending = new Map(), apiRequests = [], errors = [], responses = new Map(), dialogs = []
   async function wait(check, label) {
     const deadline = Date.now() + (label === 'home' ? 45000 : 12000)
     while (Date.now() < deadline) {
@@ -49,12 +50,13 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   const set = (selector, value) => evaluate(
     '(() => { const e = document.querySelector(' + JSON.stringify(selector) + '); Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), "value").set.call(e, ' + JSON.stringify(value) + '); e.dispatchEvent(new Event(e.tagName === "SELECT" ? "change" : "input", {bubbles:true})); })()')
   const body = () => evaluate("document.body?.innerText ?? ''")
+  const audit = async (use, tone) => dialogs.push(await auditMessageDialog({ send, evaluate }, use, tone))
   const scenario = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(1) select'
   const fault = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(2) select'
   const editor = 'form[aria-label="주간 일정 편집"]'
   const preset = number => click(number + '번 프리셋 보기', 'ariaLabel')
   const menu = () => click('주간 루틴 일정 메뉴', 'ariaLabel', 'summary')
-  const saveSchedule = async () => { await click('일정 저장'); await click('변경 확인') }
+  const saveSchedule = async () => { await click('일정 저장'); await click('저장', 'textContent', 'dialog[open] button') }
   const verifyWidth = async width => {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: true })
     assert.equal(await evaluate('document.documentElement.scrollWidth <= ' + width), true, 'viewport overflow at ' + width)
@@ -531,7 +533,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="제외").ariaLabel'), 'ariaLabel')
     assert.match(await body(), /최소 2개/)
     assert.equal(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="변경사항 저장").disabled'), true)
-    await click('취소'); await click('변경 버리기')
+    await click('취소'); await audit('순환 설정 변경 폐기', 'destructive'); await click('버리기', 'textContent', 'dialog[open] button')
 
     await menu()
     assert.equal(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="현재 보고 있는 일정 삭제").disabled'), true)
@@ -559,7 +561,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.deepEqual(await rowTops(), beforeMouse)
     await drag(0, 1, { during: verifyLiveMove(0, 1, originalOrder, beforeMouse) })
     assert.deepEqual(await rowIds(), [originalOrder[1], originalOrder[0], ...originalOrder.slice(2)])
-    await click('취소'); await click('변경 버리기')
+    await click('취소'); await click('버리기', 'textContent', 'dialog[open] button')
     await menu(); await click('주간 일정 전체 편집'); await verifyWidth(393)
     assert.deepEqual(await rowIds(), originalOrder, 'cancel preserves saved order')
     await drag(2, 3, { touch: true, during: verifyLiveMove(2, 3, originalOrder, await rowTops()) })
@@ -588,7 +590,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.equal(await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').value'), beforeSwitch)
     assert.equal(await evaluate('document.querySelector("[aria-label=\'수요일 루틴\']").value'), '')
     await set(presetSelector, nextPreset)
-    await click('변경 버리기')
+    await click('버리기', 'textContent', 'dialog[open] button')
     await wait(() => evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').value === ' + JSON.stringify(nextPreset)), 'confirmed preset switch')
     assert.equal(await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').value'), nextPreset)
     await click('닫기')
@@ -648,7 +650,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('취소', 'textContent', 'dialog[open] button')
     assert.equal(await evaluate('!!document.querySelector(' + JSON.stringify(editor) + ')'), true)
     await click('최신 일정 다시 열기')
-    await click('변경 버리기')
+    await click('버리기', 'textContent', 'dialog[open] button')
     await wait(() => evaluate('!document.querySelector("dialog[open]") && document.querySelector("[aria-label=\'월요일 루틴\']").value === ""'), 'latest schedule reopened')
     assert.equal(await evaluate('document.querySelector("[aria-label=\'월요일 루틴\']").value'), '')
     await set('[aria-label="수요일 루틴"]', createdId); await saveSchedule()
@@ -683,12 +685,12 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await verifyWidth(393)
     await set('dialog input[name="name"]', '테스트 일정 이름'); await click('이름 저장')
     await wait(async () => (await body()).includes('테스트 일정 이름') && !await evaluate('!!document.querySelector("dialog[open]")'), 'renamed')
-    await menu(); await click('현재 보고 있는 일정 삭제'); await click('일정 삭제')
+    await menu(); await click('현재 보고 있는 일정 삭제'); await audit('주간 일정 삭제', 'destructive'); await click('삭제', 'textContent', 'dialog[open] button')
     await wait(() => evaluate('!!document.querySelector("button[aria-label=\'빈 프리셋 추가\']")'), 'preset deleted')
     await click('상체 푸시 + 러닝 상세', 'ariaLabel')
     await click('루틴 삭제'); await click('취소', 'textContent', 'dialog[open] button')
     assert.match(await body(), /루틴 상세/)
-    await click('루틴 삭제'); await click('루틴 삭제', 'textContent', 'dialog[open] button')
+    await click('루틴 삭제'); await click('삭제', 'textContent', 'dialog[open] button')
     await wait(() => evaluate('!document.querySelector("dialog[open]") && !document.querySelector("button[aria-label=\'상체 푸시 + 러닝 상세\']")'), 'routine deleted')
     await preset(2)
     assert.doesNotMatch(await body(), /루틴 확인 필요/)
@@ -736,7 +738,8 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
       })()`))
     }
     await click('로그아웃')
-    assert.equal(await evaluate('document.querySelector("dialog[open] button.danger").disabled'), true)
+    assert.equal(await evaluate('document.querySelector("dialog[open][data-message-tone=warning] button.warning-action").disabled'), true)
+    await audit('설정 Preview 로그아웃', 'warning')
     await click('취소')
     await click('앱 설치 · 오프라인 준비', 'textContent', 'summary strong')
     assert.match(await body(), /검토용 설치 안내/)
@@ -774,13 +777,16 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /현재 운동은 읽기 전용.*iPad Pro.*운동 진행 중/s)
     await click('iPad Pro · 이 기기 로그아웃', 'ariaLabel', devicesPage + ' button')
     assert.match(await body(), /로그아웃 확인.*iPad Pro.*운동 진행 중인 기기가 포함되어 있어요/s)
+    await audit('지정 기기 로그아웃 시연', 'warning')
     await click('취소', 'textContent', 'dialog button')
     await click('모든 기기에서 로그아웃', 'textContent', devicesPage + ' button')
     assert.match(await body(), /현재 기기도 로그아웃 대상에 포함됩니다/)
+    await audit('모든 기기 로그아웃 시연', 'warning')
     await click('시안 확인', 'textContent', 'dialog button')
     assert.match(await body(), /iPad Pro.*MacBook Air/s)
     await click('다른 기기 모두 로그아웃', 'textContent', devicesPage + ' button')
     assert.match(await body(), /이 기기의 로그인 상태는 유지됩니다/)
+    await audit('다른 기기 로그아웃 시연', 'warning')
     await click('취소', 'textContent', 'dialog button')
     await set(devicesMode, 'only')
     assert.match(await body(), /다른 기기에 로그인되어 있지 않습니다/)
@@ -887,7 +893,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('취소', 'textContent', 'dialog[open] button')
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
     await click('취소', 'textContent', cardAction)
-    await click('변경 버리기')
+    await click('버리기', 'textContent', 'dialog[open] button')
     await wait(async () => (await body()).includes('180초'), 'discarded rest time draft')
     assert.match(await body(), /180초/)
     await click('편집', 'textContent', cardAction); await set(restSeconds, '185')
@@ -1019,6 +1025,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.deepEqual(errors, [])
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)
     assert.equal((await fetch(origin + '/api/v1/weekly-schedule')).status, 404)
+    await writeFile(resolve(root, 'front18-modal-audit.json'), JSON.stringify(dialogs, null, 2))
   } catch (error) {
     if (socket?.readyState === 1) {
       const pageText = await evaluate('document.body?.innerText ?? ""').catch(() => '')

@@ -1,11 +1,12 @@
 .button { min-height: 44px; padding: 11px 16px; transition: background-color .15s, border-color .15s; }
+.button[data-modal-neutral] { border-width: 2px; padding: 10px 15px; }
 .loadingButton { position: relative; }
 .loadingButton { color: transparent !important; }
 .loadingButton > :not([data-button-spinner]) { opacity: 0; }
 .buttonSpinner { position: absolute; inset: 0; margin: auto; width: 1em; height: 1em; border: 2px solid var(--text-muted); border-top-color: var(--text-primary); border-radius: 50%; animation: button-spin .75s linear infinite; }
 @keyframes button-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) { .buttonSpinner { animation: none; } }
-.card { min-width: 0; display: grid; gap: 12px; padding: var(--space-card); background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-card); }
+.card { min-width: 0; display: grid; gap: 12px; padding: var(--space-card); background: var(--surface-card); border: var(--border-card, 1px solid var(--border-subtle)); border-radius: var(--radius-card); }
 .hero { background: var(--hero-gradient); border-color: var(--hero-border); }
 .heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
 .heading h1 { font-size: 24px; margin: 4px 0 0; }

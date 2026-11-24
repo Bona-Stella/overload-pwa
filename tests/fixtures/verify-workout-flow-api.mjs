@@ -196,7 +196,7 @@ try{
     const repetitions=[[12,12,13],[12,12,7],[10,10,9]][i]
     for(let n=1;n<=3;n++){await wheel(n+'세트 이번 반복 횟수',String(repetitions[n-1]));await clickAria(n+'세트 완료');await saved(rid);if(await visible('휴식 종료'))await d.click('휴식 종료',root)}
   }
-  await d.click('운동 종료',root);await d.click('운동 종료 및 요약',dialog)
+  await d.click('운동 종료',root);await d.click('운동 종료',dialog)
   await waitFor(()=>visible('운동 기록 요약'),'partial workout summary')
   const reviewed=(await d.api('GET','/api/v1/workout-sessions/'+rid+'/assessment')).body
   assert.deepEqual(reviewed.weightReview.exercises.map(e=>e.advice),['INCREASE','DECREASE','DECREASE'])

@@ -54,7 +54,7 @@ function CatalogHeading({ title, backLabel, onBack, headingRef }: {
   title: string; backLabel: string; onBack: () => void; headingRef: Ref<HTMLHeadingElement>
 }) {
   return <header className={styles.header}>
-    <Button variant="quiet" className={styles.back} aria-label={backLabel} onClick={onBack}><span aria-hidden="true">‹</span> 뒤로</Button>
+    <Button shape="control" variant="quiet" className={styles.back} aria-label={backLabel} onClick={onBack}><span aria-hidden="true">‹</span> 뒤로</Button>
     <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
   </header>
 }

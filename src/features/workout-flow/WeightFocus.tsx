@@ -128,7 +128,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
     {!editing && <Button aria-expanded={false} onClick={preview ? undefined : onEdit}>운동·세트 편집</Button>}
     {editing && <section aria-label="운동·세트 편집" className="stack">{editTools}</section>}
     <section className={styles.memoSection} data-workout-memo-card={weight.id}>
-      {onMemoToggle && <Button variant="quiet" className={styles.memoToggle} aria-expanded={memoOpen} aria-controls={memoId} onClick={preview ? undefined : onMemoToggle}>
+      {onMemoToggle && <Button shape="control" variant="quiet" className={styles.memoToggle} aria-expanded={memoOpen} aria-controls={memoId} onClick={preview ? undefined : onMemoToggle}>
         기구 세팅 메모
         <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
       </Button>}

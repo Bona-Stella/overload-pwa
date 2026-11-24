@@ -18,6 +18,6 @@ export function CircleCheck({ label, checked, disabled, onClick, onCheckedChange
     </label>
   }
 
-  return <Button variant="quiet" className={styles.control} aria-label={label}
+  return <Button shape="control" variant="quiet" className={styles.control} aria-label={label}
     disabled={disabled} data-done={checked || undefined} onClick={onClick}>{mark}</Button>
 }

@@ -73,7 +73,7 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
                 </form> : <button className="primary full" disabled={locked} onClick={() => { clear(); void controller?.prepareGoogleContact() }}>Google로 등록 이메일 확인</button>}
               </> : account.identities.some(value => value.provider === 'email') ? <p className="muted small">이메일 OTP로 다시 로그인해 소유권을 확인하면 서버가 검증된 EMAIL 주소를 최초 등록에 사용할 수 있습니다. 기존 계정에서 로그아웃한 뒤 같은 이메일로 로그인해 주세요. 별도 주소 등록 API는 제공하지 않습니다.</p>
                 : <p className="muted small">로그인 수단을 확인할 수 없어 등록을 시작할 수 없습니다. 계정 정보를 다시 조회해 주세요.</p>}
-            {(account.form || (contact.status === 'REQUIRED' && contact.candidate)) && <button className="outline full" disabled={locked} onClick={() => { clear(); void controller?.cancelRegistration() }}>대표 이메일 등록 취소</button>}
+            {(account.form || (contact.status === 'REQUIRED' && contact.candidate)) && <button className="outline full action-pill" disabled={locked} onClick={() => { clear(); void controller?.cancelRegistration() }}>대표 이메일 등록 취소</button>}
           </> : <AccountNote>대표 이메일 정보를 확인할 수 없습니다. 계정 정보를 새로 확인해 주세요.</AccountNote>}
         {challenge && controller && <form className={`stack ${styles.divider}`} onSubmit={event => { event.preventDefault(); const value = code; clear(); void controller.verifyEmailProof(value) }}>
           <h2>{challenge.candidateId ? '대표 이메일 등록 코드' : '이메일 재인증 코드'}</h2>

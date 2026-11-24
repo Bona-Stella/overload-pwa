@@ -151,7 +151,7 @@ test('Google LINK renders fixed form POST containing only CSRF and never identit
 })
 for(const provider of ['email','google'])test(`${provider} unlink confirmation explains new account, sessions, contact preservation, and explicit final action`,()=>{
   const html=accountHtml({identities:[{id:ID,provider}],contact:{status:'VERIFIED',maskedEmail:'a***@***'},unlink:{userId:'private-user',identity:{id:ID,provider}}})
-  for(const label of ['로그인 수단 해제 최종 확인','해제 취소','새 계정이 생성될 수','다른 기기에서 로그인한 세션은 즉시 모두 로그아웃되지','대표 재인증 이메일과 운동 기록은 유지'])assert.ok(html.includes(label),label)
+  for(const label of ['연결 해제','취소','새 계정이 생성될 수','다른 기기는 모두 즉시 로그아웃되지는','대표 재인증 이메일과 운동 기록은 유지'])assert.ok(html.includes(label),label)
   assert.doesNotMatch(html,/private-user/);assert.doesNotMatch(html,new RegExp(ID))
 })
 test('multiple same-provider identities expose neither guessed addresses nor an arbitrary unlink button',()=>{

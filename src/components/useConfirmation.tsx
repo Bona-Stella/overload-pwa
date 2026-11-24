@@ -44,13 +44,13 @@ export function useConfirmation() {
     setPending(false)
   }
 
-  const dialog = visible && <Dialog title={visible.title} initialFocus={cancel} dismissBlocked={pending}
+  const dialog = visible && <Dialog title={visible.title} tone={visible.destructive ? 'destructive' : 'info'} initialFocus={cancel} dismissBlocked={pending}
     descriptionId={descriptionId}
     duringTraversal={visible.duringTraversal} onDismissed={finish} onClose={cancelRequest}>
-    <div id={descriptionId}>{visible.description}</div>
+    <div id={descriptionId} data-dialog-description>{visible.description}</div>
     <div className="row">
-      <Button ref={cancel} disabled={pending} onClick={cancelRequest}>취소</Button>
-      <Button variant={visible.destructive ? 'danger' : 'primary'} loading={pending} onClick={async () => {
+      <Button ref={cancel} variant="neutral" disabled={pending} onClick={cancelRequest}>취소</Button>
+      <Button variant={visible.destructive ? 'destructive' : 'primary'} loading={pending} onClick={async () => {
         const prompt = request.current
         if (!prompt || prompt.details !== visible || prompt.running || prompt.accepted !== undefined) return
         prompt.running = true

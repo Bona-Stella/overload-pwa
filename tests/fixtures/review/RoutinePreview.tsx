@@ -332,24 +332,24 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
         {issue && <p role="alert">{issue}</p>}<button className="primary" disabled={busy}>이름 저장</button>
       </form>
     </Dialog>}
-    {modal?.type === 'deletePreset' && modalPreset && <Dialog title="주간 일정 삭제" onClose={() => !busy && setModal(null)}>
-      <p>“{modalPreset.name}” 일정을 삭제할까요? 이 일정에 저장된 요일 배정이 사라집니다.</p>
+    {modal?.type === 'deletePreset' && modalPreset && <Dialog title="주간 일정 삭제" tone="destructive" dismissBlocked={busy} onClose={() => setModal(null)}>
+      <p>“{modalPreset.name}”에 저장된 요일 배정이 사라져요.</p>
       {issue && <p role="alert">{issue}</p>}
-      <div className="row"><button type="button" disabled={busy} onClick={() => setModal(null)}>취소</button>
-        <button type="button" className="danger" disabled={busy} onClick={async () => {
+      <div className="row"><button type="button" className="action-pill modal-neutral" data-modal-neutral disabled={busy} onClick={() => setModal(null)}>취소</button>
+        <button type="button" className="action-pill destructive-action" disabled={busy} onClick={async () => {
           if (await scheduleWrite({ type: 'delete', id: modal.id })) setModal(null)
-        }}>일정 삭제</button></div>
+        }}>삭제</button></div>
     </Dialog>}
-    {modal?.type === 'deleteRoutine' && <Dialog title="루틴 삭제" onClose={() => !busy && setModal(null)}>
-      <p>“{routineName(modal.id)}” 루틴을 삭제하면 모든 주간 일정에서 배정이 해제됩니다. 과거 운동 기록과 당시 계획은 보존됩니다.</p>
+    {modal?.type === 'deleteRoutine' && <Dialog title="루틴을 삭제할까요?" tone="destructive" dismissBlocked={busy} onClose={() => setModal(null)}>
+      <p>“{routineName(modal.id)}”의 주간 일정 배정이 모두 해제돼요.<br />과거 운동 기록과 당시 계획은 유지돼요.</p>
       {issue && <p role="alert">{issue}</p>}
-      <div className="row"><button type="button" disabled={busy} onClick={() => setModal(null)}>취소</button>
-        <button type="button" className="danger" disabled={busy || protectedView} onClick={async () => {
+      <div className="row"><button type="button" className="action-pill modal-neutral" data-modal-neutral disabled={busy} onClick={() => setModal(null)}>취소</button>
+        <button type="button" className="action-pill destructive-action" disabled={busy || protectedView} onClick={async () => {
           if (await write(() => ({ ...data, routines: routines.filter(r => r.id !== modal.id), schedule: unassignRoutine(schedule, modal.id) }))) {
             if (created?.id === modal.id) setCreated(null)
             setModal(null); closeEditor()
           }
-        }}>루틴 삭제</button></div>
+        }}>삭제</button></div>
     </Dialog>}
   </ReviewShell>
 }

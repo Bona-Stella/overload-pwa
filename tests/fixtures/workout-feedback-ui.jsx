@@ -16,6 +16,7 @@ import {RestAlertSettings} from '../../src/features/settings/RestAlertSettings.t
 import {useRestAlertPreferences} from '../../src/features/workout-flow/useRestAlertPreferences.ts'
 import {useProgressAssessment} from '../../src/features/workout-local/useProgressAssessment.ts'
 import {AppShell} from '../../src/app/AppShell.tsx'
+import {changeScreenPath, navigateBack} from '../../src/app/navigation.ts'
 import {LoginScreens} from '../../src/features/auth/LoginScreens.tsx'
 import {session,bootstrap,USER,OTHER} from './workout-online-data.mjs'
 import '../../src/index.css'
@@ -72,6 +73,10 @@ recordServer.snapshot.state.appliedPlan.cardioActivities=[{sessionActivityId:car
 recordServer.snapshot.state.cardioResults=[{id:crypto.randomUUID(),sessionActivityId:cardioId,status:'COMPLETED',occurredAt:recordServer.endedAt,startedAt:recordServer.startedAt,result:{activeMs:1230125,timerMs:1200000,corrected:true,distanceKm:'2.05',averageBpm:120,measurement:{actualSpeedKmh:null,distanceSource:'MANUAL'}}}]
 window.feedback.corrections=[]
 window.feedback.recoveries=[]
+window.feedback.trySummaryBack=()=>{
+ changeScreenPath(location.pathname+'?approval-draft-check')
+ navigateBack(()=>{})
+}
 const recordController={edit:async body=>{window.feedback.corrections.push(body);return true},
  recover:async (_copy,selected,version)=>{
   window.feedback.recoveries.push({selected,version})
@@ -88,6 +93,11 @@ const frozenRecordState=structuredClone(recordState),frozenServer=frozenRecordSt
 frozenServer.initialPlan.weightExercises=[first]
 frozenServer.snapshot.state.appliedPlan.weightExercises=frozenServer.snapshot.state.appliedPlan.weightExercises.slice(0,1)
 frozenServer.snapshot.state.performedSets=frozenServer.snapshot.state.performedSets.filter(s=>s.sessionExerciseId===first.sessionExerciseId).map(s=>({...s,loadType:'PLATE'}))
+const pendingApprovalState=structuredClone(recordState)
+pendingApprovalState.server.snapshot.approvalResults=[{
+ id:crypto.randomUUID(),sessionExerciseId:first.sessionExerciseId,status:'PENDING',reason:'ROUTINE_CHANGED',
+}]
+const recordViewStates={frozen:frozenRecordState,recovery:recoveryState,'pending-approval':pendingApprovalState}
 const frozenSets=structuredClone(frozenServer.snapshot.state.performedSets)
 frozenServer.completionAssessment={schemaVersion:2,ruleVersion:'task009-completion-v1',sessionVersion:'0',assessedAt:frozenServer.closedAt,overallWeightPlanComplete:true,exercises:[{sessionExerciseId:first.sessionExerciseId,eligible:true,reasonCodes:[],comparisonContext:{routineId:frozenServer.initialPlan.routineId,sourcePlacementId:first.sourcePlacementId,standardExerciseId:first.standardExerciseId,approvedWeightKg:first.approvedWeightKg,plannedSetCount:3,minReps:first.minReps,maxReps:first.maxReps,unit:'KG'},evaluatedPerformedSetIds:frozenSets.map(s=>s.id),evaluatedReps:frozenSets.map(s=>s.reps),repsSum:'37',benchmarkEvidence:null,advice:'INCREASE',adviceReason:'ALL_AT_OR_ABOVE_MAX_REPS'}]}
 frozenServer.snapshot.state.performedSets[0].reps=5
@@ -241,7 +251,7 @@ function RestSafetyFixture({ finalFooter = false, validation = false }) {
    progressAssessment={progress.value} progressAssessmentPending={progress.pending}/>
  </AppShell>
 }
-function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null),[history,setHistory]=useState([]);window.feedback.history=setHistory;window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={onGrowthInvalid} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record?.startsWith('saved-review:') ? <SavedReviewFixture key={record} mode={record.split(':')[1]}/> : record?.startsWith('approval-summary:') ? <ApprovalSummaryFixture key={record} empty={record==='approval-summary:empty'}/> : record ? <ClosedWorkoutView key={record} state={record==='frozen'?frozenRecordState:record==='recovery'?recoveryState:recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises} history={history}/>} </AppShell>}
+function Fixture(){const state=useSyncExternalStore(c.subscribe,c.getSnapshot),[advice,setAdvice]=useState(null),[record,setRecord]=useState(null),[history,setHistory]=useState([]);window.feedback.history=setHistory;window.feedback.advice=setAdvice;window.feedback.record=setRecord;return <AppShell authenticated focused tab="home" onNavigate={()=>{}}>{record?.startsWith('alerts')?<Preferences owner={record==='alerts' ? USER : OTHER} onBack={()=>setRecord(null)}/>:record==='growth'?<GrowthPanel api={growthApi} scope={recordServer} onInvalid={onGrowthInvalid} onOpen={()=>{}} refreshKey="fixture"/>:record==='chart'?<RecordChart data={[{id:'zero',label:'실제 0',value:'0'},{id:'missing',label:'미확인',value:null},{id:'value',label:'정확한 수치',value:'52.500001'}]} label="수치 검증" unit="kg"/>:record?.startsWith('saved-review:') ? <SavedReviewFixture key={record} mode={record.split(':')[1]}/> : record?.startsWith('approval-summary:') ? <ApprovalSummaryFixture key={record} empty={record==='approval-summary:empty'}/> : record ? <ClosedWorkoutView key={record} state={recordViewStates[record] ?? recordState} controller={recordController} summary={record==='summary'} onBack={()=>setRecord(null)}/> : advice ? <WorkoutFrame routine="안내 높이 검증" elapsed={0} deload={false} position={1} count={2} onHome={()=>{}} onEnd={()=>{}} actions={<><WeightRecommendation direction={advice.direction} kg={advice.kg}/><Button variant="primary">다음 종목으로</Button></>}><p>두 줄 안내와 다음 종목 버튼</p></WorkoutFrame> : <LocalWorkoutView state={state} controller={c} definitions={bootstrap.exercises} history={history}/>} </AppShell>}
 const authInput = new URLSearchParams(location.search).get('input')
 const now = Date.now()
 const challenge = authInput === 'otp' ? { id:'fixture', email:'sample@example.invalid', expiresAt:now+300000 } : null

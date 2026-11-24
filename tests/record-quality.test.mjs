@@ -11,12 +11,13 @@ import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import { resolve, dirname } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createReviewFixtureServer } from './fixtures/review-server.mjs'
+import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 
 test('record wireframe quality: navigation, complete isolated preview, responsive screenshot pairs', {timeout:180000}, async()=>{
  const root=resolve('logs/record-quality');await mkdir(root,{recursive:true})
  const profile=await mkdtemp(resolve(root,'browser-'))
  const vite=await createReviewFixtureServer()
- let browser,socket,serial=0;const pending=new Map(),errors=[],api=[],report={navigation:[],interactions:[],screens:[]}
+ let browser,socket,serial=0;const pending=new Map(),errors=[],api=[],report={navigation:[],interactions:[],screens:[],dialogs:[]}
  const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert.ok(!r.exceptionDetails,r.exceptionDetails?.exception?.description);return r.result.value}
  const wait=async(fn,label)=>{const end=Date.now()+15000;while(Date.now()<end){const r=await fn();if(r)return r;await delay(40)}assert.fail('Timed out: '+label)}
@@ -237,7 +238,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await wait(()=>evaluate('history.state.overloadNavigation.index === '+editorIndex),'editor history restored after cancel')
   assert.equal(await evaluate('document.querySelector(\'form[aria-label="루틴 생성"] input[placeholder="나의 루틴"]\').value'),'초안 이탈 보호')
   await send('Runtime.evaluate',{expression:'history.back()'})
-  await click('변경 버리기','dialog[open] button')
+  await click('버리기','dialog[open] button')
   await wait(()=>evaluate('!document.querySelector(\'form[aria-label="루틴 생성"]\')'),'accepted back to routine root')
   await send('Runtime.evaluate',{expression:'history.forward()'})
   await wait(()=>evaluate('!!document.querySelector(\'form[aria-label="루틴 생성"]\')'),'forward restores editor')
@@ -295,7 +296,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
           &&type(previous)==='11px/400/17.6px'&&type(arrow)===type(previous)&&type(result)==='13px/700/20.8px'
           &&(!direction||type(direction)==='11px/700/17.6px')&&plain&&sameStateColor&&type(count)==='12px/400/19.2px'
           &&[name,edit].every(bounds=>Math.abs(center(bounds)-center(box))<=.5)
-          &&edit.height===36&&editStyle.borderRadius==='9999px'&&editStyle.padding==='4px 6px'
+          &&edit.height===36&&editStyle.borderRadius==='999px'&&editStyle.padding==='4px 6px'
           &&editStyle.backgroundColor==='rgba(0, 0, 0, 0)'&&editStyle.borderTopColor==='rgb(53, 57, 65)'
           &&Math.abs(rect(mark).right+6-name.left)<.5&&Math.abs(name.left-rect(values.firstElementChild).left)<.5
           &&hitTarget&&box.right<edit.left&&name.right<=edit.left&&value.right<=rect(evidence).left
@@ -305,7 +306,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
     }
    })()`)
    assert.ok(layout.aligned&&layout.rows&&layout.separated,'approval layout '+w)
-   assert.deepEqual(layout.approval,['rgb(116, 166, 138)','rgb(17, 24, 32)','rgb(116, 166, 138)','9999px','4px 6px'])
+   assert.deepEqual(layout.approval,['rgb(116, 166, 138)','rgb(17, 24, 32)','rgb(116, 166, 138)','999px','4px 6px'])
    assert.deepEqual(layout.typography,['16px','700','22.4px','rgb(240, 241, 244)'])
    assert.deepEqual(layout.spacing,['8px','8px','6px',44,6,9])
    assert.equal(layout.firstInset,4)
@@ -342,7 +343,9 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await click('+2.5');await click('취소');assert.equal(await evaluate('document.querySelector(".approval-values").textContent'),before)
   await click('무게 수정');await click('+2.5');await click('확인')
   assert.equal(await evaluate('document.querySelector(".approval-item input").checked'),false)
-  await click('선택 승인');await click('취소');await click('선택 승인');assert.match(await body(),/서버·DB에는 저장하지 않습니다/);await click('시연 확인');assert.doesNotMatch(await body(),/실제 승인/)
+  await click('선택 승인');await click('취소');await click('선택 승인');assert.match(await body(),/실제 루틴에는 저장되지 않아요/)
+  report.dialogs.push(await auditMessageDialog({send,evaluate}, '운동 요약 중량 승인 시연', 'info'))
+  await click('시연 확인');assert.doesNotMatch(await body(),/실제 승인/)
   await evaluate('[...document.querySelectorAll(".approval-item input:checked")].forEach(e=>e.click())')
   assert.ok(await evaluate('[...document.querySelectorAll(".approval-toolbar button")].some(e=>/선택 승인/.test(e.textContent)&&e.disabled&&getComputedStyle(e).backgroundColor==="rgba(0, 0, 0, 0)"&&getComputedStyle(e).opacity==="0.42")'))
   await evaluate('[...document.querySelectorAll(".approval-item input:not(:checked)")].forEach(e=>e.click())')

@@ -124,8 +124,8 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const saved = useRef(false)
   const [confirm, confirmation] = useConfirmation()
   const canLeave = (duringTraversal = false) => saved.current || !guard.current && !busy && (draft === initialDraft || confirm({
-    title: '루틴 변경을 버릴까요?', description: <p>이 화면에서 수정한 내용이 사라집니다. 저장된 루틴은 유지됩니다.</p>,
-    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+    title: '루틴 변경을 버릴까요?', description: <p>{routine ? '이미 저장한 루틴은 유지돼요.' : '작성한 내용은 저장되지 않아요.'}</p>,
+    confirmLabel: '버리기', destructive: true, duringTraversal,
   }))
   useNavigationGuard(() => canLeave(true), navigationKey)
   const close = () => {
@@ -193,7 +193,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
           })
           const request = body
           await confirm({ title: '새 중량을 승인할까요?',
-            description: <><p>루틴 변경사항과 함께 다음 중량을 승인합니다.</p><ul>{changes.map((change, index) => <li key={request.weightApprovals[index].placementId}>{change}</li>)}</ul></>,
+            description: <><p>루틴 변경사항도 함께 저장돼요.</p><ul>{changes.map((change, index) => <li key={request.weightApprovals[index].placementId}>{change}</li>)}</ul></>,
             confirmLabel: '승인하고 저장', onConfirm: () => persist(request),
           })
         } else {
@@ -285,11 +285,11 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
           }} />
         </Card>
       })}
-      <button type="button" className="outline" onClick={addCardio}>+ 유산소 종목 추가</button>
+      <button type="button" className="outline action-pill" onClick={addCardio}>+ 유산소 종목 추가</button>
       {editing && <details className={editStyles.restore}>
         <summary>제거한 종목 복원</summary>
         <div className="stack">
-          <button type="button" className="outline" onClick={lookupRemoved}>복원 후보 조회</button>
+          <button type="button" className="outline action-pill" onClick={lookupRemoved}>복원 후보 조회</button>
           {removed?.weightPlacements.filter(p => !weights.some(w => w.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setWeights(values => [...values, { ...p, restore: true, setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), approve: false, nextWeightKg: p.approvedWeightKg }])}>{p.exerciseName} 배치 복원</button>)}
           {removed?.cardioPlacements.filter(p => !cardio.some(c => c.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setCardio(values => [...values, {id:p.id,existing:true,restore:true,...draftCardio(p.plan)}])}>{p.plan.name} 배치 복원</button>)}
         </div>
@@ -300,7 +300,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       {showFixedRequest && <p className="muted small">제출 내용을 고정했습니다. 응답이 확인되지 않았다면 같은 내용으로 확인하거나, 닫은 뒤 서버의 최신 루틴을 조회해 주세요.</p>}
     </div>}
     <footer className={editStyles.footer}>
-      <button type="button" className="outline" disabled={locked} data-button-pending={saving || undefined} onClick={close}>취소</button>
+      <button type="button" className="outline action-pill" disabled={locked} data-button-pending={saving || undefined} onClick={close}>취소</button>
       <Button type="submit" variant="primary" className="full" disabled={!saving && (locked || managementBlocked)} loading={saving}>{saveLabel}</Button>
     </footer>
     {confirmation}

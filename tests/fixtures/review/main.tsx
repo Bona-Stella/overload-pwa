@@ -7,6 +7,7 @@ import '../../../src/App.css'
 const pages = {
   '/rest-audio-preview': lazy(() => import('./RestAudioPreview.tsx')),
   '/common-ui-preview': lazy(() => import('./CommonUiPreview.tsx')),
+  '/common-ui-preview.html': lazy(() => import('./CommonUiPreview.tsx')),
   '/ui-foundation': lazy(() => import('./FoundationPreview.tsx')),
 }
 const Page = pages[location.pathname as keyof typeof pages] ?? RoutinePreview

@@ -146,15 +146,15 @@ export function LoggedInDevices({ onBack, headingRef, state = { status: 'unsuppo
         ? <AccountNote>다른 기기를 로그아웃해도 이 기기의 로그인 상태는 유지돼요. 모든 기기 로그아웃에는 현재 기기도 포함됩니다.</AccountNote>
         : <AccountNote>원격 로그아웃은 현재 지원되지 않습니다. 이 기기에서 로그아웃하려면 설정의 로그아웃을 사용해 주세요.</AccountNote>}
     </div>
-    {preview && target && <Dialog title="로그아웃 확인" onClose={() => setTarget(null)}>
+    {preview && target && <Dialog title="로그아웃 확인" tone="warning" onClose={() => setTarget(null)}>
       <div className="stack">
         <p>{target.kind === 'device' ? deviceName(target.device) : target.kind === 'others' ? '다른 기기 모두' : '모든 기기'}</p>
         <p>{target.kind === 'all' ? '현재 기기도 로그아웃 대상에 포함됩니다.' : '이 기기의 로그인 상태는 유지됩니다.'}</p>
         {editor !== null && affected.some(device => device.id === editor) &&
-          <p className={styles.warning}>운동 진행 중인 기기가 포함되어 있어요. 운동 기록 보존과 조작 권한 처리 정책을 확인해야 합니다.</p>}
-        <p className="muted small">검토용 확인창입니다. 실제 로그아웃 요청은 전송되지 않습니다.</p>
-        <Button variant="quiet" onClick={() => setTarget(null)}>취소</Button>
-        <Button onClick={() => setTarget(null)}>시안 확인</Button>
+          <p className={styles.warning}>운동 진행 중인 기기가 포함되어 있어요.<br />운동 기록 보존과 편집 권한을 확인해 주세요.</p>}
+        <p className="muted small">검수용 화면이며 실제 기기에 요청을 보내지 않아요.</p>
+        <Button variant="neutral" onClick={() => setTarget(null)}>취소</Button>
+        <Button variant="warning" onClick={() => setTarget(null)}>시안 확인</Button>
       </div>
     </Dialog>}
   </section>

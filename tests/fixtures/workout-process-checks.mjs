@@ -81,7 +81,7 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
     assert.ok(Math.max(...layout.widths) - Math.min(...layout.widths) <= 2)
     assert.deepEqual(layout.border, ['0px', '0px', '1px', '0px'])
     assert.deepEqual(layout.inner, ['0px', '1px', '1px'])
-    assert.deepEqual(layout.rounded, ['0px', '5px', '5px'])
+    assert.deepEqual(layout.rounded, ['0px', '5px', '999px'])
   }
   await action('운동 시작하기')
   await wait(async () => await timerHeading() === 'WEIGHT 수행', 'started weight')
@@ -255,7 +255,7 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   await action('1세트 완료')
   await scrollWorkout(1)
   await click('운동 종료', 'textContent', frame + ' button')
-  await click('운동 종료 및 요약', 'textContent', 'dialog[open] button')
+  await click('운동 종료', 'textContent', 'dialog[open] button')
   await summary(true, '0/1')
   await summaryAtTop()
 }

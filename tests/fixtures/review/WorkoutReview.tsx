@@ -288,13 +288,13 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     {(modal === 'add' || modal === 'replace') && <SessionExerciseSearch replace={modal === 'replace'} exercises={sessionExercises} onSelect={addExercise} onClose={close} />}
     {modal === 'cardio' && <SessionCardioPlan activities={[...activities, ...sessionActivities]} index={cardio.length} onSave={addActivity} onClose={close} />}
     {modal && typeof modal === 'object' && <ConfirmWorkoutAction title="세트 완료를 취소할까요?" action="완료 취소 확인"
-      message="이 세트가 미완료 상태로 돌아갑니다. 입력을 수정한 뒤 다시 완료할 수 있습니다." onClose={close} onConfirm={() => undoSet(modal.undo)} />}
-    {modal === 'remove' && <ConfirmWorkoutAction title="현재 종목을 제외할까요?" action="종목 제외"
-      message="이번 운동의 적용 계획에서 제외합니다. 원래 루틴과 시작 당시 계획은 유지됩니다." onClose={close} onConfirm={remove} />}
-    {modal === 'end' && <ConfirmWorkoutAction title="운동을 종료할까요?" action="운동 종료 및 요약"
-      message="미완료 종목이 있습니다. 지금까지 완료한 수행만 요약에 표시됩니다." onClose={close} onConfirm={finish} />}
+      message="세트가 미완료로 돌아가고 입력값은 복원돼요." onClose={close} onConfirm={() => undoSet(modal.undo)} />}
+    {modal === 'remove' && <ConfirmWorkoutAction tone="destructive" title="현재 종목을 제외할까요?" action="종목 제외"
+      message={<>이번 운동에서만 제외돼요.<br />루틴과 시작 당시 계획은 유지돼요.</>} onClose={close} onConfirm={remove} />}
+    {modal === 'end' && <ConfirmWorkoutAction tone="warning" title="운동을 종료할까요?" action="운동 종료"
+      message={<>미완료 종목이 있어요.<br />완료한 기록만 요약에 표시돼요.</>} onClose={close} onConfirm={finish} />}
     {modal === 'undo-cardio' && activity && <ConfirmWorkoutAction title="유산소 완료를 취소할까요?" action="유산소 완료 취소 확인"
-      message="활동 시간과 입력값을 유지한 채 일시정지 상태로 돌아갑니다." onClose={close}
+      message="타이머가 일시정지 상태로 돌아가요." onClose={close}
       onConfirm={() => { updateCardio({ ...activity, phase: 'paused', result: undefined }); close() }} />}
   </>
 }

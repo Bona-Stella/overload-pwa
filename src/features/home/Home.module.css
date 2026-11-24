@@ -28,8 +28,8 @@
 .planSection li > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .planSection li > strong { font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .emptyPlan { font-size: 11px; color: var(--text-muted); line-height: 1.55; margin: 11px 0; }
-.home :is(.start, .resume) { min-height: 44px; padding: 12px 7px; font-size: 15px; border: 1.5px solid var(--accent); border-radius: 2px; font-weight: 700; }
-.home .resume { width: 100%; margin-top: 14px; border-radius: 5px; }
+.home :is(.start, .resume) { min-height: 44px; padding: 12px 7px; font-size: 15px; border: 1.5px solid var(--accent); font-weight: 700; }
+.home .resume { width: 100%; margin-top: 14px; }
 .chooser > [role='region'] {
   display: flex;
   flex-direction: column;

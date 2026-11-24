@@ -26,3 +26,4 @@
   color: var(--accent);
   font-weight: 700;
 }
+.workoutTools { padding-block-end: calc(88px + env(safe-area-inset-bottom)); }

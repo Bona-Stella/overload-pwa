@@ -53,8 +53,8 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
   const hasDraft = !!onApprove && !readOnly && !preview && pendingReviews.some(w => drafts[w.id] !== undefined && drafts[w.id] !== defaultWeight(w))
   const [confirm, confirmation] = useConfirmation()
   useNavigationGuard(() => !hasDraft || confirm({ title: '승인 중량 초안을 버릴까요?',
-    description: <p>아직 승인하지 않은 수정값이 사라집니다. 루틴에 저장된 승인 중량은 유지됩니다.</p>,
-    confirmLabel: '변경 버리기', destructive: true, duringTraversal: true,
+    description: <p>루틴에 이미 저장한 승인 중량은 유지돼요.</p>,
+    confirmLabel: '버리기', destructive: true, duringTraversal: true,
   }))
   useEffect(() => {
     if (!hasDraft) return
@@ -101,7 +101,7 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
         </div>}
       </section>
     })}
-    {confirmedTargets.length > 0 && (onApprove||preview) && <Dialog title={preview?'합성 승인 시연':'중량 승인'} closePointerGuard={closePointerGuard} dismissBlocked={saving} onClose={()=>{if(!submitting.current)setConfirming([])}}><p>{onApprove&&!preview?<>선택한 {confirmedTargets.length}종목의 중량을 현재 루틴에 저장합니다.</>:<>선택한 {confirmedTargets.length}종목의 승인 화면을 시연합니다. 서버·DB에는 저장하지 않습니다.</>}</p>{(approvalIssue||confirmationIssue)&&<p role="alert">{approvalIssue||confirmationIssue}</p>}<div className="row"><Button pending={saving} onClick={()=>setConfirming([])}>취소</Button><Button variant="primary" disabled={disabled&&!saving} loading={saving} onClick={async()=>{
+    {confirmedTargets.length > 0 && (onApprove||preview) && <Dialog tone="info" title={preview?'합성 승인 시연':'중량 승인'} closePointerGuard={closePointerGuard} dismissBlocked={saving} onClose={()=>{if(!submitting.current)setConfirming([])}}><p>{onApprove&&!preview?<>선택한 {confirmedTargets.length}종목의 중량을 현재 루틴에 저장해요.</>:<>검수용 {confirmedTargets.length}종목이에요.<br />실제 루틴에는 저장되지 않아요.</>}</p>{(approvalIssue||confirmationIssue)&&<p role="alert">{approvalIssue||confirmationIssue}</p>}<div className="row"><Button variant="neutral" pending={saving} onClick={()=>setConfirming([])}>취소</Button><Button variant="primary" disabled={disabled&&!saving} loading={saving} onClick={async()=>{
       if(submitting.current)return
       submitting.current=true;setSaving(true);setConfirmationIssue('')
       try {
@@ -124,7 +124,7 @@ function ApprovalWeightDialog({ weight, value, onConfirm, onClose, closePointerG
   const step = approvalStep(weight.loadType ?? null)
   return <Dialog title="승인 예정 중량" onClose={onClose} closePointerGuard={closePointerGuard}><div className="stack"><p className="approval-draft-value">현재 승인 중량 {weight.review!.referenceKg}kg → <strong data-approval-direction={compareWeight(draft,weight.review!.referenceKg)}>{draft||'—'}kg</strong></p>
     <NumberWheel label="승인 예정 중량" value={draft} onChange={setDraft} unit="kg" start="0" stepLabel={step} adjust={(s,d) => { try { const next = decimalDraft(adjustApproval(s,d,step)); return next === s ? null : next } catch { return null } }} validate={decimalDraft} />
-    {issue && <p role="alert">{issue}</p>}<div className={styles.actions}><Button onClick={onClose}>취소</Button><Button variant="primary" onClick={() => { try { onConfirm(decimalDraft(draft)) } catch { setIssue('0 이상의 중량을 입력해 주세요.') } }}>확인</Button></div></div></Dialog>
+    {issue && <p role="alert">{issue}</p>}<div className={styles.actions}><Button variant="neutral" onClick={onClose}>취소</Button><Button variant="primary" onClick={() => { try { onConfirm(decimalDraft(draft)) } catch { setIssue('0 이상의 중량을 입력해 주세요.') } }}>확인</Button></div></div></Dialog>
 }
 
 function compareWeight(a:string,b:string){try{const scale=(v:string)=>{const [x,y='']=decimalDraft(v).split('.');return BigInt(x)*1000000n+BigInt(y.padEnd(6,'0'))};return scale(a)>scale(b)?'increase':scale(a)<scale(b)?'decrease':'same'}catch{return 'same'}}

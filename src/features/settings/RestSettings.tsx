@@ -45,8 +45,8 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
   const dirty = !!draft && !!settings && bands.some(({ field }) => draft[field] !== String(settings[field]))
   const [confirm, confirmation] = useConfirmation()
   const canLeave = useCallback<RestExitGuard>((duringTraversal = false) => !pending.current && (!dirty || confirm({
-    title: '휴식 시간 변경을 버릴까요?', description: <p>이 화면에서 수정한 시간이 사라집니다. 저장된 휴식 시간은 유지됩니다.</p>,
-    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+    title: '휴식 시간 변경을 버릴까요?', description: <p>이미 저장한 휴식 시간은 유지돼요.</p>,
+    confirmLabel: '버리기', destructive: true, duringTraversal,
   })), [confirm, dirty])
 
   useLayoutEffect(() => {
@@ -130,7 +130,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
                 setDraft({ ...draft, [field]: event.target.value })
                 if (invalid === field) { setInvalid(null); setIssue(null) }
               }} />
-            <Button variant="quiet" className={styles.remove} aria-label={`${label} 구간 삭제`} aria-describedby={hint} disabled>
+            <Button shape="control" variant="quiet" className={styles.remove} aria-label={`${label} 구간 삭제`} aria-describedby={hint} disabled>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 7h14M9 7V4h6v3m2 0-1 13H8L7 7m3 4v5m4-5v5" />
               </svg>

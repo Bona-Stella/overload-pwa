@@ -122,7 +122,7 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
     loading={pending} resultsPending={pending && rows.length > 0}
     options={rows.map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))}
     onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row&&!pending)onSelect(row)}}
-    resultsFooter={next!==null?<button className="outline full" disabled={busy || pending} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
+    resultsFooter={next!==null?<button className="outline full action-pill" disabled={busy || pending} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
   </div>
 }
 

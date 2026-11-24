@@ -9,6 +9,7 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 import { Dialog } from '../../components/Dialog.tsx'
+import { recordDeletionConsequence } from '../../components/common-ui/message-copy.ts'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
 import { createRepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import type { RepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
@@ -97,10 +98,12 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
     {issue && <p className="notice" role="alert">{issue}</p>}{busy && <p role="status">이력을 확인 중입니다.</p>}
     {page?.sessions.length === 0 && <p>종료한 운동이 없습니다.</p>}
     {page?.sessions.map(s => <button className="outline full" key={s.id} disabled={busy} onClick={() => onOpen(s.id)}>{s.routineName} · {s.workoutDate} · {s.deletedAt ? '삭제된 운동' : s.status === 'FINISHED' ? '명시 종료 ' + time(s.endedAt) : '서버 자동 종료 ' + time(s.closedAt)}</button>)}
-    {page?.next && <button className="outline" disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</button>}
+    {page?.next && <button className="outline action-pill" disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</button>}
   </section>
 }
-export function ClosedWorkout({ api, scope, recordId, session, cache, authorized, onServer, onRoutineApproved, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, onSettled }: { summary?: boolean; onSettled?: () => void; api: WorkoutApi; scope: Scope; recordId: string; session: Session | null; cache: Map<string, ClosedDisplay>; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session, changed: boolean) => void; onRoutineApproved: (scope: Scope, routineId: string, version: string) => void; onInvalid?: (error: unknown) => void }) {
+type ClosedPersistence = { store: ConstructorParameters<typeof ClosedWorkoutController>[1]; acquire: ConstructorParameters<typeof ClosedWorkoutController>[6] }
+
+export function ClosedWorkout({ api, scope, recordId, session, cache, authorized, onServer, onRoutineApproved, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, onSettled, persistence }: { summary?: boolean; onSettled?: () => void; api: WorkoutApi; scope: Scope; recordId: string; session: Session | null; cache: Map<string, ClosedDisplay>; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session, changed: boolean) => void; onRoutineApproved: (scope: Scope, routineId: string, version: string) => void; onInvalid?: (error: unknown) => void; persistence?: ClosedPersistence }) {
   const latest = useRef({ session, authorized, onServer, onInvalid, accountReady, onSettled })
   useLayoutEffect(() => { latest.current = { session, authorized, onServer, onInvalid, accountReady, onSettled } }, [session, authorized, onServer, onInvalid, accountReady, onSettled])
   const [view, setView] = useState<{ controller: ClosedWorkoutController; state: ClosedState } | null>(null)
@@ -115,13 +118,13 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
   useLayoutEffect(() => { if (ready && latest.current.authorized()) latest.current.onSettled?.() }, [ready])
   useLayoutEffect(() => {
     if (!accountReady) return
-    const store = new WorkoutStore()
+    const store = persistence ? null : new WorkoutStore()
     let lastServer = cache.get(recordId)?.server ?? latest.current.session
-    const c = new ClosedWorkoutController(api, store, scope, recordId, () => latest.current.authorized(),
+    const c = new ClosedWorkoutController(api, persistence?.store ?? store!, scope, recordId, () => latest.current.authorized(),
       server => {
         latest.current.onServer(server, !!lastServer && lastServer.version !== server.version)
         lastServer = server
-      }, undefined, error => {
+      }, persistence?.acquire, error => {
         cache.delete(recordId)
         latest.current.onInvalid?.(error)
       }, cache.get(recordId))
@@ -139,8 +142,8 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
     if (cache.has(recordId)) update()
     let cancelled = false
     queueMicrotask(() => { if (latest.current.accountReady && !cancelled) { update(); void c.open(latest.current.session ?? undefined) } })
-    return () => { cancelled = true; unsubscribe(); c.stop(); void store.close() }
-  }, [api, accountReady, cache, scope, recordId, retry])
+    return () => { cancelled = true; unsubscribe(); c.stop(); void store?.close() }
+  }, [api, accountReady, cache, scope, recordId, retry, persistence])
   return <>
     {!showRecord && <>
       <RecordSubpageHeader title={summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={onBack} backLabel={backLabel} />
@@ -183,7 +186,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     {state.pending?.status === 'PENDING' && !(state.busy && dialog) && <Card><p>이전 변경의 저장 결과를 확인해 주세요. 입력은 보존되어 있습니다.</p>
       <Button disabled={!state.writable || !!server.deletedAt} pending={state.busy} onClick={() => void controller.retry()}>저장 결과 다시 확인</Button>
       <Button variant="quiet" disabled={!state.writable} pending={state.busy} onClick={() => void confirm({
-        title: '현재 기록을 확인했나요?', description: <p>현재 기록과 변경 이력을 검토 완료로 표시합니다. 추가 변경은 다시 선택해야 합니다.</p>,
+        title: '현재 기록을 확인했나요?', description: <p>현재 기록과 변경 이력을 검토 완료로 표시해요.<br />추가 변경은 다시 선택해 주세요.</p>,
         confirmLabel: '검토 완료', onConfirm: () => controller.reviewed(),
       })}>현재 기록 확인 완료</Button></Card>}
     {!server.deletedAt && state.copies.filter(c=>c.finish?.request&&!c.finish.ack).map((c,i)=><Button key={i}
@@ -192,13 +195,13 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
   </>
   const menuAction = (action: () => void) => { if(menuRef.current)menuRef.current.open=false; action() }
   const menu = <details className={styles.recordMenu} ref={menuRef}><summary aria-label="운동 기록 메뉴"><span aria-hidden="true">⋮</span></summary><div>
-    <Button disabled={disabled} onClick={()=>menuAction(()=>setMode('correction'))}>기록 정정</Button>
-    <Button disabled={disabled || !state.copies.length || !state.changes} onClick={()=>menuAction(()=>setDialog('recovery'))}>누락 수행 복구</Button>
-    <Button data-danger disabled={disabled} onClick={event => {
+    <Button shape="control" disabled={disabled} onClick={()=>menuAction(()=>setMode('correction'))}>기록 정정</Button>
+    <Button shape="control" disabled={disabled || !state.copies.length || !state.changes} onClick={()=>menuAction(()=>setDialog('recovery'))}>누락 수행 복구</Button>
+    <Button shape="control" data-danger disabled={disabled} onClick={event => {
       deleteCloseGuard.arm(event)
       menuAction(() => setDialog('delete'))
     }}>기록 전체 삭제</Button>
-    <Button onClick={()=>menuAction(()=>setMode('history'))}>평가 변경 이력</Button>
+    <Button shape="control" onClick={()=>menuAction(()=>setMode('history'))}>평가 변경 이력</Button>
   </div></details>
   const dialogs = <>
     {confirmation}
@@ -247,23 +250,33 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
 function DeleteDialog({ server, controller, busy, issue, resultPending, onClose, closePointerGuard }: { server: Session; controller: ClosedWorkoutController; busy: boolean; issue: string | null; resultPending: boolean; onClose: () => void; closePointerGuard: RepeatPointerGuard }) {
   const [version] = useState(server.version)
   const [failed, setFailed] = useState(false)
-  return <Dialog title="운동 전체를 삭제할까요?" closePointerGuard={closePointerGuard} dismissBlocked={busy} onClose={onClose}><div className="stack"><p>{server.workoutDate} · {server.initialPlan.routineName} 운동을 기록과 통계에서 제외합니다. 삭제 후 되돌릴 수 없습니다.</p>
-    {failed && <StatusNotice error>{resultPending ? '삭제 결과를 확인하지 못했습니다. 이 창을 닫고 기록에서 저장 결과를 다시 확인해 주세요.' : issue ?? '운동을 삭제하지 못했습니다. 최신 기록을 확인해 주세요.'}</StatusNotice>}
-    <Button variant="primary" loading={busy} disabled={resultPending && !busy} onClick={async () => { if (await controller.delete(version)) onClose(); else setFailed(true) }}>운동 삭제</Button></div></Dialog>
+  return <Dialog title="운동 기록을 삭제할까요?" tone="destructive" closePointerGuard={closePointerGuard} dismissBlocked={busy} onClose={onClose}>
+    <div className="stack">
+      <p>{server.workoutDate} · {server.initialPlan.routineName}<br />기록과 통계에서 제외돼요.<br />{recordDeletionConsequence}</p>
+      {failed && <StatusNotice error>{resultPending
+        ? <>삭제 결과를 확인하지 못했어요.<br />이 창을 닫고 기록에서 저장 결과를 다시 확인해 주세요.</>
+        : issue ?? <>운동을 삭제하지 못했어요.<br />최신 기록을 확인해 주세요.</>}</StatusNotice>}
+      <div className="row">
+        <Button variant="neutral" disabled={busy} onPointerDown={closePointerGuard.pointerDown} onPointerCancel={closePointerGuard.pointerCancel}
+          onClick={event => { if (!closePointerGuard.blocksClick(event)) onClose() }}>취소</Button>
+        <Button variant="destructive" loading={busy} disabled={resultPending && !busy} onClick={async () => { if (await controller.delete(version)) onClose(); else setFailed(true) }}>삭제</Button>
+      </div>
+    </div>
+  </Dialog>
 }
 function ClosedApproval({ server, id, controller, disabled }: { server: Session; id: string; controller: ClosedWorkoutController; disabled: boolean }) {
   const [weight, setWeight] = useState('')
   const [confirm, confirmation] = useConfirmation()
   const decide = (keep: boolean) => void confirm({
     title: keep ? '현재 루틴 중량을 유지할까요?' : '새 중량을 승인할까요?',
-    description: <p>{keep ? '남은 승인 요청을 적용하지 않습니다.' : `${weight} kg을 현재 시점의 새 중량으로 승인합니다. 과거 수행은 유지됩니다.`}</p>,
+    description: <p>{keep ? '남은 승인 요청은 적용하지 않아요.' : <>{weight} kg을 지금부터 적용해요.<br />과거 수행은 유지돼요.</>}</p>,
     confirmLabel: keep ? '현재 중량 유지' : '중량 승인',
     onConfirm: async () => { await controller.resolve(id, keep ? 'KEEP_CURRENT' : 'REAPPROVE', keep ? '' : weight, server.version) },
   })
   return <section className="card stack"><h3>승인 확인 필요</h3><p>수행은 보존되었습니다. 지금 해결해도 과거 수행의 승인 문맥과 최초 평가는 바뀌지 않습니다.</p>
-    <button className="outline" disabled={disabled} onClick={() => decide(true)}>종료 후 현재 중량 유지</button>
+    <button className="outline action-pill" disabled={disabled} onClick={() => decide(true)}>종료 후 현재 중량 유지</button>
     <label>지금 재승인할 중량 kg<input inputMode="decimal" value={weight} disabled={disabled} onChange={e => setWeight(e.target.value)} /></label>
-    <button className="outline" disabled={disabled} onClick={() => decide(false)}>종료 후 명시 재승인</button>{confirmation}
+    <button className="outline action-pill" disabled={disabled} onClick={() => decide(false)}>종료 후 명시 재승인</button>{confirmation}
   </section>
 }
 function CorrectionDialog({ target, server, controller, busy, onClose, manufacturers, definitions }: { target: EditTarget; server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void; manufacturers: Manufacturer[]; definitions: StandardExercise[] }) {
@@ -334,10 +347,10 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
     {issue && <StatusNotice error>{issue}</StatusNotice>}
     {prepared ? <>
       <p>{prepared.remove ? '이 수행을 삭제하면 기록과 통계에서 제외됩니다.' : '입력한 실제 수행값으로 변경합니다. 운동 계획과 수행 시각은 유지됩니다.'}</p>
-      <div className={styles.actions}><Button ref={cancelConfirmation} disabled={busy || !!action} onClick={() => setPrepared(null)}>계속 편집</Button>
+      <div className={styles.actions}><Button variant="neutral" ref={cancelConfirmation} disabled={busy || !!action} onClick={() => setPrepared(null)}>계속 편집</Button>
         <Button variant={prepared.remove ? 'danger' : 'primary'} loading={!!action} disabled={busy && !action} onClick={() => void submit()}>{prepared.remove ? '삭제 확인' : '변경 확인'}</Button></div>
     </> : <>
-      <div className={styles.actions}><Button pending={busy} onClick={onClose}>취소</Button>{target.kind !== 'SKIPPED' && <Button ref={saveButton} variant="primary" pending={busy} onClick={() => prepare(false)}>변경 저장</Button>}</div>
+      <div className={styles.actions}><Button variant="neutral" pending={busy} onClick={onClose}>취소</Button>{target.kind !== 'SKIPPED' && <Button ref={saveButton} variant="primary" pending={busy} onClick={() => prepare(false)}>변경 저장</Button>}</div>
       <Button ref={removeButton} variant="danger" pending={busy} onClick={() => prepare(true)}>이 수행 삭제</Button>
     </>}
   </div></Dialog>
@@ -364,7 +377,7 @@ function RecoveryDialog({ state, controller, onClose, manufacturers, definitions
     {issue&&<StatusNotice error>{issue}</StatusNotice>}
     {confirming ? <>
       <p>선택한 완료 수행 {selected.length}건을 원래 중량·반복·완료 시각으로 복구합니다.</p>
-      <div className={styles.actions}><Button ref={cancelConfirmation} disabled={locked} onClick={() => setConfirming(false)}>선택으로 돌아가기</Button>
+      <div className={styles.actions}><Button variant="neutral" ref={cancelConfirmation} disabled={locked} onClick={() => setConfirming(false)}>선택으로 돌아가기</Button>
         <Button variant="primary" loading={pending} disabled={state.busy && !pending} onClick={async () => {
           if (locked || saving.current) return
           saving.current = true
@@ -377,7 +390,7 @@ function RecoveryDialog({ state, controller, onClose, manufacturers, definitions
             }
           } finally { saving.current = false; setPending(false) }
         }}>복구 확인</Button></div>
-    </> : <div className={styles.actions}><Button pending={locked} onClick={onClose}>취소</Button>
+    </> : <div className={styles.actions}><Button variant="neutral" pending={locked} onClick={onClose}>취소</Button>
       <Button ref={trigger} variant="primary" disabled={locked || !selected.length} onClick={() => { reviewed.current = true; setIssue(''); setConfirming(true) }}>선택한 수행 복구</Button></div>}
   </div></Dialog>
 }

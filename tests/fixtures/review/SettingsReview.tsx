@@ -32,12 +32,13 @@ function accountExample(example: keyof typeof accountProviders): AuthState {
   }
 }
 
-export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSaveFailure, estimate, onEstimate }: {
+export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSaveFailure, estimate, onEstimate, allowReviewMedia = true }: {
   alerts?: RestAlerts; onAlerts?: (value: RestAlerts) => void; onRestExitGuard?: (guard: RestExitGuard | null) => void
   takeRestSaveFailure?: () => boolean
   estimate?: boolean; onEstimate?: (value: boolean) => void
+  allowReviewMedia?: boolean
 }) {
-  const mediaSources = useReviewMedia()
+  const mediaSources = useReviewMedia(allowReviewMedia)
   const [view, setView] = useScreenHistory<View | null>('review-settings', null)
   const [accountMode, setAccountMode] = useState<keyof typeof accountProviders>('email')
   const [logoutOpen, setLogoutOpen] = useState(false)
@@ -86,11 +87,11 @@ export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSave
       return null
     }} />}
     {view === 'alerts' && alerts && onAlerts && <RestAlertSettings alerts={alerts} onChange={onAlerts} onBack={back} review />}
-    {logoutOpen && <Dialog title="로그아웃할까요?" onClose={() => setLogoutOpen(false)}>
+    {logoutOpen && <Dialog title="로그아웃할까요?" tone="warning" onClose={() => setLogoutOpen(false)}>
       <div className="stack">
-        <p>검토용 화면입니다. 실제 로그아웃은 로그인한 앱에서 진행합니다.</p>
-        <Button variant="danger" disabled>로그아웃 확인</Button>
-        <Button variant="quiet" onClick={() => setLogoutOpen(false)}>취소</Button>
+        <p>검수용 화면이며 실제 로그인 상태는 유지돼요.</p>
+        <Button variant="warning" disabled>로그아웃</Button>
+        <Button variant="neutral" onClick={() => setLogoutOpen(false)}>취소</Button>
       </div>
     </Dialog>}
   </>

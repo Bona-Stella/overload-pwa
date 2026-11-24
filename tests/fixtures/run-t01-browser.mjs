@@ -7,11 +7,12 @@ import { resolve, relative, isAbsolute, extname } from 'node:path'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
 import { reviewFixtureEntry } from './review-server.mjs'
+import { auditMessageDialog } from './review/modal-audit.mjs'
 
 // Dedicated ports/profile, no developer env, proxy, real Backend, or personal DB.
 const directory = resolve('logs/ui-v09-t01'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
 await mkdir(profile, { recursive: true })
-const passed = [], errors = []
+const passed = [], errors = [], dialogs = []
 const wait = async (fn, label) => {
   const until = Date.now() + 15000
   while (Date.now() < until) { const result = await fn(); if (result) return result; await new Promise(r => setTimeout(r, 40)) }
@@ -52,6 +53,7 @@ try {
   await cdp.send('Page.enable'); await cdp.send('Runtime.enable')
   await cdp.send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true })
   const evaluate = expression => cdp.eval(expression)
+  const audit = async (use, tone) => dialogs.push(await auditMessageDialog({ send: (method, params) => cdp.send(method, params), evaluate }, use, tone))
   const click = async text => {
     await wait(() => evaluate(`Array.from(document.querySelectorAll('button')).some(b => (b.textContent.trim()===${JSON.stringify(text)} || b.closest('nav[aria-label="기본 탐색"]') && b.ariaLabel===${JSON.stringify(text)}) && !b.disabled && b.getClientRects().length)`), 'button ' + text)
     await evaluate(`(() => { const button=Array.from(document.querySelectorAll('button')).find(b => (b.textContent.trim()===${JSON.stringify(text)} || b.closest('nav[aria-label="기본 탐색"]') && b.ariaLabel===${JSON.stringify(text)}) && !b.disabled && b.getClientRects().length); button.focus(); button.click(); })()`)
@@ -66,6 +68,11 @@ try {
   assert.equal(await evaluate('document.querySelectorAll("nav").length'), 0)
   assert.equal(await evaluate('document.body.innerText.includes("앱 설치·오프라인 준비")'), false)
   await screenshot('login-393'); passed.push('Anonymous login retains its controls; no account tabs or install panel')
+  for (const title of ['이용약관', '개인정보 처리방침']) {
+    await click(title)
+    await audit(title, 'info')
+    await click('닫기')
+  }
   await evaluate('window.t01.login()')
   await wait(() => evaluate('document.querySelectorAll("nav button").length===4 && document.body.innerText.includes("첫 루틴을 준비해 보세요")'), 'authenticated home')
   assert.equal(await evaluate('getComputedStyle(document.querySelector(".app-shell")).backgroundColor'), 'rgb(17, 18, 22)')
@@ -102,7 +109,8 @@ try {
   await wait(() => evaluate('window.t01.read().then(w=>!w.pendingSnapshot && w.serverRevision===w.localRevision)'), 'snapshot retry ACK')
   passed.push('Existing sync retry accepts ACK after a simulated server failure without replacing workout facts')
   await click('‹ 홈으로 · 운동은 계속 보존'); await click('설정'); await click('로그아웃')
-  await wait(() => evaluate('document.querySelector("dialog[open]")?.innerText.includes("미전송 수행·입력 초안·타이머")'), 'logout safety dialog')
+  await wait(() => evaluate('document.querySelector("dialog[open]")?.innerText.includes("미전송 기록과 입력·타이머")'), 'logout safety dialog')
+  await audit('실제 로그아웃 확인', 'warning')
   await screenshot('logout-393'); await click('취소')
   await evaluate('window.t01.changeGeneration()'); await click('루틴'); await click('다시 조회')
   await wait(() => evaluate('document.querySelectorAll(".local-workout").length===0 && document.querySelectorAll("nav button").length===4'), 'generation boundary after API revalidation')
@@ -126,10 +134,11 @@ try {
   await click('?'); assert.equal(await evaluate('document.querySelector("[role=note]")!==null'), true)
   await evaluate('document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))')
   assert.equal(await evaluate('document.querySelector("[role=note]")===null'), true)
-  await click('공통 대화상자'); await click('닫기')
+  await click('공통 대화상자'); await audit('기초 컴포넌트 공통 대화상자', 'info'); await click('닫기')
   assert.equal(await evaluate('document.activeElement.textContent.trim()'), '공통 대화상자')
   assert.equal(await evaluate('document.documentElement.scrollWidth<=393'), true)
   passed.push('Both themes preserve input identity; all six original icons render 32px; help and Dialog restore keyboard behavior')
+  await writeFile(resolve(directory, 'front18-modal-audit.json'), JSON.stringify(dialogs, null, 2))
   const manifest = JSON.parse(await readFile('docs/product/assets/exercise-icons/manifest.json', 'utf8'))
   const sw = await readFile('dist/sw.js', 'utf8'), config = JSON.parse(sw.match(/const shell = (\{[^\n]+\})/)[1])
   const icons = manifest.icons.map(icon => ({ icon, asset: config.assets.find(asset => asset.path.startsWith('/assets/' + icon.file.slice(0, -4) + '-')) }))

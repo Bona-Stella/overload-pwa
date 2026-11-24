@@ -1,0 +1,3 @@
+.spinning { animation: sync-turn 1.25s linear infinite; }
+@keyframes sync-turn { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) { .spinning { animation: none; } }

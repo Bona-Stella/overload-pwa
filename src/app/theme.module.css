@@ -9,11 +9,16 @@
   --on-accent: #111820;
   --accent-soft: #6C93C615;
   --border-subtle: #353941;
+  --border-card: 1px solid var(--border-subtle);
   --border-focus: #6C93C6;
   --status-done: #74A68A;
   --status-missed: #B17B83;
   --status-warning: #D6BC65;
   --status-danger-text: #F0B7BF;
+  --status-danger-icon: #F06473;
+  --action-danger: #A83143;
+  --action-danger-hover: #B4374A;
+  --action-danger-active: #892637;
   --surface-danger: #302127;
   --surface-warning: #302B20;
   --hero-gradient: linear-gradient(142deg, #272D37 0%, #222832 50%, #1C212A 100%);
@@ -22,6 +27,7 @@
   --space-card: 18px;
   --radius-card: 18px;
   --radius-control: 10px;
+  --radius-action: 999px;
   --font-metadata: 11px;
   --chart-primary: var(--accent);
   /* Existing feature panels consume these names while their UI moves to Modules. */
@@ -48,6 +54,19 @@
 .theme :global(button.quiet), .theme :global(button.icon-button) { background: transparent; color: var(--text-muted); }
 .theme :global(button[data-close-text]) { color: var(--status-danger-text); }
 .theme :global(button.danger) { color: var(--status-danger-text); }
+.theme :global(button[data-action-shape='pill']), .theme :global(button.action-pill),
+.theme :global(button.primary:not([data-action-shape='control'], [aria-pressed], [role='switch'])) { border-radius: var(--radius-action); }
+.theme :global(button[data-modal-neutral]) { background: transparent; border-color: var(--text-primary); color: var(--text-primary); }
+.theme :global(button.warning-action) { background: var(--status-warning); border-color: var(--status-warning); color: var(--on-accent); }
+.theme :global(button.recovery-action),
+.theme :global(button[data-appearance='recovery']:is(:not(:disabled), [data-button-pending])) {
+  background: var(--text-primary); border-color: var(--text-primary); color: var(--surface-page);
+}
+.theme :global(button:is(.recovery-action, [data-appearance='recovery']):hover:not(:disabled)) { border-color: var(--text-primary); filter: brightness(.94); }
+.theme :global(button:is(.recovery-action, [data-appearance='recovery']):active:not(:disabled)) { filter: brightness(.88); }
+.theme :global(button.destructive-action) { background: var(--action-danger); border-color: var(--action-danger); color: var(--text-primary); }
+.theme :global(button.destructive-action:hover:not(:disabled)) { background: var(--action-danger-hover); border-color: var(--action-danger-hover); filter: none; }
+.theme :global(button.destructive-action:active:not(:disabled)) { background: var(--action-danger-active); border-color: var(--action-danger-active); }
 .theme :global(button.auth-google) { color: #242125; background: #F0F1F4; }
 .theme :global(input), .theme :global(select), .theme :global(textarea) { background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary); accent-color: var(--accent); }
 .theme :global(input::placeholder) { color: var(--text-muted); }
@@ -61,7 +80,7 @@
 .theme :global(.timer-bar span) { color: var(--text-muted); }
 .theme :global(.online-session-badge), .theme :global(.badge) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .theme :global(.workout-online [aria-pressed='true']) { border-color: var(--accent); }
-.theme :global(dialog) { background: var(--surface-card); color: var(--text-primary); border-color: var(--border-subtle); }
+.theme :global(dialog) { background: var(--surface-card); color: var(--text-primary); border: var(--border-card); border-radius: var(--radius-card); }
 .theme :global(.local-set-equipment) { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
 .theme :global(a) { color: var(--accent); }
 .theme :global(summary) { cursor: pointer; }

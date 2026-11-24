@@ -57,7 +57,7 @@
 .form .exercise .cardAction {
   display: flex; align-items: center; justify-content: center; gap: 5px;
   width: 78px; height: 32px; min-height: 32px; flex: none;
-  padding: 0 6px; border-radius: 5px; font-size: 12px;
+  padding: 0 6px; border-radius: var(--radius-action); font-size: 12px;
 }
 .form > fieldset > button { border-radius: 999px; }
 .create > fieldset > button { border-radius: var(--radius-control); }

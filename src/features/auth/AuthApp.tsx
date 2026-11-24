@@ -5,6 +5,7 @@ import { useAuth } from './context.ts'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { LoginScreens } from './LoginScreens'
 import { AccountSettings } from './AccountSettings'
+import { AuthFeedback } from './AuthFeedback.tsx'
 import { WorkoutWorkspace } from '../workout-online/WorkoutWorkspace'
 import { HomeStartup } from '../home/HomePanel.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
@@ -140,10 +141,7 @@ export function AuthApp() {
       const showingOfflineWorkout = state.status === 'unavailable' && (offlineWorkoutOpen || focused && !!state.localWorkoutUserId)
       return <AppShell authenticated={authenticated} tab={tab} onNavigate={navigateFromTabs}
       focused={focused && !state.accountOpen} routineEditor={routineEditor} busy={busy || navigating}>
-    {!showingOfflineWorkout && <div id="auth-feedback" aria-live="polite">
-      {state.issue && <div className="notice error" role="alert">{state.issue.message}</div>}
-      {state.notice && !state.challenge && <p className="notice" role="status">{state.notice}</p>}
-    </div>}
+    {!showingOfflineWorkout && <AuthFeedback state={state} />}
     {state.status === 'checking' ? checkingHome
       ? <HomeStartup label="로그인 상태를 확인하고 있어요." /> : <LoadingSkeleton layout="auth" label="로그인 상태를 확인하고 있어요." />
       : state.status === 'unavailable' ? !showingOfflineWorkout && <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
@@ -161,9 +159,13 @@ export function AuthApp() {
     {state.status === 'unavailable' && state.offlineNetworkFailure && !state.localWorkoutUserId && <OfflineResume onExitGuard={registerExitGuard}
       onActiveChange={setOfflineWorkoutOpen} onReconnect={async () => { if (await flushLocal()) void controller.restore() }} />}
     {localExitIssue && !showingOfflineWorkout && <p className="notice error" role="alert">입력 초안을 이 기기에 저장하지 못해 화면을 유지했습니다. 로컬 저장 오류를 해결한 뒤 다시 시도해 주세요.</p>}
-    {dialog && <Dialog title={dialog === 'logout' ? '로그아웃할까요?' : dialog} dismissBlocked={busy} onClose={() => setDialog(null)}>
-      {dialog === 'logout' ? <div className="stack"><p>이 브라우저의 로그인을 종료합니다. 서버 미전송 수행·입력 초안·타이머·로컬 사본·미확인 시작 요청은 보존하며, 재인증 전에는 표시하지 않습니다. 기존 데모 기록은 실제 계정과 연결되지 않습니다.</p>{localExitIssue && <p className="notice error" role="alert">초안을 저장하지 못했습니다. 로그아웃을 보류했습니다.</p>}<button className="primary" disabled={busy} onClick={async () => { if (await flushLocal()) { setDialog(null); void controller.logout() } }}>로그아웃 확인</button><button className="quiet" onClick={() => setDialog(null)}>취소</button></div>
-        : <div className="stack"><p>서비스 이용 문서를 준비하고 있습니다. 정식 서비스 전에 안내할 예정입니다.</p><button data-close-text className="outline" onClick={() => setDialog(null)}>닫기</button></div>}
+    {dialog && <Dialog tone={dialog === 'logout' ? 'warning' : 'info'} title={dialog === 'logout' ? '로그아웃할까요?' : dialog} dismissBlocked={busy} onClose={() => setDialog(null)}>
+      {dialog === 'logout' ? <div className="stack">
+        <p>미전송 기록과 입력·타이머·운동 사본은 이 기기에 남아요.<br />결과를 확인 중인 운동 시작 요청도 보존돼요.<br />다시 인증하면 이 기기의 데이터를 볼 수 있어요.<br />데모 기록은 실제 계정에 연결되지 않아요.</p>
+        {localExitIssue && <p className="notice error" role="alert">초안을 저장하지 못했어요.<br />로그아웃은 보류됐어요.</p>}
+        <button className="action-pill warning-action" disabled={busy} onClick={async () => { if (await flushLocal()) { setDialog(null); void controller.logout() } }}>로그아웃</button>
+        <button className="action-pill modal-neutral" data-modal-neutral onClick={() => setDialog(null)}>취소</button>
+      </div> : <div className="stack"><p>정식 서비스 전에 이 문서를 공개할 예정이에요.</p><button className="action-pill modal-neutral" data-modal-neutral onClick={() => setDialog(null)}>닫기</button></div>}
     </Dialog>}
   </AppShell> }} />
 }

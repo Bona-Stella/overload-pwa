@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { AppShell } from '../../../src/app/AppShell.tsx'
 import type { AppTab } from '../../../src/app/types.ts'
@@ -7,6 +7,9 @@ import wordmark from '../../../src/assets/OVERLOAD_white_transparent_4x.png'
 import { Card, Field } from '../../../src/components/ui.tsx'
 import { ActionButton } from '../../../src/components/common-ui/ActionButton.tsx'
 import { ActionDialog } from '../../../src/components/common-ui/ActionDialog.tsx'
+import { draftSaveFailure, recordDeletionConsequence } from '../../../src/components/common-ui/message-copy.ts'
+import type { DialogTone } from '../../../src/components/Dialog.tsx'
+import { FeedbackIcon } from '../../../src/components/common-ui/FeedbackIcon.tsx'
 import { ConnectionBanner, EmptyState, FieldValidation, SkeletonRegion, SkeletonSlot } from '../../../src/components/common-ui/ContentFeedback.tsx'
 import { StatusTag, StatusText } from '../../../src/components/common-ui/StatusIndicator.tsx'
 import { Toast } from '../../../src/components/common-ui/Toast.tsx'
@@ -14,15 +17,17 @@ import type { ToastMessage } from '../../../src/components/common-ui/Toast.tsx'
 import { TagPickerExamples } from './TagPickerExamples.tsx'
 import styles from './CommonUiPreview.module.css'
 
+const Front18Review = lazy(() => import('./Front18Review.tsx'))
+
 const confirmationExamples = {
   finish: {
-    kind: 'confirm', title: '운동을 종료할까요?',
-    description: '미완료 종목이 있습니다. 지금까지 완료한 수행만 요약에 표시됩니다.',
-    cancelLabel: '취소', confirmLabel: '운동 종료 및 요약',
+    kind: 'confirm', tone: 'warning', actionAppearance: 'warning', title: '운동을 종료할까요?',
+    description: <>미완료 종목이 있어요.<br />완료한 기록만 요약에 표시돼요.</>,
+    cancelLabel: '취소', confirmLabel: '운동 종료',
   },
   delete: {
     kind: 'destructive', title: '운동 기록을 삭제할까요?',
-    description: '삭제한 운동 기록은 복구할 수 없습니다. 계속 진행할까요?',
+    description: recordDeletionConsequence,
     cancelLabel: '취소', confirmLabel: '삭제',
   },
   discard: {
@@ -32,27 +37,47 @@ const confirmationExamples = {
   },
   save: {
     kind: 'confirm', title: '변경 사항을 저장할까요?',
-    description: '변경 사항을 확인한 뒤 저장해 주세요.',
+    description: '저장하면 변경 사항이 바로 적용돼요.',
     cancelLabel: '취소', confirmLabel: '저장',
+  },
+  recover: {
+    kind: 'confirm', tone: 'recheck', title: '저장 결과를 확인해 주세요',
+    description: '저장 여부를 아직 확인하지 못했어요.',
+    cancelLabel: '닫기', confirmLabel: '다시 확인',
+  },
+  critical: {
+    kind: 'confirm', tone: 'critical', title: draftSaveFailure.title,
+    description: <>{draftSaveFailure.retained}<br />{draftSaveFailure.next}</>,
+    cancelLabel: '닫기', confirmLabel: draftSaveFailure.retry,
   },
 } as const
 
 const noticeExamples = {
   alert: {
+    tone: 'error',
     title: '기록을 불러오지 못했어요',
-    description: '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
+    description: '잠시 후 다시 시도해 주세요.',
   },
   recommendation: {
+    tone: 'info',
     title: '증량 가능',
     description: '벤치 프레스의 목표 반복을 달성한 검토용 예시예요.',
   },
-}
+  success: { tone: 'success', title: '변경 사항이 저장됐어요.', description: '이 화면에서 계속 확인할 수 있어요.' },
+} as const
+
+const isNotice = (value: DialogExample): value is keyof typeof noticeExamples => Object.hasOwn(noticeExamples, value)
 
 type DialogExample = keyof typeof confirmationExamples | keyof typeof noticeExamples
+function confirmationTone(example: keyof typeof confirmationExamples, pending: boolean): DialogTone | undefined {
+  if (example === 'save' && pending) return 'processing'
+  if (example === 'finish' || example === 'recover' || example === 'critical') return confirmationExamples[example].tone
+}
 
 const toastExamples = {
   success: '변경 사항이 저장됐어요.',
   error: '저장하지 못했어요.',
+  warning: '반복 횟수를 입력해 주세요.',
   info: '다른 기기에서 운동 중이에요.',
 }
 
@@ -72,6 +97,12 @@ const emptyExamples = {
 }
 
 export default function CommonUiPreview() {
+  return new URLSearchParams(location.search).has('front18')
+    ? <Suspense fallback={<p role="status">검수 항목을 준비하는 중입니다.</p>}><Front18Review /></Suspense>
+    : <ComponentExamples />
+}
+
+function ComponentExamples() {
   const [tab, setTab] = useState<AppTab>('settings')
   const [dialog, setDialog] = useState<DialogExample | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -132,20 +163,25 @@ export default function CommonUiPreview() {
     <div className={styles.intro}>
       <h1>공통 UI Preview</h1>
       <p>검토용 예시 데이터</p>
+      <a href="?front18=1">FRONT 18 안내·오류·복구 검수</a>
     </div>
 
     <section className={styles.section}>
       <h2>모달</h2>
       <div className={styles.controls}>
-        <ActionButton size="small" onClick={() => setDialog('finish')}>일반 확인</ActionButton>
+        <ActionButton size="small" onClick={() => setDialog('recommendation')}>일반 안내</ActionButton>
+        <ActionButton size="small" onClick={() => setDialog('success')}>성공 모달 디자인 예시</ActionButton>
+        <ActionButton size="small" onClick={() => setDialog('finish')}>미완료 운동 종료</ActionButton>
         <ActionButton size="small" onClick={() => setDialog('delete')}>삭제 확인</ActionButton>
         <ActionButton size="small" onClick={() => setDialog('discard')}>미저장 변경</ActionButton>
         <ActionButton size="small" onClick={() => setDialog('alert')}>단일 안내</ActionButton>
+        <ActionButton size="small" onClick={() => setDialog('recover')}>저장 결과 미확인</ActionButton>
+        <ActionButton size="small" onClick={() => setDialog('critical')}>입력 저장 실패</ActionButton>
         <ActionButton size="small" onClick={() => setDialog('save')}>저장 처리 중</ActionButton>
       </div>
-      {dialog && (dialog === 'alert' || dialog === 'recommendation'
+      {dialog && (isNotice(dialog)
         ? <ActionDialog open kind="alert" {...noticeExamples[dialog]} confirmLabel="확인" onDismiss={dismissDialog} />
-        : <ActionDialog open {...confirmationExamples[dialog]} onDismiss={dismissDialog}
+        : <ActionDialog open {...confirmationExamples[dialog]} tone={confirmationTone(dialog, confirming)} onDismiss={dismissDialog}
           onConfirm={confirmDialog} pending={confirming}
           pendingLabel={dialog === 'save' ? '저장 중' : dialog === 'delete' ? '삭제 중' : undefined} />)}
     </section>
@@ -156,6 +192,7 @@ export default function CommonUiPreview() {
         <ActionButton size="small" onClick={() => announce('success')}>성공</ActionButton>
         <ActionButton size="small" onClick={() => announce('error')}>오류</ActionButton>
         <ActionButton size="small" onClick={() => announce('info')}>안내</ActionButton>
+        <ActionButton size="small" onClick={() => announce('warning')}>경고</ActionButton>
       </div>
     </section>
 
@@ -166,11 +203,11 @@ export default function CommonUiPreview() {
       </div>
       {showButtons && <div className={styles.examples}>
         <div className={styles.buttonPair}>
-          <ActionButton onClick={() => setToast(null)}>취소</ActionButton>
+          <ActionButton appearance="contrast-outline" onClick={() => setToast(null)}>취소</ActionButton>
           <ActionButton appearance="primary" onClick={saveExample} loading={saving} loadingLabel="저장 중">변경 사항 저장</ActionButton>
         </div>
         <div className={styles.buttonPair}>
-          <ActionButton appearance="contrast-outline" onClick={() => setToast(null)}>취소</ActionButton>
+          <ActionButton appearance="warning" onClick={() => setDialog('finish')}>미완료 운동 종료 확인</ActionButton>
           <ActionButton appearance="danger-primary" onClick={() => setDialog('delete')}>삭제</ActionButton>
         </div>
         <ActionButton appearance="danger-outline" onClick={() => setDialog('delete')}>루틴 삭제</ActionButton>
@@ -256,6 +293,7 @@ export default function CommonUiPreview() {
         title="인터넷 연결이 끊겼어요" description="화면은 유지돼요. 연결 복구 후 저장 상태를 확인해 주세요." />}
       {connection === 'syncing' && <ConnectionBanner state="syncing"
         title="운동 기록을 동기화하는 중" description="서버 저장 결과를 확인하고 있어요." />}
+      <div className={styles.controls}><FeedbackIcon name="upload" size={20} /><span>서버 전송</span></div>
       <p>최근 운동 기록</p>
     </section>
 

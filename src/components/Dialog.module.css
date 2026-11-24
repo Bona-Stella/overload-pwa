@@ -1,0 +1,35 @@
+dialog.message {
+  width: min(calc(100% - max(32px, var(--space-page, 16px) * 2)), 340px);
+  padding: 16px;
+}
+.message > .messageHeading {
+  position: relative;
+  display: grid;
+  justify-content: stretch;
+  justify-items: center;
+  gap: 5px;
+  padding-inline: 28px;
+  margin: 0 0 10px;
+  text-align: center;
+}
+.messageHeading h2 { margin: 0; line-height: 1.4; }
+.messageHeading h2, .message > [data-dialog-description], .message > p, .message > :global(.stack) > p {
+  text-align: center;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.messageHeading .symbol { color: var(--accent); }
+.message[data-message-tone='success'] .symbol { color: var(--status-done); }
+.message[data-message-tone='warning'] .symbol { color: var(--status-warning); }
+.message:is([data-message-tone='error'], [data-message-tone='critical'], [data-message-tone='destructive']) .symbol { color: var(--status-danger-icon); }
+.messageHeading button:global(.icon-button)[data-close-text] {
+  position: absolute;
+  inset: -8px -8px auto auto;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  color: var(--text-muted);
+  font-size: 22px;
+  font-weight: 400;
+}
+.message :is(:global(.row), :global(.stack)) > button[data-action-shape='pill'] { white-space: normal; overflow-wrap: anywhere; min-width: 0; }

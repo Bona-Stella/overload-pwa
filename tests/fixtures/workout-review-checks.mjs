@@ -805,7 +805,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
       name.textContent = original
       return result
     })()`)
-    assert.deepEqual(layout.change, ['변경', 78, 32, '5px'])
+    assert.deepEqual(layout.change, ['변경', 78, 32, '999px'])
     assert.deepEqual(layout.number, ['02', '13px'])
     assert.ok(layout.aligned && layout.ellipsis && layout.fits, 'cardio modal layout at ' + width)
     assert.deepEqual(layout.input, ['decimal', '16px', '44px', '8px'])
@@ -865,7 +865,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('유산소 기록 확정')
 
   await click('종료')
-  await dialogClick('운동 종료 및 요약')
+  await dialogClick('운동 종료')
   await has('운동 기록 요약')
   assert.match(await body(), /전체 운동 시간.*완료 세트.*총 \d+\/\d+세트 · 총 [\d,]+kg/s)
   assert.match(await body(), /기록 보존 안내.*합성 수행/s)
@@ -952,7 +952,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await has('이전 유효 기준 기록');assert.match(await body(),/25kg → 30kg/)
   assert.match(await evaluate('document.querySelector("[role=table]").parentElement.textContent'),/0\/3/)
   for(const w of [320,375,390,430]){await verifyWidth(w);await verifyFrameClearance('benchmark')}
-  await click('운동 종료');await dialogClick('운동 종료 및 요약');await has('운동 기록 요약');await click('홈', 'ariaLabel', 'nav button')
+  await click('운동 종료');await dialogClick('운동 종료');await has('운동 기록 요약');await click('홈', 'ariaLabel', 'nav button')
   await set(scenario, 'workout-edited')
   await has('진행 중인 운동')
   assert(await evaluate(`(() => {

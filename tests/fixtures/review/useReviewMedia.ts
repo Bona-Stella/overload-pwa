@@ -19,9 +19,10 @@ function reviewSession() {
 }
 
 // Runs only inside the development review entry. The access key never enters app storage.
-export function useReviewMedia() {
+export function useReviewMedia(enabled = true) {
   const [allowed, setAllowed] = useState(false)
   useEffect(() => {
+    if (!enabled) return
     let active = true
     const check = () => {
       void reviewSession().then(value => { if (active) setAllowed(value) }).catch(() => { if (active) setAllowed(false) })
@@ -29,6 +30,6 @@ export function useReviewMedia() {
     window.addEventListener('hashchange', check)
     check()
     return () => { active = false; window.removeEventListener('hashchange', check) }
-  }, [])
+  }, [enabled])
   return allowed ? sources : undefined
 }

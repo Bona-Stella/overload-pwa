@@ -3,17 +3,22 @@ import type { ComponentPropsWithRef, ReactNode } from 'react'
 import { useDelayedPending } from './useDelayedPending.ts'
 import styles from './ui.module.css'
 
-export function Button({ variant = 'secondary', className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithRef<'button'> & {
-  variant?: 'primary' | 'secondary' | 'quiet' | 'danger'
+export function Button({ variant = 'secondary', shape = 'pill', className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithRef<'button'> & {
+  variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'neutral' | 'warning' | 'destructive' | 'recovery'
+  shape?: 'pill' | 'control'
   /** This button initiated a task and may show delayed progress. */
   loading?: boolean
   /** Temporarily lock this button while leaving its normal appearance. */
   pending?: boolean
 }) {
   const showSpinner = useDelayedPending(loading && !disabled)
+  const control = shape === 'control' || props.role === 'switch' || props['aria-pressed'] !== undefined
+  const appearance = variant === 'secondary' || variant === 'neutral' ? 'outline'
+    : variant === 'warning' || variant === 'destructive' || variant === 'recovery' ? `${variant}-action` : variant
   return <button {...props} disabled={disabled || loading || pending} aria-busy={loading || props['aria-busy']}
+    data-action-shape={control ? 'control' : 'pill'} data-modal-neutral={variant === 'neutral' || undefined}
     data-button-pending={!disabled && (loading || pending) || undefined} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined}
-    type={type} className={`${styles.button} ${showSpinner ? styles.loadingButton : ''} ${variant === 'secondary' ? 'outline' : variant} ${className}`}>
+    type={type} className={`${styles.button} ${showSpinner ? styles.loadingButton : ''} ${appearance} ${className}`}>
     {children}
     {showSpinner && <span className={styles.buttonSpinner} data-button-spinner aria-hidden="true" />}
   </button>

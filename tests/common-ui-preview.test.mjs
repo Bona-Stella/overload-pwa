@@ -5,6 +5,8 @@ import { basename, dirname, resolve } from 'node:path'
 import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createReviewFixtureServer } from './fixtures/review-server.mjs'
+import { checkFront18Preview } from './fixtures/review/check-front18-preview.mjs'
+import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 
 async function waitFor(check, label, timeout = 12000) {
   const deadline = Date.now() + timeout
@@ -16,7 +18,7 @@ async function waitFor(check, label, timeout = 12000) {
   assert.fail('Timed out: ' + label)
 }
 
-test('independent common UI preview renders reusable controls and handles interaction', { timeout: 90000 }, async () => {
+test('independent common UI preview renders reusable controls and handles interaction', { timeout: 180000 }, async () => {
   const directory = resolve('logs/common-ui-preview')
   await mkdir(directory, { recursive: true })
   const profile = await mkdtemp(resolve(directory, 'browser-'))
@@ -37,8 +39,10 @@ test('independent common UI preview renders reusable controls and handles intera
   }
   async function click(label, selector = 'button') {
     await waitFor(() => evaluate(`(() => {
-      const button = [...document.querySelectorAll(${JSON.stringify(selector)})].find(button =>
-        !button.disabled && button.getClientRects().length && (button.ariaLabel || button.innerText.trim()) === ${JSON.stringify(label)})
+      const button = [...document.querySelectorAll(${JSON.stringify(selector)})].find(button => {
+        const labelled = button.getAttribute('aria-labelledby')?.split(' ').map(id => document.getElementById(id)?.textContent ?? '').join(' ').trim()
+        return !button.disabled && button.getClientRects().length && (button.ariaLabel || labelled || button.innerText.trim()) === ${JSON.stringify(label)}
+      })
       if (!button) return false
       button.focus()
       button.click()
@@ -98,9 +102,9 @@ test('independent common UI preview renders reusable controls and handles intera
   })()`), title)
 
   try {
-    vite = await createReviewFixtureServer()
-    await vite.listen()
-    const origin = 'http://127.0.0.1:' + vite.httpServer.address().port
+    const published = process.env.OVERLOAD_COMMON_UI_REVIEW_URL
+    if (!published) { vite = await createReviewFixtureServer(); await vite.listen() }
+    const url = published ?? ('http://127.0.0.1:' + vite.httpServer.address().port + '/common-ui-preview')
     chrome = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
       '--headless', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
       '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
@@ -121,7 +125,7 @@ test('independent common UI preview renders reusable controls and handles intera
         else request.resolve(message.result)
       }
       if (message.method === 'Runtime.exceptionThrown') exceptions.push(message.params.exceptionDetails)
-      if (message.method === 'Network.requestWillBeSent' && /^\/(api|oauth2)\//.test(new URL(message.params.request.url).pathname)) requests.push(message.params.request.url)
+      if (message.method === 'Network.requestWillBeSent' && /^\/(api|oauth2|__review(?:-media)?)(?:\/|$)/.test(new URL(message.params.request.url).pathname)) requests.push(message.params.request.url)
     }
     socket.onclose = () => {
       for (const request of pending.values()) request.reject(Error('Chrome closed'))
@@ -129,7 +133,7 @@ test('independent common UI preview renders reusable controls and handles intera
     }
     await send('Runtime.enable')
     await send('Network.enable')
-    await send('Page.navigate', { url: origin + '/common-ui-preview' })
+    await send('Page.navigate', { url })
     await waitFor(() => evaluate("document.querySelector('h1')?.textContent === '공통 UI Preview'"), 'preview mounted')
 
     await send('Emulation.setDeviceMetricsOverride', { width:393,height:852,deviceScaleFactor:1,mobile:true })
@@ -163,13 +167,30 @@ test('independent common UI preview renders reusable controls and handles intera
     for (const width of [320, 375, 393, 430, 1280]) {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: width < 500 })
       assert.equal(await fit(width), true)
-      await click('일반 확인')
+      await click('미완료 운동 종료')
       assert.equal(await evaluate(`(() => {
         const modal = document.querySelector('dialog[open]')
         if (!modal) return false
         const box = modal.getBoundingClientRect()
         const actions = [...modal.querySelectorAll('button[data-size="modal"]')].map(b => b.getBoundingClientRect())
-        return innerWidth === ${width} && box.left >= 16 && box.right <= ${width - 16} && box.width <= 448 &&
+        const style = getComputedStyle(modal)
+        const neutral = getComputedStyle(modal.querySelector('[data-appearance="contrast-outline"]'))
+        const warning = getComputedStyle(modal.querySelector('[data-appearance="warning"]'))
+        const description = modal.querySelector('[data-dialog-description]')
+        const textStyle = getComputedStyle(description)
+        const sentences = [...description.childNodes].filter(node => node.nodeType === Node.TEXT_NODE)
+        const lines = sentences.map(node => {
+          const range = document.createRange(); range.selectNode(node); return range.getClientRects().length
+        })
+        return innerWidth === ${width} && box.left >= 16 && box.right <= ${width - 16} && box.width <= 340 &&
+          style.borderRadius === '18px' && style.borderColor === 'rgb(53, 57, 65)' && style.borderWidth === '1px' &&
+          style.backgroundColor === 'rgb(27, 29, 34)' && modal.querySelector('[data-feedback-icon="warning"]') &&
+          textStyle.textAlign === 'center' && textStyle.wordBreak === 'keep-all' && textStyle.fontSize === '14px' &&
+          textStyle.color === 'rgb(169, 173, 183)' && sentences.map(node => node.textContent).join('|') === '미완료 종목이 있어요.|완료한 기록만 요약에 표시돼요.' &&
+          lines.length === 2 && lines.every(count => count === 1) && description.scrollWidth <= description.clientWidth &&
+          modal.querySelector('[data-appearance="warning"]').innerText === '운동 종료' &&
+          neutral.borderWidth === '2px' && neutral.borderColor === 'rgb(240, 241, 244)' &&
+          neutral.borderRadius === '999px' && warning.backgroundColor === 'rgb(214, 188, 101)' &&
           actions.length === 2 && actions[0].height === 44 && actions[0].width === actions[1].width
       })()`), true, 'modal geometry at ' + width)
       if (width === 393) await capture('393-confirm')
@@ -178,6 +199,7 @@ test('independent common UI preview renders reusable controls and handles intera
       if (width === 393) {
         await click('삭제 확인')
         await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
+        assert.equal(await evaluate("getComputedStyle(document.querySelector('dialog [data-feedback-icon=destructive]')).color"), 'rgb(240, 100, 115)')
         assert.deepEqual(await evaluate(`[...document.querySelectorAll('dialog button[data-size="modal"]')].map(button => {
           const style = getComputedStyle(button)
           return [button.dataset.appearance, style.backgroundColor, style.borderColor, style.color]
@@ -208,13 +230,27 @@ test('independent common UI preview renders reusable controls and handles intera
     }
 
     await send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true })
+    const dialogs = []
+    for (const [label, tone] of [
+      ['일반 안내', 'info'], ['성공 모달 디자인 예시', 'success'], ['미완료 운동 종료', 'warning'],
+      ['삭제 확인', 'destructive'], ['미저장 변경', 'destructive'], ['단일 안내', 'error'],
+      ['저장 결과 미확인', 'recheck'], ['입력 저장 실패', 'critical'], ['저장 처리 중', 'info'],
+    ]) {
+      await click(label)
+      dialogs.push(await auditMessageDialog({ send, evaluate }, `공통 UI / ${label}`, tone))
+      if (label === '입력 저장 실패') await capture('modal-audit-common-recovery')
+      await click('닫기', 'dialog .icon-button')
+      await modalClosed()
+    }
     await click('단일 안내')
     assert.equal(await evaluate(`(() => {
       const modal = document.querySelector('dialog[open]')
-      return document.getElementById(modal.getAttribute('aria-describedby')).textContent.startsWith('일시적인 오류') &&
+      return document.getElementById(modal.getAttribute('aria-describedby')).textContent === '잠시 후 다시 시도해 주세요.' &&
         document.activeElement.id === modal.getAttribute('aria-labelledby') &&
         getComputedStyle(document.documentElement).overflowY === 'hidden' &&
-        modal.querySelectorAll('button[data-size="modal"]').length === 1
+        modal.querySelectorAll('button[data-size="modal"]').length === 1 &&
+        getComputedStyle(modal.querySelector('[data-feedback-icon=error]')).color === 'rgb(240, 100, 115)' &&
+        getComputedStyle(modal.querySelector('[data-appearance=contrast-outline]')).backgroundColor === 'rgba(0, 0, 0, 0)'
     })()`), true)
     await capture('393-alert')
     await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 3, y: 20, button: 'left', clickCount: 1 })
@@ -232,8 +268,30 @@ test('independent common UI preview renders reusable controls and handles intera
     await click('단일 안내')
     await click('확인', 'dialog button')
     await modalClosed()
-    await click('일반 확인')
-    await click('운동 종료 및 요약', 'dialog button')
+    await click('성공 모달 디자인 예시')
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('dialog [data-feedback-icon=check]')).color"), 'rgb(116, 166, 138)')
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('dialog [data-appearance=contrast-outline]')).borderWidth"), '2px')
+    await click('확인', 'dialog button')
+    await modalClosed()
+    await click('저장 결과 미확인')
+    assert.deepEqual(await evaluate(`(() => {
+      const dialog = document.querySelector('dialog[open]'), primary = dialog.querySelector('[data-appearance=primary]');
+      const icon = getComputedStyle(dialog.querySelector('[data-feedback-icon=syncing]'));
+      return [dialog.dataset.messageTone, icon.color, icon.animationName, getComputedStyle(primary).backgroundColor, primary.innerText,
+        getComputedStyle(dialog.querySelector('[data-appearance=contrast-outline]')).borderWidth];
+    })()`), ['recheck', 'rgb(108, 147, 198)', 'none', 'rgb(108, 147, 198)', '다시 확인', '2px'])
+    await click('닫기', 'dialog button[data-appearance=contrast-outline]')
+    await modalClosed()
+    await click('입력 저장 실패')
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('dialog [data-feedback-icon=critical]')).color"), 'rgb(240, 100, 115)')
+    assert.deepEqual(dialogs.find(({ use }) => use.endsWith('입력 저장 실패')).samples[2].actions.map(action =>
+      [action.label, action.background, action.border, action.disabled]), [
+      ['닫기', 'rgba(0, 0, 0, 0)', '2px', false], ['다시 저장', 'rgb(240, 241, 244)', '1px', false],
+    ])
+    await click('닫기', 'dialog button')
+    await modalClosed()
+    await click('미완료 운동 종료')
+    await click('운동 종료', 'dialog button')
     await modalClosed()
     await status('확인 동작이 실행됐어요.')
     await click('알림 닫기')
@@ -261,13 +319,20 @@ test('independent common UI preview renders reusable controls and handles intera
     await click('저장', 'dialog button')
     assert.equal(await evaluate("document.querySelector('dialog button[aria-busy=true]').disabled"), true)
     assert.equal(await evaluate("document.querySelector('dialog button[aria-busy=true]').innerText"), '저장')
+    assert.equal(await evaluate("document.querySelector('dialog [aria-label=닫기]').disabled && !!document.querySelector('dialog [data-feedback-icon=syncing]')"), true)
+    await key('Escape', 'Escape', 27)
+    assert.equal(await evaluate("!!document.querySelector('dialog[open]')"), true)
     await waitFor(() => evaluate("!!document.querySelector('dialog button [data-button-spinner]')"), 'delayed save spinner')
     assert.equal(await evaluate("document.querySelector('dialog button[aria-busy=true]').innerText"), '저장 중')
     await modalClosed()
     await status('변경 사항이 저장됐어요.')
     await click('안내')
+    assert.equal(await evaluate("!!document.querySelector('[data-tone=info] [data-feedback-icon=info]')"), true)
+    await click('경고')
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-tone=warning] [data-feedback-icon=warning]')).color"), 'rgb(214, 188, 101)')
     await click('오류')
     assert.equal(await evaluate('document.querySelector(\'[role="alert"]\').textContent'), '저장하지 못했어요.')
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-tone=error] [data-feedback-icon=error]')).color"), 'rgb(240, 183, 191)')
     assert.equal(await evaluate("document.querySelectorAll('[data-tone]').length"), 1)
     assert.equal(await evaluate(`(() => {
       const toast = document.querySelector('[data-tone]')
@@ -277,6 +342,7 @@ test('independent common UI preview renders reusable controls and handles intera
     await capture('393-toast')
     await click('성공')
     await status('변경 사항이 저장됐어요.')
+    assert.equal(await evaluate("!!document.querySelector('[data-tone=success] [data-feedback-icon=check]')"), true)
     await waitFor(() => evaluate("!document.querySelector('[data-tone]')"), 'toast expires', 6500)
 
     await click('버튼 예시')
@@ -345,6 +411,10 @@ test('independent common UI preview renders reusable controls and handles intera
     await capture('393-header-logo', 'header')
     await click('우측 액션형')
     assert.equal(await evaluate("!!document.querySelector('header img')"), false)
+    assert.deepEqual(await evaluate(`(() => {
+      const style = getComputedStyle(document.querySelector('header button[data-appearance=secondary]'));
+      return [style.borderColor, style.borderWidth, style.borderRadius, style.minHeight, style.backgroundColor];
+    })()`), ['rgb(53, 57, 65)', '1px', '999px', '36px', 'rgb(37, 40, 46)'])
     await click('편집', 'header button')
     await click('취소', 'header button')
     await capture('393-header', 'header')
@@ -362,8 +432,14 @@ test('independent common UI preview renders reusable controls and handles intera
     await click('오프라인')
     assert.match(await evaluate("document.querySelector('[data-state=offline]').textContent"), /인터넷 연결이 끊겼어요/)
     await capture('393-offline', '[data-state=offline]')
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
     await click('동기화 중')
     assert.match(await evaluate("document.querySelector('[data-state=syncing]').textContent"), /운동 기록을 동기화하는 중/)
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-state=syncing] [data-feedback-icon=syncing]')).animationName !== 'none'"), true)
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-state=syncing] [data-feedback-icon=syncing]')).animationName"), 'none')
+    assert.equal(await evaluate("document.querySelector('[data-feedback-icon=upload]').getAttribute('width')"), '20')
+    await send('Emulation.setEmulatedMedia', { features: [] })
     await click('정상')
     assert.equal(await evaluate("!document.querySelector('[data-state=offline], [data-state=syncing]')"), true)
     assert.match(await evaluate('document.querySelector("main").innerText'), /최근 운동 기록/)
@@ -446,6 +522,12 @@ test('independent common UI preview renders reusable controls and handles intera
       assert.equal(await fit(width), true, 'expanded examples fit ' + width)
     }
     if (process.env.OVERLOAD_CAPTURE_COMMON_UI) await writeFile(resolve(directory, 'layout-measurements.json'), JSON.stringify(measurements, null, 2))
+    await send('Page.navigate', { url: url + '?front18=1' })
+    const front18 = await checkFront18Preview({ click, evaluate, send, waitFor, modalClosed, capture, dialogs })
+    if (process.env.OVERLOAD_CAPTURE_COMMON_UI) {
+      await writeFile(resolve(directory, 'front18-measurements.json'), JSON.stringify(front18, null, 2))
+      await writeFile(resolve(directory, 'front18-modal-audit.json'), JSON.stringify(dialogs, null, 2))
+    }
     assert.deepEqual(requests, [])
     assert.deepEqual(exceptions, [])
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)

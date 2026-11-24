@@ -26,8 +26,8 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, readRe
   const saved = useRef(false)
   const [ask, confirmation] = useConfirmation()
   const canLeave = (duringTraversal = false) => !preset || !dirty || ask({ title: '일정 배정 변경을 버릴까요?',
-    description: <p>이 화면에서 바꾼 요일 배정이 사라집니다. 저장된 일정은 유지됩니다.</p>,
-    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+    description: <p>이미 저장한 요일 배정은 유지돼요.</p>,
+    confirmLabel: '버리기', destructive: true, duringTraversal,
   })
   useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(true), navigationKey)
   const leave = async (action: () => void) => { if (await canLeave()) action() }
@@ -64,16 +64,16 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, readRe
       return <label key={name}>{name}요일<select aria-label={`${name}요일 루틴`} value={assigned} onChange={e => setDraft(values => [...values.filter(a => a.dayOfWeek !== index + 1), ...(e.target.value ? [{ dayOfWeek: index + 1, routineId: e.target.value }] : [])].sort((a, b) => a.dayOfWeek - b.dayOfWeek))}>
         {priority && <option value={priority.id}>✦ 새 루틴 · {priority.name}</option>}<option value="">휴식</option>{assigned && assigned !== priority?.id && !candidates.some(r => r.id === assigned) && <option value={assigned}>{routines.find(r => r.id === assigned)?.name ?? '사용할 수 없는 루틴 · 변경 필요'}</option>}{candidates.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
     })}</fieldset>{readRetry || <button className="primary" disabled={!canSubmit}>일정 저장</button>}
-    {confirm && canSubmit && <Dialog title="주간 일정 변경 확인" onClose={() => setConfirm(false)}>
-      {!dirty && <p>배정이 없는 휴식 일정으로 처음 적용할까요?</p>}<ul>{weekdays.map((name, index) => {
+    {confirm && canSubmit && <Dialog title="주간 일정 변경 확인" tone="info" onClose={() => setConfirm(false)}>
+      {!dirty && <p>모든 요일을 휴식으로 적용해요.</p>}<ul>{weekdays.map((name, index) => {
       const before = state.assignments.find(a => a.dayOfWeek === index + 1)?.routineId
       const after = draft.find(a => a.dayOfWeek === index + 1)?.routineId
       const nameFor = (id?: string) => id ? routines.find(r => r.id === id)?.name ?? '사용할 수 없는 루틴' : '휴식'
       return before === after ? null : <li key={name}>{name}요일 · {nameFor(before)} → {nameFor(after)}</li>
-    })}</ul><div className="row"><button type="button" onClick={() => setConfirm(false)}>취소</button><button type="button" className="primary" onClick={async () => {
+    })}</ul><div className="row"><button type="button" className="action-pill modal-neutral" data-modal-neutral onClick={() => setConfirm(false)}>취소</button><button type="button" className="primary" onClick={async () => {
       setConfirm(false)
       if (await onSave(draft) && navigationKey) { saved.current = true; navigateBack(onCancel) }
-    }}>변경 확인</button></div></Dialog>}
+    }}>저장</button></div></Dialog>}
     {confirmation}
   </form>
 }
@@ -94,7 +94,7 @@ export function PresetAssignmentEditor({ base, current, id, priorityId, routines
         {!options.some(p => p.id === id) && <option value={id} disabled>삭제된 일정</option>}
         {options.map((p, index) => <option value={p.id} key={p.id}>{presetNumber(index)} · {p.name}</option>)}
       </select></label>
-      {stale && current && <button type="button" className="outline" onClick={() => leave(onReload)}>최신 일정 다시 열기</button>}
+      {stale && current && <button type="button" className="outline action-pill" onClick={() => leave(onReload)}>최신 일정 다시 열기</button>}
     </> }}
     onSave={onSave} onCancel={onClose} />
 }

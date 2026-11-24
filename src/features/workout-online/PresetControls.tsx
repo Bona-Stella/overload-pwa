@@ -50,7 +50,7 @@ export function RoutineCreatedNotice({ name, onLater, onAssign, blocked = false 
   return <section className="card stack" aria-label="새 루틴 일정 배정">
     <h2>주간 일정에 배정할까요?</h2>
     <p className={styles.createdMessage}>“{name}”</p>
-    <div className={styles.createdActions}><button type="button" className="outline" onClick={onLater}>나중에</button>
+    <div className={styles.createdActions}><button type="button" className="outline action-pill" onClick={onLater}>나중에</button>
       <button type="button" className="primary" disabled={blocked} onClick={onAssign}>배정하기</button></div>
   </section>
 }

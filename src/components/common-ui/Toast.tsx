@@ -5,11 +5,11 @@ import styles from './Toast.module.css'
 
 export type ToastMessage = {
   id: string | number
-  tone: 'success' | 'error' | 'info'
+  tone: 'success' | 'error' | 'warning' | 'info'
   message: string
 }
 
-const durationByTone = { success: 4000, error: 7000, info: 4000 }
+const durationByTone = { success: 4000, error: 7000, warning: 7000, info: 4000 }
 
 type ToastProps = {
   toast: ToastMessage | null
@@ -20,9 +20,10 @@ type ToastProps = {
 }
 
 export function Toast({ toast, onDismiss, bottomClearance = '0px', passThrough = false }: ToastProps) {
+  const urgent = toast?.tone === 'error' || toast?.tone === 'warning'
   return <>
-    <span className="sr-only" role="status">{toast?.tone !== 'error' ? toast?.message : ''}</span>
-    <span className="sr-only" role="alert">{toast?.tone === 'error' ? toast.message : ''}</span>
+    <span className="sr-only" role="status">{urgent ? '' : toast?.message}</span>
+    <span className="sr-only" role="alert">{urgent ? toast?.message : ''}</span>
     {toast && <ToastPill toast={toast} onDismiss={onDismiss} bottomClearance={bottomClearance} passThrough={passThrough} />}
   </>
 }

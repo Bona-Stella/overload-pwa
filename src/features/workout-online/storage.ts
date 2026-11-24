@@ -12,8 +12,9 @@ import type { OfflinePermit } from '../workout-local/offline-access.ts'
 export const DATABASE_NAME = 'overload.workout.v1'
 export type StartAttempt = Scope & { request: Start; requestJson: string }
 export type SessionCopy = Scope & { editorDeviceId: string; writerEpoch: string; sessionId: string; server: Session }
+export const localStoreErrorMessage = '이 기기에 저장하지 못했습니다. 저장소 설정과 여유 공간을 확인한 뒤 다시 시도해 주세요.'
 export class LocalStoreError extends Error {
-  constructor() { super('이 기기에 저장하지 못했습니다. 저장소 설정과 여유 공간을 확인한 뒤 다시 시도해 주세요.'); this.name = 'LocalStoreError' }
+  constructor() { super(localStoreErrorMessage); this.name = 'LocalStoreError' }
 }
 export class LocalWriteBlocked extends Error {
   constructor() { super('편집권 또는 저장 기준이 변경되었습니다. 로컬 원본은 보존했습니다. 현재 세션을 다시 확인해 주세요.'); this.name = 'LocalWriteBlocked' }

@@ -20,6 +20,7 @@
 
 .toast[data-tone='success'] { --toast-tone: var(--status-done); }
 .toast[data-tone='error'] { --toast-tone: var(--status-danger-text); }
+.toast[data-tone='warning'] { --toast-tone: var(--status-warning); }
 .toast[data-pass-through] { pointer-events: none; }
 .toast[data-pass-through] button.close { pointer-events: auto; }
 .toast p { color: var(--text-primary); font-size: 14px; line-height: 1.45; }

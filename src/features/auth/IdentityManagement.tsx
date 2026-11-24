@@ -41,14 +41,13 @@ export function IdentityManagement({ state, controller }: { state: AuthState; co
     <AccountNote>로그인 수단은 최소 1개 이상 유지해야 합니다. 실제 가용성은 서버가 판단합니다.</AccountNote>
     <AccountNote>대표 재인증 이메일과 로그인 수단은 별도입니다. 연결·해제에는 최근 10분 이내의 이메일 OTP 확인이 필요하며 서버가 최종 검사합니다. 서로 다른 계정을 자동으로 합치지 않습니다.</AccountNote>
     {state.issue?.code === 'EMAIL_OWNERSHIP_PROOF_REQUIRED' && <a className="auth-proof-link" href="#account-email-proof">아래 대표 이메일 재인증으로 이동</a>}
-    {selection && controller && <Dialog title={`${selection.identity.provider === 'email' ? '이메일' : 'Google'} 로그인 수단을 해제할까요?`} onClose={() => controller.cancelIdentityChange()}>
+    {selection && controller && <Dialog tone="warning" title={`${selection.identity.provider === 'email' ? '이메일' : 'Google'} 로그인 수단을 해제할까요?`} onClose={() => controller.cancelIdentityChange()}>
       <div className="stack">
-        <p>대상: 현재 계정에 연결된 {selection.identity.provider === 'email' ? '이메일' : 'Google'} 로그인 수단 1개</p>
-        <p>해제한 {selection.identity.provider === 'email' ? '이메일 주소로' : 'Google 계정으로'} 다시 로그인하면 새 계정이 생성될 수 있으며 기존 Overload 계정의 기록에 접근할 수 없습니다.</p>
-        <p>대표 재인증 이메일과 운동 기록은 유지됩니다. 이미 다른 기기에서 로그인한 세션은 즉시 모두 로그아웃되지 않습니다.</p>
-        <p>마지막으로 사용할 수 있는 로그인 수단의 제거는 서버가 거절합니다. 해제할 수단과 남는 로그인 방법을 확인해 주세요.</p>
-        <button className="primary full" disabled={busy} onClick={() => void controller.confirmUnlink()}>로그인 수단 해제 최종 확인</button>
-        <button className="outline full" disabled={busy} onClick={() => controller.cancelIdentityChange()}>해제 취소</button>
+        <p>이 수단으로 다시 로그인하면 새 계정이 생성될 수 있어요.<br />새 계정에서는 기존 운동 기록을 볼 수 없어요.</p>
+        <p>대표 재인증 이메일과 운동 기록은 유지돼요.<br />다른 기기는 모두 즉시 로그아웃되지는 않아요.</p>
+        <p>로그인 수단은 하나 이상 남아 있어야 해요.</p>
+        <button className="action-pill warning-action full" disabled={busy} onClick={() => void controller.confirmUnlink()}>연결 해제</button>
+        <button className="action-pill modal-neutral full" data-modal-neutral disabled={busy} onClick={() => controller.cancelIdentityChange()}>취소</button>
       </div>
     </Dialog>}
   </Card>

@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { networkInterfaces } from 'node:os'
 import { resolve } from 'node:path'
 import { build, preview } from 'vite'
+import react from '@vitejs/plugin-react'
 import { reviewFixtureEntry } from '../tests/fixtures/review-server.mjs'
 import { verifyV22Ownership } from '../tests/fixtures/v22-environment.mjs'
 import { reviewAccess } from './home-review-access.mjs'
@@ -43,6 +44,21 @@ if (action !== 'serve-built') await build({
   },
   build: { outDir, emptyOutDir: false },
   plugins: [reviewFixtureEntry('/scripts/review/account-entry.tsx')],
+})
+
+if (port === 4173 && action !== 'serve-built') await build({
+  configFile: false,
+  envDir: false,
+  root: resolve('scripts/review'),
+  publicDir: false,
+  define: { 'import.meta.env.VITE_HTTP_WORKOUT_REVIEW_ORIGIN': JSON.stringify(origins[2]) },
+  plugins: [react()],
+  build: {
+    outDir,
+    emptyOutDir: false,
+    assetsDir: 'review-assets',
+    rolldownOptions: { input: resolve('scripts/review/common-ui-preview.html') },
+  },
 })
 
 if (action !== 'build-only') {

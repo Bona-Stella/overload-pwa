@@ -48,7 +48,7 @@ export function FieldValidation({ error, describedBy, children }: {
       'aria-describedby': error ? [describedBy, errorId].filter(Boolean).join(' ') : describedBy,
     })}
     <p id={errorId} aria-live="polite" className={styles.fieldError}>
-      {error && <><FeedbackIcon name="error" size={14} /><span>{error}</span></>}
+      {error && <><FeedbackIcon name="critical" size={14} /><span>{error}</span></>}
     </p>
   </div>
 }
@@ -71,7 +71,7 @@ export function ConnectionBanner({ state, title, description }: {
   description: string
 }) {
   return <div className={styles.banner} data-state={state} role="status">
-    <span className={styles.bannerIcon}><FeedbackIcon name={state} size={20} /></span>
+    <span className={styles.bannerIcon}><FeedbackIcon name={state} size={20} spinning={state === 'syncing'} /></span>
     <div><p className={styles.bannerTitle}>{title}</p><p>{description}</p></div>
   </div>
 }

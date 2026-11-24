@@ -117,7 +117,7 @@
 .workingHead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 5px; min-height: 28px; }
 .workingLabel { font-size: 10px; color: var(--text-muted); }
 .workingHead .weightChange { flex-shrink: 0; min-height: 44px; padding: 8px 0; margin-block: -8px; }
-.weightChange > span { display: block; font-size: 11px; padding: 3px 7px; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.weightChange > span { display: block; font-size: 11px; padding: 3px 7px; border: 1px solid var(--line); border-radius: var(--radius-action); }
 .headingRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .headingRow > span, .headingRow > b { font-size: 12px; }
 .headingRow button { padding-inline: 10px; }

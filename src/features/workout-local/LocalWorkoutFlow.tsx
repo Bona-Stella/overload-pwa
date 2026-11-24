@@ -3,10 +3,12 @@ import type { ReferenceRecord } from '../workout-online/reference-reminder.ts'
 import type { Routine } from '../workout-online/types.ts'
 import { CombinationMemo } from '../workout-online/CombinationMemo.tsx'
 import { changedOriginalCombination } from '../workout-online/approval-weight.ts'
+import { localStoreErrorMessage } from '../workout-online/storage.ts'
 import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import { Dialog } from '../../components/Dialog.tsx'
+import { draftSaveFailure } from '../../components/common-ui/message-copy.ts'
 import { createRepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { WorkoutFrame, Warmup, RestActions, ExerciseNavigation, WeightRecommendation } from '../workout-flow/WorkoutFrame.tsx'
@@ -197,7 +199,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const validate = (check: () => void) => {
     try { check(); return true }
     catch (error) {
-      feedback.show(error instanceof WorkoutActionError ? error.message : '입력값을 확인해 주세요.', 'error')
+      feedback.show(error instanceof WorkoutActionError ? error.message : '입력값을 확인해 주세요.', 'warning')
       return false
     }
   }
@@ -387,6 +389,17 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const canReview = !!onRecheckSession && !localOnly && (!state.writable || state.syncStatus === 'OTHER') && !workout.finish
   const canRetrySync = showSyncDetails && state.writable && !localOnly
   const hasSaveDetails = !!localIssue || dataStatus === 'failed' || showSyncDetails || Children.count(notices) > 0
+  const hasApprovalForm = workout.approvalResults.some(result => result.status === 'PENDING') || !!workout.pendingResolution
+  const finishResultUnconfirmed = !!workout.finish?.request && !workout.finish.ack && !hasApprovalForm &&
+    !localIssue && !state.unsavedDrafts && !rejected && state.writable && !localOnly &&
+    (state.syncStatus === 'WAITING' || state.syncStatus === 'SENDING')
+  const draftRecovery = draftsNeedRetry && !hasApprovalForm
+  const detailsLocalIssue = draftRecovery && localIssue === localStoreErrorMessage ? '저장소 설정과 여유 공간을 확인해 주세요.' : localIssue
+  const detailsTone = finishResultUnconfirmed ? 'recheck' : hasApprovalForm ? undefined
+    : draftRecovery || dataStatus === 'failed' || workout.finish && !workout.finish.ack ? 'critical'
+      : state.syncIssue ? 'error' : dataStatus === 'waiting' ? 'warning' : 'info'
+  const isRecovery = detailsTone === 'critical' || detailsTone === 'error'
+  const sessionRecovery = isRecovery && !draftsNeedRetry && !canRetrySync
   const renderExercise = (at: number, preview = false) => {
     const exercise = exercises[at]
     if (!exercise) return null
@@ -460,35 +473,44 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
       cardioFocus={!!activity && !warmup}
       onHome={onHome} backLabel={backLabel} onEnd={requestEnd} actions={actions} actionsBlocked={finishInFlight} footerGuard={footerRepeatGuard}
       onRestInteraction={alertsActive && audioRest ? unlock : undefined}
-      dataStatus={dataStatus} onDataStatusDetails={hasSaveDetails ? () => setSaveDetailsOpen(true) : undefined}>
+      dataStatus={dataStatus} syncing={state.syncStatus === 'SENDING'} onDataStatusDetails={hasSaveDetails ? () => setSaveDetailsOpen(true) : undefined}>
       {pendingLabel && <div className={styles.finishWait}><StatusNotice>{pendingLabel}</StatusNotice></div>}
       <fieldset inert={finishInFlight} disabled={blocked && !finishInFlight} className={styles.controls}>
         {warmup ? <Warmup next={weight ? { name: weight.name, target: `${weight.working || '중량 미지정'}kg · ${weight.min}–${weight.max}회 × ${weight.plannedCount ?? weight.sets.length}세트`,
           equipment: equipmentLabel(weight, manufacturers) } : { name: activity!.plan.name, target: '목표 ' + activity!.plan.targetSeconds + '초' }} /> : renderExercise(index)}
       </fieldset>
     </WorkoutFrame>
-    {saveDetailsOpen && <Dialog title="데이터 저장 상태" onClose={() => setSaveDetailsOpen(false)}>
+    {saveDetailsOpen && <Dialog title={draftRecovery ? draftSaveFailure.title : finishResultUnconfirmed ? '저장 결과를 확인해 주세요' : '데이터 저장 상태'}
+      tone={detailsTone} onClose={() => setSaveDetailsOpen(false)}>
       <div className="stack">
-        {localIssue && <StatusNotice error>{localIssue}</StatusNotice>}
-        {state.unsavedDrafts && <p>저장하지 못한 입력값이 화면에 남아 있습니다.</p>}
-        {draftsNeedRetry && (
-          <Button loading={state.pending > 0} onClick={() => void controller.retryDrafts()}>입력 다시 저장</Button>
-        )}
-        {workout.finish && showSyncDetails && <p>{workout.finish.ack
-          ? '운동 종료는 확인되었습니다. 운동 기록을 다시 불러올 수 있습니다.'
-          : '종료 요청은 이 기기에 보존했습니다. 서버에서 같은 요청의 결과를 다시 확인할 수 있습니다.'}</p>}
-        {state.syncIssue ? <StatusNotice error>{state.syncIssue}</StatusNotice>
-          : dataStatus === 'waiting' && !workout.finish ? <p>기록은 이 기기에 저장됐습니다. 서버 전송이 남아 있습니다.</p>
-            : state.syncStatus === 'OTHER' ? <p>다른 기기의 편집 권한을 확인해 주세요. 이 기기의 기록은 보존합니다.</p>
-              : (rejected || state.syncStatus === 'CHECK') && <p>서버에 저장된 기록을 확인해 주세요.</p>}
-        {canRetrySync && <Button pending={state.syncStatus === 'SENDING'} onClick={() => void controller.retrySync()}>
+        {draftRecovery && <p>{draftSaveFailure.retained}<br />{draftSaveFailure.next}</p>}
+        {detailsLocalIssue && <StatusNotice error>{detailsLocalIssue}</StatusNotice>}
+        {!draftRecovery && state.unsavedDrafts && <p>{draftSaveFailure.retained}</p>}
+        {draftRecovery ? <div className="row">
+          <Button variant="neutral" onClick={() => setSaveDetailsOpen(false)}>닫기</Button>
+          <Button variant="recovery" loading={state.pending > 0} onClick={() => void controller.retryDrafts()}>{draftSaveFailure.retry}</Button>
+        </div> : draftsNeedRetry && <Button variant="primary" loading={state.pending > 0} onClick={() => void controller.retryDrafts()}>입력 다시 저장</Button>}
+        {finishResultUnconfirmed ? <p>저장 여부를 아직 확인하지 못했어요.</p> : workout.finish && showSyncDetails && <p>{workout.finish.ack
+          ? <>운동 종료를 확인했어요.<br />기록을 다시 불러올 수 있어요.</>
+          : <>종료 요청은 이 기기에 남아 있어요.<br />서버에서 같은 요청의 결과를 확인할 수 있어요.</>}</p>}
+        {!finishResultUnconfirmed && (state.syncIssue ? <StatusNotice error>{state.syncStatus === 'READ'
+          ? <>운동 정보를 다시 확인하지 못했어요.<br />저장된 기록은 유지돼요.</>
+          : state.syncStatus === 'WAITING' ? <>연결 또는 서버 저장 결과를 확인하지 못했어요.<br />이 기기의 원래 기록은 유지돼요.</>
+            : state.syncIssue}</StatusNotice>
+          : dataStatus === 'waiting' && !workout.finish ? <p>기록은 이 기기에 저장됐어요.<br />서버 전송이 남아 있어요.</p>
+            : state.syncStatus === 'OTHER' ? <p>다른 기기의 편집 권한을 확인해 주세요.<br />이 기기의 기록은 유지돼요.</p>
+              : (rejected || state.syncStatus === 'CHECK') && <p>서버에 저장된 기록을 확인해 주세요.</p>)}
+        {finishResultUnconfirmed ? <div className="row">
+          <Button variant="neutral" onClick={() => setSaveDetailsOpen(false)}>닫기</Button>
+          <Button variant="primary" pending={state.syncStatus === 'SENDING'} onClick={() => void controller.retrySync()}>다시 확인</Button>
+        </div> : canRetrySync && <Button variant={draftsNeedRetry ? 'secondary' : isRecovery ? 'recovery' : 'primary'} pending={state.syncStatus === 'SENDING'} onClick={() => void controller.retrySync()}>
           {workout.finish?.ack ? '운동 기록 다시 조회' : workout.finish ? '종료 결과 다시 확인' : state.syncStatus === 'READ' ? '운동 정보 다시 조회' : '서버 저장 다시 확인'}
         </Button>}
-        {canReview && <Button onClick={onRecheckSession}>세션 상세 다시 확인</Button>}
-        {onReopenLocal && <Button loading={reopeningLocal} onClick={onReopenLocal}>로컬 운동 다시 확인</Button>}
-        {localOnly && onReconnect && <Button onClick={onReconnect}>같은 계정 인증 다시 확인</Button>}
+        {canReview && <Button variant={sessionRecovery ? 'recovery' : 'secondary'} onClick={onRecheckSession}>세션 상세 다시 확인</Button>}
+        {onReopenLocal && <Button variant={sessionRecovery && !canReview ? 'recovery' : 'secondary'} loading={reopeningLocal} onClick={onReopenLocal}>로컬 운동 다시 확인</Button>}
+        {localOnly && onReconnect && <Button variant={sessionRecovery && !canReview && !onReopenLocal ? 'recovery' : 'secondary'} onClick={onReconnect}>같은 계정 인증 다시 확인</Button>}
         {notices}
-        {!hasSaveDetails && <p>필요한 저장을 완료했습니다.</p>}
+        {!finishResultUnconfirmed && !hasSaveDetails && <p>필요한 저장을 완료했습니다.</p>}
       </div>
     </Dialog>}
     {modal === 'list' && <ExerciseList saveIssue={issue} current={id} weights={weights.map(w => ({ id: w.id, name: w.name, status: `${w.sets.filter(s => s.result).length}/${w.plannedCount ?? w.sets.length}세트 완료` }))}
@@ -524,17 +546,19 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         if (plan.standardExerciseId !== activity.plan.standardExerciseId || plan.activityId !== activity.plan.activityId) model.replaceCardio(w, id, plan, createSetId)
         else model.updateCardioPlan(w, id, plan, estimateCardio)
       }, true)} />}
-    {modal === 'remove' && <ConfirmWorkoutAction saveIssue={issue} title="현재 종목 제외" message="완료 기록은 먼저 취소해야 합니다. 원래 계획은 보존됩니다." action="종목 제외"
+    {modal === 'remove' && <ConfirmWorkoutAction tone="destructive" saveIssue={issue} title="현재 종목을 제외할까요?"
+      message={<>이번 운동에서만 제외돼요.<br />루틴과 시작 당시 계획은 유지돼요.</>} action="종목 제외"
       onClose={() => setModal(null)} onConfirm={() => void act(w => model.removeExercise(w, id), true)} />}
-    {typeof modal === 'object' && modal && <ConfirmWorkoutAction saveIssue={issue} title="완료를 취소할까요?" message="완료 기록을 취소하고 입력값을 복원합니다." action="완료 취소 확인"
+    {typeof modal === 'object' && modal && <ConfirmWorkoutAction saveIssue={issue} title="세트 완료를 취소할까요?" message="세트가 미완료로 돌아가고 입력값은 복원돼요." action="완료 취소 확인"
       onClose={() => setModal(null)} onConfirm={() => void undoSet(modal.undo)} />}
-    {modal === 'undo-cardio' && <ConfirmWorkoutAction saveIssue={issue} title="유산소 완료 취소" message="완료 기록을 취소하고 일시정지 상태로 돌아갑니다." action="유산소 완료 취소 확인"
+    {modal === 'undo-cardio' && <ConfirmWorkoutAction saveIssue={issue} title="유산소 완료를 취소할까요?" message="타이머가 일시정지 상태로 돌아가요." action="유산소 완료 취소 확인"
       onClose={() => setModal(null)} onConfirm={() => void act(w => {
         const record = w.snapshot.cardioResults.find(c => c.sessionActivityId === id)
         if (record) model.undoCardio(w, record.id)
         if (w.timers[id]) w.timers[id].reviewing = false
       }, true)} />}
-    {modal === 'end' && <ConfirmWorkoutAction saveIssue={issue} title="운동을 종료할까요?" message="완료한 수행과 실제 종료 시각을 보존한 뒤 서버 종료 결과를 확인합니다. 미완료 수행은 자동 완료하지 않습니다."
-      action="운동 종료 및 요약" pending={finishing} onClose={() => { if (!finishing) setModal(null) }} onConfirm={() => void end()} />}
+    {modal === 'end' && <ConfirmWorkoutAction tone="warning" saveIssue={issue} title="운동을 종료할까요?"
+      message={<>미완료 종목이 있어요.<br />완료한 기록만 요약에 표시돼요.</>}
+      action="운동 종료" pending={finishing} onClose={() => { if (!finishing) setModal(null) }} onConfirm={() => void end()} />}
   </>
 }

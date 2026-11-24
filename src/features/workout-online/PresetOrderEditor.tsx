@@ -25,8 +25,8 @@ export function PresetOrderEditor({ schedule, busy, readOnly, locked = readOnly,
   const saved = useRef(false)
   const [confirm, confirmation] = useConfirmation()
   const canLeave = (duringTraversal = false) => saved.current || !changed || confirm({ title: '순환 설정 변경을 버릴까요?',
-    description: <p>이 화면에서 바꾼 일정 순서와 순환 포함 여부가 사라집니다. 저장된 설정은 유지됩니다.</p>,
-    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+    description: <p>이미 저장한 일정 순서와 순환 대상은 유지돼요.</p>,
+    confirmLabel: '버리기', destructive: true, duringTraversal,
   })
   useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(true), navigationKey)
   const leave = async (action: () => void) => { if (await canLeave()) action() }
@@ -77,8 +77,8 @@ export function PresetOrderEditor({ schedule, busy, readOnly, locked = readOnly,
       </section>
     })}
     {tooFew && <p role="status">자동 순환에는 포함 프리셋이 최소 2개 필요합니다.</p>}
-    {stale && <button type="button" className="outline" onClick={() => leave(onReload)}>최신 구성 다시 열기</button>}
-    <div className="row"><button data-close-text={readOnly||undefined} type="button" className="outline" disabled={busy} onClick={close}>{readOnly ? '닫기' : '취소'}</button>
+    {stale && <button type="button" className="outline action-pill" onClick={() => leave(onReload)}>최신 구성 다시 열기</button>}
+    <div className="row"><button data-close-text={readOnly||undefined} type="button" className="outline action-pill" disabled={busy} onClick={close}>{readOnly ? '닫기' : '취소'}</button>
       {readRetry || (!readOnly && <button type="button" className="primary" disabled={busy || locked || !!drag || stale || tooFew || !changed} onClick={async () => {
         if (await onSave(ordered) && navigationKey) { saved.current = true; navigateBack(onClose) }
       }}>변경사항 저장</button>)}</div>

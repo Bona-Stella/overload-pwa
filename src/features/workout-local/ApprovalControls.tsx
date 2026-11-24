@@ -30,7 +30,7 @@ function ApprovalChoice({ state, controller, id }: { state: EditorState; control
     setIssue('')
     void confirm({
       title: keep ? '현재 루틴 중량을 유지할까요?' : '새 중량을 승인할까요?',
-      description: <p>{keep ? '남은 승인 요청을 적용하지 않습니다.' : `${kg} kg을 현재 시점의 새 중량으로 승인합니다. 과거 수행은 유지됩니다.`}</p>,
+      description: <p>{keep ? '남은 승인 요청은 적용하지 않아요.' : <>{kg} kg을 지금부터 적용해요.<br />과거 수행은 유지돼요.</>}</p>,
       confirmLabel: keep ? '현재 중량 유지' : '중량 승인',
       onConfirm: async () => {
         const saved = await controller.resolveApproval(id, pending.map(r => r.id), keep ? 'KEEP_CURRENT' : 'REAPPROVE', kg)
@@ -40,7 +40,7 @@ function ApprovalChoice({ state, controller, id }: { state: EditorState; control
   }
   return <section className="card stack"><h3>{w.exerciseNames[id] ?? '운동 종목'} · 승인 확인 필요</h3>
     <p>{approvalReason[pending[0]?.reason ?? ''] ?? '현재 루틴의 승인 중량을 확인해 주세요.'} 실제 수행 기록은 보존되었습니다. 아래 선택은 과거 수행의 승인 문맥을 바꾸지 않습니다.</p>
-    <button className="outline" disabled={busy} onClick={() => decide(true)}>현재 루틴 중량 유지</button>
+    <button className="outline action-pill" disabled={busy} onClick={() => decide(true)}>현재 루틴 중량 유지</button>
     {canApprove && <><label>지금 다시 승인할 중량 kg<input inputMode="decimal" value={value} disabled={busy} onChange={e => { setValue(e.target.value); setIssue('') }} /></label><button className="primary" disabled={busy} onClick={() => decide(false)}>이 중량으로 지금 재승인</button></>}
     {issue && <p role="alert">{issue}</p>}
     {confirmation}

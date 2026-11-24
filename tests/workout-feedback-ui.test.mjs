@@ -5,6 +5,7 @@ import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { resolve, relative, isAbsolute } from 'node:path'
 import { createServer } from 'vite'
 import react from '@vitejs/plugin-react'
+import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 
 test('workout feedback keeps manual rest silent through queued writes and fits actual title widths', { timeout: 120000 }, async t => {
   const directory = resolve('logs/workout-feedback-ui'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
@@ -97,7 +98,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           await evaluate(`document.querySelector('button[aria-label="저장 실패 · 데이터 상태 확인"]').click()`)
           await wait(()=>evaluate(`!!document.querySelector('dialog[open] [role=alert]')`))
           assert.equal(await evaluate(`document.querySelectorAll('dialog[open] [role=alert]').length`),1)
-          await evaluate(`[...document.querySelectorAll('dialog[open] button')].find(b=>b.textContent==='입력 다시 저장').click()`)
+          await evaluate(`[...document.querySelectorAll('dialog[open] button')].find(b=>b.textContent==='다시 저장').click()`)
           await wait(()=>evaluate('!window.feedback.c.getSnapshot().unsavedDrafts'))
           await evaluate(`document.querySelector('dialog[open] button[aria-label="닫기"]').click()`)
           await wait(async()=>(await status())==='saved')
@@ -1018,6 +1019,22 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(past.buttons,0);assert.equal(past.inputs,0);assert.match(past.text,/45kg/);assert.match(past.text,/12회.*12회.*13회/)
     assert.match(await evaluate('document.querySelector(\'[aria-label="웨이트 수행"]\').textContent'),/45kg × 5회/)
     assert.equal(await evaluate('!!document.querySelector(\'summary[aria-label="운동 기록 메뉴"]\')'),true,'record correction menu remains available')
+    await evaluate("window.feedback.record('pending-approval')")
+    await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))')
+    await wait(() => evaluate(`!!document.querySelector('summary[aria-label="운동 기록 메뉴"]')`))
+    await evaluate(`document.querySelector('summary[aria-label="운동 기록 메뉴"]').click()`)
+    await click('평가 변경 이력')
+    await click('종료 후 현재 중량 유지')
+    await auditMessageDialog({ send, evaluate }, '종료 후 현재 루틴 중량 유지', 'info')
+    await click('취소')
+    await evaluate(`(() => {
+      const input = document.querySelector('label > input[inputmode="decimal"]');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '42.5');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    })()`)
+    await click('종료 후 명시 재승인')
+    await auditMessageDialog({ send, evaluate }, '종료 후 루틴 중량 재승인', 'info')
+    await click('취소')
     const openSavedReview = async mode => {
       await evaluate(`window.feedback.record(${JSON.stringify('saved-review:'+mode)})`)
       await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
@@ -1151,8 +1168,16 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     const draft = () => evaluate(`document.querySelector('${reviewCard} [data-weight-review=increase] .approval-values strong').textContent`)
     assert.equal(await draft(),'47.5kg')
     assert.equal(await checkedCount(),1)
+    await evaluate('window.feedback.trySummaryBack()')
+    await wait(() => evaluate(`document.querySelector('dialog[open] h2')?.textContent==='승인 중량 초안을 버릴까요?'`))
+    await auditMessageDialog({ send, evaluate }, '승인 중량 초안 폐기', 'destructive')
+    await click('취소')
+    await wait(() => evaluate(`!document.querySelector('dialog[open]') && location.search==='?approval-draft-check'`))
+    assert.equal(await draft(),'47.5kg')
     const confirmedVersions = () => evaluate('window.feedback.approvalNetwork.confirmedRoutineVersions')
-    await click('선택 승인'); await click('취소')
+    await click('선택 승인')
+    await auditMessageDialog({ send, evaluate }, '실제 운동 요약 중량 승인', 'info')
+    await click('취소')
     assert.equal(await evaluate('window.feedback.approvalNetwork.posts'),0)
     assert.equal(await draft(),'47.5kg')
     await evaluate('window.feedback.approvalNetwork.rejectPost=true')
@@ -1656,9 +1681,9 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       })()`)
       await wait(()=>evaluate(`(() => { const menu=document.querySelector('summary[aria-label="운동 기록 메뉴"]'); if(!menu)return false;menu.click();return true })()`))
       await wait(()=>action('main','기록 전체 삭제'))
-      await wait(()=>action('dialog[open]','운동 삭제'))
-      await wait(()=>evaluate(`document.querySelector('dialog[open] [role=alert]')?.textContent.includes('삭제 결과를 확인하지 못했습니다.')`))
-      assert.equal(await action('dialog[open]','운동 삭제'),false)
+      await wait(()=>action('dialog[open]','삭제'))
+      await wait(()=>evaluate(`document.querySelector('dialog[open] [role=alert]')?.textContent.includes('삭제 결과를 확인하지 못했어요.')`))
+      assert.equal(await action('dialog[open]','삭제'),false)
       await evaluate(`document.querySelector('dialog[open] button[aria-label="닫기"]').click()`)
       await wait(()=>evaluate(`!document.querySelector('dialog[open]') && [...document.querySelectorAll('main button')].some(b=>b.textContent==='저장 결과 다시 확인')`))
     })
@@ -1666,7 +1691,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await send('Page.navigate',{url:origin+'/boundary?input=validation'})
       const run=(fn,...args)=>evaluate('('+fn+')(...'+JSON.stringify(args)+')')
       const status=()=>evaluate(`document.querySelector('[data-workout-save-status]')?.dataset.workoutSaveStatus`)
-      const toast=()=>evaluate(`document.querySelector('[data-tone="error"] p')?.textContent`)
+      const toast=(tone='warning')=>evaluate(`document.querySelector('[data-tone="${tone}"] p')?.textContent`)
       const click=(label,scope='[data-workout-frame]')=>run((label,scope)=>{
         const button=[...document.querySelectorAll(scope+' button')].find(button=>!button.disabled&&(button.getAttribute('aria-label')===label || button.textContent===label))
         if(!button)throw Error('Missing enabled button: '+label)
@@ -1692,13 +1717,16 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         assert.equal(await status(),'saved')
         assert.equal(await revision(),version)
         assert.equal(await evaluate('window.restSafety.requests.length'),0)
-        assert.equal(await evaluate(`document.querySelectorAll('[data-tone="error"]').length`),1)
+        assert.equal(await evaluate(`document.querySelectorAll('[data-tone="warning"]').length`),1)
         assert.deepEqual(await layout(),before)
         assert.match(await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').textContent`),/8 회 \(미정\)/)
         await click('알림 닫기')
       }
       await click('1세트 이번 반복 횟수')
       await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
+      assert.equal(await evaluate(`(() => { const dialog = document.querySelector('dialog[open]');
+        return !dialog.hasAttribute('data-message-tone') && dialog.getBoundingClientRect().width > 340 &&
+          getComputedStyle(dialog.querySelector('button.primary')).borderRadius !== '999px'; })()`),true)
       await click('직접 입력','dialog[open]');await click('취소','dialog[open]')
       await wait(()=>evaluate(`!document.querySelector('dialog[open]')`))
       await complete();assert.equal(await toast(),missing)
@@ -1725,13 +1753,13 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await click('1세트 이번 반복 횟수')
       await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
       await click('확인','dialog[open]')
-      await wait(()=>evaluate(`!document.querySelector('dialog[open]') && !document.querySelector('[data-tone="error"]')`))
+      await wait(()=>evaluate(`!document.querySelector('dialog[open]') && !document.querySelector('[data-tone="warning"]')`))
       assert.equal(await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').textContent`),'8 회')
       await evaluate('window.restSafety.controller.retryDrafts()')
       await wait(async()=>(await status())==='saved')
       await evaluate('window.restSafety.failNextWrite()')
       await complete()
-      await wait(async()=>(await status())==='failed' && !!await toast())
+      await wait(async()=>(await status())==='failed' && !!await toast('error'))
       assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets.length'),0)
       await evaluate('window.restSafety.offline()')
       await complete()
@@ -1744,7 +1772,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       assert.equal(await status(),'waiting')
       assert.equal(await evaluate('window.restSafety.requests.length'),0)
       await click('2세트 이번 반복 횟수 증가')
-      await wait(()=>evaluate(`!document.querySelector('[data-tone="error"]')`))
+      await wait(()=>evaluate(`!document.querySelector('[data-tone="warning"]')`))
       await click('2세트 완료','[data-workout-frame] footer')
       await wait(()=>evaluate('window.restSafety.local().snapshot.performedSets.length===2'))
       assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets[1].reps'),9)

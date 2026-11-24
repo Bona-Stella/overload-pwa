@@ -54,6 +54,9 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { useRoutineEditorRoutes } from './useRoutineEditorRoutes.ts'
 
+export const workoutNavigationFailure = '입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.'
+export const workoutPermissionFailure = '오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.'
+
 export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, issue, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => Promise<void>; issue?: string | null }) {
   const [confirm, confirmation] = useConfirmation()
   const otherEditor = session.editorDeviceId !== deviceId
@@ -61,8 +64,8 @@ export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeo
   return <section className="card stack" aria-labelledby="online-session-title"><div className="section-heading"><h2 id="online-session-title">{session.initialPlan.routineName}</h2><span className="online-session-badge">{label}</span></div>
     <p>{session.workoutDate} · <time dateTime={session.startedAt}>{session.startedAt}</time></p>
     {session.status === 'ACTIVE' && otherEditor && <StatusNotice>다른 기기에서 편집 중입니다. 이 화면은 읽기 전용입니다.</StatusNotice>}
-    {session.status === 'ACTIVE' && otherEditor && onTakeover && <button className="outline full" disabled={busy || !deviceId || !saved} onClick={() => void confirm({
-      title: '이 기기에서 편집할까요?', description: <p>서버에 저장된 기록으로 편집을 시작합니다. 다른 기기의 미전송 기록은 자동으로 합치지 않습니다.</p>,
+    {session.status === 'ACTIVE' && otherEditor && onTakeover && <button className="outline full action-pill" disabled={busy || !deviceId || !saved} onClick={() => void confirm({
+      title: '이 기기에서 편집할까요?', description: <p>서버에 저장된 기록으로 시작해요.<br />다른 기기의 미전송 기록은 자동으로 합쳐지지 않아요.</p>,
       confirmLabel: '편집 가져오기', onConfirm: onTakeover,
     })}>이 기기로 편집 가져오기</button>}
     {session.status === 'AUTO_CLOSED' && <p className="notice">서버가 마지막 저장 상태로 자동 종료했습니다. 사용자 종료 시각이나 최초 명시 종료 평가를 생성하지 않습니다.</p>}
@@ -75,7 +78,7 @@ export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeo
       <p>완료 웨이트 {session.snapshot.state.performedSets.length}세트 · 확정 유산소 {session.snapshot.state.cardioResults.length}건</p>
       {session.snapshot.state.performedSets.map(s => <p key={s.id}>{s.ordinal}세트 · {s.weightKg} kg × {s.reps}회 · <Metadata>{equipmentLabel(s, manufacturers)}</Metadata></p>)}</div></details>
     {session.snapshot.approvalResults.some(r => r.status === 'PENDING') && <p className="notice">승인 확인 필요 · 수행 기록의 저장과 중량 승인 적용은 별개입니다.</p>}
-    <button type="button" className="outline full" disabled={busy} onClick={onRefresh}>세션 상세 다시 확인</button>
+    <button type="button" className="outline full action-pill" disabled={busy} onClick={onRefresh}>세션 상세 다시 확인</button>
     {confirmation}
   </section>
 }
@@ -224,8 +227,8 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     const target = editor?.routine?.id === id ? editor.routine : routineList?.find(routine => routine.id === id)
     if (managementBlocked || deletingRoutine || !target) return
     let deleted = false
-    await confirm({ title: '루틴을 삭제할까요?', confirmLabel: '루틴 삭제', destructive: true,
-      description: <p>“{target.name}” 루틴의 모든 주간 일정 배정이 해제됩니다. 기존 운동 기록은 보존합니다.</p>,
+    await confirm({ title: '루틴을 삭제할까요?', confirmLabel: '삭제', destructive: true,
+      description: <p>“{target.name}”의 주간 일정 배정이 모두 해제돼요.<br />기존 운동 기록은 유지돼요.</p>,
       onConfirm: async () => {
         const before = controller.getSnapshot()
         if (before.busy || before.active || before.attempt || before.scope !== scope) return
@@ -246,7 +249,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
   const renameStale = renaming && (renaming.base.version !== schedule?.version || renaming.version !== latestName?.version)
-  const retrySchedule = training.issue && <button type="button" className="outline" aria-label="일정 다시 조회"
+  const retrySchedule = training.issue && <button type="button" className="outline action-pill" aria-label="일정 다시 조회"
     title={training.issue} aria-description={training.issue} disabled={busy || training.loading} onClick={training.refresh}>저장 잠김 · 다시 조회</button>
   const unavailableSchedule = training.issue && <StatusNotice error>{training.issue}{' '}{retrySchedule}</StatusNotice>
   const retryRoutines = <Button variant="quiet" disabled={busy} onClick={() => void controller.refresh()}>루틴 다시 조회</Button>
@@ -261,7 +264,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         <RoutineCards week={viewed} summaries={state.data?.routines ?? []} details={cards} busy={busy} managementBlocked={managementBlocked}
           listState={!state.data && (state.issue ? <StatusNotice error>{state.issue}{' '}{retryRoutines}</StatusNotice>
             : <LoadingSkeleton layout="list" label="루틴 목록을 확인하는 중입니다." />) || undefined}
-          listRetry={state.data && state.readIssue && state.issue && <button type="button" className="outline" aria-label="루틴 다시 조회"
+          listRetry={state.data && state.readIssue && state.issue && <button type="button" className="outline action-pill" aria-label="루틴 다시 조회"
             title={state.issue} aria-description={state.issue} disabled={busy} onClick={() => void controller.refresh()}>다시 조회</button>}
           scheduleState={!schedule && (unavailableSchedule || <LoadingSkeleton layout="row" label="주간 일정을 확인하는 중입니다." />) || undefined}
           onNew={() => { setCreated(null); setEditor({ routine: null, readOnly: false }) }}
@@ -276,7 +279,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             } : undefined}
             onOrganize={() => setScheduleEditor({ type: 'order', base: schedule })}
             onDelete={() => setDeleting({ id: viewed.id, base: schedule })} /> : undefined}
-          schedule={schedule && (retrySchedule || <button type="button" className="outline full" disabled={scheduleBlocked} onClick={() => openSchedule()}>주간 일정 편집</button>)}
+          schedule={schedule && (retrySchedule || <button type="button" className="outline full action-pill" disabled={scheduleBlocked} onClick={() => openSchedule()}>주간 일정 편집</button>)}
           presetNavigation={schedule && viewed && <PresetNavigation schedule={schedule} viewed={viewed} busy={busy || scheduleBlocked}
             readOnly={scheduleBlocked && !training.loading && !training.issue}
             onView={setViewedId} onAdd={async () => {
@@ -356,29 +359,29 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           onChange={event => setRenaming({ ...renaming, value: event.target.value, issue: undefined })} /></label>
         {(renaming.issue || training.writeIssue || training.issue) &&
           <p id="preset-name-issue" className="notice error" role="alert">{renaming.issue ?? training.writeIssue ?? training.issue}</p>}
-        {training.issue && <button type="button" className="outline" disabled={busy || training.loading} onClick={training.refresh}>
+        {training.issue && <button type="button" className="outline action-pill" disabled={busy || training.loading} onClick={training.refresh}>
           일정 다시 조회
         </button>}
         {renameStale && schedule && (latestName
           ? <><p role="status">현재 저장 이름 · {latestName.name}</p>
-            <button type="button" className="outline" disabled={scheduleBlocked} onClick={() => {
+            <button type="button" className="outline action-pill" disabled={scheduleBlocked} onClick={() => {
               training.clearWriteIssue()
               setRenaming({ ...renaming, base: schedule, version: latestName.version })
             }}>최신 버전 사용</button></>
           : <p role="status">이 일정이 삭제되었거나 더 이상 조회할 수 없습니다.</p>)}
         <div className="row">
-          <button type="button" className="outline" disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setRenaming(null)}>취소</button>
+          <button type="button" className="action-pill modal-neutral" data-modal-neutral disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setRenaming(null)}>취소</button>
           <button className="primary" disabled={scheduleBlocked || !!renameStale} aria-busy={training.busy || undefined} data-button-pending={training.busy && !renameStale || undefined}>저장</button>
         </div>
       </form>
     </Dialog>}
-    {enabled && deleting && deletingPreset && <Dialog title="주간 일정 삭제" dismissBlocked={busy} onClose={() => setDeleting(null)}>
-      <p>“{deletingPreset.name}” 일정을 삭제할까요? 이 일정에 저장된 요일 배정이 사라집니다.</p>
+    {enabled && deleting && deletingPreset && <Dialog title="주간 일정 삭제" tone="destructive" dismissBlocked={busy} onClose={() => setDeleting(null)}>
+      <p>“{deletingPreset.name}”에 저장된 요일 배정이 사라져요.</p>
       {training.writeIssue && <p role="alert">{training.writeIssue}</p>}
-      <div className="row"><button type="button" disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setDeleting(null)}>취소</button>
-        <button type="button" className="danger" disabled={scheduleBlocked || deleting.base.version !== schedule?.version}
+      <div className="row"><button type="button" className="action-pill modal-neutral" data-modal-neutral disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setDeleting(null)}>취소</button>
+        <button type="button" className="action-pill destructive-action" disabled={scheduleBlocked || deleting.base.version !== schedule?.version}
           aria-busy={training.busy || undefined} data-button-pending={training.busy && deleting.base.version === schedule?.version || undefined}
-          onClick={async () => { if (await training.write({ type: 'delete', id: deleting.id }, deleting.base)) setDeleting(null) }}>일정 삭제</button></div>
+          onClick={async () => { if (await training.write({ type: 'delete', id: deleting.id }, deleting.base)) setDeleting(null) }}>삭제</button></div>
     </Dialog>}
     {confirmation}
     <Toast toast={readFeedback.toast ?? (visible && (!focused || editor?.readOnly) && !planPreset ? feedback.toast : null)}
@@ -647,8 +650,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       && (a.status === 'authenticated' && a.userId === session.userId || a.localWorkoutUserId === session.userId)
   }
   const starting = opening !== null && opening.action !== 'resume'
-  const workoutNavigationIssue = navigationIssue ? '입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.' : undefined
-  const workoutPermissionIssue = permissionIssue ? '오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.' : undefined
+  const workoutNavigationIssue = navigationIssue ? workoutNavigationFailure : undefined
+  const workoutPermissionIssue = permissionIssue ? workoutPermissionFailure : undefined
   return present(<CombinationMemoProvider key={state.scope?.userId + ':' + state.scope?.dataGeneration}><SearchExerciseDetails api={api} userId={state.scope?.userId}>
     {state.revalidatingScope && state.issue && <StatusNotice error>{state.issue} <Button onClick={() => void controller.refresh(true)}>다시 조회</Button></StatusNotice>}
     {visible && !localSession && workoutNavigationIssue && <StatusNotice error>{workoutNavigationIssue}</StatusNotice>}
@@ -714,8 +717,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
           || window.history.state?.overloadNavigation?.values?.['workout-view:' + state.scope?.userId + ':' + state.scope?.dataGeneration] === recordId && s.detail?.id === recordId && s.detail.status === 'FINISHED')
     }} />}</div>
     {settingsDetail}
-    {localOnly && !localSession && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
-    {visible && state.issue && !(state.scope && (workoutLoading || focused && !editable)) && !(state.readIssue && (tab === 'routines' || tab === 'home' && !!state.data)) && <button type="button" className="outline" onClick={async () => {
+    {localOnly && !localSession && <button className="outline action-pill" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
+    {visible && state.issue && !(state.scope && (workoutLoading || focused && !editable)) && !(state.readIssue && (tab === 'routines' || tab === 'home' && !!state.data)) && <button type="button" className="outline action-pill" onClick={async () => {
       await authentication.restore()
       // The same authenticated account may still need to retry its failed initial workout read.
       if (!controller.getSnapshot().data) await controller.refresh()

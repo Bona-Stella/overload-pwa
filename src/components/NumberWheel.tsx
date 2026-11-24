@@ -39,11 +39,11 @@ function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, s
     : <>{value || '입력'}{value && <small> {unit}</small>}</>
   const description = pending ? '기존 기록 확인 중' : showSuggestion ? suggestion + unit + ' (미정)' : undefined
   return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''} ${hideSteps ? styles.hideSteps : ''} ${compactStepper ? styles.compactStepper : ''}`} role="group" aria-label={label}>
-    {!hideSteps&&<Button aria-label={label + ' 감소'} disabled={unavailable || stepAdjust(stepValue, -1) === null} onClick={onChange && (() => change(-1))}>−{stepLabel}</Button>}
-    <Button className={compactStepper ? styles.valueButton : undefined} aria-label={label} aria-description={description} disabled={unavailable} onClick={open}>
+    {!hideSteps&&<Button shape="control" aria-label={label + ' 감소'} disabled={unavailable || stepAdjust(stepValue, -1) === null} onClick={onChange && (() => change(-1))}>−{stepLabel}</Button>}
+    <Button shape="control" className={compactStepper ? styles.valueButton : undefined} aria-label={label} aria-description={description} disabled={unavailable} onClick={open}>
       {compactStepper ? <><span>{display}</span><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" aria-hidden="true"><path d="m3 4.5 3 3 3-3" /></svg></> : display}
     </Button>
-    {!hideSteps&&<Button aria-label={label + ' 증가'} disabled={unavailable || stepAdjust(stepValue, 1) === null} onClick={onChange && (() => change(1))}>+{stepLabel}</Button>}
+    {!hideSteps&&<Button shape="control" aria-label={label + ' 증가'} disabled={unavailable || stepAdjust(stepValue, 1) === null} onClick={onChange && (() => change(1))}>+{stepLabel}</Button>}
     {children}
   </div>
 }
@@ -113,8 +113,8 @@ function WheelDialog({ label, seed, value, unit, adjust, validate, onChange, sug
       <label>{label} ({unit})<input inputMode={unit === 'kg' ? 'decimal' : 'numeric'} value={draft} autoFocus onChange={event => setDraft(event.target.value)} /></label>
       {issue && <p className="notice error" role="alert">{issue}</p>}
       <div className={styles.actions}>
-        <Button onClick={onClose}>취소</Button>
-        <Button variant="primary" onClick={confirmDirect}>확인</Button>
+        <Button shape="control" onClick={onClose}>취소</Button>
+        <Button shape="control" variant="primary" onClick={confirmDirect}>확인</Button>
       </div>
     </div> : <div className={styles.body}>
       <div className={styles.viewport}>
@@ -142,8 +142,8 @@ function WheelDialog({ label, seed, value, unit, adjust, validate, onChange, sug
       {issue && <p className="notice error" role="alert">{issue}</p>}
       <div className={styles.footer}>
         <div className={styles.actions}>
-          <Button onClick={() => { setDraft(touched.current ? centered() : value); setDirect(true); setIssue('') }}>직접 입력</Button>
-          <Button variant="primary" onClick={confirm}>확인</Button>
+          <Button shape="control" onClick={() => { setDraft(touched.current ? centered() : value); setDirect(true); setIssue('') }}>직접 입력</Button>
+          <Button shape="control" variant="primary" onClick={confirm}>확인</Button>
         </div>
       </div>
     </div>}

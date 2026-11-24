@@ -44,7 +44,7 @@ function AlertSection({ title, icon, checked, locked, onToggle, onPlay, playing,
   return <section className={styles.setting} aria-label={`${title} 설정`}>
     <div className={styles.settingHeading}>
       <h2 data-on={checked || undefined}>{icon && <Icon name={checked ? icon : inactiveIcons[icon]} />}{title}</h2>
-      {onPlay && <Button variant="quiet" className={styles.sample} aria-label={`${title} 미리듣기${playing ? ' 중지' : ''}`}
+      {onPlay && <Button shape="control" variant="quiet" className={styles.sample} aria-label={`${title} 미리듣기${playing ? ' 중지' : ''}`}
         disabled={locked || playDisabled} onClick={onPlay}><Icon name={playing ? 'pause' : 'play'} /></Button>}
       <Button className={styles.switch} role="switch" aria-label={title} aria-checked={checked} disabled={locked} onClick={onToggle}><SwitchMark on={checked} /></Button>
     </div>
@@ -217,7 +217,7 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
     {(previewFlash || running && !previewDim || completed) && <Card ref={preview} className={styles.preview} aria-label="미리보기">
       <div className={styles.previewHeading}><h2>미리보기</h2><span>{text}</span></div>
       {previewFlash && <FlashPreview alerts={previewAlerts} seconds={running || completed ? seconds : previewAlerts.threshold} running={running} />}
-      {running && !previewDim && <Button onClick={close}>미리보기 종료</Button>}
+      {running && !previewDim && <Button shape="control" onClick={close}>미리보기 종료</Button>}
     </Card>}
     <p className={styles.note}>실제 효과음 크기는 기기 음량과 브라우저 환경의 영향을 받을 수 있어요.</p>
     <p className={styles.note}>{review ? 'UI 검토용 설정입니다.' : '알림 설정은 이 브라우저에 저장돼요.'}</p>

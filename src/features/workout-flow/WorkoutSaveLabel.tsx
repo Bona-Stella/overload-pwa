@@ -11,7 +11,7 @@ const labels = {
   failed: { text: '저장 실패', icon: 'error' },
 } as const
 
-export function WorkoutSaveLabel({ status, onDetails }: { status: WorkoutSaveStatus; onDetails?: () => void }) {
+export function WorkoutSaveLabel({ status, syncing = false, onDetails }: { status: WorkoutSaveStatus; syncing?: boolean; onDetails?: () => void }) {
   const [showSaving, setShowSaving] = useState(false)
   const settled = useDelayedPending(status === 'saved' && showSaving)
   if (status !== 'saved' && showSaving !== (status === 'saving')) setShowSaving(status === 'saving')
@@ -21,7 +21,7 @@ export function WorkoutSaveLabel({ status, onDetails }: { status: WorkoutSaveSta
   const label = labels[displayed]
   return <>
     <small className={styles.saveLabel} data-workout-save-status={displayed}>
-      <FeedbackIcon name={label.icon} size={10} />{label.text}
+      <FeedbackIcon name={label.icon} size={10} spinning={status === 'saving' && syncing} />{label.text}
     </small>
     <span className="sr-only" role="status">{status === 'failed' || status === 'waiting' ? label.text : ''}</span>
     {onDetails && <button type="button" className={styles.saveDetails} aria-label={`${label.text} · 데이터 상태 확인`}

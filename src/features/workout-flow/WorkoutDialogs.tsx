@@ -17,13 +17,15 @@ import styles from './WorkoutFlow.module.css'
 import editStyles from '../workout-online/RoutineEdit.module.css'
 import orderStyles from '../workout-online/Presets.module.css'
 
-export function ConfirmWorkoutAction({ title, action, message, onClose, onConfirm, saveIssue, pending = false }: {
-  title: string; action: string; message: string; saveIssue?: ReactNode; pending?: boolean; onClose: () => void; onConfirm: () => void
+export function ConfirmWorkoutAction({ title, action, message, onClose, onConfirm, saveIssue, pending = false, tone = 'info' }: {
+  title: string; action: string; message: ReactNode; saveIssue?: ReactNode; pending?: boolean; onClose: () => void; onConfirm: () => void
+  tone?: 'info' | 'warning' | 'destructive'
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
-  return <Dialog title={title} onClose={onClose} dismissBlocked={pending} initialFocus={cancel}>
+  return <Dialog title={title} tone={tone} onClose={onClose} dismissBlocked={pending} initialFocus={cancel}>
     <div className="stack"><p>{message}</p>{saveIssue}<div className={styles.actions}>
-      <button type="button" className="outline" ref={cancel} disabled={pending} data-button-pending={pending || undefined} onClick={onClose}>취소</button><Button variant="primary" loading={pending} onClick={onConfirm}>{action}</Button>
+      <button type="button" className="action-pill modal-neutral" data-modal-neutral ref={cancel} disabled={pending} data-button-pending={pending || undefined} onClick={onClose}>취소</button>
+      <Button variant={tone === 'info' ? 'primary' : tone} loading={pending} onClick={onConfirm}>{action}</Button>
     </div></div>
   </Dialog>
 }
@@ -50,7 +52,7 @@ export function WeightChange({ weight, progressionAllowed, onSave, onClose, prog
       </fieldset>
       <p className="muted small">완료한 세트는 보존됩니다.</p>
       {issue && <p role="alert" className="notice error">{issue}</p>}
-      <div className={styles.actions}><Button onClick={onClose}>취소</Button><Button variant="primary" onClick={() => {
+      <div className={styles.actions}><Button variant="neutral" onClick={onClose}>취소</Button><Button variant="primary" onClick={() => {
         try { onSave(decimalDraft(value), mode) }
         catch (error) { setIssue(error instanceof Error ? error.message : '변경 중량을 확인해 주세요.') }
       }}>확인</Button></div>
@@ -92,7 +94,7 @@ export function ExerciseList({ weights, cardio, current, onClose, onSelect, onAp
             data-order-row={item.id} data-workout-row={item.id} data-dragging={dragging && sorting.drag?.from === index}
             style={sorting.rowStyle(kind, index)}>
             <span className={orderStyles.number}>{String(index + 1).padStart(2, '0')}</span>
-            <Button className={styles.listSelect} aria-label={item.name} aria-current={item.id === current ? 'step' : undefined}
+            <Button shape="control" className={styles.listSelect} aria-label={item.name} aria-current={item.id === current ? 'step' : undefined}
               aria-disabled={!!sorting.drag} onClick={() => { if (!sorting.drag) onSelect(item.id) }}>
               <span className={orderStyles.orderInfo}><strong title={item.name}>{item.name}</strong><small>{item.status}</small></span>
             </Button>
@@ -106,7 +108,7 @@ export function ExerciseList({ weights, cardio, current, onClose, onSelect, onAp
         </section>
       })}
       <div className={styles.actions}>
-        <Button onClick={onClose}>목록 닫기</Button>
+        <Button variant="neutral" onClick={onClose}>목록 닫기</Button>
         <Button variant="primary" disabled={!changed || !!sorting.drag} onClick={() => onApply(order)}>변경하기</Button>
       </div>
     </div>
@@ -121,7 +123,7 @@ export function SessionExerciseSearch({ replace, exercises, onSelect, onClose, s
       {saveIssue}
       <p className="muted small">이번 운동에만 적용됩니다.</p>
       <ExerciseSearch exercises={exercises} onSelect={onSelect} />
-      <Button onClick={onClose}>취소</Button>
+      <Button variant="neutral" onClick={onClose}>취소</Button>
     </div>
   </Dialog>
 }
@@ -152,7 +154,7 @@ export function SessionCardioPlan({ activities, index, plan, canReplace = true, 
         {!canReplace && <small className="muted">종목 교체는 측정을 시작하기 전에 할 수 있습니다.</small>}
       </Card>}
       {issue && <p role="alert" className="notice error">{issue}</p>}
-      <div className={styles.actions}><Button onClick={onClose}>취소</Button>{!picking && <Button variant="primary" type="submit">{action}</Button>}</div>
+      <div className={styles.actions}><Button variant="neutral" onClick={onClose}>취소</Button>{!picking && <Button variant="primary" type="submit">{action}</Button>}</div>
     </form>
   </Dialog>
 }

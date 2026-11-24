@@ -2,8 +2,9 @@ import type { ComponentPropsWithoutRef } from 'react'
 import { useDelayedPending } from '../useDelayedPending'
 import styles from './ActionButton.module.css'
 
+export type ActionAppearance = 'primary' | 'secondary' | 'danger-outline' | 'danger-primary' | 'contrast-outline' | 'warning' | 'recovery'
 type ActionButtonProps = ComponentPropsWithoutRef<'button'> & {
-  appearance?: 'primary' | 'secondary' | 'danger-outline' | 'danger-primary' | 'contrast-outline'
+  appearance?: ActionAppearance
   size?: 'regular' | 'modal' | 'small'
   loading?: boolean
   loadingLabel?: string

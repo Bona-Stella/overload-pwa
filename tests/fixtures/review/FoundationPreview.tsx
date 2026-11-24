@@ -26,6 +26,6 @@ export default function FoundationPreview() {
       <StatusNotice error>저장 실패 표시 예시 · 실제 저장 요청은 하지 않습니다.</StatusNotice>
       <a href="/">계정 앱으로</a>
     </div>
-    {dialog && <Dialog title="공통 대화상자" onClose={() => setDialog(false)}><p>닫은 뒤 열었던 버튼으로 초점이 돌아갑니다.</p><Button onClick={() => setDialog(false)}>닫기</Button></Dialog>}
+    {dialog && <Dialog title="공통 대화상자" tone="info" onClose={() => setDialog(false)}><p>닫으면 열었던 버튼으로 초점이 돌아가요.</p><Button variant="primary" onClick={() => setDialog(false)}>닫기</Button></Dialog>}
   </AppShell>
 }
