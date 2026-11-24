@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
-import { FeedbackIcon } from './FeedbackIcon'
+import { FeedbackIcon } from './FeedbackIcon.tsx'
 import styles from './Toast.module.css'
 
 export type ToastMessage = {

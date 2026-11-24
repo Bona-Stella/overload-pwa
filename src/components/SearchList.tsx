@@ -14,8 +14,8 @@ export function SearchResults({options,onSelect,onDetail,disabled=false,label='�
   {o.exerciseId&&<button type="button" className={searchStyles.detail} aria-label={o.name+' 상세 보기'} disabled={disabled||!detail&&!onDetail} onClick={e=>onDetail?onDetail(o.id,e):detail?.(o)}><span aria-hidden="true">›</span></button>}
  </li>)}</ul>
 }
-export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,onDetail,query,onQuery,options,onSelect,selected,onClear,disabled,issue,loading=false,resultsFooter,onCloseSearch,onSearchOpenChange,autoFocus=false,defaultOpen=false,closeOnSelect=true,resultsLabel='검색 결과',label='이름 검색'}:{
- scopes?:{id:string;name:string}[];scope?:string;onScope?:(value:string)=>void;renderScope?:(control:SearchScopeControl)=>ReactNode;tags?:SearchTags;onDetail?:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;query:string;onQuery:(value:string)=>void;options:SearchOption[];onSelect:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;selected?:string;onClear:()=>void;disabled?:boolean;issue?:string;loading?:boolean;resultsFooter?:ReactNode;onCloseSearch?:()=>void;onSearchOpenChange?:(open:boolean)=>void;autoFocus?:boolean;defaultOpen?:boolean;closeOnSelect?:boolean;resultsLabel?:string;label?:string
+export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,onDetail,query,onQuery,options,onSelect,selected,onClear,disabled,issue,loading=false,resultsPending=false,resultsFooter,onCloseSearch,onSearchOpenChange,autoFocus=false,defaultOpen=false,closeOnSelect=true,resultsLabel='검색 결과',label='이름 검색'}:{
+ scopes?:{id:string;name:string}[];scope?:string;onScope?:(value:string)=>void;renderScope?:(control:SearchScopeControl)=>ReactNode;tags?:SearchTags;onDetail?:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;query:string;onQuery:(value:string)=>void;options:SearchOption[];onSelect:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;selected?:string;onClear:()=>void;disabled?:boolean;issue?:string;loading?:boolean;resultsPending?:boolean;resultsFooter?:ReactNode;onCloseSearch?:()=>void;onSearchOpenChange?:(open:boolean)=>void;autoFocus?:boolean;defaultOpen?:boolean;closeOnSelect?:boolean;resultsLabel?:string;label?:string
 }){
  const [state,setState]=useState<{mode:'IDLE'|'EDITING'|'SELECTED';hideScope:boolean}>(()=>({mode:autoFocus||defaultOpen?'EDITING':selected?'SELECTED':'IDLE',hideScope:autoFocus}))
  const mode=state.mode==='SELECTED'&&!selected?'IDLE':state.mode,open=mode==='EDITING',id=useId(),region=useRef<HTMLDivElement>(null)
@@ -31,7 +31,7 @@ export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,
   edit();region.current?.querySelector('input')?.focus()
  }
  const actionLabel=mode==='SELECTED'?'선택 해제':mode==='EDITING'?query?'검색어 지우기':'검색 닫기':'검색 목록 열기'
- return <div className={'record-search '+searchStyles.search} data-search-state={mode} ref={region} onKeyDown={e=>{
+ return <div className={'record-search '+searchStyles.search} data-search-state={mode} aria-busy={open && resultsPending || undefined} ref={region} onKeyDown={e=>{
   if(e.nativeEvent.isComposing)return
   if(e.key==='Escape'){e.preventDefault();close();region.current?.querySelector<HTMLButtonElement>('.search-disclosure')?.focus()}
   if(e.key==='Enter'&&e.target instanceof HTMLInputElement)e.preventDefault()
@@ -51,10 +51,10 @@ export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,
    </button>
   </div>
   {tags&&open&&<div className={styles.filters}><p className={styles.filterLabel}>{tags.label}</p><div className={`${filterStyles.strip} ${styles.filterStrip}`} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}
-  {issue?<p className="notice" role="status">{issue}</p>:open&&<><SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled} onSelect={(id,event)=>{
+  {issue?<p className="notice" role="status">{issue}</p>:open&&<><SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled || resultsPending} onSelect={(id,event)=>{
     if(closeOnSelect)region.current?.querySelector('input')?.blur()
     onSelect(id,event)
     if(closeOnSelect)setState({mode:'SELECTED',hideScope:false})
-  }}/>{loading ? <div aria-busy="true" /> : !options.length && <p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
+  }}/>{loading ? !resultsPending && <div aria-busy="true" /> : !options.length && <p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
  </div>
 }

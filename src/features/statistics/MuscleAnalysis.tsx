@@ -15,6 +15,8 @@ import { useScreenHistory } from '../../app/navigation.ts'
 import { useRecordPreview } from './RecordDisplayContext.ts'
 import './statistics.css'
 import planStyles from './WeeklyMusclePlan.module.css'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import statisticsStyles from './WeeklyMuscleStatistics.module.css'
 
 function AnalysisRows({ rows, plan, metric, showAll }: { rows: AnalysisRow[]; plan: boolean; metric: string; showAll: boolean }) {
@@ -97,7 +99,7 @@ export function MuscleAnalysisView({ data, plan, presets = [], selected, onSelec
 
 
 type SchedulePreset = LiveSchedule['presets'][number]
-type PlanSource = { key: string; routines: Map<string, Routine>; catalog: StandardExerciseDetail[] }
+type PlanSource = { key: string; identity: string; routines: Map<string, Routine>; catalog: StandardExerciseDetail[] }
 
 export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshKey, onInvalid, definitions = [], active = true, onReadSettled }: { api: WorkoutApi; scope: Scope; schedule: LiveSchedule | null | undefined; initialPreset?: string; refreshKey: string; onInvalid: (error: unknown) => void; definitions?: StandardExercise[]; active?: boolean; onReadSettled?: (ready: boolean) => void }) {
   const preview = useRecordPreview()
@@ -112,8 +114,9 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
   const [issue, setIssue] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
   const ids = JSON.stringify([...new Set(preset?.assignments.map(a => a.routineId) ?? [])])
-  const sourceKey = (value?: SchedulePreset) => JSON.stringify([stateKey, refreshKey, value?.id, value?.version, value?.assignments.map(a => a.routineId)])
-  const key = sourceKey(preset)
+  const sourceIdentity = (value?: SchedulePreset) => JSON.stringify([stateKey, value?.id, value?.version, value?.assignments])
+  const identity = sourceIdentity(preset)
+  const key = JSON.stringify([identity, refreshKey])
   const current = presetId ? loaded.get(presetId) : null
   const confirmed = current?.key === key ? current : null
   const failed = issue === key
@@ -132,7 +135,7 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
       await Promise.all(Array.from({ length: Math.min(4, exercises.length) }, async () => {
         while (index < exercises.length && !abort.signal.aborted) catalog.push(await api.exerciseDetail(userId, exercises[index++], abort.signal))
       }))
-      if (!abort.signal.aborted) { setLoaded(previous => new Map([...previous, [presetId, { key, routines, catalog }]])); setIssue(null) }
+      if (!abort.signal.aborted) { setLoaded(previous => new Map([...previous, [presetId, { key, identity, routines, catalog }]])); setIssue(null) }
     })().catch(error => {
       if (abort.signal.aborted) return
       setIssue(key)
@@ -140,20 +143,24 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
       if (boundaryError(error)) onInvalid(error)
     })
     return () => abort.abort()
-  }, [active, api, userId, dataGeneration, ids, key, onInvalid, preview, presetId, confirmed, reload])
+  }, [active, api, userId, dataGeneration, ids, key, identity, onInvalid, preview, presetId, confirmed, reload])
 
-  if (!schedule) return null
-  if (!preset) return <Card><p>분석할 주간 프리셋이 없습니다.</p></Card>
   const previous = presets.find(p => p.id === shownId)
   const previousSource = previous && loaded.get(previous.id)
-  const keepPrevious = !!previous && previousSource?.key === sourceKey(previous)
+  const keepPrevious = !!previous && previousSource?.identity === sourceIdentity(previous)
   const displayed = preview || confirmed || !keepPrevious ? preset : previous
   const source = confirmed ?? (keepPrevious ? previousSource : null)
-  const data = preview ? preview.plan(displayed.id) : source ? plannedAnalysis(displayed, source.routines, source.catalog, definitions.flatMap(e => e.muscles ?? [])) : null
+  const data = !displayed ? null : preview ? preview.plan(displayed.id) : source ? plannedAnalysis(displayed, source.routines, source.catalog, definitions.flatMap(e => e.muscles ?? [])) : null
+  const readIssue = '계획을 조회하지 못했습니다.'
+  const feedback = useReadErrorToast(active && data && failed ? readIssue : null)
+  if (!schedule) return null
+  if (!displayed) return <Card><p>분석할 주간 프리셋이 없습니다.</p></Card>
+  const retry = <Button title={readIssue} aria-description={readIssue} onClick={() => { setIssue(null); setReload(n => n + 1) }}>다시 조회</Button>
   return <>
     {(data || failed) && <MuscleAnalysisView stateKey={stateKey} data={data} plan presets={presets} selected={displayed.id} onSelect={id => setSelected(id,true)} />}
-    {failed && <Card><p role="alert">계획을 조회하지 못했습니다.</p><Button onClick={() => { setIssue(null); setReload(n => n + 1) }}>다시 조회</Button></Card>}
-    <StatisticsWait pending={active && !ready} label="주간 근육 계획을 불러오는 중입니다." />
+    {failed && (data ? retry : <Card><p role="alert">{readIssue}</p>{retry}</Card>)}
+    <StatisticsWait pending={active && !ready && !data} label="주간 근육 계획을 불러오는 중입니다." />
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </>
 }
 

@@ -7,12 +7,11 @@
 .planCard { min-block-size: 176px; }
 .placeholder { min-width: 0; }
 .placeholder > span { display: block; inline-size: 42%; block-size: 12px; border-radius: 4px; background: var(--surface-input); }
-.placeholder[data-loading-skeleton='home-today'] > span { margin-block: 18px; }
-.placeholder[data-loading-skeleton='home-action'] { min-block-size: 47px; border: 1px solid var(--border-subtle); border-radius: 2px; }
+.placeholder[data-loading-skeleton='home-today'] { display: grid; gap: 12px; padding-block: 5px; }
+.placeholder[data-loading-skeleton='home-today'] > span:nth-child(2) { inline-size: 66%; block-size: 23px; }
 .placeholder[data-loading-skeleton='home-chooser'] { min-block-size: 56px; padding: 14px 12px; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--surface-card); }
 .placeholder[data-loading-skeleton='home-week'] > span { inline-size: 100%; block-size: 78px; margin-block-start: 28px; background: repeating-linear-gradient(90deg, var(--surface-input) 0 12%, transparent 12% calc(100% / 7)); }
 .placeholder[data-loading-skeleton='home-recent'] { min-block-size: 44px; padding: 10px; border: 1px solid var(--border-subtle); border-radius: 5px; background: var(--surface-card); }
-.home[aria-busy='true'] .recent { padding-block: 39px; }
 .kicker { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; font-weight: 750; color: var(--accent); margin: 0 0 10px; }
 .kicker time { flex: none; font-size: 12px; font-weight: 400; color: var(--text-muted); }
 .kicker > span:first-child { flex-shrink: 0; }

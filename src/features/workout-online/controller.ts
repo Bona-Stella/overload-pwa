@@ -15,7 +15,7 @@ type RoutineRefresh = { version: string; failed: boolean }
 export type OnlineState = { userId: string | null; scope: Scope | null; data: Bootstrap | null; selected: Routine | null;
   active: Session | null; detail: Session | null; deviceId: string | null; attempt: StartAttempt | null;
   routineRefreshes: ReadonlyMap<string, RoutineRefresh>;
-  revalidatingScope?: boolean;
+  revalidatingScope?: boolean; readIssue?: boolean;
   status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string; recordsRevision: number }
 const empty = (): OnlineState => ({ userId: null, scope: null, data: null, selected: null, active: null, detail: null, deviceId: null, attempt: null,
   routineRefreshes: new Map(), status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '', recordsRevision: 0 })
@@ -59,7 +59,7 @@ export class WorkoutOnlineController {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener) }
   private set(patch: Partial<OnlineState>) {
     const released = this.state.busy && patch.busy === false
-    this.state = { ...this.state, ...patch }
+    this.state = { ...this.state, ...(Object.hasOwn(patch, 'issue') ? { readIssue: false } : {}), ...patch }
     this.listeners.forEach(fn => fn())
     if (released) void this.refreshApprovedRoutines()
   }
@@ -97,14 +97,14 @@ export class WorkoutOnlineController {
     this.cancel(); const sequence = this.sequence, abort = new AbortController(); this.abort = abort
     return { userId, signal: abort.signal, current: () => this.sequence === sequence && !abort.signal.aborted && this.owner === userId && !!this.auth && eligible(this.auth.getSnapshot()) === userId }
   }
-  private failure(error: unknown) {
-    const code = (error as { code?: string })?.code
+  private failure(error: unknown, readIssue = false) {
+    const { code, status } = (error as { code?: string; status?: number } | null) ?? {}
     if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) {
       this.cancelRoutineRead()
       this.onBoundary?.()
       this.set({ ...empty(), userId: this.owner, issue: onlineIssue(error), status: 'ready' }); return
     }
-    this.set({ issue: onlineIssue(error) })
+    this.set({ issue: onlineIssue(error), readIssue: readIssue && status !== 401 && status !== 403 })
   }
   refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
@@ -152,7 +152,7 @@ export class WorkoutOnlineController {
       if (context.current()) {
         // Recovery after an outage must verify the prior scope before showing it again.
         if (keepDraftScope && previous.detail?.status !== 'ACTIVE') this.set({ ...empty(), userId: context.userId })
-        this.failure(error)
+        this.failure(error, true)
       }
     }
     finally {

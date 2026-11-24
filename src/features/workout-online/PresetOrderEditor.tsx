@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 import { useDragOrder } from '../../components/useDragOrder.ts'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
@@ -9,8 +10,9 @@ import styles from './Presets.module.css'
 import routineStyles from './Routine.module.css'
 
 type Entry = Pick<SchedulePreset, 'id' | 'included'>
-export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName, onSave, onClose, onReload, navigationKey }: {
+export function PresetOrderEditor({ schedule, busy, readOnly, locked = readOnly, readRetry, stale, routineName, onSave, onClose, onReload, navigationKey }: {
   schedule: PresetSchedule; busy: boolean; readOnly: boolean; stale: boolean
+  locked?: boolean; readRetry?: ReactNode;
   routineName: (id: string) => string; onSave: (entries: Entry[]) => void | Promise<boolean>; onClose: () => void; onReload: () => void; navigationKey?: string
 }) {
   const [draft, setDraft] = useState(() => schedule.presets.map(({ id, included }) => ({ id, included })))
@@ -34,7 +36,7 @@ export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName
   }
   function move(group: boolean, id: string, targetId: string, handle: HTMLButtonElement) {
     const from = ordered.findIndex(entry => entry.id === id), to = ordered.findIndex(entry => entry.id === targetId)
-    if (busy || readOnly || from < 0 || to < 0 || from === to || ordered[from].included !== group || ordered[to].included !== group) return
+    if (busy || locked || from < 0 || to < 0 || from === to || ordered[from].included !== group || ordered[to].included !== group) return
     const next = [...ordered]
     const [entry] = next.splice(from, 1)
     next.splice(to, 0, entry)
@@ -65,8 +67,8 @@ export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName
             style={sortingState.rowStyle(included, index)} key={entry.id}>
             <span className={styles.number}>{number}</span><span className={styles.orderInfo}><strong title={preset.name}>{preset.name}</strong><small title={summary}>{summary}</small></span>
             {!readOnly && <div className={styles.orderActions}>
-              <button type="button" className={`${routineStyles.chip} ${styles.membershipPill}`} disabled={busy || !!drag} aria-label={preset.name + (included ? ' 제외' : ' 추가')} onClick={() => changeGroup(entry)}>{included ? '제외' : '추가'}</button>
-              <button type="button" className={styles.dragHandle} disabled={busy || entries.length < 2}
+              <button type="button" className={`${routineStyles.chip} ${styles.membershipPill}`} disabled={busy || locked || !!drag} aria-label={preset.name + (included ? ' 제외' : ' 추가')} onClick={() => changeGroup(entry)}>{included ? '제외' : '추가'}</button>
+              <button type="button" className={styles.dragHandle} disabled={busy || locked || entries.length < 2}
                 aria-label={preset.name + ' 순서 이동'} aria-describedby="preset-order-help"
                 {...sortingState.handleProps(included, entry.id, entries.map(p => p.id), index)}><span aria-hidden="true">⠿</span></button>
             </div>}
@@ -77,9 +79,9 @@ export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName
     {tooFew && <p role="status">자동 순환에는 포함 프리셋이 최소 2개 필요합니다.</p>}
     {stale && <button type="button" className="outline" onClick={() => leave(onReload)}>최신 구성 다시 열기</button>}
     <div className="row"><button data-close-text={readOnly||undefined} type="button" className="outline" disabled={busy} onClick={close}>{readOnly ? '닫기' : '취소'}</button>
-      {!readOnly && <button type="button" className="primary" disabled={busy || !!drag || stale || tooFew || !changed} onClick={async () => {
+      {readRetry || (!readOnly && <button type="button" className="primary" disabled={busy || locked || !!drag || stale || tooFew || !changed} onClick={async () => {
         if (await onSave(ordered) && navigationKey) { saved.current = true; navigateBack(onClose) }
-      }}>변경사항 저장</button>}</div>
+      }}>변경사항 저장</button>)}</div>
     {confirmation}
   </section>
 }

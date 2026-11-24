@@ -102,7 +102,11 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
     if(!searchOpen)return
     const abort = new AbortController(); flight.current = abort
     void Promise.resolve().then(()=>{if(abort.signal.aborted)return null;setBusy(true);setIssue('');return api.search(scope, period, zone, query, 0, abort.signal,tag)}).then(page => { if (page&&!abort.signal.aborted) { setRows(page.exercises); setNext(page.nextOffset);setLoadedQuery(queryKey) } })
-      .catch((error: unknown) => { if (!abort.signal.aborted) { onInvalid(error); setIssue('과거 운동을 불러오지 못했습니다. 다시 검색해 주세요.') } }).finally(() => { if (!abort.signal.aborted) setBusy(false) })
+      .catch((error: unknown) => {
+        if (abort.signal.aborted) return
+        if (readAccessDenied(error) || boundaryError(error)) { setRows([]); setLoadedQuery(null); setNext(null) }
+        onInvalid(error); setIssue('과거 운동을 불러오지 못했습니다. 다시 검색해 주세요.')
+      }).finally(() => { if (!abort.signal.aborted) setBusy(false) })
     return () => { abort.abort(); flight.current?.abort() }
   }, [api, scope, period, zone, query, onInvalid,searchOpen,tag,queryKey])
   async function more() {
@@ -112,8 +116,14 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
     catch (error) { if (!abort.signal.aborted) { onInvalid(error); setIssue('다음 운동 목록을 불러오지 못했습니다.') } }
     finally { if (!abort.signal.aborted) setBusy(false) }
   }
-  return <div className="stack"><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>{setTag(tag);onClear()}}} onSearchOpenChange={setSearchOpen} scopes={[{id:'exercise',name:'운동별'}]} scope="exercise" onScope={()=>{}} query={query} onQuery={onQuery} selected={selected} onClear={onClear} label="과거 운동 검색" issue={issue} loading={loadedQuery!==queryKey} options={(loadedQuery===queryKey?rows:[]).map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))} onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row)onSelect(row)}} resultsFooter={loadedQuery===queryKey&&next!==null?<button className="outline full" disabled={busy} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
-    </div>
+  const pending = loadedQuery !== queryKey
+  return <div className="stack"><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:setTag}}
+    onSearchOpenChange={setSearchOpen} query={query} onQuery={onQuery} selected={selected} onClear={onClear} label="과거 운동 검색" issue={issue}
+    loading={pending} resultsPending={pending && rows.length > 0}
+    options={rows.map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))}
+    onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row&&!pending)onSelect(row)}}
+    resultsFooter={next!==null?<button className="outline full" disabled={busy || pending} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
+  </div>
 }
 
 type GrowthSelection = {
@@ -207,7 +217,7 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
       <p role="alert">승인 이력을 조회하지 못했습니다.</p>
       <Button loading={pending} onClick={() => setRetry(value => value + 1)}>다시 조회</Button>
     </Card>}
-    <StatisticsWait pending={pending && !failedSelection} label="승인 이력을 불러오는 중입니다." />
+    <StatisticsWait pending={pending && !view && !failedSelection} label="승인 이력을 불러오는 중입니다." />
   </>
 }
 export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack, backLabel }: Omit<Context, 'period' | 'zone'> & { onBack?: () => void; backLabel?: string }) {

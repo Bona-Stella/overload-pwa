@@ -41,6 +41,7 @@ import { Metadata, StatusNotice } from '../../components/ui.tsx'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
 import { Toast } from '../../components/common-ui/Toast.tsx'
 import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
+import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { boundaryError, readAccessDenied } from '../home/load.ts'
 import { Button } from '../../components/ui.tsx'
@@ -180,7 +181,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
 
   const viewed = schedule?.presets.find(p => p.id === viewedId) ?? schedule?.presets.find(p => p.id === schedule.activeId)
   const busy = state.busy || training.busy
-  const managementBlocked = !enabled || busy || !!state.active || !!state.attempt || protection !== null || training.loading
+  const managementBlocked = !enabled || !state.data || busy || !!state.active || !!state.attempt || protection !== null || training.loading
   const scheduleBlocked = managementBlocked || !training.canWrite
   useEffect(() => { if (focused) window.scrollTo(0, 0) }, [focused])
   const membership = (id: string) => schedule && <PresetMembership presets={schedule.presets} routineId={id} />
@@ -244,22 +245,24 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
   const renameStale = renaming && (renaming.base.version !== schedule?.version || renaming.version !== latestName?.version)
+  const retrySchedule = training.issue && <button type="button" className="outline" aria-label="일정 다시 조회"
+    title={training.issue} aria-description={training.issue} disabled={busy || training.loading} onClick={training.refresh}>저장 잠김 · 다시 조회</button>
+  const unavailableSchedule = training.issue && <StatusNotice error>{training.issue}{' '}{retrySchedule}</StatusNotice>
+  const retryRoutines = <Button variant="quiet" disabled={busy} onClick={() => void controller.refresh()}>루틴 다시 조회</Button>
+  const readFeedback = useReadErrorToast(visible && !renaming ? (schedule || scheduleEditor ? training.issue : undefined)
+    ?? (state.data && state.readIssue ? state.issue : null) : null)
   return <section className={`stack workout-online ${editor ? detailStyles.workspace : ''}`}
     aria-label="루틴"
     data-tab-overview={!focused && !planPreset || undefined}>
-    {!state.data && !state.issue && <div aria-busy="true" />}
     {protection && <p className="notice" role="status">{protection === 'ACTIVE' ? '디로딩 진행 중' : '디로딩 완료 당일'} · 일반 루틴과 주간 일정은 조회 전용입니다.</p>}
-    {training.issue && <StatusNotice error>{training.issue}{' '}
-      <Button variant="quiet" disabled={busy || training.loading} onClick={training.refresh}>일정 다시 조회</Button>
-    </StatusNotice>}
-    {training.writeIssue && !renaming && <p className="notice error" role="alert">{training.writeIssue}</p>}
-    {state.issue && <StatusNotice error>{state.issue}
-      {!focused && <> <Button variant="quiet" disabled={busy} onClick={() => void controller.refresh()}>루틴 다시 조회</Button></>}
-    </StatusNotice>}{state.notice && !startWaiting && <p className="notice" role="status">{state.notice}</p>}
-    {state.data && state.scope && <>
       <div hidden={focused || !!planPreset}>
         {created && <RoutineCreatedNotice name={created.name} onLater={() => setCreated(null)} onAssign={() => openSchedule(created.id)} blocked={scheduleBlocked} />}
-        <RoutineCards week={viewed} summaries={state.data.routines} details={cards} busy={busy} managementBlocked={managementBlocked}
+        <RoutineCards week={viewed} summaries={state.data?.routines ?? []} details={cards} busy={busy} managementBlocked={managementBlocked}
+          listState={!state.data && (state.issue ? <StatusNotice error>{state.issue}{' '}{retryRoutines}</StatusNotice>
+            : <LoadingSkeleton layout="list" label="루틴 목록을 확인하는 중입니다." />) || undefined}
+          listRetry={state.data && state.readIssue && state.issue && <button type="button" className="outline" aria-label="루틴 다시 조회"
+            title={state.issue} aria-description={state.issue} disabled={busy} onClick={() => void controller.refresh()}>다시 조회</button>}
+          scheduleState={!schedule && (unavailableSchedule || <LoadingSkeleton layout="row" label="주간 일정을 확인하는 중입니다." />) || undefined}
           onNew={() => { setCreated(null); setEditor({ routine: null, readOnly: false }) }}
           onEdit={id => void openRoutine(id, false)} onSelect={id => void openRoutine(id, true)} onDelete={id => void deleteRoutine(id)}
           presetHeader={schedule && viewed ? viewToggle => <PresetHeader schedule={schedule} viewed={viewed} busy={busy} readOnly={scheduleBlocked} viewToggle={viewToggle}
@@ -272,8 +275,9 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             } : undefined}
             onOrganize={() => setScheduleEditor({ type: 'order', base: schedule })}
             onDelete={() => setDeleting({ id: viewed.id, base: schedule })} /> : undefined}
-          schedule={schedule && <button type="button" className="outline full" disabled={scheduleBlocked} onClick={() => openSchedule()}>주간 일정 편집</button>}
-          presetNavigation={schedule && viewed && <PresetNavigation schedule={schedule} viewed={viewed} busy={busy} readOnly={scheduleBlocked}
+          schedule={schedule && (retrySchedule || <button type="button" className="outline full" disabled={scheduleBlocked} onClick={() => openSchedule()}>주간 일정 편집</button>)}
+          presetNavigation={schedule && viewed && <PresetNavigation schedule={schedule} viewed={viewed} busy={busy || scheduleBlocked}
+            readOnly={scheduleBlocked && !training.loading && !training.issue}
             onView={setViewedId} onAdd={async () => {
               const saved = await training.write({ type: 'add' })
               const added = saved?.presets.find(p => !schedule.presets.some(old => old.id === p.id))
@@ -281,13 +285,18 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             }} />}
           presetAssignments={schedule ? membership : undefined} />
       </div>
-      {planPreset && <><button type="button" className="quiet" onClick={() => navigateBack(() => setPlanPreset(null, true))}>‹ 루틴으로</button><WeeklyMusclePlan definitions={state.data.exercises} api={api} scope={state.scope} schedule={schedule} initialPreset={planPreset} refreshKey={previewKey} onInvalid={controller.invalidateScope} /></>}
+    {planPreset && <button type="button" className="quiet" onClick={() => navigateBack(() => setPlanPreset(null, true))}>‹ 루틴으로</button>}
+    {scheduleRoute && (!scheduleEditor || !state.data) && <><RecordSubpageHeader title={scheduleRoute.type === 'order' ? '주간 일정 전체 편집' : '주간 일정 편집'} onBack={() => navigateBack(closeScheduleEditor)} />
+      {unavailableSchedule || (state.issue && !state.data ? <StatusNotice error>{state.issue}{' '}{retryRoutines}</StatusNotice>
+        : training.loading || !state.data ? <LoadingSkeleton layout="detail" label="주간 일정을 확인하는 중입니다." /> : <StatusNotice>주간 일정을 찾을 수 없어요.</StatusNotice>)}</>}
+    {state.data && state.scope && <>
+      {planPreset && (schedule ? <><WeeklyMusclePlan definitions={state.data.exercises} api={api} scope={state.scope} schedule={schedule} initialPreset={planPreset} refreshKey={previewKey} onInvalid={controller.invalidateScope} />{retrySchedule}</>
+        : unavailableSchedule || <LoadingSkeleton layout="detail" label="주간 일정을 확인하는 중입니다." />)}
       {editorRoute && !editor && <RecordSubpageHeader title="루틴" onBack={backFromEditor} />}
       {editorRoute && editorIssue === editorRequest && <StatusNotice error>루틴을 조회하지 못했습니다. <Button onClick={() => setEditorRetry(value => value + 1)}>다시 조회</Button></StatusNotice>}
       {showEditorLoading && <LoadingSkeleton layout="detail" label="루틴 정보를 확인하는 중입니다." />}
-      {scheduleRoute && !scheduleEditor && <><RecordSubpageHeader title="주간 일정" onBack={() => navigateBack(closeScheduleEditor)} />{training.loading ? <div aria-busy="true" /> : !training.issue && <StatusNotice>주간 일정을 찾을 수 없어요.</StatusNotice>}</>}
       {scheduleEditor?.type === 'assign' && <PresetAssignmentEditor base={scheduleEditor.base} current={schedule} id={scheduleEditor.id}
-        priorityId={scheduleEditor.priorityId} routines={state.data.routines} busy={busy} readOnly={scheduleBlocked}
+        priorityId={scheduleEditor.priorityId} routines={state.data.routines} busy={busy} readOnly={scheduleBlocked} readRetry={retrySchedule}
         initialApply={scheduleEditor.base.appliedVersion === null && scheduleEditor.id === scheduleEditor.base.activeId}
         navigationKey={scheduleKey} onSelect={id => { if (schedule) setScheduleEditor({ ...scheduleEditor, id, base: schedule }, true) }}
         onReload={() => { if (schedule && viewed) setScheduleEditor({ ...scheduleEditor, id: schedule.presets.some(p => p.id === scheduleEditor.id) ? scheduleEditor.id : viewed.id, base: schedule }, true) }}
@@ -299,7 +308,8 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           return true
         }} />}
       {scheduleEditor?.type === 'order' && <PresetOrderEditor key={scheduleEditor.base.version} schedule={scheduleEditor.base} busy={busy}
-        stale={scheduleEditor.base.version !== schedule?.version} readOnly={scheduleBlocked} routineName={routineName}
+        stale={!!schedule && scheduleEditor.base.version !== schedule.version} readOnly={scheduleBlocked && !training.loading && !training.issue}
+        locked={scheduleBlocked} readRetry={retrySchedule} routineName={routineName}
         navigationKey={scheduleKey} onClose={closeScheduleEditor} onReload={() => { if (schedule) setScheduleEditor({ type: 'order', base: schedule }, true) }}
         onSave={async entries => !!await training.write({ type: 'rotate', enabled: scheduleEditor.base.autoEnabled, entries }, scheduleEditor.base)} />}
       {editor?.readOnly && editor.routine && <RoutineDetail routine={editor.routine} exercises={state.data.exercises} activities={activities} manufacturers={state.data.manufacturers}
@@ -321,6 +331,13 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers}
         busy={busy} controller={controller} onClose={() => setEditor(null)} navigationKey={editorKey} backLabel={editorRoute?.fromDetail ? '루틴 상세로' : undefined} managementBlocked={managementBlocked} />}
     </>}
+    {!state.data && editorRoute && <><RecordSubpageHeader title="루틴" onBack={backFromEditor} />
+      {state.issue ? <StatusNotice error>{state.issue}{' '}{retryRoutines}</StatusNotice> : <LoadingSkeleton layout="detail" label="루틴 정보를 확인하는 중입니다." />}</>}
+    {!state.data && planPreset && (state.issue ? <StatusNotice error>{state.issue}{' '}{retryRoutines}</StatusNotice> : <LoadingSkeleton layout="detail" label="계획을 확인하는 중입니다." />)}
+    {training.writeIssue && !renaming && <StatusNotice error>{training.writeIssue}</StatusNotice>}
+    {state.data && state.issue && (state.readIssue ? (focused || !!planPreset) && retryRoutines
+      : <StatusNotice error>{state.issue}{' '}{!focused && retryRoutines}</StatusNotice>)}
+    {state.notice && !startWaiting && <p className="notice" role="status">{state.notice}</p>}
     {enabled && renaming && <Dialog title="주간 일정 이름 변경" dismissBlocked={busy} onClose={() => setRenaming(null)}>
       <form className="stack" onSubmit={async event => {
         event.preventDefault()
@@ -363,7 +380,8 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           onClick={async () => { if (await training.write({ type: 'delete', id: deleting.id }, deleting.base)) setDeleting(null) }}>일정 삭제</button></div>
     </Dialog>}
     {confirmation}
-    <Toast toast={visible && (!focused || editor?.readOnly) && !planPreset ? feedback.toast : null} onDismiss={feedback.dismiss} bottomClearance={focused ? '0px' : 'var(--tabs-height, 56px)'} />
+    <Toast toast={readFeedback.toast ?? (visible && (!focused || editor?.readOnly) && !planPreset ? feedback.toast : null)}
+      onDismiss={readFeedback.toast ? readFeedback.dismiss : feedback.dismiss} bottomClearance={focused ? '0px' : 'var(--tabs-height, 56px)'} />
   </section>
 }
 export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, renderShell, catalogOpen = false, restOpen = false, onSettingsBack, onRestExitGuard }: {
@@ -638,7 +656,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       onRefreshRoutines={() => void controller.refresh()}
       routineRefreshes={state.routineRefreshes} onRetryRoutineRefresh={controller.retryRoutineRefresh}
       attempt={starting ? opening.action === 'retry' : state.attempt !== null} busy={state.busy} localReady={state.localReady} action={opening?.action ?? homeAction}
-      issue={homeStartIssue ?? state.issue} onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void runHomeAction('resume', resume)} onRetry={() => void runHomeAction('retry', startWorkout)}
+      issue={homeStartIssue ?? (state.readIssue ? null : state.issue)} readIssue={state.readIssue ? state.issue : null}
+      onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void runHomeAction('resume', resume)} onRetry={() => void runHomeAction('retry', startWorkout)}
       onStart={routine => runHomeAction('start', async () => {
           const before = controller.getSnapshot(), origin = window.history.state?.overloadNavigation
           if (!training.canWrite || before.busy || before.active || before.attempt || !await flush()) return
@@ -689,7 +708,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
     }} />}</div>
     {settingsDetail}
     {localOnly && <button className="outline" onClick={() => void authentication.restore()}>같은 계정 인증 다시 확인</button>}
-    {visible && state.issue && <button type="button" className="outline" onClick={async () => {
+    {visible && state.issue && !(state.readIssue && (tab === 'routines' || tab === 'home' && !!state.data)) && <button type="button" className="outline" onClick={async () => {
       await authentication.restore()
       // The same authenticated account may still need to retry its failed initial workout read.
       if (!controller.getSnapshot().data) await controller.refresh()

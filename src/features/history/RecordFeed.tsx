@@ -3,7 +3,10 @@ import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
 import {recordTime} from '../../components/record-time.ts'
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
-import { Button, Card } from '../../components/ui.tsx'
+import { Button, Card, StatusNotice } from '../../components/ui.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import { SearchList } from '../../components/SearchList.tsx'
 import { useScreenHistory } from '../../app/navigation.ts'
 import type { WorkoutApi } from '../workout-online/api.ts'
@@ -51,6 +54,8 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const [loadedPage, setPage] = useState<ClosedPage | null>(()=>cache?.page??null), [busy, setBusy] = useState(false), [issue, setIssue] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const page = loadedPage?.userId === userId && loadedPage.dataGeneration === dataGeneration ? loadedPage : null
+  const readIssue = issue ? '기록을 조회하지 못했습니다. 표시된 목록이 최신인지 확인할 수 없습니다.' : undefined
+  const feedback = useReadErrorToast(enabled && page ? readIssue : undefined)
   const pageRef=useRef(page),cacheRef=useRef(cache)
   useEffect(()=>{cacheRef.current=cache},[cache])
   const flight = useRef<AbortController | null>(null), failure = useRef(onInvalid)
@@ -121,17 +126,18 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
         onClear={() => setSearch({ ...search, query: '', selected: '' }, true)} /></Card></>}
     {searching && <p role="status" className="muted small">전체 과거 기간 검색 · 월 필터를 적용하지 않습니다.</p>}
     {exerciseSearch && !preview && <p className="notice" role="status">실제 세션에 포함된 운동명으로 검색하는 기능은 서버 연결을 기다리고 있습니다. 루틴별 검색은 불러온 기록에서 사용할 수 있습니다.</p>}
-    {issue && <p role="alert">기록을 조회하지 못했습니다. 표시된 목록이 최신인지 확인할 수 없습니다.</p>}
-    {!page && !preview && !issue && <div aria-busy="true" />}
     {page?.next && <p className="muted small" role="status">불러온 기록만 표시합니다. 기간·전체 검색 결과가 완전하지 않을 수 있습니다. 이전 기록을 더 불러올 수 있습니다.</p>}
     {(!exerciseSearch || !!preview) && page && !rows.length && <p>{page.next ? '불러온 기록에서 조건에 맞는 운동을 찾지 못했습니다.' : recent ? '최근 7일 운동 기록이 없습니다.' : '조건에 맞는 운동 기록이 없습니다.'}</p>}
-    <div className="stack">{rows.map((row, index) => {
+    <div className="stack" aria-busy={!preview && (!page && !issue || busy) || undefined}>
+      {!page && !preview && (issue ? <StatusNotice error>{readIssue}</StatusNotice> : <LoadingSkeleton layout="row" label="운동 기록을 확인하는 중입니다." />)}
+      {rows.map((row, index) => {
       const week = recordWeek(row.workoutDate), header = !recent && (index === 0 || week.key !== recordWeek(rows[index - 1].workoutDate).key)
       const cached=savedDetails.get(row.id)
       const detail=preview?.sessions.find(s=>s.id===row.id)??(cached?.userId===userId&&cached.dataGeneration===dataGeneration&&cached.version===row.version?cached:undefined)
       return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={detail} onOpen={onOpen} timeZone={zone}/></Fragment>
     })}</div>
     {page?.next && <Button loading={loadingMore} disabled={!enabled || busy && !loadingMore} onClick={() => void load(page.next)}>이전 기록 더 불러오기</Button>}
-    {issue && <Button disabled={!enabled || busy} onClick={() => void load()}>다시 조회</Button>}
+    {issue && <Button disabled={!enabled || busy} title={readIssue} aria-description={readIssue} onClick={() => void load()}>다시 조회</Button>}
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </section>
 }

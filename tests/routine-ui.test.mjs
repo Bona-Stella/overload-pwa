@@ -853,17 +853,25 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.equal(await evaluate(`document.querySelector('${workspace} > .section-heading')`),null,'the accessible routine region has no normal refresh row')
     await click('주간 일정 편집')
     await input('[aria-label="월요일 루틴"]',first)
-    const scheduleError = `${workspace} > [role="alert"]`
-    const canSaveSchedule = () => evaluate(`!document.querySelector('form[aria-label="주간 일정 편집"] button.primary').disabled`)
-    const canRetrySchedule = () => evaluate(`[...document.querySelectorAll('${scheduleError} button')].some(button=>button.textContent==='일정 다시 조회'&&!button.disabled)`)
+    const retrySchedule = 'form[aria-label="주간 일정 편집"] button[aria-label="일정 다시 조회"]'
+    const canSaveSchedule = () => evaluate(`document.querySelector('form[aria-label="주간 일정 편집"] button.primary')?.disabled === false`)
+    const canRetrySchedule = () => evaluate(`document.querySelector('${retrySchedule}')?.disabled === false`)
+    const scheduleGeometry = () => evaluate(`(() => {
+      const form=document.querySelector('form[aria-label="주간 일정 편집"]');
+      return [form.firstElementChild.getBoundingClientRect().y, form.querySelector('fieldset').getBoundingClientRect().y, scrollY];
+    })()`)
+    const geometryBeforeError = await scheduleGeometry()
     assert.equal(await canSaveSchedule(),true)
     await evaluate('window.listUi.scheduleReadError=true;window.listUi.refresh()')
     await wait(canRetrySchedule)
     assert.equal(await canSaveSchedule(),false)
+    assert.deepEqual(await scheduleGeometry(),geometryBeforeError,'the schedule header, fields, and scroll stay fixed during read failure')
+    assert.equal(await evaluate(`document.querySelectorAll('${workspace} [data-tone="error"]').length`),1)
     assert.equal(await evaluate(`document.querySelector('[aria-label="월요일 루틴"]').value`),first)
     await evaluate('window.listUi.scheduleReadError=false')
-    await click('일정 다시 조회')
+    await tap(retrySchedule)
     await wait(async()=>!await canRetrySchedule() && await canSaveSchedule())
+    assert.deepEqual(await scheduleGeometry(),geometryBeforeError,'recovery keeps the same form geometry')
     assert.equal(await evaluate(`document.querySelector('[aria-label="월요일 루틴"]').value`),first)
     for(const day of ['월','화','수','목','금','토','일'])await input(`[aria-label="${day}요일 루틴"]`,'')
     const beforeRest=await evaluate('window.listUi.requests.filter(r=>r.method==="PUT").length')

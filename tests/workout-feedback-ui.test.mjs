@@ -834,6 +834,24 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.equal(await evaluate('document.querySelector(".record-search select")'),null,'growth search has no scope')
     await evaluate('document.querySelector(".search-disclosure").click()')
     await wait(()=>evaluate('!!document.querySelector(".record-search li button")'))
+    const searchHeight=await evaluate('document.querySelector(".record-search").getBoundingClientRect().height')
+    const typeGrowthQuery = query => evaluate(`(() => {
+      const input=document.querySelector('.record-search input');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(query)});
+      input.dispatchEvent(new Event('input',{bubbles:true}));
+    })()`)
+    await typeGrowthQuery('지연1')
+    await wait(()=>evaluate('!!window.feedback.growthRequests.searchWaits.지연1'))
+    assert.equal(await evaluate('document.querySelector(".record-search li button").disabled'),true)
+    assert.equal(await evaluate('document.querySelector(".record-search").getBoundingClientRect().height'),searchHeight)
+    await typeGrowthQuery('지연2')
+    await wait(()=>evaluate('!!window.feedback.growthRequests.searchWaits.지연2'))
+    await evaluate('window.feedback.growthRequests.searchWaits.지연2("승인 이력 검증을 위한 매우 긴 운동명")')
+    await wait(()=>evaluate('!document.querySelector(".record-search li button").disabled'))
+    await evaluate('window.feedback.growthRequests.searchWaits.지연1("이전 요청")')
+    assert.doesNotMatch(await evaluate('document.querySelector(".record-search li").textContent'),/이전 요청/)
+    await typeGrowthQuery('')
+    await wait(()=>evaluate('!document.querySelector(".record-search li button").disabled'))
     await viewport(375)
     const searchReveal = await evaluate(`(async()=>{
       const field = document.querySelector('.record-search input'), vv = visualViewport

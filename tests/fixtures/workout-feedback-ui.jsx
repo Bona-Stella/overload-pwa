@@ -152,10 +152,13 @@ function ApprovalSummaryFixture({ empty }) {
  return <ClosedWorkoutView state={{...recordState,server}} controller={recordController} summary
   reviewContent={<SavedWeightReview api={fixture.api} session={server} readOnly={false} disabled={false} authorized={()=>true} onChanged={refresh} onRoutineApproved={onRoutineApproved}/>}/>
 }
-const growthRequests={ fail: false, hold: false, release: null, count: 0 }
+const growthRequests={ fail: false, hold: false, release: null, count: 0, searchWaits: {} }
 window.feedback.growthRequests=growthRequests
 const growthApi={
- search:async()=>({exercises:[{standardExerciseId:bootstrap.exercises[0].id,name:'승인 이력 검증을 위한 매우 긴 운동명',lastPerformedAt:recordServer.endedAt,lastApprovalAt:recordServer.endedAt}],nextOffset:null}),
+ search:async (_scope, _period, _zone, query)=>{
+  const name=await (query.startsWith('지연') ? new Promise(resolve=>{growthRequests.searchWaits[query]=resolve}) : '승인 이력 검증을 위한 매우 긴 운동명')
+  return {exercises:[{standardExerciseId:bootstrap.exercises[0].id,name,lastPerformedAt:recordServer.endedAt,lastApprovalAt:recordServer.endedAt}],nextOffset:null}
+ },
  options:async()=>({placements:[{placementId:'placement',routineId:'routine',routineName:'검토 루틴',deleted:false}]}),
  history:async()=>{
   growthRequests.count++
