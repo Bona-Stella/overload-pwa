@@ -29,8 +29,6 @@ const plans = [
 ]
 let calendar = { ...scope, version: '1', timeZone: 'Asia/Seoul', appliedAt: '2026-11-06T00:00:00Z', assignments: [{ dayOfWeek: 1, routineId: ids[0] }, { dayOfWeek: 3, routineId: ids[1] }, { dayOfWeek: 5, routineId: ids[0] }] }
 const ui = window.listUi = { ids, requests: [], selected: [], edited: [], deleted: [], started: [], routineWrites:[], invalid: [], activeError: false, versionConflict: false, loseAck: false }
-ui.confirmDelete=true;ui.confirms=[]
-window.confirm=message=>{ui.confirms.push(message);return ui.confirmDelete}
 const presetId = '90000000-0000-4000-8000-000000000011'
 const transport = { workoutRequest: async (owner, path, method, body) => {
   if (owner !== scope.userId) throw Error('Fixture owner mismatch')
@@ -71,7 +69,7 @@ function ReviewWorkspace() {
     ui.setActive = active => update({ active: active ? session() : null })
     ui.setAttempt = active => update({ attempt: active ? { ...scope, request: start, requestJson: JSON.stringify(start) } : null })
     ui.staleSelection = () => update({ selected: { ...plans[0], version: '0', weightPlacements: [{ ...plans[0].weightPlacements[0], exerciseName: 'STALE EXERCISE' }] } })
-    return { getSnapshot: () => current, refresh: async () => setRefresh(n => n + 1), invalidateScope: error => ui.invalid.push(error?.code), select: async id => { ui.selected.push(id); update({ selected: plans.find(p => p.id === id) }) }, deleteRoutine: async () => { ui.deleted.push(current.selected?.id);update({selected:null}) }, removedRoutine: async () => null, saveRoutine:async body=>{ui.routineWrites.push(structuredClone(body));return true},start:async()=>{ui.started.push(current.selected?.id)} }
+    return { getSnapshot: () => current, refresh: async () => setRefresh(n => n + 1), invalidateScope: error => ui.invalid.push(error?.code), select: async id => { ui.selected.push(id); update({ selected: plans.find(p => p.id === id) }) }, deleteRoutine: async () => { ui.deleted.push(current.selected?.id);update({selected:null});return true }, removedRoutine: async () => null, saveRoutine:async body=>{ui.routineWrites.push(structuredClone(body));return true},start:async()=>{ui.started.push(current.selected?.id)} }
   })
   const training = useTrainingSchedule(transport, scope, String(refresh), controller.invalidateScope)
   ui.showHome = () => setTab('home')

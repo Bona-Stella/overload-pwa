@@ -6,6 +6,7 @@ import { AccountSettings } from '../../../src/features/auth/AccountSettings.tsx'
 import { emptyAccount } from '../../../src/features/auth/account.ts'
 import type { AuthState } from '../../../src/features/auth/controller.ts'
 import { RestSettings } from '../../../src/features/settings/RestSettings.tsx'
+import type { RestExitGuard } from '../../../src/features/settings/RestSettings.tsx'
 import { RestAlertSettings } from '../../../src/features/settings/RestAlertSettings.tsx'
 import { CatalogView } from '../../../src/features/workout-online/PublicCatalog.tsx'
 import { SettingsMain } from '../../../src/features/settings/SettingsMain.tsx'
@@ -32,7 +33,7 @@ function accountExample(example: keyof typeof accountProviders): AuthState {
 }
 
 export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSaveFailure, estimate, onEstimate }: {
-  alerts?: RestAlerts; onAlerts?: (value: RestAlerts) => void; onRestExitGuard?: (guard: (() => boolean) | null) => void
+  alerts?: RestAlerts; onAlerts?: (value: RestAlerts) => void; onRestExitGuard?: (guard: RestExitGuard | null) => void
   takeRestSaveFailure?: () => boolean
   estimate?: boolean; onEstimate?: (value: boolean) => void
 }) {
@@ -44,8 +45,8 @@ export function SettingsReview({ alerts, onAlerts, onRestExitGuard, takeRestSave
   const trigger = useRef<HTMLButtonElement>(null)
   const menuScroll = useRef(0)
   const heading = useRef<HTMLHeadingElement>(null)
-  const back = (canLeave?: () => boolean) => navigateBack(() => {
-    if (!canLeave || canLeave()) setView(null, true)
+  const back = (canLeave?: RestExitGuard) => navigateBack(async () => {
+    if (!canLeave || await canLeave()) setView(null, true)
   })
 
   useLayoutEffect(() => {

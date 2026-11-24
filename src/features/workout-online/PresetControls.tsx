@@ -47,9 +47,9 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
 export function RoutineCreatedNotice({ name, onLater, onAssign, blocked = false }: {
   name: string; onLater: () => void; onAssign: () => void; blocked?: boolean
 }) {
-  return <section className="card stack" aria-label="새 루틴 생성 완료">
-    <h2>✓ 새 루틴 생성 완료</h2>
-    <div className={styles.createdMessage}><p>“{name}” 루틴을 만들었습니다.</p><p>주간 일정에 배정할까요?</p></div>
+  return <section className="card stack" aria-label="새 루틴 일정 배정">
+    <h2>주간 일정에 배정할까요?</h2>
+    <p className={styles.createdMessage}>“{name}”</p>
     <div className={styles.createdActions}><button type="button" className="outline" onClick={onLater}>나중에</button>
       <button type="button" className="primary" disabled={blocked} onClick={onAssign}>배정하기</button></div>
   </section>

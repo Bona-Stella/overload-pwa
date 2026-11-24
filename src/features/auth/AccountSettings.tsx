@@ -1,9 +1,10 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ComponentType, ReactNode, Ref } from 'react'
 import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { Button, Card } from '../../components/ui.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
 import { AccountIcon, AccountItem, AccountNote, AccountStatus } from './AccountDetailUi.tsx'
 import type { AuthController, AuthState } from './controller.ts'
 import { IdentityManagement } from './IdentityManagement'
@@ -27,6 +28,10 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
   const verified = contact?.status === 'VERIFIED'
   const recent = account.confirmedAt !== null && clock - account.confirmedAt <= 600_000
   const [devicesOpen, setDevicesOpen] = useScreenHistory('account-devices:' + (state.userId ?? 'review'), false)
+  const success = state.accountSuccess
+  useEffect(() => {
+    if (devicesOpen && success) controller?.dismissAccountSuccess(success.id)
+  }, [controller, devicesOpen, success])
   const devicesHeading = useRef<HTMLHeadingElement>(null)
   const devicesLink = useRef<HTMLButtonElement>(null)
   const devicesScroll = useRef<number | null>(null)
@@ -101,5 +106,6 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
     <Button className={styles.refresh} disabled={locked} onClick={() => { clear(); void controller?.openAccount() }}>
       <AccountIcon name="refresh" />계정 정보 새로 확인
     </Button>
-  </section>{children}</>
+  </section>{controller && <Toast toast={success ? { ...success, tone: 'success' } : null}
+    onDismiss={controller.dismissAccountSuccess} bottomClearance="var(--tabs-height, 56px)" />}{children}</>
 }

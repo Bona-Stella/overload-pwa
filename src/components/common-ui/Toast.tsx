@@ -16,17 +16,18 @@ type ToastProps = {
   onDismiss: (id: ToastMessage['id']) => void
   /** Dock clearance in addition to the safe area, such as the tab bar or the workout footer. */
   bottomClearance?: string
+  passThrough?: boolean
 }
 
-export function Toast({ toast, onDismiss, bottomClearance = '0px' }: ToastProps) {
+export function Toast({ toast, onDismiss, bottomClearance = '0px', passThrough = false }: ToastProps) {
   return <>
     <span className="sr-only" role="status">{toast?.tone !== 'error' ? toast?.message : ''}</span>
     <span className="sr-only" role="alert">{toast?.tone === 'error' ? toast.message : ''}</span>
-    {toast && <ToastPill toast={toast} onDismiss={onDismiss} bottomClearance={bottomClearance} />}
+    {toast && <ToastPill toast={toast} onDismiss={onDismiss} bottomClearance={bottomClearance} passThrough={passThrough} />}
   </>
 }
 
-function ToastPill({ toast, onDismiss, bottomClearance }: Required<Omit<ToastProps, 'toast'>> & { toast: ToastMessage }) {
+function ToastPill({ toast, onDismiss, bottomClearance, passThrough }: Required<Omit<ToastProps, 'toast'>> & { toast: ToastMessage }) {
   const [hovered, setHovered] = useState(false)
   const [focused, setFocused] = useState(false)
   const pill = useRef<HTMLDivElement>(null)
@@ -65,6 +66,7 @@ function ToastPill({ toast, onDismiss, bottomClearance }: Required<Omit<ToastPro
     ref={pill}
     className={styles.toast}
     data-tone={tone}
+    data-pass-through={passThrough || undefined}
     style={{ '--toast-clearance': bottomClearance } as CSSProperties}
     onPointerEnter={event => { if (event.pointerType === 'mouse') setHovered(true) }}
     onPointerLeave={() => setHovered(false)}

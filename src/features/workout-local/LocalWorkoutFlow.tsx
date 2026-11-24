@@ -11,6 +11,8 @@ import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { WorkoutFrame, Warmup, RestActions, ExerciseNavigation, WeightRecommendation } from '../workout-flow/WorkoutFrame.tsx'
 import type { ExerciseScrollPosition } from '../workout-flow/WorkoutFrame.tsx'
 import { WeightFocus, EquipmentEditor } from '../workout-flow/WeightFocus.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
 import { CardioFocus } from '../workout-flow/CardioFocus.tsx'
 import { ExerciseList, WeightChange, ConfirmWorkoutAction, SessionExerciseSearch, SessionCardioPlan } from '../workout-flow/WorkoutDialogs.tsx'
 import { exerciseDescription } from '../workout-online/catalog-label.ts'
@@ -63,6 +65,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const audio = useRestAudio(alerts.sound || alerts.middle, alerts.volume)
   const { stop, unlock } = audio
   const workout = state.workout
+  const feedback = useSuccessToast(workout && visible && editing ? workout.sessionId + ':' + workout.currentExerciseId : null)
   const weights = workout ? flowWeights(state, history, definitions) : []
   const weight = weights.find(weight => weight.id === workout?.currentExerciseId)
   const nextSet = weight?.sets.find(set => !set.result)
@@ -374,7 +377,11 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         })}
         onWeight={() => setModal('weight')} onEdit={() => setEditing(true)} onMemo={value => controller.memo(id, value)}
         onList={() => setModal('list')} onEnd={requestEnd}
-        editTools={<><EquipmentEditor key={id} equipment={weight} manufacturers={manufacturers} onApply={value => act(w => model.changeEquipment(w, id, value))} />
+        editTools={<><EquipmentEditor key={id} equipment={weight} manufacturers={manufacturers} onApply={async value => {
+          const saved = await act(w => model.changeEquipment(w, id, value))
+          if (saved) feedback.show('이후 세트에 적용했습니다.')
+          return saved
+        }} />
           <Card><p className="muted small">변경은 이번 운동에만 적용됩니다. 완료 세트를 취소한 뒤 교체하거나 제외할 수 있습니다.</p>
             <Button onClick={() => setModal('add')}>+ 다음 종목 추가</Button><Button onClick={() => setModal('cardio')}>+ 유산소 추가</Button>
             <Button disabled={weight.sets.some(s => !!s.result)} onClick={() => setModal('replace')}>현재 종목 교체</Button>
@@ -392,6 +399,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   }
   return <>
     <WorkoutFrame hidden={!visible} routine={workout.initialPlan.routineName} deload={false} exerciseScroll={exerciseScroll}
+      feedback={<Toast toast={feedback.toast} onDismiss={feedback.dismiss} passThrough
+        bottomClearance="max(0px, calc(var(--workout-footer-height, 0px) - env(safe-area-inset-bottom)))" />}
       elapsed={Math.max(0, now - Date.parse(workout.startedAt))} position={warmup ? 0 : index + 1} count={items.length}
       flash={visual.top} dim={visual.dim && !editing && !blocked && !modal ? remaining : undefined}
       timerHeading={timerHeading} timerLabel={timerLabel} timer={timer} clockRef={clock}

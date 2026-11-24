@@ -382,7 +382,9 @@ test('routine deletion binds the selected version, refreshes the list and retain
 })
 test('routine deletion version conflict preserves selection without automatic rebase or replay',async()=>{
   let calls=0;const s=setup({deleteRoutine:async()=>{calls++;throw{code:'ROUTINE_VERSION_CONFLICT',status:409}}})
-  await settle();await s.controller.select(ROUTINE);await s.controller.deleteRoutine()
+  await settle();await s.controller.select(ROUTINE)
+  assert.equal(await s.controller.deleteRoutine('1'),false);assert.equal(calls,0,'a version changed after opening confirmation must be reviewed again')
+  await s.controller.deleteRoutine(routine.version)
   assert.equal(calls,1);assert.equal(s.controller.getSnapshot().selected.version,routine.version)
   assert.ok(s.controller.getSnapshot().issue.includes('다른 곳에서 루틴이 수정'));s.disconnect()
 })

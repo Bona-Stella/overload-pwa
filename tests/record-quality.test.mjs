@@ -16,7 +16,6 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
  const root=resolve('logs/record-quality');await mkdir(root,{recursive:true})
  const profile=await mkdtemp(resolve(root,'browser-'))
  const vite=await createReviewFixtureServer()
- let acceptDialogs=false,dialogCount=0
  let browser,socket,serial=0;const pending=new Map(),errors=[],api=[],report={navigation:[],interactions:[],screens:[]}
  const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++serial;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});assert.ok(!r.exceptionDetails,r.exceptionDetails?.exception?.description);return r.result.value}
@@ -70,7 +69,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   const port=await wait(async()=>{try{return Number((await readFile(resolve(profile,'DevToolsActivePort'),'utf8')).split('\n')[0])}catch{return false}},'Chrome')
   const pages=await(await fetch('http://127.0.0.1:'+port+'/json/list')).json();socket=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl)
   await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject})
-  socket.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}if(m.method==='Page.javascriptDialogOpening'){dialogCount++;void send('Page.handleJavaScriptDialog',{accept:acceptDialogs})}if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(m.method==='Network.requestWillBeSent'&&new URL(m.params.request.url).pathname.startsWith('/api/'))api.push(m.params.request.url)}
+  socket.onmessage=e=>{const m=JSON.parse(e.data),p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}if(m.method==='Page.javascriptDialogOpening'){errors.push(m.params.type);void send('Page.handleJavaScriptDialog',{accept:false})}if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(m.method==='Network.requestWillBeSent'&&new URL(m.params.request.url).pathname.startsWith('/api/'))api.push(m.params.request.url)}
   socket.onclose=()=>{for(const p of pending.values())p.reject(Error('Chrome closed'));pending.clear()}
   await send('Page.enable');await send('Page.addScriptToEvaluateOnNewDocument',{source:`{const BaseDate=Date,offset=Date.parse('2026-11-11T03:00:00Z')-BaseDate.now();window.Date=class extends BaseDate{constructor(...args){super(...(args.length?args:[BaseDate.now()+offset]))}static now(){return BaseDate.now()+offset}}}`});await send('Runtime.enable');await send('Network.enable')
   await go('/routine-preview?tab=home')
@@ -231,12 +230,14 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await evaluate('document.querySelector(".record-search input").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));document.querySelector(".search-disclosure").click()');assert.match(await evaluate('document.querySelector(".record-period-row b").textContent'),/2026\/10/);assert.ok(await evaluate('[...document.querySelectorAll(".session-record-card")].every(e=>e.querySelector("time").textContent.startsWith("10."))'));report.interactions.push('history routine/exercise all-past search; clear restores month; occupied week headers')
   await tab('홈');await reactCapture('home-week')
   await tab('루틴');await click('+ 새 루틴');await set('form[aria-label="루틴 생성"] input[placeholder="나의 루틴"]','초안 이탈 보호')
-  const promptsBefore=dialogCount
+  const editorIndex=await evaluate('history.state.overloadNavigation.index')
   await send('Runtime.evaluate',{expression:'history.back()'})
-  await wait(()=>dialogCount>promptsBefore,'draft exit prompt')
+  await wait(()=>evaluate('document.querySelector("dialog[open] h2")?.textContent === "루틴 변경을 버릴까요?"'),'draft exit prompt')
+  await click('취소','dialog[open] button')
+  await wait(()=>evaluate('history.state.overloadNavigation.index === '+editorIndex),'editor history restored after cancel')
   assert.equal(await evaluate('document.querySelector(\'form[aria-label="루틴 생성"] input[placeholder="나의 루틴"]\').value'),'초안 이탈 보호')
-  await delay(100);acceptDialogs=true
   await send('Runtime.evaluate',{expression:'history.back()'})
+  await click('변경 버리기','dialog[open] button')
   await wait(()=>evaluate('!document.querySelector(\'form[aria-label="루틴 생성"]\')'),'accepted back to routine root')
   await send('Runtime.evaluate',{expression:'history.forward()'})
   await wait(()=>evaluate('!!document.querySelector(\'form[aria-label="루틴 생성"]\')'),'forward restores editor')

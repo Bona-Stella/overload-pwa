@@ -8,9 +8,10 @@ function isBackdrop(dialog: HTMLDialogElement, event: Pick<MouseEvent, 'target' 
   return event.target === dialog && (event.clientX < left || event.clientX >= right || event.clientY < top || event.clientY >= bottom)
 }
 
-export function Dialog({ title, onClose, children, initialFocus, className, descriptionId, closePointerGuard, dismissBlocked = false, dismissOnBackdrop = false }: {
+export function Dialog({ title, onClose, children, initialFocus, className, descriptionId, closePointerGuard, dismissBlocked = false, dismissOnBackdrop = false, duringTraversal, onDismissed }: {
   title: string; onClose: () => void; children: ReactNode; initialFocus?: RefObject<HTMLElement | null>
   className?: string; descriptionId?: string; closePointerGuard?: RepeatPointerGuard; dismissBlocked?: boolean; dismissOnBackdrop?: boolean
+  duringTraversal?: boolean; onDismissed?: () => void
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const backdropPressed = useRef(false)
@@ -19,7 +20,7 @@ export function Dialog({ title, onClose, children, initialFocus, className, desc
   useLayoutEffect(() => { dismissal.current = { onClose, dismissBlocked } }, [onClose, dismissBlocked])
   const canClose = useCallback(() => !dismissal.current.dismissBlocked, [])
   const requestClose = useCallback(() => { if (canClose()) dismissal.current.onClose() }, [canClose])
-  useDialogHistory(titleId, requestClose, canClose)
+  useDialogHistory(titleId, requestClose, canClose, duringTraversal, onDismissed)
   useEffect(() => {
     const dialog = ref.current
     const previous = document.activeElement

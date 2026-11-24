@@ -27,10 +27,11 @@ function measureWorkoutFrame(frame: HTMLElement, clock: HTMLElement | null, foot
   }
 }
 
-export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, footerGuard, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, hidden, cardioFocus, exerciseScroll }: {
+export function WorkoutFrame({ routine, deload, elapsed, position, count, timerHeading = '휴식 시간', timerLabel, timer, flash, dim, children, actions, actionsBlocked, footerGuard, onHome, backLabel = '홈', onEnd, onRestInteraction, clockRef, navigation, swipe, reviewNote, hidden, cardioFocus, exerciseScroll, feedback }: {
   routine: string; deload: boolean; elapsed: number; position: number; count: number
   timerHeading?: string; timerLabel: string; timer?: number; flash?: boolean; dim?: number; children: ReactNode; actions?: ReactNode; actionsBlocked?: boolean
   footerGuard?: RepeatPointerGuard
+  feedback?: ReactNode
   onHome: () => void; backLabel?: string; onEnd: () => void; onRestInteraction?: () => void
   clockRef?: RefObject<HTMLDivElement | null>
   navigation?: Navigation; swipe?: ExerciseSwipeOptions; reviewNote?: ReactNode; hidden?: boolean; cardioFocus?: boolean
@@ -94,6 +95,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     {hasActions && <footer className={styles.footer} ref={footer} inert={actionsBlocked}
       onPointerDownCapture={footerGuard?.pointerDown} onPointerCancelCapture={footerGuard?.pointerCancel}
       onClickCapture={footerGuard?.blocksClick}>{actions}</footer>}
+    {feedback}
   </div>
 }
 

@@ -44,12 +44,12 @@ const writes=f=>f.trace.filter(x=>x.method==='POST')
 
 test('A: 201 plus authoritative read shows completion and exactly one write',async()=>{
   const f=fixture();await open(f);await f.controller.linkEmail()
-  const s=f.controller.getSnapshot();assert.equal(s.issue,null);assert.match(s.notice,/연결했습니다/);assert.equal(s.userId,USER);assert.equal(writes(f).length,1)
+  const s=f.controller.getSnapshot();assert.equal(s.issue,null);assert.equal(s.notice,'');assert.match(s.accountSuccess?.message,/연결했습니다/);assert.equal(s.userId,USER);assert.equal(writes(f).length,1)
   assert.deepEqual(s.account.identities,[GOOGLE,EMAIL])
 })
 for(const read of ['503','network','403'])test(`B/C/E: acknowledged 201 then transient ${read} is reconciled by read only`,async()=>{
   const f=fixture({read,failures:1});await open(f);await f.controller.linkEmail()
-  const s=f.controller.getSnapshot();assert.equal(s.issue,null);assert.match(s.notice,/연결했습니다/);assert.equal(writes(f).length,1);assert.equal(s.userId,USER)
+  const s=f.controller.getSnapshot();assert.equal(s.issue,null);assert.equal(s.notice,'');assert.match(s.accountSuccess?.message,/연결했습니다/);assert.equal(writes(f).length,1);assert.equal(s.userId,USER)
   assert.equal(f.trace.filter(x=>x.path.endsWith('/identities')&&x.method==='GET').length,4)
 })
 for(const read of ['503','network','403'])test(`B/C/E: acknowledged 201 then persistent ${read} does not claim LINK failed`,async()=>{
@@ -60,7 +60,7 @@ for(const read of ['503','network','403'])test(`B/C/E: acknowledged 201 then per
 })
 test('D: POST response lost after commit confirms current EMAIL state without claiming a new LINK receipt',async()=>{
   const f=fixture({post:'lost'});await open(f);await f.controller.linkEmail()
-  const s=f.controller.getSnapshot();assert.equal(s.issue,null);assert.match(s.notice,/현재 이메일 로그인.*확인/);assert.doesNotMatch(s.notice,/연결했습니다/);assert.equal(writes(f).length,1);assert.equal(s.userId,USER)
+  const s=f.controller.getSnapshot();assert.equal(s.issue,null);assert.match(s.notice,/현재 이메일 로그인.*확인/);assert.equal(s.accountSuccess,undefined);assert.equal(writes(f).length,1);assert.equal(s.userId,USER)
 })
 test('D: lost POST and failed GET remain unconfirmed, recover with GET only',async()=>{
   const f=fixture({post:'lost',read:'network'});await open(f);await f.controller.linkEmail()
@@ -89,7 +89,7 @@ test('explicit proof rejection remains rejection and cannot become inferred succ
 })
 for(const readPath of ['contact','session'])test(`201 followed by transient ${readPath} GET failure recovers without replay`,async()=>{
   const f=fixture({readPath,read:'503',failures:1});await open(f);await f.controller.linkEmail()
-  assert.equal(f.controller.getSnapshot().issue,null);assert.match(f.controller.getSnapshot().notice,/연결했습니다/);assert.equal(writes(f).length,1)
+  assert.equal(f.controller.getSnapshot().issue,null);assert.match(f.controller.getSnapshot().accountSuccess?.message,/연결했습니다/);assert.equal(writes(f).length,1)
 })
 test('a transient 401 owner failure cannot be replaced by success on a later GET',async()=>{
   const f=fixture({readPath:'session',read:'401',failures:1});await open(f);await f.controller.linkEmail()
@@ -106,5 +106,5 @@ for(const post of ['ghost','mismatch'])test(`201 with ${post} readback cannot be
 })
 test('200 ALREADY_LINKED recovers from a failed follow-up without a second POST',async()=>{
   const f=fixture({post:'already',read:'503',failures:1});await open(f);await f.controller.linkEmail()
-  assert.equal(f.controller.getSnapshot().issue,null);assert.match(f.controller.getSnapshot().notice,/이미 같은 계정/);assert.equal(writes(f).length,1)
+  assert.equal(f.controller.getSnapshot().issue,null);assert.match(f.controller.getSnapshot().accountSuccess?.message,/이미 같은 계정/);assert.equal(writes(f).length,1)
 })

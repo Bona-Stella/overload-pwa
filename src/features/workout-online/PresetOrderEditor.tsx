@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 import { useDragOrder } from '../../components/useDragOrder.ts'
+import { useConfirmation } from '../../components/useConfirmation.tsx'
 import { dayNames } from './routine-schedule.ts'
 import { presetLimit, presetNumber } from './preset-schedule.ts'
 import type { PresetSchedule, SchedulePreset } from './preset-schedule.ts'
@@ -20,9 +21,13 @@ export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName
   const changed = draft.some((p, index) => p.id !== schedule.presets[index].id || p.included !== schedule.presets[index].included)
   const tooFew = schedule.autoEnabled && draft.filter(p => p.included).length < 2
   const saved = useRef(false)
-  const canLeave = () => saved.current || !changed || window.confirm('저장하지 않은 순환 설정을 버릴까요?')
-  useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(), navigationKey)
-  const leave = (action: () => void) => { if (canLeave()) action() }
+  const [confirm, confirmation] = useConfirmation()
+  const canLeave = (duringTraversal = false) => saved.current || !changed || confirm({ title: '순환 설정 변경을 버릴까요?',
+    description: <p>이 화면에서 바꾼 일정 순서와 순환 포함 여부가 사라집니다. 저장된 설정은 유지됩니다.</p>,
+    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+  })
+  useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(true), navigationKey)
+  const leave = async (action: () => void) => { if (await canLeave()) action() }
   const close = () => {
     if (navigationKey) navigateBack(() => leave(onClose))
     else leave(onClose)
@@ -75,5 +80,6 @@ export function PresetOrderEditor({ schedule, busy, readOnly, stale, routineName
       {!readOnly && <button type="button" className="primary" disabled={busy || !!drag || stale || tooFew || !changed} onClick={async () => {
         if (await onSave(ordered) && navigationKey) { saved.current = true; navigateBack(onClose) }
       }}>변경사항 저장</button>}</div>
+    {confirmation}
   </section>
 }

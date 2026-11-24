@@ -50,7 +50,7 @@ test('Google LINK form preparation only fetches fresh CSRF, never fetches OAuth 
 for(const providers of [[EMAIL],[GOOGLE],[EMAIL,GOOGLE]])test(`EMAIL link readback preserves UUID/contact for ${providers.map(x=>x.provider).join('+')}`,async()=>{
   const f=fake(providers);await open(f);await f.controller.linkEmail();const s=f.controller.getSnapshot()
   assert.equal(s.userId,USER);assert.equal(s.account.contact.maskedEmail,'a***@***');assert.equal(s.account.identities.filter(x=>x.provider==='email').length,1)
-  assert.match(s.notice,providers.includes(EMAIL)?/이미 같은 계정/:/연결했습니다/);assert.ok(!f.calls.includes('mail'))
+  assert.match(s.accountSuccess?.message,providers.includes(EMAIL)?/이미 같은 계정/:/연결했습니다/);assert.ok(!f.calls.includes('mail'))
 })
 test('VERIFIED alone never creates EMAIL identity and REQUIRED blocks mutation without sending mail',async()=>{
   const f=fake();await open(f);assert.deepEqual(f.controller.getSnapshot().account.identities,[GOOGLE]);assert.equal(f.controller.getSnapshot().account.confirmedAt,null)
@@ -62,7 +62,7 @@ test('server proof refusal uses existing REAUTH; completing OTP never automatica
   f.api.linkEmail=async()=>{attempts++;throw new AuthError('EMAIL_OWNERSHIP_PROOF_REQUIRED',403)}
   await f.controller.linkEmail();assert.equal(f.controller.getSnapshot().issue.code,'EMAIL_OWNERSHIP_PROOF_REQUIRED');assert.ok(!f.calls.includes('mail'))
   await f.controller.requestEmailProof();await f.controller.verifyEmailProof('012345');assert.equal(attempts,1)
-  f.api.linkEmail=success;await f.controller.linkEmail();assert.match(f.controller.getSnapshot().notice,/연결했습니다/)
+  f.api.linkEmail=success;await f.controller.linkEmail();assert.match(f.controller.getSnapshot().accountSuccess?.message,/연결했습니다/)
 })
 test('EMAIL ownership conflict explains separate accounts and never merges',async()=>{
   const f=fake();await open(f);f.api.linkEmail=async()=>{throw new AuthError('IDENTITY_ALREADY_OWNED',409)}
@@ -72,7 +72,7 @@ for(const target of [EMAIL,GOOGLE])test(`${target.provider} UNLINK requires expl
   const f=fake([EMAIL,GOOGLE]);await open(f);f.controller.selectUnlink(target);assert.ok(f.controller.getSnapshot().account.unlink);assert.equal(f.calls.filter(Array.isArray).length,0)
   f.controller.cancelIdentityChange();await f.controller.confirmUnlink();assert.equal(f.calls.filter(Array.isArray).length,0)
   f.controller.selectUnlink(target);await f.controller.confirmUnlink();assert.equal(f.calls.filter(Array.isArray).length,1)
-  const s=f.controller.getSnapshot();assert.equal(s.userId,USER);assert.equal(s.account.contact.status,'VERIFIED');assert.ok(!s.account.identities.some(x=>x.id===target.id));assert.match(s.notice,/대표 재인증 이메일은 유지/)
+  const s=f.controller.getSnapshot();assert.equal(s.userId,USER);assert.equal(s.account.contact.status,'VERIFIED');assert.ok(!s.account.identities.some(x=>x.id===target.id));assert.match(s.accountSuccess?.message,/대표 재인증 이메일은 유지/)
 })
 test('last usable identity is judged by server, not client count or guessed provider readiness',async()=>{
   const f=fake([EMAIL]);await open(f);f.api.unlinkIdentity=async()=>{throw new AuthError('LAST_LOGIN_IDENTITY',409)}
@@ -120,7 +120,7 @@ test('Google complete path rereads session/identities and does not infer a new l
   for(const identities of [[EMAIL],[EMAIL,GOOGLE]]) {
     const f=fake(identities);await f.controller.start('link-complete');assert.equal(f.controller.getSnapshot().accountOpen,true);assert.ok(f.calls.includes('identities'))
     if(identities.length===1)assert.equal(f.controller.getSnapshot().issue.code,'GOOGLE_LINK_NOT_CONFIRMED')
-    else assert.match(f.controller.getSnapshot().notice,/현재 Google.*다시 확인/)
+    else assert.match(f.controller.getSnapshot().accountSuccess?.message,/Google 로그인 수단 연결을 확인/)
     assert.ok(!f.calls.includes('link-form'));assert.ok(!f.calls.includes('mail'))
   }
 })

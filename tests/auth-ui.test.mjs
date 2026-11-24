@@ -69,6 +69,15 @@ test('authenticated UI is separated from demo data and identity-management previ
   assert.match(html, /data-loading-skeleton="home-recent"/)
   assert.doesNotMatch(html, /a-private-user|Google 연결|이메일 인증코드 해제|나의 루틴|>최근 운동<|운동 시작 ↗/)
 })
+test('verified account success renders one common toast outside the persistent auth feedback', () => {
+  const state = { ...initial, status: 'authenticated', userId: ID, updatedAt: NOW, accountOpen: true,
+    account: emptyAccount(), accountSuccess: { id: 1, message: '이메일 재인증을 완료했습니다.' } }
+  const html = render(state)
+  assert.match(html, /id="auth-feedback" aria-live="polite"><\/div>/)
+  assert.equal([...html.matchAll(/data-tone="success"/g)].length, 1)
+  assert.match(html, /aria-hidden="true">이메일 재인증을 완료했습니다/)
+  assert.doesNotMatch(render({ ...state, accountOpen: false }), /data-tone="success"/)
+})
 test('initial checking, connection failure, processing and logged-out states stay distinct', () => {
   const startup = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
   assert.match(startup, /<html[^>]*style="background-color: #111216; color-scheme: dark"/)

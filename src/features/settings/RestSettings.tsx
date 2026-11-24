@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from
 import type { FormEvent } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
+import { useConfirmation } from '../../components/useConfirmation.tsx'
 import type { RestPolicy } from '../workout-local/types.ts'
 import { countDraft } from '../workout-online/validation.ts'
 import styles from './RestSettings.module.css'
@@ -9,7 +10,7 @@ import styles from './RestSettings.module.css'
 type Band = keyof RestPolicy
 type Draft = Record<Band, string>
 type SaveIssue = { message: string; conflict?: boolean }
-type ExitGuard = (guard: (() => boolean) | null) => void
+export type RestExitGuard = (duringTraversal?: boolean) => boolean | Promise<boolean>
 
 const bands = [
   { field: 'restLowSeconds', start: 1, end: 10, label: '1~10회' },
@@ -24,9 +25,9 @@ function minutes(seconds: number) {
 
 export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = false, hidden = false, review = false, loadIssue }: {
   settings?: RestPolicy
-  onBack: (canLeave?: () => boolean) => void
+  onBack: (canLeave?: RestExitGuard) => void
   onRequest: (values: RestPolicy | null) => Promise<SaveIssue | null>
-  onExitGuard?: ExitGuard
+  onExitGuard?: (guard: RestExitGuard | null) => void
   busy?: boolean
   hidden?: boolean
   review?: boolean
@@ -42,7 +43,11 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
   const [refreshed, setRefreshed] = useState(false)
   const [saving, setSaving] = useState(false)
   const dirty = !!draft && !!settings && bands.some(({ field }) => draft[field] !== String(settings[field]))
-  const canLeave = useCallback(() => !pending.current && (!dirty || window.confirm('수정한 휴식 시간을 버릴까요?')), [dirty])
+  const [confirm, confirmation] = useConfirmation()
+  const canLeave = useCallback<RestExitGuard>((duringTraversal = false) => !pending.current && (!dirty || confirm({
+    title: '휴식 시간 변경을 버릴까요?', description: <p>이 화면에서 수정한 시간이 사라집니다. 저장된 휴식 시간은 유지됩니다.</p>,
+    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+  })), [confirm, dirty])
 
   useLayoutEffect(() => {
     if (!hidden) { heading.current?.focus({ preventScroll: true }); window.scrollTo(0, 0) }
@@ -53,8 +58,8 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
     return () => onExitGuard(null)
   }, [hidden, draft, canLeave, onExitGuard])
 
-  const toggleEdit = () => {
-    if (draft && !canLeave()) return
+  const toggleEdit = async () => {
+    if (draft && !await canLeave()) return
     setDraft(!draft && settings ? {
       restLowSeconds: String(settings.restLowSeconds),
       restMediumSeconds: String(settings.restMediumSeconds),
@@ -103,7 +108,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
 
   return <section className={styles.page} hidden={hidden} aria-label="세트 사이 휴식">
     <RecordSubpageHeader title="세트 사이 휴식" backLabel="설정으로" headingRef={heading} backDisabled={saving}
-      onBack={() => { if (onExitGuard) onBack(canLeave); else if (canLeave()) onBack() }} />
+      onBack={async () => { if (onExitGuard) onBack(canLeave); else if (await canLeave()) onBack() }} />
     {settings ? <form className={styles.form} onSubmit={event => void submit(event)} aria-busy={saving}>
       <Card className={styles.card}>
         <div className={styles.cardHeading}>
@@ -153,5 +158,6 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
       </>}
     </form> : loadIssue ? <StatusNotice error>{loadIssue}</StatusNotice> : <div aria-busy="true" />}
     {review && <p className="muted small">검토용 예시 휴식 시간입니다.</p>}
+    {confirmation}
   </section>
 }

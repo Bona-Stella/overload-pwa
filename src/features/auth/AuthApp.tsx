@@ -11,6 +11,7 @@ import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import { OfflineResume } from '../workout-local/OfflineResume.tsx'
 import { SettingsMain } from '../settings/SettingsMain.tsx'
 import { RestAlertSettings } from '../settings/RestAlertSettings.tsx'
+import type { RestExitGuard } from '../settings/RestSettings.tsx'
 import { useRestAlertPreferences } from '../workout-flow/useRestAlertPreferences.ts'
 import { AppShell } from '../../app/AppShell.tsx'
 import { useStartupReveal } from '../../app/useStartupReveal.ts'
@@ -33,11 +34,11 @@ export function AuthApp() {
   const [settingsAccountRetry, setSettingsAccountRetry] = useState(0)
   const navigationPending = useRef(false)
   const localExitGuard = useRef<(() => Promise<boolean>) | null>(null)
-  const restExitGuard = useRef<(() => boolean) | null>(null)
+  const restExitGuard = useRef<RestExitGuard | null>(null)
   const settingsTrigger = useRef<HTMLButtonElement | null>(null)
   const settingsScroll = useRef(0)
   const registerExitGuard = useCallback<ExitGuardRegistration>(guard => { localExitGuard.current = guard }, [])
-  const registerRestExit = useCallback((guard: (() => boolean) | null) => { restExitGuard.current = guard }, [])
+  const registerRestExit = useCallback((guard: RestExitGuard | null) => { restExitGuard.current = guard }, [])
   const tab = state.accountOpen ? 'settings' : selection?.userId === state.userId ? selection!.tab : 'home'
   const checkingHome = state.status === 'checking' && tab === 'home' && typeof window !== 'undefined' && window.location.pathname === '/' &&
     !Object.entries(window.history.state?.overloadNavigation?.values ?? {}).some(([key, value]) =>
@@ -51,14 +52,18 @@ export function AuthApp() {
   const navigate = useCallback(async (next: AppTab, replace = false, children: Record<string, unknown> = {}, resetScroll = true) => {
     if (next === tab && !replace) return false
     const before = controller.getSnapshot(), guard = localExitGuard.current, origin = window.history.state?.overloadNavigation
-    if (navigationPending.current || before.status !== 'authenticated' || before.pending !== null || !before.userId || restExitGuard.current?.() === false) return false
+    const restGuard = restExitGuard.current
+    if (navigationPending.current || before.status !== 'authenticated' || before.pending !== null || !before.userId) return false
     navigationPending.current = true
     if (guard) setNavigating(true)
     try {
+      if (restGuard && !await restGuard()) return false
       const saved = guard ? await guard() : true
       setLocalExitIssue(!saved)
       const latest = controller.getSnapshot()
-      if (!saved || latest.status !== 'authenticated' || latest.pending !== null || latest.userId !== before.userId || localExitGuard.current !== guard || window.history.state?.overloadNavigation !== origin) return false
+      const entry = window.history.state?.overloadNavigation
+      const sameEntry = restGuard ? JSON.stringify(entry) === JSON.stringify(origin) : entry === origin
+      if (!saved || latest.status !== 'authenticated' || latest.pending !== null || latest.userId !== before.userId || localExitGuard.current !== guard || !sameEntry) return false
       if (latest.accountOpen) controller.closeAccount(false)
       navigateTabRoot('app:' + before.userId, { userId: before.userId, tab: next }, children, latest.accountOpen ? '/' : undefined, replace)
       if (resetScroll) window.scrollTo(0, 0)
@@ -67,7 +72,7 @@ export function AuthApp() {
   }, [controller, tab])
   useNavigationGuard(useCallback(async () => {
     const before = controller.getSnapshot(), guard = localExitGuard.current
-    if (before.pending !== null || navigationPending.current || restExitGuard.current?.() === false) return false
+    if (before.pending !== null || navigationPending.current || (await restExitGuard.current?.(true)) === false) return false
     const saved = await (guard?.() ?? Promise.resolve(true))
     setLocalExitIssue(!saved)
     return saved && controller.getSnapshot().userId === before.userId && localExitGuard.current === guard
@@ -121,8 +126,8 @@ export function AuthApp() {
     }
   }, [settingsMain])
   const rememberSettings = (button: HTMLButtonElement) => { settingsTrigger.current = button; settingsScroll.current = window.scrollY }
-  const settingsBack = (canLeave?: () => boolean) => navigateBack(() => {
-    if (!canLeave || canLeave()) setSelection(current => current && { ...current, settingsView: 'main' }, true)
+  const settingsBack = (canLeave?: RestExitGuard) => navigateBack(async () => {
+    if (!canLeave || await canLeave()) setSelection(current => current && { ...current, settingsView: 'main' }, true)
   })
   const accountBack = () => navigateBack(() => {
     controller.closeAccount(false)

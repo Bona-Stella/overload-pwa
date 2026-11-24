@@ -370,16 +370,23 @@ export class WorkoutOnlineController {
     } catch (error) { if (context.current()) this.failure(error); return null }
     finally { if (context.current()) this.set({ busy: false }) }
   }
-  deleteRoutine = async () => {
-    const scope = this.state.scope, selected = this.state.selected, context = this.context()
-    if (!scope || !selected || !context) return
+  deleteRoutine = async (confirmedVersion?: string) => {
+    const scope = this.state.scope, selected = this.state.selected
+    if (selected && confirmedVersion !== undefined && confirmedVersion !== selected.version) {
+      this.failure(new WorkoutApiError('ROUTINE_VERSION_CONFLICT', 409))
+      return false
+    }
+    const context = this.context()
+    if (!scope || !selected || !context) return false
     this.cancelRoutineRead()
     this.set({ busy: true, issue: null })
     try {
       await this.api.deleteRoutine(scope, selected.id, selected.version, context.signal)
       const list = await this.api.routines(scope, context.signal)
-      if (context.current()) this.set({ ...this.routineListPatch(list.routines), selected: null, notice: '루틴을 삭제했습니다. 기존 운동 기록은 보존합니다.' })
-    } catch (error) { if (context.current()) this.failure(error) }
+      if (!context.current()) return false
+      this.set({ ...this.routineListPatch(list.routines), selected: null })
+      return true
+    } catch (error) { if (context.current()) this.failure(error); return false }
     finally { if (context.current()) this.set({ busy: false }) }
   }
   saveRoutine = async (body: CreateRoutine | UpdateRoutine, id?: string) => {
@@ -402,7 +409,6 @@ export class WorkoutOnlineController {
         try {
           value = await this.api.routine(scope, creation.id, context.signal)
           if(!routineMatches(value,body))throw new WorkoutApiError('ROUTINE_ID_CONFLICT',409)
-          if (context.current()) this.set({ notice: '같은 요청의 기존 루틴을 조회했습니다. 현재 서버 내용을 확인해 주세요.' })
         } catch (error) {
           if ((error as { status?: number }).status !== 404) throw error
           value = await this.api.createRoutine(scope, creation, context.signal)
@@ -410,7 +416,7 @@ export class WorkoutOnlineController {
       }
       const list: RoutineList = await this.api.routines(scope, context.signal)
       if (!context.current()) return false
-      this.set({ ...this.routineListPatch(list.routines), selected: value, notice: this.state.notice || '루틴을 서버에 저장했습니다.' })
+      this.set({ ...this.routineListPatch(list.routines), selected: value })
       return true
     } catch (error) { if (context.current()) this.failure(error); return false }
     finally { if (context.current()) this.set({ busy: false }) }

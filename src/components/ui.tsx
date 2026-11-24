@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode } from 'react'
+import type { ComponentPropsWithRef, ReactNode } from 'react'
 import { useDelayedPending } from './useDelayedPending.ts'
 import styles from './ui.module.css'
 
-export function Button({ variant = 'secondary', className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithoutRef<'button'> & {
+export function Button({ variant = 'secondary', className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithRef<'button'> & {
   variant?: 'primary' | 'secondary' | 'quiet' | 'danger'
   /** This button initiated a task and may show delayed progress. */
   loading?: boolean

@@ -33,7 +33,9 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
   const root = useRef<HTMLDivElement>(null)
   const closeMenus = () => root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { menu.open = false })
   function deleteFromMenu(event: MouseEvent<HTMLButtonElement>, id: string) {
-    event.currentTarget.closest('details')!.open = false
+    const menu = event.currentTarget.closest('details')!
+    menu.open = false
+    menu.querySelector('summary')?.focus({ preventScroll: true })
     const revealed = event.detail > 0
       ? document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLButtonElement>('button[data-routine-detail]')
       : null

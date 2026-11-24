@@ -18,6 +18,7 @@ export type AuthState = {
   verifyAt: number
   issue: AuthIssue | null
   notice: string
+  accountSuccess?: { id: number; message: string }
   updatedAt: number
   accountOpen: boolean
   account: AccountState
@@ -76,10 +77,19 @@ export class AuthController {
   constructor(api = new AuthApi(), now = () => Date.now(), navigate = (path: string) => window.location.assign(path), route: (path: string) => void = () => {}, boundary?: AuthBoundary) { this.api = api; this.now = now; this.navigate = navigate; this.route = route; this.boundary = boundary }
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
+  private successSequence = 0
+  private accountSucceeded(message: string) {
+    this.set({ notice: '', accountSuccess: { id: ++this.successSequence, message } })
+  }
+  dismissAccountSuccess = (id: string | number) => {
+    if (this.state.accountSuccess?.id === id) this.set({ accountSuccess: undefined })
+  }
   private set(patch: Partial<AuthState>) {
     const previous = this.state
     this.state = { ...previous, ...patch, updatedAt: this.now() }
     const { status, userId, pending, account } = this.state
+    if (this.state.accountSuccess && (status !== 'authenticated' || !this.state.accountOpen || userId !== previous.userId ||
+      patch.pending && patch.pending !== previous.pending)) this.state = { ...this.state, accountSuccess: undefined }
     if (status !== 'authenticated' || pending === 'logout' || previous.userId !== userId) this.accountDetailsCache = null
     else if (account.loaded && account.contact) this.accountDetailsCache = { identities: account.identities, contact: account.contact }
     this.listeners.forEach(listener => listener())
@@ -135,7 +145,7 @@ export class AuthController {
         if (flow === 'link-failed') this.set({ issue: authIssue(new AuthError('GOOGLE_LINK_FAILED')) })
         if (flow === 'link-complete') {
           if (!this.state.account.identities.some(identity => identity.provider === 'google')) this.set({ issue: authIssue(new AuthError('GOOGLE_LINK_NOT_CONFIRMED')) })
-          else this.set({ notice: '서버에서 현재 Google 로그인 수단 연결 상태를 다시 확인했습니다.' })
+          else this.accountSucceeded('Google 로그인 수단 연결을 확인했습니다.')
         }
       }
     }
@@ -405,7 +415,7 @@ export class AuthController {
       await this.readAccount(expected, generation)
       if (this.state.account.contact?.status !== 'VERIFIED') throw new AuthError('RESPONSE_INVALID')
       this.accountPatch({ confirmedAt: this.now() })
-      this.set({ notice: challenge.candidateId ? '대표 이메일을 등록하고 이메일 재인증을 완료했습니다.' : '이메일 재인증을 완료했습니다.' })
+      this.accountSucceeded(challenge.candidateId ? '대표 이메일을 등록하고 이메일 재인증을 완료했습니다.' : '이메일 재인증을 완료했습니다.')
     } catch (error) {
       const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
       if (e.status === 429) this.accountPatch({ verifyAt: this.now() + Math.max(60, e.retryAfter) * 1000, resendAt: Math.max(this.state.account.resendAt, this.now() + Math.max(60, e.retryAfter) * 1000) })
@@ -421,7 +431,7 @@ export class AuthController {
     if (this.running || this.state.status !== 'authenticated' || !this.state.userId || this.state.account.contact?.status !== 'REQUIRED') return
     const expected = this.state.userId, generation = this.generation
     this.running = true; this.set({ pending: 'cancel-registration', issue: null, notice: '' }); this.accountPatch({ challenge: null, form: null })
-    try { await this.prepareWrite(expected, generation); await this.api.cancelRegistration(); await this.readAccount(expected, generation); this.set({ notice: '대표 이메일 등록을 취소했습니다.' }) }
+    try { await this.prepareWrite(expected, generation); await this.api.cancelRegistration(); await this.readAccount(expected, generation); this.accountSucceeded('대표 이메일 등록을 취소했습니다.') }
     catch (error) { this.accountFailure(error) }
     finally { await this.finish() }
   }
@@ -469,7 +479,7 @@ export class AuthController {
       await this.readAccount(expected, generation)
       if (target ? this.state.account.identities.some(value => value.id === target.id)
         : !result || !this.state.account.identities.some(value => value.id === result.identity.id && value.provider === 'email')) throw new AuthError('RESPONSE_INVALID')
-      this.set({ notice: target ? '로그인 수단을 해제했습니다. 대표 재인증 이메일은 유지됩니다.' : linkNotice() })
+      this.accountSucceeded(target ? '로그인 수단을 해제했습니다. 대표 재인증 이메일은 유지됩니다.' : linkNotice())
     } catch (error) {
       const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
       const uncertain = sent && (['NETWORK', 'TIMEOUT', 'RESPONSE_INVALID'].includes(e.code) || e.status >= 500)
@@ -488,7 +498,8 @@ export class AuthController {
       }
       if (!target && (linked || uncertain)) {
         const confirmed = this.state.account.identities.some(value => value.provider === 'email' && (!linked || value.id === linked.identity.id))
-        if (confirmed) this.set({ issue: null, notice: linked ? linkNotice() : '현재 이메일 로그인 연결 상태를 서버에서 확인했습니다. 앞선 요청의 응답은 확인하지 못했으며 자동 재실행하지 않습니다.' })
+        if (confirmed && linked) { this.set({ issue: null }); this.accountSucceeded(linkNotice()) }
+        else if (confirmed) this.set({ issue: null, notice: '현재 이메일 로그인 연결 상태를 서버에서 확인했습니다. 앞선 요청의 응답은 확인하지 못했으며 자동 재실행하지 않습니다.' })
         else unconfirmedLink()
         return
       }

@@ -38,6 +38,9 @@ import { StatisticsApi } from '../statistics/api.ts'
 import { StatisticsPanel } from '../statistics/StatisticsPanel.tsx'
 import type { AppTab } from '../../app/types.ts'
 import { Metadata, StatusNotice } from '../../components/ui.tsx'
+import { useConfirmation } from '../../components/useConfirmation.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { boundaryError, readAccessDenied } from '../home/load.ts'
 import { Button } from '../../components/ui.tsx'
@@ -45,17 +48,22 @@ import { HomePanel, HomeStartup } from '../home/HomePanel.tsx'
 import { useStartupReveal } from '../../app/useStartupReveal.ts'
 import { activeWorkoutProgress } from '../home/active-workout.ts'
 import { RestSettings } from '../settings/RestSettings.tsx'
+import type { RestExitGuard } from '../settings/RestSettings.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { useRoutineEditorRoutes } from './useRoutineEditorRoutes.ts'
 
-export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => void }) {
+export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeover, manufacturers = [] }: { manufacturers?: Manufacturer[]; session: Session; deviceId: string | null; saved: boolean; busy: boolean; onRefresh: () => void; onTakeover?: () => Promise<void> }) {
+  const [confirm, confirmation] = useConfirmation()
   const otherEditor = session.editorDeviceId !== deviceId
   const label = session.status === 'ACTIVE' ? '진행 중' : session.status === 'FINISHED' ? '명시 종료' : '서버 자동 종료'
   return <section className="card stack" aria-labelledby="online-session-title"><div className="section-heading"><h2 id="online-session-title">{session.initialPlan.routineName}</h2><span className="online-session-badge">{label}</span></div>
     <p>{session.workoutDate} · <time dateTime={session.startedAt}>{session.startedAt}</time></p>
     {session.status === 'ACTIVE' && <p className="notice">{otherEditor ? '다른 기기에서 편집 중입니다. 이 화면은 읽기 전용입니다.' : '이 기기의 운동입니다. 아래에서 기록하고 서버 저장 상태를 확인할 수 있습니다.'}</p>}
-    {session.status === 'ACTIVE' && otherEditor && onTakeover && <button className="outline full" disabled={busy || !deviceId || !saved} onClick={() => { if (window.confirm('서버에 저장된 기록으로 이 기기에서 편집할까요? 다른 기기의 미전송 기록은 자동으로 합치지 않습니다.')) onTakeover() }}>이 기기로 편집 가져오기</button>}
+    {session.status === 'ACTIVE' && otherEditor && onTakeover && <button className="outline full" disabled={busy || !deviceId || !saved} onClick={() => void confirm({
+      title: '이 기기에서 편집할까요?', description: <p>서버에 저장된 기록으로 편집을 시작합니다. 다른 기기의 미전송 기록은 자동으로 합치지 않습니다.</p>,
+      confirmLabel: '편집 가져오기', onConfirm: onTakeover,
+    })}>이 기기로 편집 가져오기</button>}
     {session.status === 'AUTO_CLOSED' && <p className="notice">서버가 마지막 저장 상태로 자동 종료했습니다. 사용자 종료 시각이나 최초 명시 종료 평가를 생성하지 않습니다.</p>}
     {session.deletedAt && <p className="notice">삭제된 운동입니다. 기록을 자동 복원하지 않습니다.</p>}
     <p className="muted small" role="status">{saved ? '서버에서 확인한 세션 사본을 이 기기에 저장했습니다.' : '서버 세션의 로컬 보존을 확인하지 못했습니다. 수행 입력을 시작할 수 없습니다.'}</p>
@@ -67,6 +75,7 @@ export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeo
       {session.snapshot.state.performedSets.map(s => <p key={s.id}>{s.ordinal}세트 · {s.weightKg} kg × {s.reps}회 · <Metadata>{equipmentLabel(s, manufacturers)}</Metadata></p>)}</div></details>
     {session.snapshot.approvalResults.some(r => r.status === 'PENDING') && <p className="notice">승인 확인 필요 · 수행 기록의 저장과 중량 승인 적용은 별개입니다.</p>}
     <button type="button" className="outline full" disabled={busy} onClick={onRefresh}>세션 상세 다시 확인</button>
+    {confirmation}
   </section>
 }
 type RoutineEditorState = { routine: Routine | null; readOnly: boolean }
@@ -74,9 +83,9 @@ type ScheduleEditorState = { type: 'assign'; id: string; base: LiveSchedule; pri
 type RenameDraft = { id: string; version: string; base: LiveSchedule; value: string; issue?: string }
 const editorIdentity = (session: Session) => [session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')
 
-export function WorkspaceView({ state, controller, api, training, enabled, activities = [], routes, onStart, openingWorkout = false }: {
+export function WorkspaceView({ state, controller, api, training, enabled, activities = [], routes, onStart, openingWorkout = false, visible = true }: {
   state: OnlineState; controller: WorkoutOnlineController; api: WorkoutApi; training: TrainingSchedule
-  enabled: boolean; activities?: CardioActivity[]; routes: ReturnType<typeof useRoutineEditorRoutes>; onStart?: () => void | Promise<void>; openingWorkout?: boolean
+  enabled: boolean; activities?: CardioActivity[]; routes: ReturnType<typeof useRoutineEditorRoutes>; onStart?: () => void | Promise<void>; openingWorkout?: boolean; visible?: boolean
 }) {
   const { schedule, protection } = training
   const [planPreset, setPlanPreset] = useScreenHistory<string | null>('routine-plan:' + state.scope?.userId + ':' + state.scope?.dataGeneration, null)
@@ -87,19 +96,23 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const [startingRoutine, setStartingRoutine] = useState<string | null>(null)
   const startWaiting = !!startingRoutine || openingWorkout
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
+  const [confirm, confirmation] = useConfirmation()
+  const feedback = useSuccessToast(visible ? 'routines' : null)
   const startPending = useRef(false)
   const setEditor = (next: RoutineEditorState | null, fromDetail = false) => {
+    if (next) feedback.clear()
     setEditorData(next)
     if (next) setEditorRoute({ id: next.routine?.id ?? 'new', readOnly: next.readOnly, fromDetail })
     else setEditorRoute(null, true)
   }
-  const backFromEditor = () => navigateBack(() => setEditor(null))
+  const backFromEditor = () => { feedback.clear(); navigateBack(() => setEditor(null)) }
   const [scheduleData, setScheduleData] = useState<ScheduleEditorState | null>(null)
   const scheduleEditor = scheduleRoute && (scheduleData?.type === scheduleRoute.type &&
     (scheduleRoute.type === 'order' || scheduleData.type === 'assign' && scheduleData.id === scheduleRoute.id)
     ? scheduleData : schedule && (scheduleRoute.type === 'order' || schedule.presets.some(p => p.id === scheduleRoute.id))
       ? { ...scheduleRoute, base: schedule } : null)
   const setScheduleEditor = (next: ScheduleEditorState, replace = false) => {
+    feedback.clear()
     setScheduleData(next)
     setScheduleRoute(next.type === 'assign' ? { type: next.type, id: next.id, priorityId: next.priorityId } : { type: next.type }, replace)
   }
@@ -179,6 +192,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   }
   function openRoutine(id: string, readOnly: boolean) {
     if (!readOnly && managementBlocked) return
+    feedback.clear()
     const routine = cards.get(id)
     setEditorData(routine ? { routine, readOnly } : null)
     setEditorIssue(null)
@@ -205,18 +219,27 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     }
   }
   async function deleteRoutine(id: string) {
-    if (managementBlocked || deletingRoutine) return
-    const origin = window.history.state?.overloadNavigation
-    setDeletingRoutine(id)
-    try {
-      await controller.select(id)
-      const current = controller.getSnapshot()
-      if (window.history.state?.overloadNavigation !== origin || current.active || current.attempt || current.selected?.id !== id ||
-        !window.confirm('이 루틴을 삭제할까요? 모든 주간 일정의 배정이 해제되며 기존 운동 기록은 보존합니다.')) return
-      await controller.deleteRoutine()
-      training.refresh()
-      if (!controller.getSnapshot().selected && editorRoute) backFromEditor()
-    } finally { setDeletingRoutine(null) }
+    const target = editor?.routine?.id === id ? editor.routine : routineList?.find(routine => routine.id === id)
+    if (managementBlocked || deletingRoutine || !target) return
+    let deleted = false
+    await confirm({ title: '루틴을 삭제할까요?', confirmLabel: '루틴 삭제', destructive: true,
+      description: <p>“{target.name}” 루틴의 모든 주간 일정 배정이 해제됩니다. 기존 운동 기록은 보존합니다.</p>,
+      onConfirm: async () => {
+        const before = controller.getSnapshot()
+        if (before.busy || before.active || before.attempt || before.scope !== scope) return
+        setDeletingRoutine(id)
+        try {
+          await controller.select(id)
+          const current = controller.getSnapshot()
+          if (current.scope !== scope || current.active || current.attempt || current.selected?.id !== id) return
+          deleted = await controller.deleteRoutine(target.version)
+          training.refresh()
+        } finally { setDeletingRoutine(null) }
+      } })
+    if (deleted) {
+      feedback.show('루틴을 삭제했습니다.')
+      if (editorRoute) navigateBack(() => setEditor(null))
+    }
   }
   const deletingPreset = deleting?.base.presets.find(p => p.id === deleting.id)
   const latestName = renaming && schedule?.presets.find(p => p.id === renaming.id)
@@ -240,7 +263,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           onNew={() => { setCreated(null); setEditor({ routine: null, readOnly: false }) }}
           onEdit={id => void openRoutine(id, false)} onSelect={id => void openRoutine(id, true)} onDelete={id => void deleteRoutine(id)}
           presetHeader={schedule && viewed ? viewToggle => <PresetHeader schedule={schedule} viewed={viewed} busy={busy} readOnly={scheduleBlocked} viewToggle={viewToggle}
-            onPlan={() => setPlanPreset(viewed.id)}
+            onPlan={() => { feedback.clear(); setPlanPreset(viewed.id) }}
             onActivate={() => void training.write({ type: 'activate', id: viewed.id })}
             onToggle={() => void training.write({ type: 'rotate', enabled: !schedule.autoEnabled, entries: schedule.presets })}
             onRename={schedule.renameSupported ? () => {
@@ -290,7 +313,11 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             onClick={() => void startRoutine(editor.routine!)}>온라인으로 운동 시작</Button>
         </>} />}
       {editor && !editor.readOnly && <RoutineForm key={editor.routine?.id ?? 'new'} routine={editor.routine} activities={activities}
-        onSaved={(id, name) => { if (!editor.routine) setCreated({ id, name }); training.refresh() }}
+        onSaved={(id, name) => {
+          if (!editor.routine) setCreated({ id, name })
+          feedback.show(editor.routine ? '루틴 변경사항을 저장했습니다.' : '루틴을 만들었습니다.')
+          training.refresh()
+        }}
         generation={state.scope.dataGeneration} exercises={state.data.exercises} manufacturers={state.data.manufacturers}
         busy={busy} controller={controller} onClose={() => setEditor(null)} navigationKey={editorKey} backLabel={editorRoute?.fromDetail ? '루틴 상세로' : undefined} managementBlocked={managementBlocked} />}
     </>}
@@ -335,13 +362,15 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           aria-busy={training.busy || undefined} data-button-pending={training.busy && deleting.base.version === schedule?.version || undefined}
           onClick={async () => { if (await training.write({ type: 'delete', id: deleting.id }, deleting.base)) setDeleting(null) }}>일정 삭제</button></div>
     </Dialog>}
+    {confirmation}
+    <Toast toast={visible && (!focused || editor?.readOnly) && !planPreset ? feedback.toast : null} onDismiss={feedback.dismiss} bottomClearance={focused ? '0px' : 'var(--tabs-height, 56px)'} />
   </section>
 }
 export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, renderShell, catalogOpen = false, restOpen = false, onSettingsBack, onRestExitGuard }: {
   onExitGuard?: ExitGuardRegistration; tab?: AppTab; onNavigate?: (tab: AppTab, replace?: boolean, children?: Record<string, unknown>, resetScroll?: boolean) => Promise<boolean>
   renderShell?: (content: ReactNode, focused: boolean, routineEditor: boolean) => ReactNode
-  catalogOpen?: boolean; restOpen?: boolean; onSettingsBack?: (canLeave?: () => boolean) => void
-  onRestExitGuard?: (guard: (() => boolean) | null) => void
+  catalogOpen?: boolean; restOpen?: boolean; onSettingsBack?: (canLeave?: RestExitGuard) => void
+  onRestExitGuard?: (guard: RestExitGuard | null) => void
 } = {}) {
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
@@ -622,7 +651,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
           await startWorkout()
       })} /> : state.issue ? <StatusNotice error>{state.issue}</StatusNotice> : <HomeStartup />)}</div>
     {(!localOnly || preserveDrafts) && <div hidden={!visible || localOnly || focused || workoutLoading || recordFocused || tab !== 'routines'}>
-      <WorkspaceView activities={activities} training={training} enabled={accountReady && visit.routines} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} routes={routineRoutes} onStart={startWorkout} openingWorkout={starting} />
+      <WorkspaceView activities={activities} training={training} enabled={accountReady && visit.routines} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} routes={routineRoutes} onStart={startWorkout} openingWorkout={starting} visible={visible && !localOnly && !focused && !workoutLoading && !recordFocused && tab === 'routines'} />
     </div>}
 
     <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'history'}
@@ -635,7 +664,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
     {showDetailWait && <div className={flowStyles.detailWait}><StatusNotice>운동 기록을 확인하는 중입니다.</StatusNotice></div>}
     {workoutLoading && <><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" />
       {showWorkoutLoading && <LoadingSkeleton layout="workout" label="운동 정보를 확인하는 중입니다." />}</>}
-    {session && session.status === 'ACTIVE' && !editable && <div hidden={!focused}><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" /><details open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={() => void controller.takeover()} /></details></div>}
+    {session && session.status === 'ACTIVE' && !editable && <div hidden={!focused}><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" /><details open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={controller.takeover} /></details></div>}
     {visible && permissionIssue && <p className="notice" role="status">오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.</p>}
     {summaryPending && !handoffEditor && <RecordSubpageHeader title="운동 기록 요약" onBack={leaveWorkout} />}
     {showSummaryWait && !handoffEditor && <StatusNotice>운동 기록 요약을 불러오고 있습니다.</StatusNotice>}

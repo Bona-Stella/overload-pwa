@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigationGuard } from '../../app/navigation.ts'
+import { useConfirmation } from '../../components/useConfirmation.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { CircleCheck } from '../../components/common-ui/CircleCheck.tsx'
 import { Dialog } from '../../components/Dialog.tsx'
@@ -50,7 +51,11 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
   const defaultWeight = (weight: WeightSummary) => weight.review!.recommendedKg ?? suggestedApproval(weight.review!.referenceKg, weight.review!.direction, weight.loadType ?? null)
   const nextWeight = (weight: WeightSummary) => drafts[weight.id] ?? defaultWeight(weight)
   const hasDraft = !!onApprove && !readOnly && !preview && pendingReviews.some(w => drafts[w.id] !== undefined && drafts[w.id] !== defaultWeight(w))
-  useNavigationGuard(() => !hasDraft || window.confirm('승인하지 않은 중량 변경을 버리고 나갈까요?'))
+  const [confirm, confirmation] = useConfirmation()
+  useNavigationGuard(() => !hasDraft || confirm({ title: '승인 중량 초안을 버릴까요?',
+    description: <p>아직 승인하지 않은 수정값이 사라집니다. 루틴에 저장된 승인 중량은 유지됩니다.</p>,
+    confirmLabel: '변경 버리기', destructive: true, duringTraversal: true,
+  }))
   useEffect(() => {
     if (!hasDraft) return
     const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = '' }
@@ -110,6 +115,7 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
     }}>{preview?'시연 확인':'승인 확인'}</Button></div></Dialog>}
     {current && <ApprovalWeightDialog weight={current} value={nextWeight(current)} closePointerGuard={closePointerGuard}
       onClose={() => setModal(null)} onConfirm={value => { setDrafts(values => ({ ...values, [current.id]:value })); setModal(null) }} />}
+    {confirmation}
   </Card>
 }
 

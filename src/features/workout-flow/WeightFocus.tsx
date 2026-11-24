@@ -143,12 +143,10 @@ export function EquipmentEditor({ equipment, manufacturers, onApply }: {
   const [draft, setDraft] = useState<Equipment>(() => ({
     manufacturerId: equipment.manufacturerId, loadType: equipment.loadType,
   }))
-  const [applied, setApplied] = useState(false)
   return <Card>
     <div className={styles.headingRow}><h2>현재 세션의 장비 설정</h2>
       <Help label="장비 변경 범위">이후 세트에 적용됩니다. 완료 당시 장비와 원본 루틴은 보존합니다.</Help></div>
-    <EquipmentFields value={draft} onChange={value => { setDraft(value); setApplied(false) }} manufacturers={manufacturers} />
-    <Button onClick={() => { setApplied(false); void Promise.resolve(onApply(draft)).then(saved => { if (saved !== false) setApplied(true) }) }}>오늘만 장비 변경 적용</Button>
-    {applied && <small role="status">이후 세트에 적용했습니다.</small>}
+    <EquipmentFields value={draft} onChange={setDraft} manufacturers={manufacturers} />
+    <Button onClick={() => void onApply(draft)}>오늘만 장비 변경 적용</Button>
   </Card>
 }

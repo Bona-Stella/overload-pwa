@@ -10,8 +10,7 @@ import { AppShell } from '../../src/app/AppShell.tsx'
 const edited=structuredClone(routine)
 edited.weightPlacements[0]={...edited.weightPlacements[0],loadType:'PLATE',approvedWeightKg:'25'}
 edited.weightPlacements.push({...edited.weightPlacements[0],id:'20000000-0000-4000-8000-000000000001',exerciseName:'스쿼트',loadType:'STACK',approvedWeightKg:'30'})
-window.ui={saved:[],closed:0,scheduleCalls:0,allowConfirm:true,confirmations:[],routineId:edited.id,secondId:edited.weightPlacements[1].id}
-window.confirm=message=>{window.ui.confirmations.push(message);return window.ui.allowConfirm}
+window.ui={saved:[],closed:0,scheduleCalls:0,routineId:edited.id,secondId:edited.weightPlacements[1].id}
 const activities=[{id:'ca000000-0000-4000-8000-000000000011',activityId:'ca000000-0000-4000-8000-000000000001',aliases:['treadmill run'],category:'RUNNING',name:'러닝머신',kind:'TREADMILL'}]
 const exercises=[{...bootstrap.exercises[0],muscles:[{role:'PRIMARY',groupCode:'CHEST',name:'대흉근'}]},{id:'40000000-1111-4222-8333-000000000002',name:'바벨 스쿼트',aliases:['Squat'],muscles:[{role:'PRIMARY',groupCode:'LEGS',name:'대퇴사두근'}]}]
 export const root=createRoot(document.getElementById('root'))

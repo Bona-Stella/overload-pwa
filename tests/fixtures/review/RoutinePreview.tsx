@@ -109,9 +109,9 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
   const audio = useRestAudio(alerts.sound || alerts.middle, alerts.volume)
   const [shortRest, setShortRest] = useState(() => isWorkoutScenario(scenario) || scenario === 'active')
   const inFlight = useRef(false)
-  const restExit = useRef<(() => boolean) | null>(null)
-  const registerRestExit = useCallback((guard: (() => boolean) | null) => { restExit.current = guard }, [])
-  useNavigationGuard(useCallback(() => restExit.current?.() ?? true, []))
+  const restExit = useRef<import('../../../src/features/settings/RestSettings.tsx').RestExitGuard | null>(null)
+  const registerRestExit = useCallback((guard: import('../../../src/features/settings/RestSettings.tsx').RestExitGuard | null) => { restExit.current = guard }, [])
+  useNavigationGuard(useCallback(() => restExit.current?.(true) ?? true, []))
   const protectedView = scenario === 'active' || scenario === 'completed'
   const deloadView = scenario === 'active' && !normalView
   const viewed = schedule.presets.find(preset => preset.id === viewedId) ?? schedule.presets.find(preset => preset.id === schedule.activeId)!
@@ -171,14 +171,14 @@ function Review({ scenario, tab, reset }: { scenario: ReviewScenario; tab: AppTa
 
   const closeEditor = () => { setEditor(null); setIssue(null) }
   const backFromEditor = () => navigateBack(closeEditor)
-  const navigate = (next: AppTab, target?:'history') => {
+  const navigate = async (next: AppTab, target?:'history') => {
     if (next === tab) {
-      navigateToCurrentTabRoot(() => {
-        if (restExit.current?.() !== false) navigateTabRoot('review-tab', next, { 'review-record-summary': null }, undefined, true)
+      navigateToCurrentTabRoot(async () => {
+        if ((await restExit.current?.()) !== false) navigateTabRoot('review-tab', next, { 'review-record-summary': null }, undefined, true)
       })
       return
     }
-    if (restExit.current?.() === false) return
+    if ((await restExit.current?.()) === false) return
     if (next === 'home' && tab !== 'home') setHomeVisit(visit => visit + 1)
     setIssue(null); navigateTabRoot('review-tab', next, { 'review-record-summary': null, ...(target ? { ['records:'+scope.userId+':'+scope.dataGeneration]:target } : {}) })
     window.scrollTo(0, 0)

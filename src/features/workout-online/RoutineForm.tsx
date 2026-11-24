@@ -24,6 +24,7 @@ import { ExerciseSearch } from './ExerciseSearch.tsx'
 import { EquipmentFields } from './EquipmentFields.tsx'
 import { CombinationMemo } from './CombinationMemo.tsx'
 import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
+import { useConfirmation } from '../../components/useConfirmation.tsx'
 
 import { newWeights, updatedWeights } from './routine-weights.ts'
 import type { WeightDraft } from './routine-weights.ts'
@@ -121,10 +122,14 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const draft = JSON.stringify({ name, weights, cardio: chosenCardio, tag })
   const [initialDraft] = useState(draft)
   const saved = useRef(false)
-  const canLeave = () => saved.current || draft === initialDraft || window.confirm('작성 중인 변경을 버리고 닫을까요?')
-  useNavigationGuard(canLeave, navigationKey)
+  const [confirm, confirmation] = useConfirmation()
+  const canLeave = (duringTraversal = false) => saved.current || !guard.current && !busy && (draft === initialDraft || confirm({
+    title: '루틴 변경을 버릴까요?', description: <p>이 화면에서 수정한 내용이 사라집니다. 저장된 루틴은 유지됩니다.</p>,
+    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+  }))
+  useNavigationGuard(() => canLeave(true), navigationKey)
   const close = () => {
-    const fallback = () => { if (canLeave()) onClose() }
+    const fallback = async () => { if (await canLeave()) onClose() }
     if (navigationKey) navigateBack(fallback)
     else fallback()
   }
@@ -159,8 +164,16 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   }
   async function save() {
     if(locked||managementBlocked||guard.current)return
-    guard.current=true;setSaveAttempt(submitted ? 'retry' : 'submit')
+    guard.current = true
     let validating = submitted === null
+    let confirmed = false
+    const persist = async (body: CreateRoutine | UpdateRoutine) => {
+      setSaveAttempt(submitted ? 'retry' : 'submit')
+      setSubmitted(body)
+      validating = false
+      setError('')
+      confirmed = await controller.saveRoutine(body, routine?.id)
+    }
     try {
       let body = submitted
       if (!body) {
@@ -178,13 +191,16 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
             const weight = weights.find(w => w.id === approval.placementId)
             return `${weight?.exerciseName ?? '웨이트 종목'} · ${approval.nextApprovedWeightKg} kg`
           })
-          if (!window.confirm(['변경한 중량을 새 승인 중량으로 저장할까요?', ...changes].join('\n'))) return
+          const request = body
+          await confirm({ title: '새 중량을 승인할까요?',
+            description: <><p>루틴 변경사항과 함께 다음 중량을 승인합니다.</p><ul>{changes.map((change, index) => <li key={request.weightApprovals[index].placementId}>{change}</li>)}</ul></>,
+            confirmLabel: '승인하고 저장', onConfirm: () => persist(request),
+          })
+        } else {
+          await persist(body)
         }
-        setSubmitted(body)
-      }
-      validating = false
-      setError('')
-      if (await controller.saveRoutine(body, routine?.id) && !abort.current.signal.aborted) {
+      } else await persist(body)
+      if (confirmed && !abort.current.signal.aborted) {
         saved.current = true
         onSaved?.(id, body.name.trim())
         if (navigationKey) navigateBack(onClose)
@@ -287,5 +303,6 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       <button type="button" className="outline" disabled={locked} data-button-pending={saving || undefined} onClick={close}>취소</button>
       <Button type="submit" variant="primary" className="full" disabled={!saving && (locked || managementBlocked)} loading={saving}>{saveLabel}</Button>
     </footer>
+    {confirmation}
   </form>
 }

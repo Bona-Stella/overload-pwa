@@ -2,6 +2,7 @@ import { presetNumber } from '../workout-online/preset-schedule.ts'
 import type { PresetSchedule } from '../workout-online/preset-schedule.ts'
 import type { ReactNode } from 'react'
 import { Dialog } from '../../components/Dialog.tsx'
+import { useConfirmation } from '../../components/useConfirmation.tsx'
 import { sameAssignments } from '../workout-online/routine-schedule.ts'
 import { useEffect, useRef, useState } from 'react'
 import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
@@ -23,9 +24,13 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave
   const [confirm, setConfirm] = useState(false)
   const dirty = !sameAssignments(state.assignments, draft)
   const saved = useRef(false)
-  const canLeave = () => !preset || !dirty || window.confirm('저장하지 않은 배정 변경을 버릴까요?')
-  useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(), navigationKey)
-  const leave = (action: () => void) => { if (canLeave()) action() }
+  const [ask, confirmation] = useConfirmation()
+  const canLeave = (duringTraversal = false) => !preset || !dirty || ask({ title: '일정 배정 변경을 버릴까요?',
+    description: <p>이 화면에서 바꾼 요일 배정이 사라집니다. 저장된 일정은 유지됩니다.</p>,
+    confirmLabel: '변경 버리기', destructive: true, duringTraversal,
+  })
+  useNavigationGuard(() => !navigationKey || saved.current || !busy && canLeave(true), navigationKey)
+  const leave = async (action: () => void) => { if (await canLeave()) action() }
   const close = () => {
     if (navigationKey) navigateBack(() => leave(onCancel))
     else leave(onCancel)
@@ -69,6 +74,7 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, onSave
       setConfirm(false)
       if (await onSave(draft) && navigationKey) { saved.current = true; navigateBack(onCancel) }
     }}>변경 확인</button></div></Dialog>}
+    {confirmation}
   </form>
 }
 export function PresetAssignmentEditor({ base, current, id, priorityId, routines, busy, readOnly, initialApply, onSelect, onReload, onSave, onClose, navigationKey }: {

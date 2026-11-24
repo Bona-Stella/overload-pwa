@@ -13,6 +13,7 @@ let closeOnly = false
 const deferredNavigation: (() => void)[] = []
 const afterDialogClose = (action: () => void) => { if (closeOnly) deferredNavigation.push(action); else action() }
 const layers: { id: string; close: () => void; canClose: () => boolean }[] = []
+let traversalDialog: { close: () => void } | null = null
 const read = (): Entry => window.history.state?.overloadNavigation ?? { index: 0, values: {} }
 const publish = () => listeners.forEach(listener => listener())
 function write(values: Entry['values'], replace: boolean, url?: string, tabRoot = false) {
@@ -131,6 +132,11 @@ function initialize() {
       publish()
       return
     }
+    if (checking && traversalDialog) {
+      requested = next
+      traversalDialog.close()
+      return
+    }
     const layer = layers.at(-1)
     if (layer && previous.values.__dialog === layer.id && next.values.__dialog !== layer.id && next.index === previous.index - 1) {
       if (!layer.canClose()) {
@@ -180,7 +186,7 @@ export function useNavigationGuard(guard: Guard, key?: string) {
   useEffect(() => { guards.set(guard, key); return () => { guards.delete(guard) } }, [guard, key])
 }
 
-export function useDialogHistory(id: string, close: () => void, canClose: () => boolean) {
+export function useDialogHistory(id: string, close: () => void, canClose: () => boolean, duringTraversal = false, onDismissed?: () => void) {
   useEffect(() => {
     let cancelled = false, pushedIndex: number | null = null
     const layer = { id, close, canClose }
@@ -188,7 +194,12 @@ export function useDialogHistory(id: string, close: () => void, canClose: () => 
       if (cancelled) return
       initialize()
       afterDialogClose(() => {
-        if (cancelled || checking || rollback) return
+        if (cancelled || rollback) return
+        if (checking) {
+          // A traversal guard still owns the pending destination. Do not rewrite browser history.
+          if (duringTraversal) traversalDialog = layer
+          return
+        }
         layers.push(layer)
         current = { ...current!, index: current!.index + 1, values: { ...current!.values, __dialog: id } }
         window.history.pushState({ ...window.history.state, overloadNavigation: current }, '')
@@ -197,8 +208,15 @@ export function useDialogHistory(id: string, close: () => void, canClose: () => 
     })
     return () => {
       cancelled = true
+      if (traversalDialog === layer) traversalDialog = null
       const index = layers.indexOf(layer); if (index >= 0) layers.splice(index,1)
-      if (rollback?.dialog !== id && pushedIndex !== null && read().index === pushedIndex && read().values.__dialog === id) { closeOnly = true; window.history.back() }
+      if (rollback?.dialog === id) {
+        if (onDismissed) deferredNavigation.push(onDismissed)
+      } else if (pushedIndex !== null && read().index === pushedIndex && read().values.__dialog === id) {
+        if (onDismissed) deferredNavigation.push(onDismissed)
+        closeOnly = true
+        window.history.back()
+      } else onDismissed?.()
     }
-  }, [id, close, canClose])
+  }, [id, close, canClose, duringTraversal, onDismissed])
 }
