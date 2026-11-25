@@ -670,7 +670,7 @@ iPhone의 화면 구조를 고려합니다.
 | 05 UI-07·10·19 및 UI-09 | `0331dab`의 [홈 진행 카드 계산](../../src/features/home/active-workout.ts), [LocalWorkoutFlow](../../src/features/workout-local/LocalWorkoutFlow.tsx), [model](../../src/features/workout-local/model.ts), [weight-timing](../../src/features/workout-local/weight-timing.ts)와 [WorkoutSummary](../../src/features/workout-flow/WorkoutSummary.tsx)를 사용한다. UI-09의 편집 명칭·닫기 색·완료 수치 표현을 함께 반영했다. | 구현과 2차 피드백 반영. 기존 브랜치 검증은 자동 테스트 660건, Chrome 모바일 전환/종료/요약, 실제 IndexedDB를 사용한 격리 Edge의 롤백·새로고침 복원·편집 잠금이다. 기존 세션 API 연결과 이 검증을 운영 계정의 실제 저장 검수로 간주하지 않는다. |
 
 - **진행 저장과 시간.** 준비운동 완료 시각, 시작한 웨이트, 준비의 원인이 된 완료 ID와 종목별 휴식은 같은 기기의 로컬 문서에 보존한다. 완료와 자동 이동은 [IndexedDB](#12-진행-운동의-로컬-보호-및-복원)의 한 트랜잭션을 사용한다. 스와이프와 표시 갱신은 서버 쓰기를 발생시키지 않는다. 관찰 구간의 로컬 체크포인트를 이후 완료 스냅샷 또는 FINISH에 포함하며, [V37 DTO와 서버 저장 계약](../../../overload-server/docs/api/workout-sessions.md#웨이트-시간-구간--v37)은 유지한다. 실행 조건은 [UI/UX 시간 의미](../product/ui-ux.md#시간수행-합계의-의미)를 따른다. 메모 입력은 기존 마운트 메모리 초안이며 영속 저장이 추가되지 않았다.
-- **요약 최상단 진입.** FINISH ACK를 보존하면 `WorkoutWorkspace`는 세션별 첫 진입을 표시하고 활성 운동 항목을 기록 요약으로 전환한다. `WorkoutSummary` 본문을 렌더링한 직후 첫 프레임에서 그 표시를 한 번 소비해 실제 스크롤 루트인 `document.scrollingElement`를 최상단에 맞춘다. 이후 뒤로가기·앞으로가기는 기존 History 복원 정책을 따른다. [검수의 ProcessSession](../../src/review/RestAudioPreview.tsx)도 요약 경로가 선택된 뒤 같은 컴포넌트를 사용한다.
+- **요약 최상단 진입.** FINISH ACK를 보존하면 `WorkoutWorkspace`는 세션별 첫 진입을 표시하고 활성 운동 항목을 기록 요약으로 전환한다. `WorkoutSummary` 본문을 렌더링한 직후 첫 프레임에서 그 표시를 한 번 소비해 실제 스크롤 루트인 `document.scrollingElement`를 최상단에 맞춘다. 이후 뒤로가기·앞으로가기는 기존 History 복원 정책을 따른다. [검수의 ProcessSession](../../tests/fixtures/review/RestAudioPreview.tsx)도 요약 경로가 선택된 뒤 같은 컴포넌트를 사용한다.
 - **검수 환경.** [4173 운동 검수 경로](http://127.0.0.1:4173/rest-audio-preview?process=1)는 합성 세션과 메모리 응답을 사용한다. 운영 운동 화면·동기화 제어와 요약 표시를 재사용하며 운영 계정·IndexedDB·서버 평가에는 쓰지 않는다. iPhone Safari와 설치형 PWA에서 요약 최상단 진입 및 운영 계정 저장의 재검수는 남아 있다.
 - **이번 동기화 검증.** 4173 Chrome에서는 운동 화면의 상단·중간·하단에서 종료한 뒤 요약 최상단과 홈 복귀, 뒤로가기·앞으로가기, 요약 내 수동 스크롤을 확인했다. 운동 기록 상세는 기존 홈 최근 운동 카드와 기록 탭에서 연다. 격리된 운영 컴포넌트 테스트에서는 종료 기록을 지연 로드해 요약 본문이 나타날 때의 초기화와 종료 세션의 이력 복귀를 확인했다. 전체 자동 테스트 660/660, TypeScript, ESLint, 프로덕션 빌드와 `git diff --check`가 통과했다.
 
@@ -845,14 +845,14 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 - [SettingsMain](../../src/features/settings/SettingsMain.tsx)은 요약·그룹·독립 로그아웃을 공통 Card/Button과 페이지 CSS로 구성한다. `AuthApp`은 기존 계정 조회로 확인한 마스킹 대표 이메일과 연결된 로그인 수단을 전달한다. 고유 기기 수는 조회 미지원으로 표시한다. 값 조회 중에는 계정 카드 안의 스켈레톤을 사용한다.
 - `AuthApp`이 계정·휴식 조회·카탈로그 이동과 현재 브라우저 로그아웃을 연결하고 설정 복귀 시 초점과 스크롤을 유지한다. 알림 조작은 개발 검토에만 연결한다. 디로딩 설정·데이터 상태·내보내기·초기화·탈퇴는 기존 비활성 행이다. [PwaStatus](../../src/pwa/PwaStatus.tsx)는 네이티브 접이식 영역에서 설치 가능 여부·준비·실패·업데이트와 오프라인 안내를 표시한다. 기존 로컬 운동 저장·이어가기와 서버 ACK는 [12절](#12-진행-운동의-로컬-보호-및-복원)을 따른다.
 - [AccountSettings](../../src/features/auth/AccountSettings.tsx)는 공통 `RecordSubpageHeader`, `AccountDetailUi`와 페이지 CSS를 사용한다. `IdentityManagement`는 서버의 연결 목록, 이메일 연결·Google 폼·해제 확인을 표현한다. `AuthController`가 사용자·세대와 CSRF, OTP·조회·쓰기 경계를 관리한다. 최근 OTP 성공 표시는 마운트 상태의 `confirmedAt`으로 표시하는 피드백이며 권한 판정과 서버 이력 조회와 구분한다. [계정 API 범위](backend-ui-v0.9.md#설정-메인과-계정-설정-연동)
-- `/routine-preview?tab=settings`의 [SettingsReview](../../src/review/SettingsReview.tsx)는 합성 계정과 세 로그인 수단 조합을 같은 상세 레이아웃에 주입한다. 운영의 컨트롤러와 쓰기 권한은 주입하지 않는다. 기기 관리로의 분기와 복귀는 다음 절을 따른다.
+- `/routine-preview?tab=settings`의 [SettingsReview](../../tests/fixtures/review/SettingsReview.tsx)는 합성 계정과 세 로그인 수단 조합을 같은 상세 레이아웃에 주입한다. 운영의 컨트롤러와 쓰기 권한은 주입하지 않는다. 기기 관리로의 분기와 복귀는 다음 절을 따른다.
 - **구현 당시 검증.** 설정 메인 `7f9f85b`에서 전체 645/645, 계정 설정 `8040054`에서 646/646을 기록했다. 두 작업에서 TypeScript·린트·프로덕션 빌드와 Chrome 320·375·393·430·1280px 검토를 수행했다. [컴포넌트](../../tests/components.test.mjs)·[인증 UI](../../tests/auth-ui.test.mjs)·[브라우저 회귀](../../tests/preset-review.test.mjs)를 구분한다. 이 결과는 문서 갱신 검증과 별개다.
 
 #### 로그인된 기기 관리 구현 현황 — 2026-11-18
 
 - [AccountSettings](../../src/features/auth/AccountSettings.tsx)의 기기 관리 행이 [LoggedInDevices](../../src/features/auth/LoggedInDevices.tsx)를 연다. `useScreenHistory`의 계정별 `account-devices:` 값으로 브라우저 뒤로가기를 지원한다. 새 화면에서는 제목에 초점을 두고 복귀 시 저장한 스크롤과 진입 버튼에 초점을 돌려준다. [탭 루트 전환](../../src/app/navigation.ts)에서 기기 관리 하위 상태를 정리한다.
 - `LoggedInDevices`의 `DevicesState`는 미지원 기본값, 로딩, 실패, 준비된 스냅샷을 구분하는 화면 입력이다. API 응답 계약은 아직 없다. 운영은 별도 기기 요청을 보내지 않고 원격 버튼을 비활성화한다. 스냅샷 시연은 확인된 현재 ID와 최근 접속순으로 카드를 배치하고, 누락된 접속 상태를 온라인·오프라인 수치로 추정하지 않는다.
-- 개발 검토 경로 `/routine-preview?tab=settings`에서 [SettingsReview](../../src/review/SettingsReview.tsx)가 [DevicesReview](../../src/review/DevicesReview.tsx)를 주입한다. 합성 기기·시각·편집 기기 예시와 세 종류의 검토 확인창은 운영과 분리된다. 공통 헤더·카드·버튼·Dialog를 재사용한다. 확인은 모달만 닫으며 세션 종료나 운동 상태 변경을 실행하지 않는다.
+- 개발 검토 경로 `/routine-preview?tab=settings`에서 [SettingsReview](../../tests/fixtures/review/SettingsReview.tsx)가 [DevicesReview](../../tests/fixtures/review/DevicesReview.tsx)를 주입한다. 합성 기기·시각·편집 기기 예시와 세 종류의 검토 확인창은 운영과 분리된다. 공통 헤더·카드·버튼·Dialog를 재사용한다. 확인은 모달만 닫으며 세션 종료나 운동 상태 변경을 실행하지 않는다.
 - 실제 운동 편집 여부는 기존 `WorkoutWorkspace`의 ACTIVE 세션, 편집 기기 ID·writer epoch 및 로컬 쓰기 보호를 따른다. 온라인 표시와 권한은 별개다. 인증 세션과 운동 편집 기기의 연결은 [서버 연동 과제](backend-ui-v0.9.md#로그인된-기기-관리-연동-경계)다.
 - **구현 당시 검증(`f71427e`).** 전체 647/647, [인증 UI](../../tests/auth-ui.test.mjs)를 포함한 관련 94/94, TypeScript·린트·빌드·diff 검사 통과. [브라우저 회귀](../../tests/preset-review.test.mjs)에서 Chrome 320·375·393·430·1280px, 상태 전환, 확인창, 계정 설정 복귀를 확인했다. 실제 서버 원격 종료와 iPhone Safari·설치형 PWA는 당시 확인하지 않았다. 이번 문서 갱신의 검사와는 별도다.
 
@@ -913,7 +913,7 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 - **UI 구현 A / 사용자 승인 B 완료.** `37512e9`의 [운동 현황 화면](../../src/features/statistics/StatisticsPanel.tsx), [기간 컨트롤](../../src/features/statistics/PeriodControls.tsx), [화면 전용 스타일](../../src/features/statistics/Activity.module.css), [검색 팝오버](../../src/features/statistics/SearchScopePopover.tsx)를 기준으로 한다. 최종 보정은 달력과 이전·다음 버튼의 외형 통일, 월간 `YYYY/MM`, 검색 입력 16px, `– 휴식 / · 미수행 / ? 미확인` 범례다. 기간·검색·차트 전환·상태 판정과 유산소 집계는 기존 경로를 사용한다.
 - 최종 UI 작업에서 린트·TypeScript·빌드와 관련 테스트 31건을 통과했다. Chrome 320/375/393/430px에서 버튼·날짜 정렬·기간 이동·달력·검색/필터·세트/총중량을 확인했고, 사용자가 iPhone에서 검색 아이콘을 누른 뒤 키보드가 열리고 화면 배율이 유지됨을 확인했다. 위 641건은 2차 보정의 전체 검사 결과다. 실제 API 통합이나 DB 작업은 이번 UI 승인 범위에 포함되지 않는다.
-- `/routine-preview?tab=history&activity-demo=states`의 정상 조회 시연에서 운동 현황을 열면 직전 주의 완료·부분 달성·미달·휴식·대기·근거 미확인을 시연한다. 완료 비율 합계는 2일분, 계획은 5일, 표시 달성률은 40%다. 유산소는 2시간 20분·4일, 러닝머신 `월 · 금` 8km, 자전거 `화` 7.5km, 야외 운동의 요일·거리 누락 예시를 제공한다. [시연 구현](../../src/review/activity-sample.ts)은 운동 현황에만 이 값을 제공한다.
+- `/routine-preview?tab=history&activity-demo=states`의 정상 조회 시연에서 운동 현황을 열면 직전 주의 완료·부분 달성·미달·휴식·대기·근거 미확인을 시연한다. 완료 비율 합계는 2일분, 계획은 5일, 표시 달성률은 40%다. 유산소는 2시간 20분·4일, 러닝머신 `월 · 금` 8km, 자전거 `화` 7.5km, 야외 운동의 요일·거리 누락 예시를 제공한다. [시연 구현](../../tests/fixtures/review/activity-sample.ts)은 운동 현황에만 이 값을 제공한다.
 - 운영 Overview의 `statistics.days[].cardioActiveMs`는 종류가 없는 날짜별 총시간이며, `cardioByKind`의 종류별 합계에는 날짜가 없다. 운영 화면의 요일 생략과 누적 일수 `미확인`을 유지한다. `상세 보기`는 같은 카드에서 펼쳐지고 `운동 이력` 버튼이 이동을 담당한다. [결정 기록](../product/Overload_UI_Decision_Log_v0.9.md#1027--운동-현황-최종-ui-승인과-문서-동기화--2026-11-17)과 [HTML](../product/Overload_UI_Baseline_Wireframe_v0.9.html)을 동기화한다.
 
 #### 성장 추적 최종 UI 승인 — 2026-11-18
@@ -992,7 +992,7 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 | [Toast](../../src/components/common-ui/Toast.tsx) | 한 건의 `toast` 또는 `null`, `onDismiss(id)`와 선택적인 `bottomClearance`를 받는다. 성공·안내 4초, 오류 7초이며 포인터 호버나 닫기 버튼 포커스 중에 자동 종료를 멈춘다. 메시지 ID 교체 시 타이머를 정리하고 오류는 `alert`, 나머지는 `status` 영역으로 알린다. |
 | [ContentFeedback](../../src/components/common-ui/ContentFeedback.tsx) | `SkeletonRegion`은 자식 레이아웃을 유지하고 `aria-busy`·`inert`로 로딩 상태를 전달한다. `SkeletonSlot`은 `visibility: hidden`으로 실제 콘텐츠의 크기를 남기고 같은 영역에 선·원·블록을 겹친다. `FieldValidation`은 전달받은 오류를 입력의 설명 및 `aria-invalid`와 연결한다. `EmptyState`와 `ConnectionBanner`는 아이콘·문구 및 오프라인/동기화 상태를 표현한다. |
 | [RoutineTagList](../../src/components/common-ui/RoutineTagList.tsx) | `options`, `selectedId`, `onSelect`에 선택적인 `onCancel`, `loading`, `emptyLabel`을 받는다. 단일 선택 `listbox`의 행 포커스 이동에서 비활성 항목을 건너뛰고, `onCancel`을 전달하면 Escape로 부모의 닫기 동작을 호출한다. 제목·설명 슬롯은 로딩 전후 동일한 구조다. |
-| 검색 태그 UI | [TagPickerExamples](../../src/review/TagPickerExamples.tsx)가 기존 [SearchList](../../src/components/SearchList.tsx), [SearchScopePopover](../../src/features/statistics/SearchScopePopover.tsx)와 운동량 추이 스타일을 조합한다. 검색어·범위·선택 칩·후보를 예시 상태로 전달한다. 화면 내 필터링은 합성 운동·분류·근육 후보에만 적용된다. |
+| 검색 태그 UI | [TagPickerExamples](../../tests/fixtures/review/TagPickerExamples.tsx)가 기존 [SearchList](../../src/components/SearchList.tsx), [SearchScopePopover](../../src/features/statistics/SearchScopePopover.tsx)와 운동량 추이 스타일을 조합한다. 검색어·범위·선택 칩·후보를 예시 상태로 전달한다. 화면 내 필터링은 합성 운동·분류·근육 후보에만 적용된다. |
 | [StatusIndicator](../../src/components/common-ui/StatusIndicator.tsx) | `StatusTag`와 `StatusText`에 `kind`와 라벨을 전달한다. 증량 권고는 선택적인 `onOpenDetails`로 안내를 열 수 있다. 아이콘은 [FeedbackIcon](../../src/components/common-ui/FeedbackIcon.tsx) 모듈에서 사용한다. |
 | [RecordSubpageHeader](../../src/components/RecordSubpageHeader.tsx) | 기존 헤더에 선택적인 `brandImage { src, alt, width, height }`를 추가했다. `action`이 있으면 우측은 액션을 표시한다. Preview 기본형은 [제공된 투명 4x PNG](../../src/assets/OVERLOAD_white_transparent_4x.png)를 전달하며 운영 호출부는 기존 헤더 props를 사용한다. |
 
@@ -1093,7 +1093,46 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 **검증 기준.** 마지막 3-6B 스타일 빌드의 전체 FRONT 728/728, 집중 검사 38/38, TypeScript, ESLint, 프로덕션·4173 검수 빌드와 `git diff --check` 통과 기록을 확인했다. Chrome 320·375·393·430·1280px, 실제 4173 전용 계정의 일반 휴식 180초·테스트 12초와 설정 복원, Preview 운영 격리까지 확인한 범위다. 500kB 초과 번들 청크 경고와 실기기 효과음 재생 검수는 남아 있다. [검증 범위와 기록 위치](../tasks/front-18-3-6-preview-review.md#front18-review-evidence)
 
-**다음 작업.** 4단계 카드 크기·간격 통일 → 5단계 버튼·입력 규격 통일 → 6단계 공통 드롭다운 확대 적용 → 7단계 숫자 초기값 확대 적용 → 8단계 타이포그래피·아이콘·세부 간격 → 9단계 전체 통합 검증. 4단계 착수 전에는 1·2단계 일반 페이지 경계, 카드 자체의 역할별 외곽, 메시지형 Dialog 토큰, 기존 콘텐츠를 보존하는 조회 오류와 운동 고정 프레임 기준을 확인한다.
+**당시 후속 순서.** 4단계 카드 크기·간격 통일 → 5단계 버튼·입력 규격 통일 → 6단계 공통 드롭다운 확대 적용 → 7단계 숫자 초기값 확대 적용 → 8단계 타이포그래피·아이콘·세부 간격 → 9단계 전체 통합 검증. 4단계에는 1·2단계 일반 페이지 경계, 카드의 역할별 외곽, 메시지형 Dialog 토큰, 기존 데이터를 보존하는 조회 오류와 운동 고정 프레임이 적용된다. [4단계 마감 현황](#front18-stage4)
+
+<a id="front18-stage4"></a>
+
+#### FRONT 18 · 4단계 카드 디자인 마감 — 2026-11-26
+
+구현과 검수 자료 정리는 `58ccf44`(`refactor(front): standardize card layouts and refine shared UI`)에 반영됐다. 사용자가 승인한 범위는 전체 카드 디자인과 4단계 조작 보완이다. 화면별 정책은 [UI/UX 3.16절](../product/ui-ux.md#front18-card-ux), 수치·색상·예외는 [Visual Theme Spec 19절](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual), 결정 경계와 승인은 [Decision Log 10.44절](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage4-decision)에서 관리한다.
+
+| 작업 | 상태와 근거 |
+| --- | --- |
+| 4-1 전체 카드 조사 | 완료. [기존 78개 사용처 조사](../tasks/front-18-4-1-card-audit.md) |
+| 4-2 디자인 규격 결정 | 완료. [카드 유형별 현행 기준](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual) |
+| 4-3 공통 카드 적용 및 보완 | 완료. [공통 카드](../tasks/front-18-4-3-card-foundation.md) · [버튼](../tasks/front-18-4-3-button-refinement.md) · [푸터와 정렬](../tasks/front-18-4-3-final-refinement.md) |
+| 4-4 전체 적용 및 예외 | 완료. [78개 사용처 적용표](../tasks/front-18-4-4-card-coverage.md#78개-사용처-적용표) |
+| 4-5 최종 검수 및 사용자 승인 | 완료. [최종 80개 적용표와 실측 범위](../tasks/front-18-4-5-card-final-review.md#최종-사용처-적용표) |
+| 검수 자료 정리 | 완료. [보존 자료와 원본 백업 대조](../tasks/front-18-stage-4-evidence-cleanup.md) |
+| 4-5C 공식 문서 최신화 | 완료. 이 기록과 UI/UX, Decision Log, Visual Theme Spec에 반영했다. |
+| 5단계 버튼·입력 규격 통일 | 후속 작업. 4단계에서 승인된 공통 카드·조작 기준 위에서 아직 확정되지 않은 항목을 다룬다. |
+
+**표면과 간격의 구현.** [`Card`와 `Button`](../../src/components/ui.tsx), [공통 CSS Module](../../src/components/ui.module.css), [Onyx 토큰](../../src/app/theme.module.css)을 기준으로 한다. `Card`는 `cardSurface`와 `card`를 적용하고 `hero`가 강조 표면을 선택한다. 입력·목록·통계의 압축과 패딩은 기존 역할 토큰과 호출부의 배치에서 지정한다. 루틴 검색·압축 목록과 설치 카드처럼 별도 마크업이 필요한 표면도 `cardSurface`를 합성해 공통 외곽을 사용한다. 외부 간격은 가능한 한 부모의 `gap`이 담당한다. 기존 margin과 공통 간격이 겹치거나 전역 `.card`의 18px 반경·레거시 패딩이 기능별 CSS에 섞이면 해당 호출부의 스타일을 정리한다. `--card-padding-override`와 `--card-radius-override`를 사용하는 기능형 표면은 적용 범위와 좁은 폭을 따로 확인한다. [루틴 표면](../../src/features/workout-online/Routine.module.css) · [설치 카드 표면](../../src/pwa/PwaStatus.module.css) · [승인 예외](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual-exceptions)
+
+**커스텀 조작.** 일반 `Button`의 캡슐형과 `compact` 보조 액션의 시각 영역·실제 조작 영역을 구분한다. 운동은 [`WorkoutFrame`](../../src/features/workout-flow/WorkoutFrame.tsx)의 [전용 푸터 CSS](../../src/features/workout-flow/WorkoutFlow.module.css)에서 크기·위치와 현재 마우스가 가리키는 액션을 관리한다. [`Dialog`](../../src/components/Dialog.tsx)의 [메시지형 CSS](../../src/components/Dialog.module.css)는 두 버튼이 있는 가로 액션에 균등 열을 적용한다. 기능형 Dialog는 각 화면의 입력·포커스·저장 보호 규칙을 따른다. 설정은 [페이지 CSS](../../src/features/settings/SettingsMain.module.css)가 인접 행과 설치 카드 묶음의 간격을 관리한다. 홈과 루틴의 날짜 외형은 [홈 날짜 선택 스타일](../../src/features/home/Home.module.css)을 [루틴 목록](../../src/features/workout-online/RoutineCards.tsx)에서 재사용하며 [일정 번호·추가 버튼](../../src/features/workout-online/Presets.module.css)은 별도 프리셋 조작이다.
+
+**적용과 검증 범위.** 최초 78개에 새로 찾은 2개를 더해 80개를 관리하고 기존 승인 예외 22개를 추적했다. 4-4의 실측 63개를 재사용하고 미계측 15개와 추가 2개를 Chrome 320·375·393·430·1280px에서 직접 계측했다. 기존 4173 실제 앱의 대표 화면은 검수 계정의 읽기 경로를 확인했고, 상태 전환·수정·오류의 표본은 4173 Preview, 격리 Vite 또는 운동 fixture에서 검증했다. 전체 운동 이력의 필터와 항목 증가는 확인했으며 서버 커서 페이지 추가는 카드 계측에서 미실행이다. iPhone Safari와 설치형 PWA는 실기기 미검증이다. [실측 및 환경별 증거](../tasks/front-18-4-5-card-final-review.md#검수-결과)
+
+| 4-5 검증 항목 | 기록 |
+| --- | --- |
+| 전체 FRONT 및 데이터 보호 집중 | 728/728, 27/27 통과 |
+| TypeScript와 ESLint | 통과 |
+| 운영·4173 검수 빌드와 Preview 격리 | 빌드 통과. 운영 산출물과 PWA 사전 캐시에서 Preview 제외 확인 |
+| 휴식 흐름 | 격리 운동 회귀에서 테스트 ON 12초, OFF 일반 휴식 180초 기준 및 효과음 경로 확인 |
+| 기존 빌드 경고 | PostCSS `from` 옵션 및 Vite 500kB 초과 청크 경고 유지 |
+
+이 표는 4-5에서 실행한 결과를 인용한다. [최종 실행 요약](../tasks/evidence/front-18-4-5/test-results.json) · [운영 사전 캐시 검사](../tasks/evidence/front-18-4-5/production-cache.json) · [최종 검수 보고서](../tasks/front-18-4-5-card-final-review.md#자동-검사와-빌드)
+
+**간헐 실패와 9단계 재확인.** 수동 새로고침에서 요청 시작과 `loading` 상태 커밋 사이의 경합이 Toast 누락에 관련된 것으로 관측됐다. [`RecordFeed`](../../src/features/history/RecordFeed.tsx)는 수동 클릭 업데이트에서 `busy`를 발행한다. 독립 반복에서 보완 전 4/10회 실패했고 보완 후 10/10회 통과했다. 운동 저장 상태 독립 검사도 10/10회 통과했지만 과거 `saving` 타이밍 실패의 원인은 미확정이다. 9단계 전체 통합 검증에서 이 상태 전환, 서버 커서 페이지 추가와 남은 실기기 경계를 다시 확인한다. 삭제 Dialog 색상 회귀는 실제 브라우저 상태와 화면에 적용된 색상을 기다리고, 키보드 종료 회귀는 이벤트 전송과 즉시 푸터 관측을 같은 브라우저 호출에서 실행한다. [간헐 실패 조사](../tasks/front-18-4-5-card-final-review.md#간헐적-실패-조사)
+
+**검수 자료 관리.** 검수 중에는 재현 근거를 확보하고 승인 후에는 공식 문서·자동 회귀·fixture, 대표 화면과 재현하기 어려운 문제의 계측을 남긴다. 반복 스크린샷, 중간 계측과 임시 로그를 정리하기 전에 보고서와 테스트의 참조를 대조하고 로컬 백업은 Git에서 제외한다. 4단계 검수 경로의 자료는 246개에서 66개, 16.72MB에서 11.11MB로 줄었다. [유형별 정리 내역](../tasks/front-18-stage-4-evidence-cleanup.md#정리-전후)
+
+**5단계 시작 기준.** 일반 캡슐형, 운동 푸터와 권고 높이, 소형 보조 버튼의 조작 영역·정렬, 메시지형 Dialog의 가로 액션 균등 너비, 설정·날짜·일정 조작의 승인값을 유지한다. 앱 셸과 페이지 시작 위치, Toast·새로고침, ConnectedDropdown, 숫자 휠·초기값, 저장·동기화·복구 및 오프라인 보호에는 기존 계약을 적용한다. [버튼 기준](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual-actions) · [메시지형 Dialog](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-feedback-visual)
 
 #### 현황 갱신
 
