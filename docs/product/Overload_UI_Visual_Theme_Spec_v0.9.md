@@ -248,6 +248,8 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 
 ## 16. 공통 UI Preview 시각 규칙
 
+이 절은 최초 Preview 기록이다. 현재 메시지형 모달의 폭과 외곽, 일반 주요 버튼의 색상, 공통 토스트와 조회 오류는 [18절](#front18-feedback-visual)을 적용한다. 검색·태그·헤더·스켈레톤의 개별 규칙은 이 절을 참조한다.
+
 아래 규칙은 2026-11-19에 구현한 공통 부품의 Preview에 적용한다. 표면·글자·포커스·상태에는 Onyx의 역할 토큰을 사용한다. 위험 확정의 채움색은 버튼 CSS Module 안의 `--danger-button-fill`로 관리한다. [Onyx 토큰](../../src/app/theme.module.css) · [결정과 적용 범위](Overload_UI_Decision_Log_v0.9.md#1039--공통-ui-컴포넌트와-독립-preview--2026-11-19)
 
 | 요소 | 구현 값과 상태 |
@@ -269,3 +271,30 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 
 - 56px 트리거는 제목과 펼침 아이콘을 수직 중앙에 놓고 개폐 시 정렬을 유지한다. 같은 너비의 패널을 바로 아래에 연결하며 `--surface-card`와 `--border-subtle`을 쓴다. 패널은 화면 경계 안에서 최대 340px까지 펼친다. [공통 드롭다운 CSS](../../src/components/common-ui/ConnectedDropdown.module.css)
 - 홈 필터는 운동 종목 검색과 Pill 스타일을 공유한다. 홈에서는 50×27px로 표시하고 높이 44px의 터치 영역을 제공한다. 간격은 6px이며 선택 상태는 `--accent`와 `--on-accent`를 쓴다. 루틴명은 실제 루틴 편집의 태그 선택과 같은 14px·900, 보조 설명과 배정 요일은 12px·400이다. [공통 필터 CSS](../../src/components/common-ui/FilterTags.module.css) · [공통 목록 글자](../../src/components/common-ui/RoutineOptionText.module.css) · [홈 적용](../../src/features/home/Home.module.css)
+
+<a id="front18-feedback-visual"></a>
+
+## 18. FRONT 18 공통 안내·조회 복구 시각 규칙
+
+### 메시지형 Dialog
+
+- 루틴 주간 일정과 세트 사이 휴식의 반복 구간 카드에서 사용하는 외곽을 공유한다. Onyx의 `--surface-card`는 `#1B1D22`, `--radius-card-compact`는 5px, `--border-card`는 `1px solid #353941`이다. 최대 폭은 340px, 좁은 화면에서 좌우 여백은 각각 16px과 페이지 여백 중 큰 값, 내부 패딩은 16px이다. 일반 카드의 `--radius-card: 18px`과 기능형 Dialog의 화면별 카드 반경은 각 적용 범위에서 유효하다. [테마 토큰](../../src/app/theme.module.css) · [Dialog CSS](../../src/components/Dialog.module.css)
+- 아이콘·제목·설명은 가운데 정렬한다. 설명은 짧은 문장을 뜻 단위로 배치한다. `word-break: keep-all`과 `overflow-wrap: anywhere`로 한글 단어를 우선 보존하고 화면보다 긴 문자열의 넘침을 막는다. 제목과 설명의 기존 간격을 사용하며, 설명 블록 하단과 액션 영역 상단 사이의 간격은 20px이다. 모달 액션은 캡슐형이며 버튼끼리의 간격은 별도로 적용한다. [공통 메시지 스타일](../../src/components/Dialog.module.css) · [액션 Dialog CSS](../../src/components/common-ui/ActionDialog.module.css)
+
+| 모달 의미 | 아이콘 | 주요 액션 |
+| --- | --- | --- |
+| 일반 안내 | Info, `--accent` | `--accent` 채움 |
+| 단순 결과 재확인 | 회전 화살표, `--accent` | `--accent` 채움 |
+| 성공 확인 | 체크, `--status-done` | `--text-primary` 2px 테두리 |
+| 오류 확인 | X, `--status-danger-icon` | `--text-primary` 2px 테두리 |
+| 오류·위험 상태에서 안전한 복구 | 오류·위험 아이콘, `--status-danger-icon` | `--text-primary` 채움과 `--surface-page` 글자 |
+| 주의 행동 | 경고, `--status-warning` | `--status-warning` 채움 |
+| 삭제·폐기 | 위험 아이콘, `--status-danger-icon` | `--action-danger` 채움 |
+
+Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warning: #D6BC65`, `--status-danger-icon: #F06473`이다. 중립 액션의 흰색 테두리와 안전한 복구의 채움은 `--text-primary: #F0F1F4`를 쓰며, 안전한 복구 글자는 `--surface-page: #111216`이다. 삭제·폐기 채움은 기본 `#A83143`, 호버 `#B4374A`, 눌림 `#892637`이다. 강조색은 테마 역할을 따른다. 메시지형 스타일은 `data-message-tone` 범위에 적용한다. 숫자 휠·선택기·입력 편집처럼 조작이 주인 기능형 Dialog는 화면별 규격을 사용한다. [ActionDialog 의미별 적용](../../src/components/common-ui/ActionDialog.tsx) · [아이콘과 색상](../../src/components/common-ui/FeedbackIcon.module.css)
+
+### 일반 액션·Toast·조회 복구
+
+- 일반 액션에는 `--radius-action: 999px` 캡슐을 쓴다. 기본 Primary는 Dusty Blue `--accent` 채움과 `--on-accent` 글자, 기본 보조는 `--border-subtle: #353941`의 카드와 같은 회색 테두리다. `ActionButton`의 일반·모달·소형 최소 높이는 각각 48·44·36px이다. 토글·숫자 조절·전용 운동 컨트롤 등은 조작에 맞는 기존 형태를 사용한다. 키보드 포커스 윤곽과 위험 확정의 포커스 구분을 유지한다. [버튼 CSS](../../src/components/common-ui/ActionButton.module.css) · [공통 테마 CSS](../../src/app/theme.module.css)
+- Toast는 페이지 흐름 밖의 캡슐형 알림이다. 정보는 강조색, 성공은 초록색, 주의는 노란색, 오류는 빨간 오류 아이콘으로 구분한다. 동기화는 두 회전 화살표, 전송은 구름과 위쪽 화살표 아이콘을 사용한다. [Toast CSS](../../src/components/common-ui/Toast.module.css) · [공통 아이콘](../../src/components/common-ui/FeedbackIcon.tsx)
+- 데이터 없는 조회 실패는 배경 배지 없는 오류 아이콘과 짧은 문구를 가운데 정렬한다. 공통 `RefreshButton`은 배경과 테두리 없이 왼쪽 18px 아이콘과 오른쪽 `새로고침`을 표시한다. 기본 최소 터치 높이는 44px이며 루틴 목록 제목의 기존 소형 배치는 36px이다. 조회 중 버튼을 비활성화하고 아이콘만 1.25초당 한 바퀴 반시계방향으로 회전시킨다. 대기 중 아이콘 대비를 유지하며, 모션 감소 설정에서는 정적인 점선 진행 표시를 제공한다. [조회 피드백 CSS](../../src/components/common-ui/ContentFeedback.module.css) · [루틴 목록 CSS](../../src/features/workout-online/Routine.module.css) · [동작 기준](ui-ux.md#front18-feedback)

@@ -983,7 +983,7 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 #### 공통 UI 컴포넌트와 독립 Preview — 2026-11-19
 
-**구현·검토 범위.** `2a1e10e`는 재사용할 공통 UI의 구현과 독립 Preview 검토 결과다. 공통 UI 컴포넌트는 구현 및 Preview 검토 단계이며, 실제 서비스 화면으로의 일괄 적용은 진행하지 않았다. 기존 운영 화면은 각각의 버튼·저장·검색 흐름과 기존 호출부를 사용한다. [최종 제품 결정](../product/Overload_UI_Decision_Log_v0.9.md#1039--공통-ui-컴포넌트와-독립-preview--2026-11-19) · [조작](../product/ui-ux.md#314-공통-ui-preview) · [시각 규칙](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#16-공통-ui-preview-시각-규칙)
+**당시 구현·검토 범위.** `2a1e10e`는 공통 UI 초기 구현과 독립 Preview 검토의 기록이다. 당시 서비스 화면은 각 호출부의 버튼·저장·검색 흐름을 사용했다. 아래 속성·검증은 초기 범위이며 현재 서비스 적용과 Preview의 실행 경계는 [FRONT 18 현황](#front18-stage3)을 참조한다. [초기 결정](../product/Overload_UI_Decision_Log_v0.9.md#1039--공통-ui-컴포넌트와-독립-preview--2026-11-19) · [검수 사용법](../tasks/front-18-3-6-preview-review.md)
 
 | 부품 | 실제 인터페이스와 책임 |
 |---|---|
@@ -996,9 +996,9 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 | [StatusIndicator](../../src/components/common-ui/StatusIndicator.tsx) | `StatusTag`와 `StatusText`에 `kind`와 라벨을 전달한다. 증량 권고는 선택적인 `onOpenDetails`로 안내를 열 수 있다. 아이콘은 [FeedbackIcon](../../src/components/common-ui/FeedbackIcon.tsx) 모듈에서 사용한다. |
 | [RecordSubpageHeader](../../src/components/RecordSubpageHeader.tsx) | 기존 헤더에 선택적인 `brandImage { src, alt, width, height }`를 추가했다. `action`이 있으면 우측은 액션을 표시한다. Preview 기본형은 [제공된 투명 4x PNG](../../src/assets/OVERLOAD_white_transparent_4x.png)를 전달하며 운영 호출부는 기존 헤더 props를 사용한다. |
 
-**개발 진입과 데이터.** [CommonUiPreview](../../src/review/CommonUiPreview.tsx)는 같은 컴포넌트를 호출하는 보기·상태 전환 화면이다. 기존 `AppShell`을 사용하고 탭 선택, 저장·삭제 성공, 연결 카드, 운동 검색은 브라우저 메모리 상태와 합성 데이터로 시연한다. 셸의 탭 표시용 `authenticated` 값과 실제 사용자 인증은 별개다. Preview에는 로그인 절차가 없고 테스트에서 API 요청과 IndexedDB 생성이 없음을 확인했다.
+**개발 진입과 데이터.** [CommonUiPreview](../../tests/fixtures/review/CommonUiPreview.tsx)는 같은 컴포넌트를 호출하는 보기·상태 전환 화면이다. 기존 `AppShell`을 사용하고 탭 선택, 저장·삭제 성공, 연결 카드, 운동 검색은 브라우저 메모리 상태와 합성 데이터로 시연한다. 셸의 탭 표시용 `authenticated` 값과 실제 사용자 인증은 별개다. Preview에는 로그인 절차가 없고 테스트에서 API 요청과 IndexedDB 생성이 없음을 확인했다.
 
-- `npm run dev -- --mode ui-review`의 [4173 검토 경로](http://127.0.0.1:4173/common-ui-preview)는 [Vite 설정](../../vite.config.ts)이 전용 [검토 진입점](../../src/review/main.tsx)을 제공한다. 기본은 루프백이며 `OVERLOAD_MOCK_LAN_IP`를 설정한 경우 승인된 사설 인터페이스 서브넷에서 접근한다. 검토 모드는 API·OAuth 경로를 차단한다. 일반 Vite 개발 서버는 [기본 진입점](../../src/main.tsx)의 `import.meta.env.DEV` 조건에서 같은 경로를 로딩한다.
+- 기존 4173 게이트웨이는 전용 빌드로 [검수 HTML](../../scripts/review/common-ui-preview.html)을 제공한다. 브라우저 자동 검사는 격리 Vite 환경에서 [fixture 진입점](../../tests/fixtures/review/main.tsx)의 `/common-ui-preview`를 사용한다. 앱과 Preview의 현재 주소 및 갱신 절차는 [로컬 4173 PWA 검수](#review-4173)와 [Preview 검수 안내](../tasks/front-18-3-6-preview-review.md)를 따른다.
 - Vite 프로덕션 빌드에는 Preview 경로 분기, Preview 전용 부품과 4x 이미지가 포함되지 않는다. `npm run preview`는 운영 산출물을 제공한다. 운영에서도 사용하는 `Dialog`·`RecordSubpageHeader`·`SearchList`는 각 기존 호출부에서 재사용한다.
 
 **구현 당시 검증.** Chrome **320·375·393·430·1280px**에서 [공통 UI Preview 테스트](../../tests/common-ui-preview.test.mjs) 단독 실행이 통과했다. 위험 버튼 상태, 검색 범위·긴 칩, 루틴 태그 선택과 빈/로딩 상태, 로고 비율과 제목 겹침, 계정 카드·루틴 태그 목록의 로딩 전후 경계 상자와 주변 위치, 가로 넘침, 포커스와 모달 닫기, 움직임 줄이기를 확인했다. 전체 테스트 **652/652**에는 기존 홈·루틴·기록·설정 브라우저 회귀도 포함된다. TypeScript·린트·프로덕션 빌드와 Preview의 번들 제외 검사가 통과했다. 빌드는 기존 500kB 초과 청크 경고를 냈다. `logs/common-ui-round3-full.log`는 당시 전체 실행 기록이며 문서 갱신에서는 코드와 그 기록을 대조했다. iPhone Safari·설치형 PWA 실기기와 서비스 화면별 적용 검증은 후속 단계다.
@@ -1067,6 +1067,33 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 - 375px에서 계정 설정의 첫 카드 문구가 한 줄 더 줄바꿈되며 카드 높이가 18px 늘어났다. 카드 높이와 내부 패딩의 CSS 규칙은 유지했다.
 - LAN 검수에서 393·1280px 운동 화면의 상단 타이머와 하단 액션이 기존 전체 너비를 사용했다. Spring START 201, 스냅샷 200, 이어하기·새로고침 및 FINISH를 확인했다. 검증에 생성한 운동만 앱 계약에 따라 논리 삭제한 뒤 진행 중 운동 0건을 확인했다.
 - PC와 iPhone 사용자 최종 UI 승인 대기 상태다. iPhone Safari와 설치형 PWA 실기기 검증은 남아 있다.
+
+<a id="front18-stage3"></a>
+
+#### FRONT 18 · 3단계 구현·검수 마감 현황 — 2026-11-25
+
+1단계의 초도 17개 일반 화면에 루틴 생성·편집 보완을 이어 적용했다. 2단계 일반 화면은 Chrome의 Safe Area 기본값에서 메인 탭 시작 Y=18px, 공통 하위 헤더 시작 Y=20px을 기준으로 한다. 헤더 아래 본문의 좌표는 화면 구성에 따른다. 일반 페이지의 홈 기준 너비와 운동 전용 고정 프레임·내비게이션 경계를 3단계에도 유지했다.
+
+| 작업 | 적용 결과 |
+| --- | --- |
+| 3-1 | 전체 서비스 UI와 공통 부품의 내부 문구·조회·상태 전환·레이아웃 이동을 조사했다. 필요한 입력 오류·충돌·복구 안내를 식별했다. |
+| 3-2 | 루틴과 주간 일정 상단의 `ROUTINES · 다시 조회`를 정리했다. 진입·복귀 조회, 오류 재시도, 일정 쓰기 차단 및 충돌 복구를 유지했다. 표준 운동·계정·PWA의 내부 용어를 정리했고, 휴식 테스트의 노출·저장·12초 적용을 유지했다. |
+| 3-3 | 일시 알림과 명시적 확인에 공통 Toast·Dialog를 적용했다. 입력·데이터 보호에 필요한 상세 안내는 해당 흐름에 유지했다. |
+| 3-4A·3-4B | 일반 페이지는 기존 조회 데이터와 주요 콘텐츠 위치를 유지한다. 운동은 고정 프레임·스크롤·입력 보존을 기준으로, 임시 메시지가 카드와 상하 액션을 밀던 경로를 정리했다. |
+| 3-5 및 추가 보완 | 운동 저장 상태와 상세 복구를 통일했다. 내부 저장·동기화 오류와 사용자가 조치할 입력 오류를 분리하고 미확인 쓰기·로컬 원본 보호를 유지했다. |
+| 3-6·3-6A 및 보완 | 실제 공통 컴포넌트를 두 Preview에서 검수한다. 메시지형 Dialog의 문장·아이콘·버튼 의미를 정리하고 일반 액션·동기화·구름 전송 아이콘을 갱신했다. |
+| 3-6B 및 1~3차 보완·추가 피드백 | 탐색·복구 문구, 정상 빈 상태와 조회 오류, 서비스 28개 조회 경로의 공통 새로고침을 정리했다. 두 Preview의 조회 지연을 공통화했다. 반시계방향 회전과 설명–액션 20px 간격까지 반영했다. |
+| 3-6C | **최종 사용자 검수와 승인 대기.** 구현과 Chrome 검증 완료 상태를 기록한다. iPhone Safari와 설치형 PWA는 실기기 미검증이다. |
+
+**기준 문서.** [공통 안내·오류·복구 UX](../product/ui-ux.md#front18-feedback)는 표시 조건과 조작을, [Visual Theme Spec 18절](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-feedback-visual)은 디자인 토큰·수치·적용 범위를 관리한다. [Decision Log 10.43절](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage3-decision)은 변경 이력과 대체 관계를, [3-6 검수 안내](../tasks/front-18-3-6-preview-review.md)는 재현 경로와 검증 근거를 관리한다.
+
+**조회·쓰기 보호.** [AuthApi](../../src/features/auth/api.ts)의 개별 HTTP 요청 기본 제한은 10초이며 [복합 조회](../../src/app/read-deadline.ts)의 기본 제한은 30초다. 홈은 계정·진행 운동 재확인과 홈 데이터 전체 조회에 각각 단계별 제한을 적용한다. 기존 로컬 복원·편집 잠금은 별도 경계다. 부모 요청의 종료와 화면·계정 변경 시 하위 조회를 취소하고, 시간 초과·뒤늦은 응답이 화면이나 다른 계정 상태에 반영되지 않도록 한다. 기존 데이터·스크롤은 가능한 범위에서 유지한다. [홈 조회](../../src/features/home/HomePanel.tsx) · [워크스페이스 조회와 쓰기](../../src/features/workout-online/controller.ts)
+
+[공통 RefreshButton](../../src/components/common-ui/RefreshButton.tsx)은 대기 중 비활성화와 즉시 중복 클릭 방지, 완료·실패·시간 초과·취소 시 진행 종료를 제공한다. 실패는 Error Toast와 다시 조작할 수 있는 상태로 돌아간다. 운동 START·FINISH와 기록 편집 같은 쓰기는 시간 초과만으로 확정 실패 처리할 수 없다. 기존 요청과 저장된 복구 정보를 보존하고 계약에 맞게 동일 작업의 결과를 재확인한다. [일반 화면 조회 회귀](../../tests/read-deadline.test.mjs) · [운동 로컬 보호와 복원](#12-진행-운동의-로컬-보호-및-복원)
+
+**검증 기준.** 마지막 3-6B 스타일 빌드의 전체 FRONT 728/728, 집중 검사 38/38, TypeScript, ESLint, 프로덕션·4173 검수 빌드와 `git diff --check` 통과 기록을 확인했다. Chrome 320·375·393·430·1280px, 실제 4173 전용 계정의 일반 휴식 180초·테스트 12초와 설정 복원, Preview 운영 격리까지 확인한 범위다. 500kB 초과 번들 청크 경고와 실기기 효과음 재생 검수는 남아 있다. [검증 범위와 기록 위치](../tasks/front-18-3-6-preview-review.md#front18-review-evidence)
+
+**다음 작업.** 4단계 카드 크기·간격 통일 → 5단계 버튼·입력 규격 통일 → 6단계 공통 드롭다운 확대 적용 → 7단계 숫자 초기값 확대 적용 → 8단계 타이포그래피·아이콘·세부 간격 → 9단계 전체 통합 검증. 4단계 착수 전에는 1·2단계 일반 페이지 경계, 카드 자체의 역할별 외곽, 메시지형 Dialog 토큰, 기존 콘텐츠를 보존하는 조회 오류와 운동 고정 프레임 기준을 확인한다.
 
 #### 현황 갱신
 
@@ -1815,7 +1842,7 @@ Mock은 검토 환경임을 화면에 표시하고 현실적인 합성 데이터
 
 로컬 PWA를 검수할 때는 [4173 PWA 검수](#review-4173)의 실제 앱과 전용 계정으로 운동 START까지 확인합니다. 아래 LAN Mock 설정은 합성 UI를 독립적으로 시연할 때 적용합니다.
 
-- 기존 검토 서버·설정·주소·포트를 우선 사용합니다. 사설 LAN 접속에는 기존 `server.host: true` 또는 해당 검토 모드의 LAN 바인딩을 적용합니다. `ui-review`에서는 확인한 사설 IPv4를 `OVERLOAD_MOCK_LAN_IP`에 지정하며 기본 포트는 4173입니다. 피드백마다 서버·DB·계정을 다시 만들지 않습니다. UI 변경은 같은 환경에 반영하고 필요한 경우 프런트엔드만 재시작합니다.
+- 기존 검토 서버·설정·주소·포트를 우선 사용합니다. 사설 LAN 접속에는 기존 `server.host: true` 또는 해당 검토 모드의 LAN 바인딩을 적용합니다. 실제 앱을 검수하는 4173 게이트웨이와 Vite `ui-review`에서는 사설 IPv4를 `OVERLOAD_REVIEW_LAN_IP`에 지정합니다. 합성 `review:lan`은 별도 실행 경로입니다. 피드백마다 서버·DB·계정을 다시 만들지 않습니다. UI 변경은 같은 환경에 반영하고 필요한 경우 프런트엔드만 재시작합니다.
 - 사용자의 최종 UI 승인이 없거나 피드백이 남아 있으면 사용자 검토 환경을 유지하고 중간 커밋을 하지 않습니다. 검증에 사용한 별도 일회용 프로세스는 [AGENTS.md의 정리 규칙](../../AGENTS.md#local-process-cleanup)을 적용합니다. 최종 종료 시 실행 소유권·PID·포트를 확인하고 해당 환경의 안전 종료 경로를 사용합니다. [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md#종료와-보존)
 - Backend·DB 변경을 포함하면 변경 범위를 먼저 확인합니다. 기존 환경의 Backend 버전, DB 스키마, 실제 Flyway 이력, 데이터·계정 상태와 호환성·보존 여부를 확인합니다. 승인·백업·복구 조건을 충족한 뒤 승인된 변경만 반영하고, 적용 결과와 코드·데이터 일치를 검증한 상태로 PC와 iPhone에서 시연합니다. 보존 DB의 재개·마이그레이션·데이터 변경에는 기존 별도 승인 절차를 적용합니다. UI 전용 작업은 프런트엔드에서 검토합니다. [테스트 환경 안내](../../../overload-server/docs/engineering/test-environment.md)
 
@@ -1824,6 +1851,8 @@ Mock은 검토 환경임을 화면에 표시하고 현실적인 합성 데이터
 #### 로컬 4173 PWA 검수
 
 로컬 PWA 검수의 기본 주소는 PC `http://127.0.0.1:4173/`와 동일 Wi-Fi의 `http://192.168.0.3:4173/`입니다. 둘 다 격리 Spring API와 PostgreSQL을 사용하는 실제 앱의 `/`로 들어갑니다. `npm run review:lan`과 `/routine-preview`는 합성 UI 시연 경로입니다.
+
+같은 4173 게이트웨이의 `/common-ui-preview.html`과 `/common-ui-preview.html?front18=1`은 합성 데이터로 동작하는 별도 검수 페이지입니다. [공통 UI 및 FRONT 18 검수 안내](../tasks/front-18-3-6-preview-review.md)
 
 **기존 환경 실행과 갱신**
 
