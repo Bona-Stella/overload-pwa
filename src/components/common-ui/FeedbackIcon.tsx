@@ -11,6 +11,9 @@ const paths = {
   offline: 'M2 2l20 20M8.5 8.5A14 14 0 0 1 22 9M2 9c.7-.6 1.5-1.1 2.4-1.6M5 12.5a10 10 0 0 1 3.6-1.9m5.7-.4c1.7.4 3.3 1.2 4.7 2.3M8.5 16a5.6 5.6 0 0 1 7 0M12 20h.01',
   syncing: 'M20 9a8 8 0 0 0-13.6-3L4 9m0-5v5h5M4 15a8 8 0 0 0 13.6 3L20 15m0 5v-5h-5',
   upload: 'M7 19a5 5 0 1 1 .2-10A6.7 6.7 0 0 1 20 10.6a4.3 4.3 0 0 1-1.7 8.3H16m-4 2v-9m-3 3 3-3 3 3',
+  routine: 'M4 4h16v16H4zM9 4v16m4-12h4m-4 4h4m-4 4h3',
+  record: 'M3 12a9 9 0 1 0 3-6.7M3 5v7h7m2-5v5l3 2',
+  search: 'M16 16l4 4M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z',
 }
 
 export function FeedbackIcon({ name, size = 18, spinning = false }: { name: keyof typeof paths; size?: number; spinning?: boolean }) {

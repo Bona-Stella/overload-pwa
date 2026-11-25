@@ -1,3 +1,6 @@
+import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
+import { ContentError, EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { useState } from 'react'
 import type { ReactNode, Ref } from 'react'
 import { Dialog } from '../../components/Dialog.tsx'
@@ -92,14 +95,8 @@ function DeviceCard({ device, snapshot, current = false, canPreviewLogout = fals
   </Card>
 }
 
-const statusText = {
-  unsupported: '현재 서버에서 로그인된 기기 조회를 지원하지 않습니다.',
-  loading: '로그인된 기기를 확인하고 있어요.',
-  error: '로그인된 기기 정보를 불러오지 못했습니다.',
-}
-
-export function LoggedInDevices({ onBack, headingRef, state = { status: 'unsupported' }, previewControls, onRetry }: DevicesNavigation & {
-  state?: DevicesState; previewControls?: ReactNode; onRetry?: () => void
+export function LoggedInDevices({ onBack, headingRef, state = { status: 'unsupported' }, previewControls, onRetry, refreshing }: DevicesNavigation & {
+  state?: DevicesState; previewControls?: ReactNode; onRetry?: () => void; refreshing?: boolean
 }) {
   const [target, setTarget] = useState<PreviewTarget | null>(null)
   const snapshot = state.status === 'ready' ? state.snapshot : null
@@ -124,16 +121,16 @@ export function LoggedInDevices({ onBack, headingRef, state = { status: 'unsuppo
         <div><dt>오프라인</dt><dd>{countLabel(online === null ? null : devices.length - online)}</dd></div>
       </dl>
     </Card>
-    {state.status !== 'ready' ? <Card className={styles.card} role={state.status === 'error' ? 'alert' : 'status'}>
-      <AccountNote>{statusText[state.status]}</AccountNote>
-      {state.status === 'error' && onRetry && <Button className={styles.action} onClick={onRetry}>다시 확인</Button>}
-    </Card> : snapshot && <>
+    {state.status === 'unsupported' ? <Card className={styles.card}><AccountNote>로그인된 기기 목록은 아직 제공되지 않아요.</AccountNote></Card>
+      : state.status === 'loading' ? <LoadingSkeleton layout="settings" label="로그인된 기기를 확인하고 있어요." />
+      : state.status === 'error' ? <ContentError title="로그인된 기기를 불러오지 못했어요." action={onRetry && <RefreshButton onRefresh={onRetry} loading={refreshing} />} />
+      : snapshot && <>
       {current && <DeviceCard device={current} snapshot={snapshot} current />}
       {devices.length > 0 && !current && <AccountNote>현재 접속한 기기를 확인할 수 없습니다.</AccountNote>}
       <div className={styles.row}><h2>{current ? '다른 기기' : '로그인 기기 목록'}</h2><span>{countLabel(others.length)}</span></div>
       {others.length ? others.map(device => <DeviceCard key={device.id} device={device} snapshot={snapshot}
         canPreviewLogout={canPreview} onPreviewLogout={() => setTarget({ kind: 'device', device })} />)
-        : <Card className={styles.card}><p>{current ? '다른 기기에 로그인되어 있지 않습니다.' : '로그인된 기기가 없습니다.'}</p></Card>}
+        : <EmptyState icon={<AccountIcon name="devices" />} title={current ? '다른 기기에 로그인되어 있지 않아요' : '로그인된 기기가 없어요'} />}
     </>}
     <div className={styles.footer}>
       <Button className={styles.action} disabled={!canPreview || !others.length} onClick={() => setTarget({ kind: 'others' })}>

@@ -26,6 +26,7 @@ const inputExamples = {
 } satisfies Partial<Record<WorkoutExample, string>>
 const recoveryExamples = { offline: '이 기기에 보존된 운동 이어가기', 'offline-error': '오프라인 원본 조회 실패',
   'offline-empty': '오프라인 원본 없음', 'open-error': '로컬 운동 열기 실패', 'read-only': '편집 잠금 · 읽기 전용' } satisfies Partial<Record<WorkoutExample, string>>
+const defensiveInputs = new Set(['reps-range', 'weight-range', 'extra', 'derived-distance', 'motion'])
 
 export function Front18Workout({ onExit }: { onExit: () => void }) {
   const [setup, setSetup] = useState({ example: 'reps' as WorkoutExample, attempt: 0 })
@@ -76,14 +77,20 @@ function WorkoutExampleView({ example, reset, onExit }: { example: WorkoutExampl
     <h3>입력·선택·작업 오류</h3>
     <p>상태를 구성한 뒤 운동 화면의 완료, 수정 또는 이동 버튼을 누르세요.</p>
     <div className={styles.controls}>
-      {Object.entries(inputExamples).map(([value, label]) => <Button key={value} onClick={() => begin(value as WorkoutExample)}>{label}</Button>)}
+      {Object.entries(inputExamples).filter(([value]) => !defensiveInputs.has(value)).map(([value, label]) => <Button key={value} onClick={() => begin(value as WorkoutExample)}>{label}</Button>)}
       <Button disabled={!canWrite} onClick={() => run(fixture.failWrite)}>다음 완료·취소·종목 이동 실패 예약</Button>
       <Button disabled={!hasWeight} onClick={() => run(async () => {
         fixture.failWrite(); fixture.draft(); await controller.settled(); fixture.failWrite()
         if (!await controller.flushDrafts()) setNavigationIssue(workoutNavigationFailure)
       })}>화면 이동 전 초안 저장 실패</Button>
     </div>
+    <h3>방어 검증 · 비정상 값 복원</h3>
+    <p>정상 입력에서 차단되는 값이나 서로 맞지 않는 값이 복원됐을 때의 검수예요. 상태를 선택하고 해당 세트나 유산소 완료를 눌러 보세요.</p>
+    <div className={styles.controls}>
+      {Object.entries(inputExamples).filter(([value]) => defensiveInputs.has(value)).map(([value, label]) => <Button key={value} onClick={() => begin(value as WorkoutExample)}>{label}</Button>)}
+    </div>
     <h3>운동 종료</h3>
+    <p>오류를 선택한 뒤 운동 화면에서 ‘운동 종료’를 누르고 종료를 확인하세요.</p>
     <div className={styles.controls}>
       <Button onClick={() => run(() => { fixture.holdDelivery(); window.setTimeout(fixture.releaseDelivery, 5000) })}>다음 종료 처리 5초 지연</Button>
       <Button onClick={() => run(fixture.failWrite)}>다음 종료 로컬 저장 실패</Button>

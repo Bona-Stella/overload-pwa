@@ -22,7 +22,8 @@ export function ExerciseSearch<T extends SearchExercise>({ exercises, onSelect, 
     <SearchList defaultOpen={defaultOpen} tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:filter,onSelect:id=>setFilter(id as CatalogGroup|'ALL')}}
       onDetail={(id,event)=>{const exercise=results.find(e=>e.id===id);if(!exercise)return;if(!resetOnSelect)onSelect(exercise,event);else{onCancel?.();detail?.({id,exerciseId:id,name:exercise.name,description:''})}}}
       resultsLabel="표준 운동 목록" closeOnSelect={resetOnSelect} query={query} onQuery={setQuery} onClear={()=>{setQuery('');setFilter('ALL')}} disabled={disabled} autoFocus={autoFocus}
-      label="표준 운동 검색 · 이름 또는 별칭" issue={failed?'운동 정보를 불러오지 못했습니다.':loading?'운동 정보를 불러오는 중입니다.':!exercises.length?'등록된 표준 운동이 없습니다. 카탈로그 등록 후 다시 조회해 주세요.':undefined}
+      label="표준 운동 검색 · 이름 또는 별칭" loading={loading} issue={failed?'운동 목록을 불러오지 못했어요.':undefined}
+      emptyTitle={exercises.length ? '검색 결과가 없어요' : '등록된 표준 운동이 없어요'}
       options={results.map(exercise=>{const first=primaryMuscles(exercise)[0],group=catalogGroups[catalogRowGroup(exercise,first)];return{id:exercise.id,exerciseId:exercise.id,name:exercise.name,description:group.label+' · '+(first?.name??'등록 정보 없음'),icon:<ExerciseIcon kind={group.icon}/>}})}
       onSelect={(id,event)=>{const exercise=results.find(e=>e.id===id);if(exercise)onSelect(exercise,event);if(resetOnSelect)setQuery('')}} />
   </div>

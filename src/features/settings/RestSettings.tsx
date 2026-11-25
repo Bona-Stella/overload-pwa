@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
-import { Button, Card, StatusNotice } from '../../components/ui.tsx'
+import { Button, Card } from '../../components/ui.tsx'
+import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
+import { ContentError } from '../../components/common-ui/ContentFeedback.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
 import type { RestPolicy } from '../workout-local/types.ts'
 import { countDraft } from '../workout-online/validation.ts'
@@ -9,7 +14,7 @@ import styles from './RestSettings.module.css'
 
 type Band = keyof RestPolicy
 type Draft = Record<Band, string>
-type SaveIssue = { message: string; conflict?: boolean }
+type SaveIssue = { message: string; conflict?: boolean; tone?: 'warning' | 'error' }
 export type RestExitGuard = (duringTraversal?: boolean) => boolean | Promise<boolean>
 
 const bands = [
@@ -23,7 +28,7 @@ function minutes(seconds: number) {
   return `${Math.floor(seconds / 60)}분${remaining ? ` ${remaining}초` : ''}`
 }
 
-export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = false, hidden = false, review = false, loadIssue }: {
+export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = false, hidden = false, review = false, loadIssue, onRetry }: {
   settings?: RestPolicy
   onBack: (canLeave?: RestExitGuard) => void
   onRequest: (values: RestPolicy | null) => Promise<SaveIssue | null>
@@ -32,13 +37,14 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
   hidden?: boolean
   review?: boolean
   loadIssue?: string | null
+  onRetry?: () => void
 }) {
   const heading = useRef<HTMLHeadingElement>(null)
   const pending = useRef(false)
   const hint = useId()
   const [draft, setDraft] = useState<Draft | null>(null)
   const [invalid, setInvalid] = useState<Band | null>(null)
-  const [issue, setIssue] = useState<string | null>(null)
+  const feedback = useSuccessToast(hidden ? null : 'rest-settings')
   const [reloading, setReloading] = useState(false)
   const [refreshed, setRefreshed] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -65,7 +71,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
       restMediumSeconds: String(settings.restMediumSeconds),
       restHighSeconds: String(settings.restHighSeconds),
     } : null)
-    setIssue(null)
+    feedback.clear()
     setInvalid(null)
     setReloading(false)
     setRefreshed(false)
@@ -78,28 +84,29 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
       values = { restLowSeconds: 0, restMediumSeconds: 0, restHighSeconds: 0 }
       for (const { field, label } of bands) {
         try { values[field] = countDraft(draft[field]) }
-        catch (error) {
+        catch {
           setInvalid(field)
-          setIssue(`${label} 휴식 시간은 ${(error as Error).message}`)
+          feedback.show(`${label} 휴식 시간을 1초 이상으로 입력해 주세요.`, 'warning')
           event.currentTarget.querySelector<HTMLInputElement>(`[name="${field}"]`)?.focus()
           return
         }
       }
     }
     setInvalid(null)
-    setIssue(null)
+    feedback.clear()
     setRefreshed(false)
     pending.current = true
     setSaving(true)
     try {
       const failure = await onRequest(values)
       if (failure) {
-        setIssue(failure.message)
+        feedback.show(failure.message, failure.tone ?? (failure.conflict ? 'warning' : 'error'))
         if (failure.conflict) setReloading(true)
       } else if (reloading) {
         setReloading(false)
         setRefreshed(true)
-      } else setDraft(null)
+        feedback.show('최신 설정을 불러왔어요. 입력한 값을 확인해 주세요.', 'info')
+      } else { setDraft(null); feedback.show('휴식 시간을 저장했어요.') }
     } finally {
       pending.current = false
       setSaving(false)
@@ -114,7 +121,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
         <div className={styles.cardHeading}>
           <div className={styles.cardTitle}>
             <h2>반복 구간별 휴식 시간</h2>
-            <p>{draft ? '구간별 휴식 시간을 수정할 수 있어요.' : '목표 반복 횟수에 따른 휴식 기준'}</p>
+            <p>{refreshed ? `최신 저장값은 ${bands.map(({ field }) => `${settings[field]}초`).join(' · ')}예요.` : draft ? '구간별 휴식 시간을 수정할 수 있어요.' : '목표 반복 횟수에 따른 휴식 기준'}</p>
           </div>
           <Button className={styles.cardAction} disabled={busy && !saving} pending={saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>
         </div>
@@ -128,7 +135,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
               name={field} inputMode="numeric" autoComplete="off" value={draft[field]} readOnly={saving}
               onChange={event => {
                 setDraft({ ...draft, [field]: event.target.value })
-                if (invalid === field) { setInvalid(null); setIssue(null) }
+                if (invalid === field) { setInvalid(null); feedback.clear() }
               }} />
             <Button shape="control" variant="quiet" className={styles.remove} aria-label={`${label} 구간 삭제`} aria-describedby={hint} disabled>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -150,14 +157,13 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
         </dl>}
       </Card>
       {draft && <>
-        {issue && <StatusNotice error>{issue}</StatusNotice>}
-        {refreshed && <StatusNotice>최신 저장값은 {bands.map(({ field }) => `${settings[field]}초`).join(' · ')}입니다. 입력한 값을 확인한 뒤 다시 저장해 주세요.</StatusNotice>}
         <Button type="submit" className={styles.save} disabled={busy && !saving} loading={saving}>
-          {reloading ? '최신 설정 다시 확인' : '변경 사항 저장'}
+          {reloading ? '최신 설정 확인' : '변경 사항 저장'}
         </Button>
       </>}
-    </form> : loadIssue ? <StatusNotice error>{loadIssue}</StatusNotice> : <div aria-busy="true" />}
+    </form> : loadIssue ? <ContentError title="휴식 설정을 불러오지 못했어요." action={onRetry && <RefreshButton loading={busy} onRefresh={onRetry} failure={loadIssue} />} /> : <LoadingSkeleton layout="settings" label="휴식 설정을 불러오고 있어요." />}
     {review && <p className="muted small">검토용 예시 휴식 시간입니다.</p>}
     {confirmation}
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </section>
 }

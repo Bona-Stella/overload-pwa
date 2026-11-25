@@ -106,7 +106,7 @@ export function scheduleIssue(error: unknown) {
     case 'ACTIVE_SESSION_EXISTS': return '진행 중인 운동을 종료하고 저장 상태를 확인한 뒤 변경해 주세요.'
     case 'SCHEDULE_STATE_VERSION_CONFLICT':
     case 'PRESET_VERSION_CONFLICT':
-    case 'SCHEDULE_TIME_ZONE_CONFLICT': return '일정이 다른 화면에서 변경되었습니다. 입력은 유지됩니다. 최신 일정을 다시 열어 주세요.'
+    case 'SCHEDULE_TIME_ZONE_CONFLICT': return '일정이 변경됐어요. 최신 일정을 확인해 주세요.'
     case 'DELOAD_ACTIVE_PERIOD': return '디로딩 진행 중이거나 완료 당일에는 일반 루틴과 일정을 변경할 수 없습니다.'
     case 'ROTATION_REQUIRES_TWO_PRESETS': return '자동 순환에는 포함 일정이 최소 2개 필요합니다.'
     case 'AUTO_ROTATION_ENABLED': return '자동 순환 중에는 수동으로 전환할 수 없습니다.'
@@ -117,6 +117,9 @@ export function scheduleIssue(error: unknown) {
     case 'PRESET_NOT_FOUND': return '이 일정을 찾을 수 없습니다. 최신 일정을 다시 조회해 주세요.'
     case 'CSRF_INVALID':
     case 'CSRF_REQUIRED': return '보안 확인이 만료됐습니다. 최신 일정을 확인한 뒤 다시 시도해 주세요.'
-    default: return '일정 변경을 확인하지 못했습니다. 입력은 유지됩니다. 최신 일정을 확인해 주세요.'
+    default: {
+      const status = (error as { status?: number } | null)?.status ?? 0
+      return status >= 400 && status < 500 ? '일정을 저장하지 못했어요.' : '일정 저장 결과를 확인하지 못했어요. 최신 일정을 확인해 주세요.'
+    }
   }
 }

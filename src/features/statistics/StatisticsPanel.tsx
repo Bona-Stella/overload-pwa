@@ -1,3 +1,9 @@
+import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
+import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
+import { ContentError, EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
+import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
 import { durationLabel, durationMinutesLabel } from '../../components/duration.ts'
@@ -69,7 +75,7 @@ export function WeightChart({ rows }: { rows: Row[] }) {
   const hasContribution = rows.some(r => r.contributionSets !== undefined)
   const values = rows.map(r => metric === 'volume' && volumeAvailable ? r.weights.volumeLoadKg : r.contributionSets ?? r.weights.completedSets)
   return <div className="stack">{volumeAvailable && <div className="row" aria-label="집계 항목"><button className="outline" aria-pressed={metric === 'sets'} onClick={() => setMetric('sets')}>{hasContribution ? '기여 세트' : '세트 수'}</button><button className="outline" aria-pressed={metric === 'volume'} onClick={() => setMetric('volume')}>총중량</button></div>}
-    {!rows.length && <p className="muted">해당 기간의 기록이 없습니다.</p>}
+    {!rows.length && <EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="선택한 기간에 운동 기록이 없어요" />}
     {rows.map((row, index) => <div className="statistics-row" key={row.key}><div><strong>{row.name}</strong><span>{metric === 'volume' && volumeAvailable ? values[index] === null ? '중량 기록 없음' : `${values[index]} kg` : row.contributionSets === undefined ? `${row.weights.completedSets}세트 · ${row.weights.reps}회`
       : `기여 ${row.contributionSets}세트 · 실제 참여 ${row.weights.completedSets}세트 · ${row.weights.reps}회`}</span></div>
       <RecordChart data={[{id:row.key,label:row.name,value:values[index]}]} kind="horizontal" compact unit={metric==='volume'?'kg':'세트'} label={row.name+' '+(metric==='volume'?'총중량':'세트')}/>
@@ -196,7 +202,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
       <section className={activityStyles.cardioKinds}><h3>종류별 누적 거리</h3>
         {cardioTotals.map(c=><div className={activityStyles.cardioKind} key={c.kind}><span><ExerciseIcon kind={c.kind==='BIKE'?'cycling':c.kind==='TREADMILL'||c.kind==='OUTDOOR'?'running':'other'} />{cardioKinds[c.kind]??c.kind}</span>
           <strong>{sampleCardio&&<small>{sampleCardio.weekdays.get(c.kind)??'요일 미확인'}</small>}{c.distanceKm!==null?format(c.distanceKm)+' km':'거리 미입력'}</strong></div>)}
-        {data&&!cardioTotals.length&&<p className="muted small">선택 기간에 유산소 기록이 없습니다.</p>}
+        {data&&!cardioTotals.length&&<EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="선택한 기간에 유산소 기록이 없어요" />}
       </section>
       <p className="muted small">{sampleCardio?'UI 검토용 합성 유산소 기록':<>선택 기간 실제 기록 기준 · 계획 외 유산소도 포함{!preview&&'. 미전송 기록은 포함되지 않습니다.'}</>}</p>
       <div className={`stack ${activityStyles.cardioDetails}`} hidden={!cardioDetail}>
@@ -245,7 +251,7 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   if (queuedPeriod && !pending) setQueuedPeriod(null)
 
   const [overviews, setOverviews] = useState<{ key: string; request: string; data: Overview }[]>([])
-  const [failures, setFailures] = useState<Partial<Record<Mode, string>>>({})
+  const [failures, setFailures] = useState<Partial<Record<Mode, { request: string; message: string }>>>({})
   const [retryCount, setRetryCount] = useState({ week: 0, month: 0 })
   const invalid = useRef(onInvalid)
   useEffect(() => { invalid.current = onInvalid }, [onInvalid])
@@ -276,7 +282,10 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   const current = inActivity && activityPeriod.mode === 'month' ? monthly : weekly
   const summaryOverview = cachedPeriod({ mode: 'week', anchor: preview?.today ?? localToday() })
   const failedMode = inActivity ? pending?.mode ?? activityPeriod.mode : 'week'
-  const issue = failures[failedMode] === (failedMode === 'week' ? weekRequest : monthRequest)
+  const failedRequest = failedMode === 'week' ? weekRequest : monthRequest
+  const failure = failures[failedMode]
+  const issue = failure?.request === failedRequest
+  const refreshing = !!failure && !issue && failure.request.startsWith(failedRequest.slice(0, failedRequest.lastIndexOf(',') + 1))
   const activityState = inActivity && !current ? issue ? 'error' : 'loading' : undefined
   const waitingForScreen = !preview && entry?.screen === screen && !entry.presented && (
     (screen === 'activity' || screen === 'muscles') && !current && !issue ||
@@ -302,9 +311,10 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
         flights.current.week?.abort()
         flights.current.month?.abort()
         setOverviews([])
-        setFailures({ week: weekRequest, month: monthRequest })
+        const message = readFailure(error, '운동 통계를 불러오지 못했어요.')
+        setFailures({ week: { request: weekRequest, message }, month: { request: monthRequest, message } })
       } else {
-        setFailures(previous => ({ ...previous, [mode]: request }))
+        setFailures(previous => ({ ...previous, [mode]: { request, message: readFailure(error, '운동 통계를 불러오지 못했어요.') } }))
       }
       if (boundaryError(error)) onInvalid(error)
       return
@@ -323,7 +333,7 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
     if (inActivity && overviews.some(item => item.key === key && item.request === request)) return
     const flight = new AbortController()
     flights.current[mode] = flight
-    void api.overview({ userId, dataGeneration }, { fromDate, toDateExclusive }, flight.signal).then(data => {
+    void readWithDeadline(flight.signal, signal => api.overview({ userId, dataGeneration }, { fromDate, toDateExclusive }, signal)).then(data => {
       if (!flight.signal.aborted) settleOverview(mode, key, request, { data })
     }).catch(error => {
       if (!flight.signal.aborted) settleOverview(mode, key, request, { error })
@@ -345,7 +355,7 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
       setQueuedPeriod({ origin: selectionKey, value })
       const {fromDate, toDateExclusive} = selectedPeriod(value)
       const failed = JSON.stringify([[identity, fromDate, toDateExclusive].join(':'), overviewRevision, retryCount[value.mode]])
-      if (failures[value.mode] === failed) retry(value.mode)
+      if (failures[value.mode]?.request === failed) retry(value.mode)
       return
     }
     setQueuedPeriod(null)
@@ -380,24 +390,28 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
     onOpen(id)
   }
   const displayed = shown === 'summary' ? summaryOverview : current
+  const readIssue = '운동 통계를 불러오지 못했어요.'
+  const retryOverview = <RefreshButton loading={refreshing} failure={!displayed && issue ? failure.message : null} onRefresh={() => retry(failedMode)} />
+  const feedback = useReadErrorToast(enabled && displayed && issue && (shown === 'summary' || shown === 'activity' || shown === 'muscles') ? failure.message : null)
   return <section ref={panel} className={`stack statistics record-screen ${shown==='summary'?styles.main:''} ${shown==='activity'?activityStyles.page:''}`}
     aria-label="운동 기록·분석" data-tab-overview={shown === 'summary' || undefined}>
     {shown === 'activity' || shown === 'plan' || shown === 'muscles' || shown === 'history' ? <RecordSubpageHeader title={shown==='activity'?'운동 현황':shown==='plan'?'주간 근육 계획':shown==='muscles'?'주간 근육 통계':'전체 운동 이력'} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} /> : null}
     {shown === 'activity' && <PeriodControls variant="activity" days={current?.plannedDays} value={activityPeriod} pendingMode={issue ? undefined : pending?.mode} pendingValue={issue ? undefined : pending ?? undefined} onChange={changePeriod} />}
     {shown === 'growth' ? <GrowthPanel api={api.growth} scope={scope} refreshKey={refreshKey} onInvalid={onInvalid} onOpen={onOpen} onBack={back} backLabel={initialPreset?'루틴으로':'기록으로'} />
       : shown === 'plan' ? !workoutApi ? <p role="status">운동 계획 데이터 연결을 기다리고 있습니다.</p>
-        : !schedule && scheduleIssue ? <Card><p role="alert">{scheduleIssue}</p><Button onClick={onRetrySchedule}>다시 조회</Button></Card> : null
+        : !schedule && scheduleIssue ? <ContentError title={scheduleIssue} action={onRetrySchedule && <RefreshButton loading={scheduleLoading} failure={scheduleIssue} onRefresh={onRetrySchedule} />} /> : null
       : shown === 'history' ? workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={onOpen} onInvalid={onInvalid} definitions={definitions} /> : <p>운동 이력 연결 필요</p>
       : <>{(displayed || shown === 'summary' || shown === 'activity') ? <div className="stack record-statistics-body" data-activity-state={shown === 'activity' ? activityState : undefined}>
           {shown === 'activity' && activityState === 'loading' && <span role="status" className="sr-only">선택 기간의 운동 통계를 불러오는 중입니다.</span>}
           <StatisticsView achievementPlanning={achievement} achievementAnchor={activityPeriod.anchor} evidence={currentEvidence?.rows} data={displayed?.statistics ?? null} planning={displayed} identity={identity} screen={shown} onScreen={openScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions} activityState={activityState}/>
-        </div> : !issue && <StatisticsWait pending skeleton label="운동 통계를 불러오는 중입니다." />}
-        {issue && <Card><p role="alert">통계를 불러오지 못했습니다. 연결을 확인해 주세요.</p><Button onClick={() => retry(failedMode)}>다시 조회</Button></Card>}
+        </div> : !issue && !refreshing && <StatisticsWait pending skeleton label="운동 통계를 불러오는 중입니다." />}
+        {(issue || refreshing) && (displayed ? retryOverview : <ContentError title={readIssue} action={retryOverview} />)}
         {shown === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={openRecent} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>openScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button variant="quiet" onClick={() => openScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
     {retainPlan && workoutApi && <div hidden={shown !== 'plan'} className="statistics-plan">
       <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} active={enabled && screen === 'plan'} onReadSettled={setPlanReady} />
     </div>}
     <StatisticsWait pending={!!waitingForScreen || shown === 'plan' && !schedule && !!scheduleLoading} label="운동 통계를 불러오는 중입니다." />
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
     {preview&&shown!=='plan'&&shown!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
   </section>
 }

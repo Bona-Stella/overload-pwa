@@ -56,6 +56,37 @@
 .emptyIcon { width: 50px; height: 50px; margin-bottom: 4px; }
 .empty h2 { color: var(--text-primary); font-size: 15px; }
 .empty p { color: var(--text-muted); font-size: 13px; }
+.empty h2, .empty p { word-break: keep-all; overflow-wrap: anywhere; }
+.empty[data-embedded] { min-height: 0; padding: 16px 0; border: 0; background: transparent; }
+.empty[data-content-state='error'] .emptyIcon { color: var(--status-danger-icon); background: none; border: 0; border-radius: 0; }
+.emptyAction { margin-top: 4px; }
+
+button.refresh[data-refresh] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+button.refresh[data-refresh]:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; }
+button.refresh[data-refresh][aria-busy='true'] { opacity: 1; }
+.refreshIcon { position: relative; display: grid; flex: 0 0 18px; width: 18px; height: 18px; place-items: center; }
+.refreshIcon > svg { animation-direction: reverse; }
+@media (prefers-reduced-motion: reduce) {
+  button.refresh[aria-busy='true'] .refreshIcon > svg { visibility: hidden; }
+  button.refresh[aria-busy='true'] .refreshIcon::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border: 2px dashed currentColor;
+    border-radius: 50%;
+  }
+}
 
 .banner {
   --banner-tone: var(--accent);

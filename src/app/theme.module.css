@@ -26,6 +26,7 @@
   --space-page: 20px;
   --space-card: 18px;
   --radius-card: 18px;
+  --radius-card-compact: 5px;
   --radius-control: 10px;
   --radius-action: 999px;
   --font-metadata: 11px;
@@ -72,7 +73,7 @@
 .theme :global(input::placeholder) { color: var(--text-muted); }
 .theme :global(label), .theme :global(.muted), .theme :global(.eyebrow), .theme :global(.auth-divider) { color: var(--text-muted); }
 .theme :global(.brand-dot), .theme :global(.auth-wordmark span) { color: var(--accent); }
-.theme :global(.card) { background: var(--surface-card); border-color: var(--border-subtle); border-radius: var(--radius-card); }
+.theme :global(.card) { background: var(--surface-card); border: var(--border-card); border-radius: var(--radius-card); }
 .theme :global(.notice) { background: var(--surface-input); border-color: var(--border-subtle); color: var(--text-primary); }
 .theme :global(.notice.error) { background: var(--surface-danger); border-color: var(--status-missed); color: var(--status-danger-text); }
 .theme :global(.notice.warning) { background: var(--surface-warning); border-color: var(--status-warning); }
@@ -81,6 +82,7 @@
 .theme :global(.online-session-badge), .theme :global(.badge) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .theme :global(.workout-online [aria-pressed='true']) { border-color: var(--accent); }
 .theme :global(dialog) { background: var(--surface-card); color: var(--text-primary); border: var(--border-card); border-radius: var(--radius-card); }
+.theme :global(dialog[data-message-tone]) { border-radius: var(--radius-card-compact); }
 .theme :global(.local-set-equipment) { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
 .theme :global(a) { color: var(--accent); }
 .theme :global(summary) { cursor: pointer; }

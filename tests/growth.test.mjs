@@ -47,7 +47,7 @@ test('growth chart connects only the actual adjacent predecessor and never suppl
   assert.deepEqual(growthChartData([a,{...b,previousPointId:OTHER}],'UTC').map(p=>p.connect),[false,false])
   assert.deepEqual(growthChartData([a,{...b,connectFromPrevious:false}],'UTC').map(p=>p.connect),[false,false])
   assert.equal(growthChartData([a],'UTC').length,1)
-  assert.match(render([]),/승인 중량 변경 기록이 없습니다/)
+  assert.match(render([]),/data-content-state="empty".*승인 중량 변경 기록이 없어요/s)
 })
 test('large decimal and zero approved weights render without floating point loss',()=>{
   const html=renderToStaticMarkup(React.createElement(GrowthGraph,{points:[{...point(),approvedWeightKg:'99999999999999.999999'},{...point(SECOND),occurredAt:'2026-11-02T00:00:00Z',approvedWeightKg:'0'}],zone:'UTC'}))
@@ -56,7 +56,7 @@ test('large decimal and zero approved weights render without floating point loss
 test('growth screen exposes all four periods and historical search without claiming workout load is approval',()=>{
   const html=renderToStaticMarkup(React.createElement(GrowthPanel,{api:new GrowthApi({workoutRequest:async()=>{throw Error('SSR must not fetch')}}),scope,refreshKey:'test',onInvalid(){},onOpen(){}}))
   for(const value of ['1개월','3개월','6개월','전체','과거 운동 검색'])assert.ok(html.includes(value))
-  assert.match(html,/분석할 운동/);assert.match(html,/공식 승인 중량만 성장 그래프에 반영/);assert.match(html,/미전송 기록은 포함되지 않습니다/)
+  assert.match(html,/분석할 운동을 선택해 주세요/);assert.match(html,/공식 승인 중량만 성장 그래프에 반영/)
 })
 test('growth rejects a nonadvancing page instead of silently looping or mixing an unexpected page',async()=>{
   const data={...envelope(),standardExerciseId:OTHER,placement:selected,offset:0,points:[point()],nextOffset:0}

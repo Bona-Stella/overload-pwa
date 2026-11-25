@@ -1,4 +1,5 @@
 import { routineMatches } from './routine-match.ts'
+import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
 import { newId } from '../../id.ts'
 import type { AuthController, AuthState } from '../auth/controller.ts'
 import { WorkoutApi, WorkoutApiError } from './api.ts'
@@ -10,12 +11,12 @@ import type { RestPolicy } from '../workout-local/types.ts'
 
 type Bootstrap = Awaited<ReturnType<WorkoutApi['bootstrap']>>
 type AuthSource = Pick<AuthController, 'getSnapshot' | 'subscribe'>
-type Store = Pick<WorkoutStore, 'deviceId' | 'attempt' | 'prepareStart' | 'saveSession' | 'copies'> & Partial<Pick<WorkoutStore, 'prepareTakeover' | 'rejectTakeover'>>
-type RoutineRefresh = { version: string; failed: boolean }
+type Store = Pick<WorkoutStore, 'deviceId' | 'attempt' | 'prepareStart' | 'saveSession' | 'copies'> & Partial<Pick<WorkoutStore, 'prepareTakeover' | 'rejectTakeover' | 'rejectStart'>>
+type RoutineRefresh = { version: string; failed: boolean; retrying?: boolean }
 export type OnlineState = { userId: string | null; scope: Scope | null; data: Bootstrap | null; selected: Routine | null;
   active: Session | null; detail: Session | null; deviceId: string | null; attempt: StartAttempt | null;
   routineRefreshes: ReadonlyMap<string, RoutineRefresh>;
-  revalidatingScope?: boolean; readIssue?: boolean;
+  revalidatingScope?: boolean; readIssue?: boolean; issueCode?: string; startUnconfirmed?: boolean; routineSaveRejected?: boolean;
   status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string; recordsRevision: number }
 const empty = (): OnlineState => ({ userId: null, scope: null, data: null, selected: null, active: null, detail: null, deviceId: null, attempt: null,
   routineRefreshes: new Map(), status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '', recordsRevision: 0 })
@@ -23,16 +24,16 @@ const eligible = (state: AuthState) => state.status === 'authenticated' && state
 export function onlineIssue(error: unknown): string {
   if (error instanceof LocalStoreError) return error.message
   const e = error as { code?: string; status?: number }
-  if (e?.code === 'DATA_GENERATION_MISMATCH') return '운동 데이터가 변경되었습니다. 이전 화면은 적용하지 않았습니다. 로그인 상태와 운동 정보를 다시 확인해 주세요.'
-  if (e?.status === 401 || e?.code === 'SESSION_CHANGED' || e?.code === 'OWNER_MISMATCH') return '계정 상태가 변경되었습니다. 로그인 상태를 다시 확인해 주세요.'
-  if (e?.code === 'CSRF_INVALID') return '보안 확인이 만료되었습니다. 요청을 자동 반복하지 않았습니다. 다시 확인해 주세요.'
-  if (e?.code === 'ACTIVE_SESSION_EXISTS') return '이미 진행 중인 운동이 있습니다. 현재 운동을 다시 조회해 주세요.'
-  if (e?.code === 'ROUTINE_VERSION_CONFLICT') return '다른 곳에서 루틴이 수정되었습니다. 입력을 확인한 뒤 최신 루틴을 다시 조회해 주세요.'
-  if (e?.code === 'CLOCK_CONTEXT_INVALID') return '기기의 날짜·시간·시간대를 확인해 주세요. 실제 운동 시각은 자동 보정하지 않습니다.'
-  if (e?.code === 'RESPONSE_INVALID') return '서버 응답을 확인하지 못했습니다. 새 운동을 만들지 말고 기존 요청 결과를 다시 확인해 주세요.'
-  if (e?.status === 409) return '다른 변경과 충돌했습니다. 현재 서버 상태를 다시 확인해 주세요.'
-  if (e?.status === 400 || e?.status === 422) return '입력 내용과 허용 범위를 확인해 주세요.'
-  return '연결 또는 요청 결과를 확인하지 못했습니다. 입력을 유지하고 다시 확인해 주세요.'
+  if (e?.code === 'DATA_GENERATION_MISMATCH') return '운동 데이터가 변경됐어요. 로그인 상태와 운동 정보를 다시 확인해 주세요.'
+  if (e?.status === 401 || e?.code === 'SESSION_CHANGED' || e?.code === 'OWNER_MISMATCH') return '로그인 상태를 다시 확인해 주세요.'
+  if (e?.code === 'CSRF_INVALID') return '보안 확인이 만료됐어요. 다시 시도해 주세요.'
+  if (e?.code === 'ACTIVE_SESSION_EXISTS') return '이미 진행 중인 운동이 있어요. 현재 운동을 확인해 주세요.'
+  if (e?.code === 'ROUTINE_VERSION_CONFLICT') return '루틴이 변경됐어요. 최신 루틴을 확인해 주세요.'
+  if (e?.code === 'CLOCK_CONTEXT_INVALID') return '기기의 날짜와 시간 설정을 확인해 주세요.'
+  if (e?.code === 'RESPONSE_INVALID') return '처리 결과를 확인하지 못했어요.'
+  if (e?.status === 409) return '다른 곳에서 변경됐어요. 최신 정보를 확인해 주세요.'
+  if (e?.status === 400 || e?.status === 422) return '입력 내용을 확인해 주세요.'
+  return '연결을 확인한 뒤 다시 시도해 주세요.'
 }
 export function startBody(scope: Scope, routineId: string, deviceId: string, id: string, now: Date, zone: string) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now)
@@ -59,7 +60,7 @@ export class WorkoutOnlineController {
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => this.listeners.delete(listener) }
   private set(patch: Partial<OnlineState>) {
     const released = this.state.busy && patch.busy === false
-    this.state = { ...this.state, ...(Object.hasOwn(patch, 'issue') ? { readIssue: false } : {}), ...patch }
+    this.state = { ...this.state, ...(Object.hasOwn(patch, 'issue') ? { readIssue: false, issueCode: undefined, startUnconfirmed: undefined, routineSaveRejected: undefined } : {}), ...patch }
     this.listeners.forEach(fn => fn())
     if (released) void this.refreshApprovedRoutines()
   }
@@ -97,32 +98,37 @@ export class WorkoutOnlineController {
     this.cancel(); const sequence = this.sequence, abort = new AbortController(); this.abort = abort
     return { userId, signal: abort.signal, current: () => this.sequence === sequence && !abort.signal.aborted && this.owner === userId && !!this.auth && eligible(this.auth.getSnapshot()) === userId }
   }
-  private failure(error: unknown, readIssue = false) {
+  private failure(error: unknown, readIssue = false, outcome?: Pick<OnlineState, 'startUnconfirmed' | 'routineSaveRejected'>) {
     const { code, status } = (error as { code?: string; status?: number } | null) ?? {}
     if (['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) {
       this.cancelRoutineRead()
       this.onBoundary?.()
-      this.set({ ...empty(), userId: this.owner, issue: onlineIssue(error), status: 'ready' }); return
+      this.set({ ...empty(), userId: this.owner, issue: onlineIssue(error), issueCode: code, status: 'ready' }); return
     }
-    this.set({ issue: onlineIssue(error), readIssue: readIssue && status !== 401 && status !== 403 })
+    const issue = readIssue ? readFailure(error, onlineIssue(error)) : onlineIssue(error)
+    this.set({ issue, issueCode: code, readIssue: readIssue && status !== 401 && status !== 403, ...outcome })
   }
   refresh = async (keepDraftScope = false) => {
     const context = this.context(); if (!context) return
     this.cancelRoutineRead()
     const previous = this.state
-    this.set({ userId: context.userId, status: 'loading', busy: true, issue: null, revalidatingScope: keepDraftScope && !!previous.scope })
+    this.set({ userId: context.userId, status: 'loading', busy: true, revalidatingScope: keepDraftScope && !!previous.scope })
     try {
-      const data = await this.api.bootstrap(context.userId, context.signal)
+      const { data, active } = await readWithDeadline(context.signal, async signal => {
+        const data = await this.api.bootstrap(context.userId, signal)
+        signal.throwIfAborted()
+        if (context.current() && previous.scope && (previous.scope.userId !== data.scope.userId || previous.scope.dataGeneration !== data.scope.dataGeneration)) {
+          this.set({ ...empty(), userId: context.userId, status: 'loading', busy: true })
+        }
+        return { data, active: (await this.api.active(data.scope, signal)).session }
+      })
       if (!context.current()) return
       const sameScope = previous.scope?.userId === data.scope.userId && previous.scope.dataGeneration === data.scope.dataGeneration
-      if (previous.scope && !sameScope) this.set({ ...empty(), userId: context.userId, status: 'loading', busy: true })
-      const active = (await this.api.active(data.scope, context.signal)).session
-      if (!context.current()) return
       const detail = active ?? (sameScope && previous.detail?.status !== 'ACTIVE' ? previous.detail : null)
       const copySaved = sameScope && previous.copySaved && previous.detail?.id === detail?.id
         && previous.detail?.writerEpoch === detail?.writerEpoch && previous.detail?.editorDeviceId === detail?.editorDeviceId
       const selected = sameScope && data.routines.some(r => r.id === previous.selected?.id && r.version === previous.selected.version) ? previous.selected : null
-      this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected, revalidatingScope: false,
+      this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected, issue: null, revalidatingScope: false,
         routineRefreshes: this.remainingRoutineRefreshes(data.routines),
         recordsRevision: sameScope ? previous.recordsRevision + 1 : 0 })
       let deviceId: string | null = null, attempt: StartAttempt | null = null, copies: SessionCopy[] = []
@@ -191,7 +197,7 @@ export class WorkoutOnlineController {
   retryRoutineRefresh = (routineId: string) => {
     const refresh = this.state.routineRefreshes.get(routineId)
     if (!refresh?.failed) return
-    this.set({ routineRefreshes: new Map(this.state.routineRefreshes).set(routineId, { ...refresh, failed: false }) })
+    this.set({ routineRefreshes: new Map(this.state.routineRefreshes).set(routineId, { ...refresh, failed: false, retrying: true }) })
     void this.refreshApprovedRoutines()
   }
   private async refreshApprovedRoutines() {
@@ -246,8 +252,11 @@ export class WorkoutOnlineController {
     } catch (error) {
       const code = (error as { code?: string })?.code
       if (context.current() && ['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED'].includes(code ?? '')) this.failure(error)
-      if (code === 'WRITE_CONFLICT') return { conflict: true, message: '다른 곳에서 휴식 설정이 변경되었어요. 최신 설정을 확인한 뒤 다시 저장해 주세요.' }
-      return { message: code === 'RESPONSE_INVALID' ? '서버의 휴식 설정 응답을 확인하지 못했습니다.' : onlineIssue(error) }
+      if (code === 'WRITE_CONFLICT') return { conflict: true, message: '휴식 설정이 변경됐어요. 최신 설정을 확인해 주세요.' }
+      const status = (error as { status?: number } | null)?.status
+      return values && (!status || status >= 500)
+        ? { tone: 'warning' as const, message: '휴식 설정 저장 결과를 확인하지 못했어요.' }
+        : { message: values ? '휴식 시간을 저장하지 못했어요.' : '휴식 설정을 불러오지 못했어요.' }
     } finally {
       if (context.current()) this.set({ busy: false })
     }
@@ -318,6 +327,7 @@ export class WorkoutOnlineController {
     const context = this.context(); if (!scope || !deviceId || !localReady || !context || (!attempt && (!selected || active))) return
     this.set({ busy: true, issue: null, notice: '', copySaved: false })
     let lease: Awaited<ReturnType<typeof acquireEditor>> = null
+    let canHaveStarted = !!attempt
     try {
       const pending = attempt ?? await this.store.prepareStart(scope, startBody(scope, selected!.id, deviceId, newId(), new Date(), Intl.DateTimeFormat().resolvedOptions().timeZone))
       if (!context.current()) return
@@ -342,11 +352,18 @@ export class WorkoutOnlineController {
       }
       let detail = attempt ? await readStarted() : null
       if (!context.current()) return
-      if (!detail) try { detail = await this.api.start(scope, pending.request, context.signal) }
+      if (!detail) try { canHaveStarted = true; detail = await this.api.start(scope, pending.request, context.signal) }
       catch (error) {
         if (!context.current()) return
         const { status = 0, code } = (error ?? {}) as { status?: number; code?: string }
-        if (status >= 400 && status < 500 || ['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) throw error
+        if (status >= 400 && status < 500 || ['DATA_GENERATION_MISMATCH', 'OWNER_MISMATCH', 'SESSION_CHANGED', 'AUTHENTICATION_REQUIRED'].includes(code ?? '')) {
+          canHaveStarted = false
+          // START rejects the clock context before entering the service. Retire only the exact rejected payload.
+          if (status === 422 && code === 'CLOCK_CONTEXT_INVALID' && await this.store.rejectStart?.(scope, pending.requestJson)) {
+            if (context.current()) this.set({ attempt: null })
+          }
+          throw error
+        }
         detail = await readStarted()
         if (!detail) throw error
       }
@@ -356,8 +373,13 @@ export class WorkoutOnlineController {
       if (!context.current()) return
       await lease?.release(); lease = null
       if (!context.current()) return
-      this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null, attempt: null, copySaved: true, notice: '운동 시작 결과와 계획을 이 기기에 저장했습니다. 수행 완료 후 서버 저장 상태를 확인해 주세요.' })
-    } catch (error) { if (context.current()) this.failure(error) }
+      this.set({ detail, active: detail.status === 'ACTIVE' ? detail : null, attempt: null, copySaved: true })
+    } catch (error) {
+      if (context.current()) {
+        this.failure(error instanceof RangeError ? new WorkoutApiError('CLOCK_CONTEXT_INVALID', 422) : error, false,
+          { startUnconfirmed: canHaveStarted && !!this.state.attempt })
+      }
+    }
     finally { await lease?.release(); if (context.current()) this.set({ busy: false }) }
   }
   removedRoutine = async (id: string) => {
@@ -389,17 +411,24 @@ export class WorkoutOnlineController {
     } catch (error) { if (context.current()) this.failure(error); return false }
     finally { if (context.current()) this.set({ busy: false }) }
   }
-  saveRoutine = async (body: CreateRoutine | UpdateRoutine, id?: string) => {
+  saveRoutine = async (body: CreateRoutine | UpdateRoutine, id?: string, confirming = false) => {
     const scope = this.state.scope, context = this.context(); if (!scope || !context) return false
     this.cancelRoutineRead()
     this.set({ busy: true, issue: null, notice: '' })
+    let rejected = false
+    const explicitRejection = (error: unknown) => {
+      const status = (error as { status?: number } | null)?.status ?? 0
+      return !confirming && status >= 400 && status < 500
+    }
     try {
       let value: Routine
       if (id) {
         try{value=await this.api.updateRoutine(scope,id,body as UpdateRoutine,context.signal)}catch(error){
           if(!context.current())throw error
+          rejected = explicitRejection(error)
           const latest=await this.api.routine(scope,id,context.signal)
           if(BigInt(latest.version)!==BigInt((body as UpdateRoutine).expectedVersion)+1n||!routineMatches(latest,body))throw error
+          rejected = false
           value=latest
         }
       }
@@ -411,14 +440,18 @@ export class WorkoutOnlineController {
           if(!routineMatches(value,body))throw new WorkoutApiError('ROUTINE_ID_CONFLICT',409)
         } catch (error) {
           if ((error as { status?: number }).status !== 404) throw error
-          value = await this.api.createRoutine(scope, creation, context.signal)
+          try { value = await this.api.createRoutine(scope, creation, context.signal) }
+          catch (failure) { rejected = explicitRejection(failure); throw failure }
         }
       }
       const list: RoutineList = await this.api.routines(scope, context.signal)
       if (!context.current()) return false
       this.set({ ...this.routineListPatch(list.routines), selected: value })
       return true
-    } catch (error) { if (context.current()) this.failure(error); return false }
+    } catch (error) {
+      if (context.current()) this.failure(error, false, { routineSaveRejected: rejected })
+      return false
+    }
     finally { if (context.current()) this.set({ busy: false }) }
   }
 }

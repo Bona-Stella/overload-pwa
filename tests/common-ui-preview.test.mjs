@@ -7,6 +7,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { createReviewFixtureServer } from './fixtures/review-server.mjs'
 import { checkFront18Preview } from './fixtures/review/check-front18-preview.mjs'
 import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
+import { auditRefreshMotion } from './fixtures/review/refresh-audit.mjs'
 
 async function waitFor(check, label, timeout = 12000) {
   const deadline = Date.now() + timeout
@@ -18,7 +19,7 @@ async function waitFor(check, label, timeout = 12000) {
   assert.fail('Timed out: ' + label)
 }
 
-test('independent common UI preview renders reusable controls and handles interaction', { timeout: 180000 }, async () => {
+test('independent common UI preview renders reusable controls and handles interaction', { timeout: 280000 }, async () => {
   const directory = resolve('logs/common-ui-preview')
   await mkdir(directory, { recursive: true })
   const profile = await mkdtemp(resolve(directory, 'browser-'))
@@ -183,7 +184,7 @@ test('independent common UI preview renders reusable controls and handles intera
           const range = document.createRange(); range.selectNode(node); return range.getClientRects().length
         })
         return innerWidth === ${width} && box.left >= 16 && box.right <= ${width - 16} && box.width <= 340 &&
-          style.borderRadius === '18px' && style.borderColor === 'rgb(53, 57, 65)' && style.borderWidth === '1px' &&
+          style.borderRadius === '5px' && style.borderColor === 'rgb(53, 57, 65)' && style.borderWidth === '1px' &&
           style.backgroundColor === 'rgb(27, 29, 34)' && modal.querySelector('[data-feedback-icon="warning"]') &&
           textStyle.textAlign === 'center' && textStyle.wordBreak === 'keep-all' && textStyle.fontSize === '14px' &&
           textStyle.color === 'rgb(169, 173, 183)' && sentences.map(node => node.textContent).join('|') === '미완료 종목이 있어요.|완료한 기록만 요약에 표시돼요.' &&
@@ -373,9 +374,9 @@ test('independent common UI preview renders reusable controls and handles intera
     assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-tone]')).animationName"), 'none')
     await click('알림 닫기')
     await click('콘텐츠 표시')
-    assert.equal(await evaluate("!document.querySelector('[data-shape]') && document.body.innerText.includes('Google SSO')"), true)
+    assert.equal(await evaluate("!document.querySelector('[data-shape]') && document.body.innerText.includes('Google')"), true)
     await capture('393-skeleton-loaded', settings)
-    await send('Emulation.setEmulatedMedia', { features: [] })
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
 
     await click('검증 예시')
     assert.equal(await evaluate("document.querySelector('form input').hasAttribute('aria-invalid')"), false)
@@ -404,6 +405,27 @@ test('independent common UI preview renders reusable controls and handles intera
       })()`), true)
     }
     await capture('393-empty', '[class*="_empty_"]')
+
+    const refreshExample = '[aria-label="조회 실패·새로고침 예시"]'
+    const refreshAction = refreshExample + ' [data-refresh]'
+    const commonMotion = {}
+    for (const scenario of ['조회 실패', '응답 시간 초과']) {
+      await click(scenario, refreshExample + ' button')
+      await evaluate(`(() => { const button = document.querySelector(${JSON.stringify(refreshAction)}); button.click(); button.click() })()`)
+      await waitFor(() => evaluate(`document.querySelector(${JSON.stringify(refreshAction)}).disabled`), scenario)
+      commonMotion[scenario] = await auditRefreshMotion(evaluate, refreshAction)
+      await waitFor(() => evaluate(`[...document.querySelectorAll('[role="alert"]')].some(element => element.textContent === '연결할 수 없어요. 다시 시도해 주세요.')`), scenario + ' alert')
+      assert.equal(await evaluate(`getComputedStyle(document.querySelector(${JSON.stringify(refreshAction + ' svg')})).animationName`), 'none')
+      await click('알림 닫기')
+    }
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
+    await click('새로고침', refreshAction)
+    commonMotion['실패 후 재시도 · 움직임 줄이기'] = await auditRefreshMotion(evaluate, refreshAction, true)
+    await waitFor(() => evaluate(`document.querySelector(${JSON.stringify(refreshExample)}).innerText.includes('운동 기록을 불러왔어요.')`), 'recovered read')
+    assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(refreshAction)})`), false)
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
+    if (process.env.OVERLOAD_CAPTURE_COMMON_UI) await writeFile(resolve(directory, 'front18-common-refresh-motion.json'), JSON.stringify(commonMotion, null, 2))
+
     await click('기본 서브페이지 헤더 보기')
     assert.equal(await evaluate("document.querySelector('header h1')?.textContent"), '계정 설정')
     await assertLogo()
@@ -522,6 +544,7 @@ test('independent common UI preview renders reusable controls and handles intera
       assert.equal(await fit(width), true, 'expanded examples fit ' + width)
     }
     if (process.env.OVERLOAD_CAPTURE_COMMON_UI) await writeFile(resolve(directory, 'layout-measurements.json'), JSON.stringify(measurements, null, 2))
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
     await send('Page.navigate', { url: url + '?front18=1' })
     const front18 = await checkFront18Preview({ click, evaluate, send, waitFor, modalClosed, capture, dialogs })
     if (process.env.OVERLOAD_CAPTURE_COMMON_UI) {

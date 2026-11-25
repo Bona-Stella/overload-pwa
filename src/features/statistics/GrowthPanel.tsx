@@ -6,6 +6,12 @@ import { RecordChart } from './RecordChart.tsx'
 import { useRecordPreview } from './RecordDisplayContext.ts'
 import type { RecordPreviewData } from './RecordDisplayContext.ts'
 import { SearchList } from '../../components/SearchList.tsx'
+import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
+import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
+import { ContentError, EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
+import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import { ExerciseIcon } from '../../components/ExerciseIcon.tsx'
 import { Card, Button } from '../../components/ui.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
@@ -75,18 +81,17 @@ function GrowthChartSection({ points, zone }: { points: GrowthPoint[]; zone: str
   </section>
 }
 
-function GrowthHistoryCard({ points, name, zone, onOpen, busy = false, known = true, partial = false }: {
-  points: GrowthPoint[]; name: string; zone: string; onOpen: (id: string) => void; busy?: boolean; known?: boolean; partial?: boolean
+function GrowthHistoryCard({ points, name, zone, onOpen, partial = false }: {
+  points: GrowthPoint[]; name: string; zone: string; onOpen: (id: string) => void; partial?: boolean
 }) {
   return <Card>
-    <div className={styles.heading}><h2>승인 중량 변경 이력</h2><GrowthCount count={known?points.length:undefined} partial={partial} /></div>
+    <div className={styles.heading}><h2>승인 중량 변경 이력</h2><GrowthCount count={points.length} partial={partial} /></div>
     {points.length>0&&<ul className={styles.historyList}>{points.toReversed().map(p=><li key={p.id}><GrowthEvent point={p} name={name} zone={zone} onOpen={onOpen} /></li>)}</ul>}
-    {known&&!busy&&!points.length&&<p className="muted small">승인 중량 변경 기록이 없습니다.</p>}
   </Card>
 }
 
 export function GrowthGraph({ points, zone }: { points: GrowthPoint[]; zone: string }) {
-  if (!points.length) return <p>이 기간의 승인 중량 변경 기록이 없습니다.</p>
+  if (!points.length) return <EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="선택한 기간에 승인 중량 변경 기록이 없어요" />
   return <><RecordChart data={growthChartData(points,zone)} kind="line" unit="kg" label="승인 중량 변화" timeZone={zone}/>
     <p className="sr-only">승인된 변경값만 표시합니다. 점 사이의 연결 근거가 없으면 선을 이어 그리지 않습니다.</p></>
 }
@@ -94,35 +99,40 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
   const { api, scope, period, zone, onInvalid, refreshKey } = context
   const [tag,setTag]=useState('ALL')
   const [searchOpen,setSearchOpen]=useState(false)
-  const queryKey = JSON.stringify([period, refreshKey, query, tag])
+  const [retry, retrySearch] = useState(0)
+  const queryKey = JSON.stringify([period, refreshKey, query, tag, retry])
   const [loadedQuery,setLoadedQuery]=useState<string|null>(null)
   const [rows, setRows] = useState<GrowthExercise[]>([]), [next, setNext] = useState<number | null>(null), [busy, setBusy] = useState(true), [issue, setIssue] = useState('')
   const flight = useRef<AbortController | null>(null)
   useEffect(() => {
     if(!searchOpen)return
     const abort = new AbortController(); flight.current = abort
-    void Promise.resolve().then(()=>{if(abort.signal.aborted)return null;setBusy(true);setIssue('');return api.search(scope, period, zone, query, 0, abort.signal,tag)}).then(page => { if (page&&!abort.signal.aborted) { setRows(page.exercises); setNext(page.nextOffset);setLoadedQuery(queryKey) } })
+    void Promise.resolve().then(()=>{if(abort.signal.aborted)return null;setBusy(true);return readWithDeadline(abort.signal, signal => api.search(scope, period, zone, query, 0, signal,tag))}).then(page => { if (page&&!abort.signal.aborted) { setIssue(''); setRows(page.exercises); setNext(page.nextOffset);setLoadedQuery(queryKey) } })
       .catch((error: unknown) => {
         if (abort.signal.aborted) return
         if (readAccessDenied(error) || boundaryError(error)) { setRows([]); setLoadedQuery(null); setNext(null) }
-        onInvalid(error); setIssue('과거 운동을 불러오지 못했습니다. 다시 검색해 주세요.')
+        onInvalid(error); setIssue(readFailure(error, '과거 운동을 불러오지 못했어요.'))
       }).finally(() => { if (!abort.signal.aborted) setBusy(false) })
     return () => { abort.abort(); flight.current?.abort() }
   }, [api, scope, period, zone, query, onInvalid,searchOpen,tag,queryKey])
   async function more() {
     if (busy || next === null) return
-    const abort = new AbortController(); flight.current = abort; setBusy(true); setIssue('')
-    try { const page = await api.search(scope, period, zone, query, next, abort.signal,tag); if (!abort.signal.aborted) { setRows(values => [...new Map([...values, ...page.exercises].map(e => [e.standardExerciseId, e])).values()]); setNext(page.nextOffset) } }
-    catch (error) { if (!abort.signal.aborted) { onInvalid(error); setIssue('다음 운동 목록을 불러오지 못했습니다.') } }
+    const abort = new AbortController(); flight.current = abort; setBusy(true)
+    try { const page = await api.search(scope, period, zone, query, next, abort.signal,tag); if (!abort.signal.aborted) { setIssue(''); setRows(values => [...new Map([...values, ...page.exercises].map(e => [e.standardExerciseId, e])).values()]); setNext(page.nextOffset) } }
+    catch (error) { if (!abort.signal.aborted) { onInvalid(error); setIssue('운동을 더 불러오지 못했어요.') } }
     finally { if (!abort.signal.aborted) setBusy(false) }
   }
   const pending = loadedQuery !== queryKey
+  const feedback = useReadErrorToast(searchOpen && rows.length && !busy ? issue : null)
   return <div className="stack"><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:setTag}}
     onSearchOpenChange={setSearchOpen} query={query} onQuery={onQuery} selected={selected} onClear={onClear} label="과거 운동 검색" issue={issue}
     loading={pending} resultsPending={pending && rows.length > 0}
     options={rows.map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))}
     onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row&&!pending)onSelect(row)}}
-    resultsFooter={next!==null?<button className="outline full action-pill" disabled={busy || pending} onClick={()=>void more()}>운동 더 보기</button>:undefined}/>
+    resultsFooter={issue
+      ? <RefreshButton loading={busy} failure={!rows.length ? issue : null} onRefresh={() => { if (pending || next === null) retrySearch(value => value + 1); else void more() }} />
+      : next !== null && <Button disabled={busy || pending} onClick={() => void more()}>운동 더 보기</Button>} />
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </div>
 }
 
@@ -136,7 +146,7 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
 }) {
   const [view, setView] = useState<GrowthSelection | null>(null)
   const [placementId, setPlacementId] = useState('')
-  const [failure, setFailure] = useState<{ selection: string; retry: number } | null>(null)
+  const [failure, setFailure] = useState<{ selection: string; retry: number; message: string } | null>(null)
   const [retry, setRetry] = useState(0)
   const flight = useRef<AbortController | null>(null)
   const { userId, dataGeneration } = scope
@@ -155,21 +165,21 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
     const abort = new AbortController()
     flight.current = abort
     const owner = { userId, dataGeneration }
-    void (async () => {
-      const options = prior?.optionKey === optionKey ? prior.options : await api.options(owner, standardId, period, zone, abort.signal)
-      if (abort.signal.aborted) return
+    void readWithDeadline(abort.signal, async signal => {
+      const options = prior?.optionKey === optionKey ? prior.options : await api.options(owner, standardId, period, zone, signal)
+      signal.throwIfAborted()
       const preferred = placementId || prior?.placement?.placementId
       const placement = options.placements.find(item => item.placementId === preferred) ?? options.placements[0]
-      const history = placement && await api.history(owner, standardId, placement, period, zone, 0, abort.signal)
-      if (!abort.signal.aborted) {
+      const history = placement && await api.history(owner, standardId, placement, period, zone, 0, signal)
+      if (!signal.aborted) {
         setView({ request, optionKey, options, placement, period, points: history?.points ?? [], next: history?.nextOffset ?? null })
         setFailure(null)
       }
-    })().catch(error => {
+    }).catch(error => {
       if (abort.signal.aborted) return
       if (readAccessDenied(error) || boundaryError(error)) setView(null)
       onInvalid(error)
-      setFailure({ selection, retry })
+      setFailure({ selection, retry, message: readFailure(error, '승인 이력을 불러오지 못했어요.') })
     })
     return () => { abort.abort(); flight.current?.abort() }
   }, [api, userId, dataGeneration, standardId, period, zone, optionKey, placementId, selection, retry, request, onInvalid])
@@ -178,18 +188,18 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
     if (!settled || !view?.placement || view.next === null || view.moreBusy) return
     const abort = new AbortController()
     flight.current = abort
-    setView({ ...view, moreBusy: true, moreIssue: undefined })
+    setView({ ...view, moreBusy: true })
     try {
       const page = await api.history(scope, standardId, view.placement, view.period, zone, view.next, abort.signal)
       if (!abort.signal.aborted) {
         const points = [...new Map([...view.points, ...page.points].map(point => [point.id, point])).values()]
-        setView({ ...view, points, next: page.nextOffset, moreBusy: false })
+        setView({ ...view, points, next: page.nextOffset, moreBusy: false, moreIssue: undefined })
       }
     } catch (error) {
       if (abort.signal.aborted) return
       if (readAccessDenied(error) || boundaryError(error)) {
         setView(null)
-        setFailure({ selection, retry })
+        setFailure({ selection, retry, message: readFailure(error, '승인 이력을 불러오지 못했어요.') })
       } else setView({ ...view, moreBusy: false, moreIssue: '이전 승인 이력을 불러오지 못했습니다.' })
       onInvalid(error)
     }
@@ -203,21 +213,22 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
       </select>
     </label>}
   </>
+  const readIssue = '승인 이력을 불러오지 못했어요.'
+  const feedback = useReadErrorToast(view && (failedSelection && !pending ? failedSelection.message : !view.moreBusy ? view.moreIssue : null))
+  const tryAgain = <RefreshButton loading={pending} failure={!view ? failedSelection?.message : null} onRefresh={() => setRetry(value => value + 1)} />
   return <>
     <GrowthAnalysis controls={controls} latest={view?.points[0]} count={view?.points.length} partial={view?.next != null} zone={zone}>
       {view?.placement ? <GrowthChartSection points={view.points} zone={zone} />
-        : view ? <p>이 기간의 승인 중량 변경 기록이 없습니다. 최초·현재 중량으로 과거 값을 만들지 않습니다.</p>
-          : <p className="muted small">미전송 기록은 포함되지 않습니다.</p>}
-      {view?.moreIssue && <p role="alert">{view.moreIssue}</p>}
+        : view ? <GrowthGraph points={view.points} zone={zone} />
+          : failedSelection && <ContentError embedded title={readIssue} action={tryAgain} />}
       {view?.next != null && <><p className="muted small">일부 승인 이력입니다. 이전 이력을 더 불러올 수 있습니다.</p>
-        <Button disabled={pending || !!failedSelection} loading={view.moreBusy} onClick={() => void more()}>이전 승인 더 보기</Button></>}
+        {view.moreIssue ? <RefreshButton disabled={pending || !!failedSelection} loading={view.moreBusy} onRefresh={() => void more()} />
+          : <Button disabled={pending || !!failedSelection} loading={view.moreBusy} onClick={() => void more()}>이전 승인 더 보기</Button>}</>}
     </GrowthAnalysis>
-    {view?.placement && <GrowthHistoryCard points={view.points} name={exercise.name} zone={zone} onOpen={onOpen} busy={view.moreBusy} partial={view.next !== null} />}
-    {failedSelection && <Card>
-      <p role="alert">승인 이력을 조회하지 못했습니다.</p>
-      <Button loading={pending} onClick={() => setRetry(value => value + 1)}>다시 조회</Button>
-    </Card>}
+    {view?.placement && <GrowthHistoryCard points={view.points} name={exercise.name} zone={zone} onOpen={onOpen} partial={view.next !== null} />}
+    {failedSelection && view && tryAgain}
     <StatisticsWait pending={pending && !view && !failedSelection} label="승인 이력을 불러오는 중입니다." />
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </>
 }
 export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack, backLabel }: Omit<Context, 'period' | 'zone'> & { onBack?: () => void; backLabel?: string }) {
@@ -231,7 +242,7 @@ export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack,
     <RecordSubpageHeader title="성장 추적" onBack={onBack} backLabel={backLabel} />
     {preview?<PreviewGrowth data={preview} onOpen={onOpen} />:<>
       <Card className={styles.searchCard}><h2>분석할 운동</h2><SearchResults key={key} {...context} query={query} onQuery={setQuery} selected={selected?.name} onClear={()=>{setSelected(null);setQuery('')}} onSelect={value=>{setSelected(value);setQuery('')}} /></Card>
-      {selected?<Selected key={key+selected.standardExerciseId} {...context} exercise={selected} onPeriod={setPeriod} />:<GrowthAnalysis controls={controls} zone={zone}><p className="muted small">미전송 기록은 포함되지 않습니다.</p></GrowthAnalysis>}
+      {selected?<Selected key={key+selected.standardExerciseId} {...context} exercise={selected} onPeriod={setPeriod} />:<GrowthAnalysis controls={controls} zone={zone}><EmptyState embedded icon={<FeedbackIcon name="search" size={24} />} title="분석할 운동을 선택해 주세요" /></GrowthAnalysis>}
     </>}
   </div>
 }

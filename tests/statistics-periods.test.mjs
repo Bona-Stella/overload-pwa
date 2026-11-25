@@ -12,7 +12,7 @@ const panelUrl = new URL('../src/features/statistics/StatisticsPanel.tsx', impor
 const growthUrl = new URL('../src/features/statistics/GrowthPanel.tsx', import.meta.url).href
 registerHooks({
   resolve(specifier, context, next) {
-    if (specifier.endsWith('/app/navigation.ts') || specifier === 'react' && [panelUrl, growthUrl].includes(context.parentURL)) return { url: new URL('./fixtures/statistics-panel-hooks.mjs', import.meta.url).href, shortCircuit: true }
+    if (specifier.endsWith('/app/navigation.ts') || specifier === 'react' && ([panelUrl, growthUrl].includes(context.parentURL) || context.parentURL?.endsWith('/useReadErrorToast.ts'))) return { url: new URL('./fixtures/statistics-panel-hooks.mjs', import.meta.url).href, shortCircuit: true }
     return next(specifier, context)
   },
   load(url, context, next) {
@@ -36,7 +36,7 @@ function overview(owner, period, count) {
 function nodes(tree) {
   if (Array.isArray(tree)) return tree.flatMap(nodes)
   if (!tree || typeof tree !== 'object') return []
-  return [tree, ...nodes(tree.props?.children)]
+  return [tree, ...nodes(tree.props?.children), ...nodes(tree.props?.action)]
 }
 function setup(t, owner = scope, freezeTime = true) {
   globalThis.window = { history:{state:null}, scrollTo() {} }
@@ -60,8 +60,8 @@ function setup(t, owner = scope, freezeTime = true) {
     refresh(refreshKey) { props.refreshKey = refreshKey; tree = panel.render() },
     update(changes) { Object.assign(props, changes); tree = panel.render() },
     click(label) {
-      const button = nodes(tree).find(node => node.props?.children === label && typeof node.props?.onClick === 'function')
-      assert.ok(button, `missing button ${label}`); button.props.onClick(); tree = panel.render()
+      const button = nodes(tree).find(node => (node.props?.children === label && typeof node.props?.onClick === 'function') || (label === '새로고침' && node.type?.name === 'RefreshButton'))
+      assert.ok(button, `missing button ${label}`); (button.props.onRefresh ?? button.props.onClick)(); tree = panel.render()
     },
     back(title) {
       const growth = nodes(tree).find(node => node.type === GrowthPanel)
@@ -172,7 +172,7 @@ test('failed and canceled mode switches cannot replace the committed period', as
   assert.equal(f.control().pendingMode, undefined)
   assert.equal(f.view().props.data.summary.completedSets, '7')
   const beforeRetry = f.requests.length
-  f.click('다시 조회')
+  f.click('새로고침')
   assert.equal(f.requests.length, beforeRetry + 1)
   assert.equal(f.control().pendingMode, 'month')
   assert.equal(f.view().props.data.summary.completedSets, '7')
@@ -256,7 +256,7 @@ test('revisiting a period renders its own ready snapshot through refresh and a t
   assert.equal(f.view().props.data.summary.completedSets,'3')
   f.requests.at(-1).reject(Error('temporary failure'));await flush();f.render()
   assert.equal(f.view().props.data.summary.completedSets,'3')
-  assert(nodes(f.render()).some(n=>n.props?.role==='alert'))
+  assert(nodes(f.render()).some(n=>n.type?.name==='Toast'&&n.props.toast?.tone==='error'))
   f.open('activity')
   assert.equal(f.view().props.data.summary.completedSets,'12')
 })
@@ -265,14 +265,14 @@ test('a forbidden revalidation discards previously displayed statistics',async t
   f.open('growth');f.back('성장 추적')
   f.requests.at(-1).reject({ status:403 });await flush();f.render()
   assert.equal(f.view().props.data,null)
-  assert(nodes(f.render()).some(n=>n.props?.role==='alert'))
+  assert(nodes(f.render()).some(n=>n.type?.name==='ContentError'&&n.props.title==='운동 통계를 불러오지 못했어요.'))
 })
 test('failed requests offer a retry and retain the selected activity period',async t=>{
   const f=setup(t);await f.respond(1);f.open('activity');await f.respond(2)
   f.period({mode:'month',anchor:'2026-10-20'})
   f.requests.findLast(r=>r.period.fromDate==='2026-10-01').reject(Error('offline'));await flush()
-  assert(nodes(f.render()).some(n=>n.props?.role==='alert'))
-  f.click('다시 조회');requested(f,'month',-1);await f.respond(0)
+  assert(nodes(f.render()).some(n=>n.type?.name==='Toast'&&n.props.toast?.tone==='error'))
+  f.click('새로고침');requested(f,'month',-1);await f.respond(0)
   assert.equal(f.view().props.data.summary.completedSets,'0')
 })
 test('growth and plan screens stop overview reads',async t=>{
@@ -296,6 +296,6 @@ for(const [name,owner] of [['account',{...scope,userId:OTHER}],['generation',{..
 test('owner and generation validation still invalidates the current account scope',async t=>{
   const f=setup(t);f.requests.at(-1).respond(1,{...scope,userId:OTHER});await flush();f.render()
   assert.equal(f.invalid.at(-1).code,'OWNER_MISMATCH');assert.equal(f.view().props.data,null)
-  f.click('다시 조회');f.requests.at(-1).respond(1,{...scope,dataGeneration:'0'});await flush();f.render()
+  f.click('새로고침');f.requests.at(-1).respond(1,{...scope,dataGeneration:'0'});await flush();f.render()
   assert.equal(f.invalid.at(-1).code,'DATA_GENERATION_MISMATCH')
 })

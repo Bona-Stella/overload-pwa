@@ -5,6 +5,7 @@ import { useAuth } from './context.ts'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { LoginScreens } from './LoginScreens'
 import { AccountSettings } from './AccountSettings'
+import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
 import { AuthFeedback } from './AuthFeedback.tsx'
 import { WorkoutWorkspace } from '../workout-online/WorkoutWorkspace'
 import { HomeStartup } from '../home/HomePanel.tsx'
@@ -31,7 +32,7 @@ export function AuthApp() {
   const [selection, setSelection] = useScreenHistory<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' | 'alerts' } | null>('app:' + state.userId, null)
   const [restAlerts, saveRestAlerts] = useRestAlertPreferences(state.status === 'authenticated' ? state.userId : null)
   const [navigating, setNavigating] = useState(false)
-  const [settingsAccount, setSettingsAccount] = useState<{ userId: string; data: Awaited<ReturnType<AuthController['readSettingsAccount']>> | null; failed?: boolean } | null>(null)
+  const [settingsAccount, setSettingsAccount] = useState<{ userId: string; data: Awaited<ReturnType<AuthController['readSettingsAccount']>> | null; failed?: boolean; request: number; message?: string } | null>(null)
   if (settingsAccount && (state.status !== 'authenticated' || state.userId !== settingsAccount.userId || state.pending === 'logout')) setSettingsAccount(null)
   const [settingsAccountRetry, setSettingsAccountRetry] = useState(0)
   const navigationPending = useRef(false)
@@ -112,12 +113,12 @@ export function AuthApp() {
   useEffect(() => {
     if (!settingsUser) return
     const abort = new AbortController()
-    void controller.readSettingsAccount(settingsUser, abort.signal).then(data => {
-      if (!abort.signal.aborted) setSettingsAccount({ userId: settingsUser, data })
+    void readWithDeadline(abort.signal, signal => controller.readSettingsAccount(settingsUser, signal)).then(data => {
+      if (!abort.signal.aborted) setSettingsAccount({ userId: settingsUser, data, request: settingsAccountRetry })
     }).catch(error => {
       if (abort.signal.aborted) return
       const denied = ['AUTHENTICATION_REQUIRED', 'SESSION_CHANGED'].includes(error?.code) || error?.status === 401 || error?.status === 403
-      setSettingsAccount(previous => ({ userId: settingsUser, data: !denied && previous?.userId === settingsUser ? previous.data : null, failed: true }))
+      setSettingsAccount(previous => ({ userId: settingsUser, data: !denied && previous?.userId === settingsUser ? previous.data : null, failed: true, request: settingsAccountRetry, message: readFailure(error, '계정 정보를 불러오지 못했어요.') }))
     })
     return () => abort.abort()
   }, [controller, settingsUser, settingsAccountRetry])
@@ -141,13 +142,13 @@ export function AuthApp() {
       const showingOfflineWorkout = state.status === 'unavailable' && (offlineWorkoutOpen || focused && !!state.localWorkoutUserId)
       return <AppShell authenticated={authenticated} tab={tab} onNavigate={navigateFromTabs}
       focused={focused && !state.accountOpen} routineEditor={routineEditor} busy={busy || navigating}>
-    {!showingOfflineWorkout && <AuthFeedback state={state} />}
+    {!showingOfflineWorkout && !state.accountOpen && <AuthFeedback state={state} />}
     {state.status === 'checking' ? checkingHome
       ? <HomeStartup label="로그인 상태를 확인하고 있어요." /> : <LoadingSkeleton layout="auth" label="로그인 상태를 확인하고 있어요." />
       : state.status === 'unavailable' ? !showingOfflineWorkout && <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}
-    {authenticated && tab === 'settings' && <SettingsMain userId={state.userId} hidden={!settingsMain || focused} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary}
+    {authenticated && tab === 'settings' && <SettingsMain userId={state.userId} hidden={!settingsMain || focused} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary || settingsSummary.request !== settingsAccountRetry} accountIssue={settingsSummary?.message}
       onRetryAccount={settingsSummary?.failed ? () => setSettingsAccountRetry(value => value + 1) : undefined}
       onAccount={async event => { rememberSettings(event.currentTarget); if (await flushLocal()) void controller.openAccount() }}
       onRest={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'rest' }) }}

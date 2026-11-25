@@ -1,4 +1,4 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { HomePanel } from '../../../src/features/home/HomePanel.tsx'
 import { RecordFeed } from '../../../src/features/history/RecordFeed.tsx'
 import { GrowthPanel } from '../../../src/features/statistics/GrowthPanel.tsx'
@@ -17,6 +17,7 @@ import { useScreenHistory } from '../../../src/app/navigation.ts'
 import { activities, exercises, scope } from './routine-samples.ts'
 import { catalogSamples } from './catalog-samples.ts'
 import { createPageExample, ignore, sleep } from './front18-pages.ts'
+import { useReviewRecovery } from './review-read.ts'
 import type { ReadExample } from './front18-pages.ts'
 import styles from './CommonUiPreview.module.css'
 
@@ -42,9 +43,13 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
   const [, selectPlan] = useScreenHistory<string | null>('routine-plan:' + scope.userId + ':' + scope.dataGeneration, null)
   const [readsCleared, setReadsCleared] = useState(0)
   const [recent, setRecent] = useState(true)
+  const [catalogMode, setCatalogMode] = useState<'normal' | 'empty' | 'failed' | 'retained'>('normal')
+  const catalogRead = useReviewRecovery()
+  const showCatalog = (mode: typeof catalogMode) => { catalogRead.cancel(); setCatalogMode(mode) }
   const [homeBusy, setHomeBusy] = useState(false)
   const [homeIssue, setHomeIssue] = useState<string | null>(null)
   const [homeAttempt, setHomeAttempt] = useState(false)
+  const homeFlight = useRef(false)
   const [homeFault, setHomeFault] = useState<'none' | 'fail' | 'unknown'>('none')
   useEffect(() => controller.connect({ getSnapshot: () => authenticated, subscribe: () => ignore }), [controller, readsCleared])
 
@@ -62,16 +67,29 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
   }
   const plan = () => { routes.setScheduleRoute(null, true); routes.setEditorRoute(null, true); selectPlan(fixture.presetId) }
   async function start() {
-    if (homeBusy) return
+    if (homeFlight.current) return
+    homeFlight.current = true
     setHomeBusy(true); setHomeIssue(null)
     await sleep(650)
+    homeFlight.current = false
     setHomeBusy(false)
+    if (homeAttempt) { setHomeAttempt(false); return }
     if (homeFault === 'none') { openWorkout(); return }
     if (homeFault === 'unknown') setHomeAttempt(true)
     setHomeIssue(onlineIssue(new WorkoutApiError(homeFault === 'unknown' ? 'RESPONSE_INVALID' : 'CLOCK_CONTEXT_INVALID')))
     setHomeFault('none')
   }
-  if (page === 'catalog') return <CatalogView items={catalogSamples} onBack={onBack} />
+  if (page === 'catalog') return <>
+    <details open className="card" data-front18-tools><summary>상태 전환 · 운동 종목</summary><div className={styles.controls}>
+      <Button onClick={() => showCatalog('normal')}>정상 운동 목록</Button>
+      <Button onClick={() => showCatalog('empty')}>빈 운동 목록</Button>
+      <Button onClick={() => showCatalog('failed')}>데이터 없는 운동 목록 조회 실패</Button>
+      <Button onClick={() => showCatalog('retained')}>기존 운동 목록 재조회 실패</Button>
+    </div></details>
+    <CatalogView items={catalogMode === 'failed' ? null : catalogMode === 'empty' ? [] : catalogSamples}
+      failed={catalogMode === 'failed' || catalogMode === 'retained'} refreshing={catalogRead.pending}
+      onRetry={() => catalogRead.recover(() => setCatalogMode('normal'))} onBack={onBack} />
+  </>
   const updateRecords = (mode: ReadExample, initial = false) => {
     if (initial) setReadsCleared(value => value + 1)
     read('records', mode)
@@ -79,7 +97,7 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
   return <>
     <details open className="card" data-front18-tools><summary>상태 전환 · {page === 'home' ? '홈' : page === 'routine' ? '루틴' : page === 'rest' ? '휴식 설정' : page === 'growth' ? '성장 추적' : page === 'records' ? '기록' : '주간 일정·계획 분석'}</summary>
       <div className={styles.controls}>
-        {page === 'home' && <>
+    {page === 'home' && <>
           <Button onClick={() => read('schedule', 'normal')}>정상 데이터 · 재조회</Button>
           <Button onClick={() => reset('delayed')}>최초 홈 로딩</Button>
           <Button onClick={() => read('schedule', 'delayed')}>홈 조회 3.6초 지연</Button>
@@ -99,7 +117,8 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
           <Button onClick={() => routes.setEditorRoute({ id: fixture.first.id, readOnly: false })}>루틴 편집 · 저장·폐기</Button>
           <Button onClick={() => routes.setEditorRoute({ id: fixture.first.id, readOnly: true })}>루틴 상세 · 삭제 확인</Button>
           <Button onClick={() => fixture.setWrite('routines', 'failed')}>다음 루틴 쓰기 실패</Button>
-          <Button onClick={fixture.versionChanged}>다음 운동 시작에서 루틴 버전 변경</Button>
+        <Button onClick={() => fixture.setWrite('routines', 'unknown')}>다음 루틴 저장 결과 미확인</Button>
+        <Button disabled={!routes.editorRoute?.readOnly} onClick={fixture.versionChanged}>다음 운동 시작에서 루틴 버전 변경</Button>
         </>}
         {page === 'schedule' && <>
           <Button onClick={() => scheduleEditor('assign')}>주간 일정 배정·편집</Button>
@@ -110,6 +129,7 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
           <Button onClick={() => reset('failed')}>데이터 없는 일정 조회 실패</Button>
           <Button onClick={() => fixture.setWrite('schedule', 'conflict')}>다음 일정 저장 충돌</Button>
           <Button onClick={() => fixture.setWrite('schedule', 'failed')}>다음 일정 저장 실패</Button>
+          <Button onClick={() => fixture.setWrite('schedule', 'unknown')}>다음 일정 저장 결과 미확인</Button>
           <Button onClick={() => { fixture.setRead('details', 'failed'); selectPlan(fixture.presetId) }}>계획 분석 루틴 조회 실패</Button>
           <Button onClick={() => { fixture.setRead('details', 'failed'); fixture.updateRoutineVersion(); void controller.refresh() }}>기존 계획 유지 · 조회 오류</Button>
           <Button onClick={() => { fixture.setRead('details', 'normal'); read('schedule', 'normal') }}>일정·계획 조회 복구</Button>
@@ -122,6 +142,9 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
           <Button onClick={() => updateRecords('delayed')}>기존 기록 유지 · 재조회 지연</Button>
           <Button onClick={() => updateRecords('failed')}>기존 기록 조회 실패</Button>
           <Button onClick={() => updateRecords('failed', true)}>데이터 없는 기록 조회 실패</Button>
+          <Button onClick={() => fixture.setRecordRefresh('timeout')}>다음 새로고침 시간 초과 예약</Button>
+          <Button onClick={() => fixture.setRecordRefresh('delayed')}>다음 새로고침 성공 예약</Button>
+          <Button onClick={() => fixture.setRecordRefresh('failed')}>다음 새로고침 실패 예약</Button>
         </>}
         {page === 'growth' && <>
           <Button onClick={() => read('growthSearch', 'delayed')}>성장 추적 검색 지연</Button>
@@ -136,10 +159,16 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
         </>}
         <Button onClick={onBack}>검수 분류로 돌아가기</Button>
       </div>
+      {page === 'home' && <p>시작 상태를 선택한 뒤 홈에서 ‘운동 시작’을 눌러 보세요.</p>}
+      {page === 'routine' && <p>저장 오류는 편집 화면에서 이름을 바꾸고 저장해 확인해요. 루틴 변경은 ‘루틴 상세’를 열고 상태를 선택한 뒤 ‘운동 시작’을 누르세요.</p>}
+      {page === 'schedule' && <p>저장 상태를 선택한 뒤 일정 편집 화면에서 요일 배정을 바꾸고 저장하세요. 최신 일정 확인 전 변경사항을 버릴지 선택할 수 있어요.</p>}
+      {page === 'growth' && <p>검색 오류는 검색창을 열고, 기간 오류는 운동을 선택한 뒤 기간을 바꿔 확인하세요.</p>}
+      {page === 'records' && <p>기록 조회 실패를 선택한 다음 원하는 새로고침 상태를 예약하고 화면의 ‘새로고침’을 누르세요.</p>}
+      {page === 'rest' && <p>저장 상태를 선택한 뒤 휴식 시간을 바꾸고 ‘변경 사항 저장’을 누르세요.</p>}
     </details>
     {page === 'home' && <HomePanel scope={scope} routines={state.data?.routines ?? fixture.routines()} api={fixture.api} training={training}
       statistics={fixture.statistics} visit={1} refreshKey={String(revision)} active={null} attempt={homeAttempt} busy={homeBusy}
-      localReady issue={homeIssue} action={homeBusy ? 'start' : null} onStart={start} onResume={openWorkout} onRetry={() => { setHomeAttempt(false); setHomeIssue(null) }}
+      localReady issue={homeIssue} action={homeBusy ? homeAttempt ? 'retry' : 'start' : null} onStart={start} onResume={openWorkout} onRetry={() => void start()}
       onNavigate={ignore} onOpen={ignore} onInvalid={ignore} />}
     {(page === 'routine' || page === 'schedule') && <SearchExerciseDetails preview={catalogSamples}>
       <WorkspaceView state={state} controller={controller} api={fixture.api} training={training} enabled activities={activities} routes={routes} onStart={openWorkout} />

@@ -23,7 +23,7 @@ export function ConfirmWorkoutAction({ title, action, message, onClose, onConfir
 }) {
   const cancel = useRef<HTMLButtonElement>(null)
   return <Dialog title={title} tone={tone} onClose={onClose} dismissBlocked={pending} initialFocus={cancel}>
-    <div className="stack"><p>{message}</p>{saveIssue}<div className={styles.actions}>
+    <div className="stack"><p>{message}</p>{saveIssue}<div className={styles.actions} data-dialog-actions>
       <button type="button" className="action-pill modal-neutral" data-modal-neutral ref={cancel} disabled={pending} data-button-pending={pending || undefined} onClick={onClose}>취소</button>
       <Button variant={tone === 'info' ? 'primary' : tone} loading={pending} onClick={onConfirm}>{action}</Button>
     </div></div>

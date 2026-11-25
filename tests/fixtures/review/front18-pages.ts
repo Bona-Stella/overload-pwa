@@ -1,6 +1,7 @@
 import { WorkoutApi, WorkoutApiError } from '../../../src/features/workout-online/api.ts'
+import { reviewRead } from './review-read.ts'
 import type { WorkoutTransport } from '../../../src/features/workout-online/api.ts'
-import type { CreateRoutine, UpdateRoutine, ClosedPage } from '../../../src/features/workout-online/types.ts'
+import type { CreateRoutine, UpdateRoutine, ClosedPage, StandardExerciseDetail } from '../../../src/features/workout-online/types.ts'
 import { GrowthApi } from '../../../src/features/statistics/growth.ts'
 import type { GrowthPeriod } from '../../../src/features/statistics/growth.ts'
 import { StatisticsApi } from '../../../src/features/statistics/api.ts'
@@ -13,7 +14,8 @@ import { exercises, manufacturers, reviewHome, reviewSample, reviewToday, scope 
 import { reviewRest } from './workout-model.ts'
 
 export type ReadExample = 'normal' | 'delayed' | 'failed' | 'empty'
-type WriteExample = 'normal' | 'failed' | 'conflict'
+type RecordRefresh = 'delayed' | 'failed' | 'timeout'
+type WriteExample = 'normal' | 'failed' | 'unknown' | 'conflict'
 export const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 export const ignore = () => {}
 const netError = () => new TypeError('Preview response unavailable')
@@ -32,33 +34,49 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
   const summary = { ...recent, routineName: recent.initialPlan.routineName, status: 'FINISHED' as const }
   const modes = { routines: 'normal', details: 'normal', schedule: initialSchedule, records: 'normal', growthSearch: 'normal', growthDetails: 'normal' } as Record<string, ReadExample>
   const writes = { routines: 'normal', schedule: 'normal', rest: 'normal' } as Record<string, WriteExample>
-  const wait = async (key: string) => {
+  let nextRecordRefresh: RecordRefresh | null = null
+  const read = <T,>(key: string, signal: AbortSignal | undefined, result: (mode: ReadExample) => T, keepFailure = false) => {
     const mode = modes[key]
-    if (mode === 'delayed') await sleep(3600)
-    if (mode === 'failed') { modes[key] = 'normal'; throw netError() }
-    return mode
+    if (mode === 'failed' && !keepFailure) modes[key] = 'normal'
+    return reviewRead(signal, () => {
+      if (mode === 'failed') throw netError()
+      return result(mode)
+    }, { slow: mode === 'delayed' })
   }
   let changedVersion = false
-  const listed = () => (modes.routines === 'empty' ? [] : routines).map(routine => ({ ...routine, createdAt: routine.createdAt }))
+  const listed = (mode = modes.routines) => (mode === 'empty' ? [] : routines).map(routine => ({ ...routine, createdAt: routine.createdAt }))
   const update = (body: CreateRoutine | UpdateRoutine, id?: string) => {
-    if (writes.routines === 'failed') { writes.routines = 'normal'; throw netError() }
+    const fault = writes.routines
+    writes.routines = 'normal'
+    if (fault === 'failed') throw new WorkoutApiError('INVALID_REQUEST', 422)
+    if (fault === 'unknown') throw netError()
     const result = mockSaveRoutine(body, routines.find(routine => routine.id === id))
     routines = [...routines.filter(routine => routine.id !== result.id), result]
     return structuredClone(result)
   }
   const api = Object.assign(new WorkoutApi(disconnected), {
-    bootstrap: async () => { await wait('routines'); return { scope, routines: listed(), exercises, manufacturers, settings: { ...scope, ...rest } } },
+    bootstrap: (_userId: string, signal: AbortSignal) => read('routines', signal, mode => ({ scope, routines: listed(mode), exercises, manufacturers, settings: { ...scope, ...rest } })),
     active: async () => ({ ...scope, session: null }),
-    routine: async (_scope: unknown, id: string) => {
-      if (modes.details === 'delayed') await sleep(3600)
-      if (modes.details === 'failed') throw netError()
-      const result = routines.find(routine => routine.id === id)
-      if (!result) throw new WorkoutApiError('ROUTINE_NOT_FOUND', 404)
-      if (changedVersion) { changedVersion = false; result.version = String(BigInt(result.version) + 1n) }
-      return structuredClone(result)
+    routine: (_scope: unknown, id: string, signal: AbortSignal) => {
+      const bumpedVersion = changedVersion
+      if (bumpedVersion) changedVersion = false
+      return read('details', signal, () => {
+        const result = routines.find(routine => routine.id === id)
+        if (!result) throw new WorkoutApiError('ROUTINE_NOT_FOUND', 404)
+        if (bumpedVersion) result.version = String(BigInt(result.version) + 1n)
+        return structuredClone(result)
+      }, true)
     },
-    exerciseDetail: async (_user: string, id: string) => exercises.find(item => item.id === id),
-    routines: async () => ({ ...scope, routines: listed() }),
+    exerciseDetail: async (_user: string, id: string): Promise<StandardExerciseDetail> => {
+      const exercise = exercises.find(item => item.id === id)
+      if (!exercise) throw new WorkoutApiError('EXERCISE_NOT_FOUND', 404)
+      const muscles = exercise.muscles ?? []
+      return { id, name: exercise.name, aliases: exercise.aliases, exerciseType: 'WEIGHT', recordMethod: 'SETS_REPS',
+        equipmentDescription: null, jointType: null, pplSplit: null, frontBackSplit: null, instructionSteps: [], selectableForRoutine: true,
+        primaryMuscles: muscles.filter(muscle => muscle.role === 'PRIMARY').map(({ id, groupCode, name }, index) => ({ id, groupCode, name, primaryOrder: index + 1 })),
+        secondaryMuscles: muscles.filter(muscle => muscle.role === 'SECONDARY').map(({ id, groupCode, name }) => ({ id, groupCode, name })) }
+    },
+    routines: (_scope: unknown, signal: AbortSignal) => read('routines', signal, mode => ({ ...scope, routines: listed(mode) })),
     createRoutine: async (_scope: unknown, body: CreateRoutine) => update(body),
     updateRoutine: async (_scope: unknown, id: string, body: UpdateRoutine) => update(body, id),
     deleteRoutine: async (_scope: unknown, id: string) => {
@@ -67,7 +85,15 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
       schedule = unassignRoutine(schedule, id)
       routines = routines.filter(routine => routine.id !== id)
     },
-    closed: async () => ({ ...scope, sessions: await wait('records') === 'empty' ? [] : [summary], next: null } satisfies ClosedPage),
+    closed: async (_owner: unknown, _cursor: unknown, signal: AbortSignal) => {
+      const refresh = nextRecordRefresh
+      nextRecordRefresh = null
+      if (refresh) return reviewRead(signal, () => {
+        if (refresh === 'failed') throw netError()
+        return { ...scope, sessions: [summary], next: null } satisfies ClosedPage
+      }, { timeout: refresh === 'timeout' })
+      return read('records', signal, mode => ({ ...scope, sessions: mode === 'empty' ? [] : [summary], next: null } satisfies ClosedPage))
+    },
     detail: async () => structuredClone(recent),
     settings: async (_scope: unknown, values: typeof rest) => {
       await sleep(650)
@@ -81,18 +107,19 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
     restSettings: async () => ({ ...rest }),
   })
   const transport: WorkoutTransport = {
-    async workoutRequest(_owner, path, method, body) {
+    async workoutRequest(_owner, path, method, body, signal) {
       if (path === '/api/v1/deload-periods/current') return response({ ...scope, period: null })
       if (path === '/api/v1/deload-analysis') return response({ ...scope, enabled: true, calculationStatus: 'READY', confirmedWeeks: null, recommendationThreshold: { numerator: '1', denominator: '1' } })
       if (!path.startsWith('/api/v1/weekly-schedule')) throw netError()
       let status = 200
-      if (method === 'GET') await wait('schedule')
+      if (method === 'GET') await read('schedule', signal, () => undefined)
       else {
         await sleep(500)
         const fault = writes.schedule
         writes.schedule = 'normal'
         if (fault === 'conflict') { schedule = changedSchedule(schedule); throw new WorkoutApiError('SCHEDULE_STATE_VERSION_CONFLICT', 409) }
-        if (fault === 'failed') throw netError()
+        if (fault === 'failed') throw new WorkoutApiError('INVALID_REQUEST', 422)
+        if (fault === 'unknown') throw netError()
         const parts = path.split('/'), id = parts[5], expected = schedule.version
         const input = body as { assignments: typeof assignments; name: string; presetId: string; autoEnabled: boolean; presets: { id: string; rotationIncluded: boolean }[] }
         if (path.endsWith('/assignments')) schedule = mockScheduleWrite(schedule, expected,
@@ -121,19 +148,16 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
   const placement = { routineId: first.id, placementId: placed.id, routineName: first.name, deleted: false, lastApprovalAt }
   const growthEnvelope = (period: GrowthPeriod, timeZone: string) => ({ ...scope, period, range: { fromDate: null, toDateExclusive: reviewToday, timeZone } })
   const growth = Object.assign(new GrowthApi(disconnected), {
-    search: async (_scope: unknown, period: GrowthPeriod, zone: string, query: string, offset: number) => {
-      await wait('growthSearch')
-      return { ...growthEnvelope(period, zone), query, offset, exercises: leaf.name.includes(query) ? [leaf] : [], nextOffset: null }
-    },
-    options: async (_scope: unknown, _id: string, period: GrowthPeriod, zone: string) => {
-      await wait('growthDetails')
-      return { ...growthEnvelope(period, zone), ...leaf, placements: [placement] }
-    },
+    search: (_scope: unknown, period: GrowthPeriod, zone: string, query: string, offset: number, signal: AbortSignal) =>
+      read('growthSearch', signal, () => ({ ...growthEnvelope(period, zone), query, offset, exercises: leaf.name.includes(query) ? [leaf] : [], nextOffset: null })),
+    options: (_scope: unknown, _id: string, period: GrowthPeriod, zone: string, signal: AbortSignal) =>
+      read('growthDetails', signal, () => ({ ...growthEnvelope(period, zone), ...leaf, placements: [placement] })),
     history: async (_scope: unknown, _id: string, _placement: unknown, period: GrowthPeriod, zone: string, offset: number) => ({ ...growthEnvelope(period, zone),
       standardExerciseId: leaf.standardExerciseId, placement, offset, points: [{ id: placed.id, previousWeightKg: '25', approvedWeightKg: '27.5', occurredAt: lastApprovalAt,
         recordedAt: lastApprovalAt, source: 'WORKOUT', sessionId: recent.id, connectFromPrevious: false, previousPointId: null }], nextOffset: null }),
   })
   return { api: api as WorkoutApi, transport, statistics, growth: growth as GrowthApi,
+    setRecordRefresh: (mode: RecordRefresh) => { nextRecordRefresh = mode },
     setRead: (key: string, mode: ReadExample) => { modes[key] = mode }, setWrite: (key: string, mode: WriteExample) => { writes[key] = mode },
     routines: listed, first, presetId: schedule.activeId, versionChanged: () => { changedVersion = true },
     updateRoutineVersion: () => { routines = routines.map(value => value.id === first.id ? { ...value, version: String(BigInt(value.version) + 1n) } : value) },

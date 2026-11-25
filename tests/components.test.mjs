@@ -62,7 +62,7 @@ test('settings account summary renders provided identity data and an uppercase e
     account: { email: 'alex@example.test', loginMethod: 'google', deviceCount: 2 },
     onAccount: noop, onRest: noop, onRestAlerts: noop, onCatalog: noop, onLogout: noop,
   })
-  assert.match(markup, /aria-hidden="true">A<\/span>.*alex@example\.test.*Google SSO.*2대/s)
+  assert.match(markup, /aria-hidden="true">A<\/span>.*alex@example\.test.*Google.*2대/s)
   const alerts = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g).find(b => b.includes('휴식 타이머 알림'))
   assert.doesNotMatch(alerts, /disabled|미구현/)
 })

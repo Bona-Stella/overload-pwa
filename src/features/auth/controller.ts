@@ -4,7 +4,7 @@ import type { AccountState } from './account.ts'
 import type { Identity, ServerSession } from './api.ts'
 import type { AuthBoundary } from '../workout-local/offline-access.ts'
 
-export type AuthIssue = { code: string; message: string }
+export type AuthIssue = { code: string; message: string; tone?: 'warning' }
 export type AuthState = {
   status: 'checking' | 'anonymous' | 'authenticated' | 'unavailable'
   userId: string | null
@@ -18,7 +18,7 @@ export type AuthState = {
   verifyAt: number
   issue: AuthIssue | null
   notice: string
-  accountSuccess?: { id: number; message: string }
+  accountSuccess?: { id: number; message: string; tone?: 'info' }
   updatedAt: number
   accountOpen: boolean
   account: AccountState
@@ -78,8 +78,8 @@ export class AuthController {
   getSnapshot = () => this.state
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener) } }
   private successSequence = 0
-  private accountSucceeded(message: string) {
-    this.set({ notice: '', accountSuccess: { id: ++this.successSequence, message } })
+  private accountSucceeded(message: string, tone?: 'info') {
+    this.set({ notice: '', accountSuccess: { id: ++this.successSequence, message, ...(tone && { tone }) } })
   }
   dismissAccountSuccess = (id: string | number) => {
     if (this.state.accountSuccess?.id === id) this.set({ accountSuccess: undefined })
@@ -285,10 +285,10 @@ export class AuthController {
       // The schedule response carries a generation but no account ID.
       const schedule = path === '/api/v1/weekly-schedule' || path.startsWith('/api/v1/weekly-schedule/')
       if (method !== 'GET') await this.prepareWrite(expected, generation)
-      else if (schedule) await this.owner(expected, generation)
+      else if (schedule) await this.owner(expected, generation, signal)
       if (!current()) throw obsolete()
       const result = await this.api.workoutRequest(path, method, body, signal)
-      if (schedule && current()) await this.owner(expected, generation)
+      if (schedule && current()) await this.owner(expected, generation, method === 'GET' ? signal : undefined)
       if (!current()) throw obsolete()
       return result
     } catch (error) {
@@ -345,9 +345,9 @@ export class AuthController {
     this.running = true
     const expected = this.state.userId, generation = ++this.generation
     const cached = this.accountDetailsCache
-    this.set({ accountOpen: true, account: { ...emptyAccount(), ...cached, loaded: !!cached, resendAt: this.state.account.resendAt }, issue: null, notice: '', pending: 'account' })
+    this.set({ accountOpen: true, account: { ...emptyAccount(), ...cached, loaded: !!cached, resendAt: this.state.account.resendAt }, issue: entering ? null : this.state.issue, notice: '', pending: 'account' })
     if (entering && updateRoute) this.route('/account')
-    try { await this.readAccount(expected, generation) }
+    try { await this.readAccount(expected, generation); this.set({ issue: null }) }
     catch (error) { this.accountFailure(error) }
     finally { await this.finish() }
   }
@@ -460,10 +460,11 @@ export class AuthController {
     this.accountPatch({ unlink: null, linkForm: null, form: null, challenge: null })
     let sent = false
     let linked: Awaited<ReturnType<AuthApi['linkEmail']>> | undefined
-    const linkNotice = () => linked?.status === 'ALREADY_LINKED' ? '이미 같은 계정에 연결된 이메일 로그인입니다.' : '대표 이메일의 로그인 수단을 연결했습니다.'
+    const notifyLink = () => linked?.status === 'ALREADY_LINKED'
+      ? this.accountSucceeded('이미 연결된 이메일이에요.', 'info') : this.accountSucceeded('이메일 로그인을 연결했어요.')
     const unconfirmedLink = () => this.set({ issue: { code: 'EMAIL_LINK_STATUS_UNCONFIRMED', message: linked
-      ? '연결 요청은 처리됐지만 현재 상태를 조회하지 못했습니다. 계정 정보 다시 확인으로 연결 상태를 다시 확인해 주세요. 연결 요청은 자동으로 반복하지 않습니다.'
-      : '연결 요청 결과를 확인하지 못했습니다. 계정 정보 다시 확인으로 연결 상태를 다시 확인해 주세요. 연결 요청은 자동으로 반복하지 않습니다.' } })
+      ? '이메일 연결 상태를 불러오지 못했어요. 계정 정보를 다시 확인해 주세요.'
+      : '이메일 연결 결과를 확인하지 못했어요. 계정 정보를 다시 확인해 주세요.' } })
     try {
       await this.readAccount(expected, generation)
       if (this.state.account.contact?.status !== 'VERIFIED') throw new AuthError('REAUTH_EMAIL_REQUIRED', 409)
@@ -479,7 +480,8 @@ export class AuthController {
       await this.readAccount(expected, generation)
       if (target ? this.state.account.identities.some(value => value.id === target.id)
         : !result || !this.state.account.identities.some(value => value.id === result.identity.id && value.provider === 'email')) throw new AuthError('RESPONSE_INVALID')
-      this.accountSucceeded(target ? '로그인 수단을 해제했습니다. 대표 재인증 이메일은 유지됩니다.' : linkNotice())
+      if (target) this.accountSucceeded('로그인 수단을 해제했어요.')
+      else notifyLink()
     } catch (error) {
       const e = error instanceof AuthError ? error : new AuthError('REQUEST_FAILED')
       const uncertain = sent && (['NETWORK', 'TIMEOUT', 'RESPONSE_INVALID'].includes(e.code) || e.status >= 500)
@@ -498,14 +500,14 @@ export class AuthController {
       }
       if (!target && (linked || uncertain)) {
         const confirmed = this.state.account.identities.some(value => value.provider === 'email' && (!linked || value.id === linked.identity.id))
-        if (confirmed && linked) { this.set({ issue: null }); this.accountSucceeded(linkNotice()) }
-        else if (confirmed) this.set({ issue: null, notice: '현재 이메일 로그인 연결 상태를 서버에서 확인했습니다. 앞선 요청의 응답은 확인하지 못했으며 자동 재실행하지 않습니다.' })
+        if (confirmed && linked) { this.set({ issue: null }); notifyLink() }
+        else if (confirmed) { this.set({ issue: null }); this.accountSucceeded('이메일 로그인 연결을 확인했어요.', 'info') }
         else unconfirmedLink()
         return
       }
       this.accountFailure(e)
-      if (!target && e.code === 'IDENTITY_ALREADY_OWNED') this.set({ issue: { code: e.code, message: '이 이메일 로그인은 이미 다른 계정에 연결되어 있습니다. 계정은 자동으로 합쳐지지 않습니다.' } })
-      if (uncertain) this.set({ notice: '요청 결과가 불확실해 현재 서버 상태만 다시 조회했습니다. 성공을 단정하거나 자동 재실행하지 않습니다.' })
+      if (!target && e.code === 'IDENTITY_ALREADY_OWNED') this.set({ issue: { code: e.code, message: '이 이메일은 다른 계정에 연결돼 있어요.' } })
+      if (target && uncertain && this.state.status === 'authenticated') this.set({ issue: { code: e.code, tone: 'warning', message: '연결 해제 결과를 확인하지 못했어요. 계정 정보를 다시 확인해 주세요.' } })
     } finally { await this.finish() }
   }
   async prepareGoogleLink() {

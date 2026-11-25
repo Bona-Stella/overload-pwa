@@ -1,3 +1,4 @@
+import { readWithDeadline } from '../../app/read-deadline.ts'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { WorkoutTransport } from './api.ts'
 import type { Scope } from './types.ts'
@@ -22,7 +23,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
   const [analysis, setAnalysis] = useState<{ owner: string; value: HomeAnalysis } | null>(null)
   const [reload, setReload] = useState(0)
   const [saving, setSaving] = useState<{ owner: string; abort: AbortController } | null>(null)
-  const [writeIssue, setWriteIssue] = useState<{ owner: string; text: string } | null>(null)
+  const [writeIssue, setWriteIssue] = useState<{ owner: string; text: string; tone: 'error' | 'warning' } | null>(null)
   const readFlight = useRef<AbortController | null>(null)
   const writeFlight = useRef<AbortController | null>(null)
   const refresh = useCallback(() => setReload(value => value + 1), [])
@@ -42,25 +43,25 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     const abort = new AbortController()
     readFlight.current = abort
     const scope = { userId, dataGeneration }
-    const scheduleRead = api.read(scope, abort.signal)
+    const scheduleRead = readWithDeadline(abort.signal, signal => api.read(scope, signal))
     void scheduleRead.then(schedule => {
       if (abort.signal.aborted) return
       setSnapshot(previous => previous?.owner === owner ? { ...previous, schedule } : { owner, request: '', schedule, scheduleVerified: false })
     }, () => {})
-    void readHomeAnalysis(transport, scope, abort.signal).then(value => {
+    void readWithDeadline(abort.signal, signal => readHomeAnalysis(transport, scope, signal)).then(value => {
       if (!abort.signal.aborted) setAnalysis({ owner, value })
     }).catch(error => {
       if (abort.signal.aborted) return
       if (boundaryError(error)) onInvalid(error)
       if (readAccessDenied(error)) setAnalysis(null)
     })
-    void Promise.allSettled([scheduleRead, readHomeProtection(transport, scope, abort.signal)]).then(([schedule, protection]) => {
+    void Promise.allSettled([scheduleRead, readWithDeadline(abort.signal, signal => readHomeProtection(transport, scope, signal))]).then(([schedule, protection]) => {
       if (abort.signal.aborted) return
       for (const result of [schedule, protection]) {
         if (result.status === 'rejected' && boundaryError(result.reason)) { onInvalid(result.reason); return }
       }
-      const issue = schedule.status === 'rejected' ? '주간 일정을 조회하지 못했습니다. 다시 조회해 주세요.'
-        : protection.status === 'rejected' ? '디로딩 상태를 확인하지 못했습니다. 확인 전까지 일반 일정과 루틴을 변경할 수 없습니다.' : undefined
+      const issue = schedule.status === 'rejected' ? '일정을 불러오지 못했어요.'
+        : protection.status === 'rejected' ? '디로딩 상태를 확인하지 못했어요. 다시 조회해 주세요.' : undefined
       setSnapshot(previous => ({
         owner, request, issue,
         scheduleVerified: schedule.status === 'fulfilled',
@@ -98,7 +99,11 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     } catch (error) {
       if (abort.signal.aborted) return null
       if (boundaryError(error)) onInvalid(error)
-      else setWriteIssue({ owner, text: scheduleIssue(error) })
+      else {
+        const { code, status = 0 } = (error ?? {}) as { code?: string; status?: number }
+        const conflict = code === 'SCHEDULE_STATE_VERSION_CONFLICT' || code === 'PRESET_VERSION_CONFLICT' || code === 'SCHEDULE_TIME_ZONE_CONFLICT'
+        setWriteIssue({ owner, text: scheduleIssue(error), tone: conflict || !status || status >= 500 ? 'warning' : 'error' })
+      }
       // Fetch current versions after a conflict or uncertain acknowledgement. Never replay the write.
       refresh()
       return null
@@ -111,6 +116,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
   }
   return { schedule: current?.schedule, protection: current?.protection, analysis: analysis?.owner === owner ? analysis.value : undefined, loading, busy,
     canWrite, issue: current?.issue, writeIssue: writeIssue?.owner === owner ? writeIssue.text : null,
+    writeIssueTone: writeIssue?.owner === owner ? writeIssue.tone : undefined,
     clearWriteIssue: () => setWriteIssue(null), refresh, write }
 }
 export type TrainingSchedule = ReturnType<typeof useTrainingSchedule>

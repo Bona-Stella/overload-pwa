@@ -135,6 +135,15 @@ export class WorkoutStore {
       await request(store.add(value)); return value
     })
   }
+  rejectStart(scope: Scope, requestJson: string) {
+    return this.run(['startAttempts'], 'readwrite', async tx => {
+      const attempts = tx.objectStore('startAttempts'), key = scopeKey(scope)
+      const attempt: unknown = await request(attempts.get(key))
+      if (!isAttempt(attempt, scope) || attempt.requestJson !== requestJson) return false
+      await request(attempts.delete(key))
+      return true
+    })
+  }
   saveSession(scope: Scope, value: Session, attemptId?: string) {
     if (!session(value) || value.userId !== scope.userId || value.dataGeneration !== scope.dataGeneration) return Promise.reject(new LocalStoreError())
     return this.run(['sessionCopies', 'startAttempts', 'meta'], 'readwrite', async tx => {

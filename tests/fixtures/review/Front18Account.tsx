@@ -1,6 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { AccountSettings } from '../../../src/features/auth/AccountSettings.tsx'
-import { AuthFeedback } from '../../../src/features/auth/AuthFeedback.tsx'
 import { AuthApi, AuthError } from '../../../src/features/auth/api.ts'
 import type { Contact, Identity } from '../../../src/features/auth/api.ts'
 import { AuthController } from '../../../src/features/auth/controller.ts'
@@ -8,6 +7,7 @@ import { Button } from '../../../src/components/ui.tsx'
 import { PwaStatusView } from '../../../src/pwa/PwaStatus.tsx'
 import { DevicesReview } from './DevicesReview.tsx'
 import { ignore, sleep } from './front18-pages.ts'
+import { reviewRead } from './review-read.ts'
 import { scope } from './routine-samples.ts'
 import styles from './CommonUiPreview.module.css'
 
@@ -22,11 +22,22 @@ const required: Contact = { status: 'REQUIRED', candidate: { id: 'review-candida
 export function Front18Account({ onBack }: { onBack: () => void }) {
   const [fixture] = useState(() => {
     let contact: Contact = verified, identities: Identity[] = [google], clockOffset = 0, linking: LinkExample = 'success'
-    let otp: OtpExample = 'success', readUnavailable = 0
+    let otp: OtpExample = 'success', readUnavailable = 0, retryRead = false
+    let lifetime: AbortController | undefined
     const api = Object.assign(new AuthApi(async () => { throw new AuthError('NETWORK') }), {
       session: async () => ({ userId: scope.userId }), refreshCsrf: async () => {}, clearCsrf: ignore,
       contact: async () => contact,
-      identities: async () => { if (readUnavailable) { readUnavailable--; throw new AuthError('NETWORK') } return [...identities] },
+      identities: (signal?: AbortSignal) => {
+        const failed = readUnavailable > 0
+        if (failed) readUnavailable--
+        const delayed = failed || retryRead
+        retryRead = failed
+        if (!delayed) return Promise.resolve([...identities])
+        return reviewRead(signal ?? lifetime?.signal, () => {
+          if (failed) throw new AuthError('NETWORK')
+          return [...identities]
+        })
+      },
       requestEmailProof: async () => 'review-challenge',
       verifyEmailProof: async (_id: string, value: string, candidate?: string) => {
         if (otp === 'limited') throw new AuthError('OTP_RATE_LIMITED', 429, 60)
@@ -55,6 +66,11 @@ export function Front18Account({ onBack }: { onBack: () => void }) {
     controller.beginContactNavigation = () => { contact = required; void controller.restore('contact-complete'); return false }
     controller.beginLinkNavigation = () => { identities = [email, google]; void controller.restore('link-complete'); return false }
     return { controller, now,
+      beginLifetime: () => {
+        const abort = new AbortController()
+        lifetime = abort
+        return () => abort.abort()
+      },
       prepare: async (config: { registration?: boolean; both?: boolean; otp?: OtpExample; link?: LinkExample } = {}) => {
         contact = config.registration ? required : verified
         identities = config.both ? [google, email] : [google]
@@ -62,6 +78,7 @@ export function Front18Account({ onBack }: { onBack: () => void }) {
         otp = config.otp ?? 'success'
         clockOffset += 10 * 60_000
         readUnavailable = 0
+        retryRead = false
         await controller.restore('account')
       },
       expire: () => { clockOffset += 6 * 60_000 },
@@ -69,7 +86,13 @@ export function Front18Account({ onBack }: { onBack: () => void }) {
   })
   const { controller } = fixture
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot)
-  useEffect(() => { void controller.start('account') }, [controller])
+  const shownState = state.pending === 'account' && state.issue?.code === 'EMAIL_LINK_STATUS_UNCONFIRMED'
+    ? { ...state, account: { ...state.account, loaded: false } } : state
+  useEffect(() => {
+    const dispose = fixture.beginLifetime()
+    void controller.start('account')
+    return dispose
+  }, [controller, fixture])
   const proof = async (registration: boolean, otp: OtpExample = 'success', verify = true) => {
     await fixture.prepare({ registration, otp })
     await controller.requestEmailProof()
@@ -105,8 +128,7 @@ export function Front18Account({ onBack }: { onBack: () => void }) {
         <Button onClick={onBack}>검수 분류로 돌아가기</Button>
       </div>
     </details>
-    <AuthFeedback state={state} />
-    <AccountSettings state={state} controller={controller} now={fixture.now()} onBack={onBack} DevicesPage={DevicesReview} />
+    <AccountSettings state={shownState} controller={controller} now={fixture.now()} onBack={onBack} DevicesPage={DevicesReview} />
   </>
 }
 

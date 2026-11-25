@@ -100,7 +100,7 @@ export function decimalDraft(value: string): string {
 export function countDraft(value: string): number {
   if (!/^\d+$/.test(value.trim())) throw new Error('양의 정수를 입력해 주세요.')
   const result = Number(value.trim())
-  if (!count(result)) throw new Error('1~2147483647 범위의 정수를 입력해 주세요.')
+  if (!count(result)) throw new Error('입력한 숫자를 확인해 주세요.')
   return result
 }
 

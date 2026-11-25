@@ -321,7 +321,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     (completeWeight || activity?.phase === 'completed' || activity?.phase === 'skipped')
   const finishAction = <Button variant={pending ? 'quiet' : 'primary'} data-click-action={id + ':finish'} pending={finishInFlight}
     loading={finishInFlight && modal !== 'end'} onClick={finishRecovery ? () => void controller.retrySync() : () => void end()}>
-    {finishRecovery ? '서버 저장 상태 다시 확인' : pending ? '남은 유산소 건너뛰고 종료' : '운동 종료 및 요약'}
+    {finishRecovery ? workout.finish?.ack ? '요약 다시 조회' : '종료 결과 확인' : pending ? '남은 유산소 건너뛰고 종료' : '운동 종료 및 요약'}
   </Button>
   const finalActions = <>{allWeights && <Button data-click-action={id + ':add-cardio'} disabled={finishRecovery} onClick={() => setModal('cardio')}>+ 유산소 추가</Button>}
     {pending && <Button variant="primary" data-click-action={id + ':next'} disabled={finishRecovery} onClick={() => void go(pending.id)}>다음 종목으로</Button>}
@@ -492,7 +492,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
         </div> : draftsNeedRetry && <Button variant="primary" loading={state.pending > 0} onClick={() => void controller.retryDrafts()}>입력 다시 저장</Button>}
         {finishResultUnconfirmed ? <p>저장 여부를 아직 확인하지 못했어요.</p> : workout.finish && showSyncDetails && <p>{workout.finish.ack
           ? <>운동 종료를 확인했어요.<br />기록을 다시 불러올 수 있어요.</>
-          : <>종료 요청은 이 기기에 남아 있어요.<br />서버에서 같은 요청의 결과를 확인할 수 있어요.</>}</p>}
+          : <>종료 결과가 아직 확인되지 않았어요.<br />이 기기의 운동 기록은 유지돼요.</>}</p>}
         {!finishResultUnconfirmed && (state.syncIssue ? <StatusNotice error>{state.syncStatus === 'READ'
           ? <>운동 정보를 다시 확인하지 못했어요.<br />저장된 기록은 유지돼요.</>
           : state.syncStatus === 'WAITING' ? <>연결 또는 서버 저장 결과를 확인하지 못했어요.<br />이 기기의 원래 기록은 유지돼요.</>
@@ -504,7 +504,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
           <Button variant="neutral" onClick={() => setSaveDetailsOpen(false)}>닫기</Button>
           <Button variant="primary" pending={state.syncStatus === 'SENDING'} onClick={() => void controller.retrySync()}>다시 확인</Button>
         </div> : canRetrySync && <Button variant={draftsNeedRetry ? 'secondary' : isRecovery ? 'recovery' : 'primary'} pending={state.syncStatus === 'SENDING'} onClick={() => void controller.retrySync()}>
-          {workout.finish?.ack ? '운동 기록 다시 조회' : workout.finish ? '종료 결과 다시 확인' : state.syncStatus === 'READ' ? '운동 정보 다시 조회' : '서버 저장 다시 확인'}
+          {workout.finish?.ack ? '요약 다시 조회' : workout.finish ? '종료 결과 확인' : state.syncStatus === 'READ' ? '운동 정보 다시 조회' : '저장 결과 확인'}
         </Button>}
         {canReview && <Button variant={sessionRecovery ? 'recovery' : 'secondary'} onClick={onRecheckSession}>세션 상세 다시 확인</Button>}
         {onReopenLocal && <Button variant={sessionRecovery && !canReview ? 'recovery' : 'secondary'} loading={reopeningLocal} onClick={onReopenLocal}>로컬 운동 다시 확인</Button>}

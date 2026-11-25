@@ -20,7 +20,12 @@ function setup(options={}) {
   const api={bootstrap:async userId=>({...structuredClone(bootstrap),scope:{...scope,userId}}),active:async()=>({...scope,session:null}),routine:async()=>structuredClone(routine),detail:async()=>session(),
     start:async(_scope,body)=>{starts.push(structuredClone(body));return session({id:body.id,startedAt:body.startedAt,workoutDate:body.workoutDate,startedTimeZone:body.startedTimeZone,editorDeviceId:body.editorDeviceId})},...options}
   const store={deviceId:async()=>DEVICE,attempt:async()=>attempt,copies:async()=>structuredClone(copies),prepareStart:async(s,body)=>{
-    if(failPrepare)throw new LocalStoreError();attempt??={...s,request:structuredClone(body),requestJson:JSON.stringify(body)};return structuredClone(attempt)},saveSession:async(s,value,id)=>{
+    if(failPrepare)throw new LocalStoreError();attempt??={...s,request:structuredClone(body),requestJson:JSON.stringify(body)};return structuredClone(attempt)},
+    rejectStart: async (owner, bytes) => {
+      if (attempt?.userId !== owner.userId || attempt.dataGeneration !== owner.dataGeneration || attempt.requestJson !== bytes) return false
+      attempt = null
+      return true
+    }, saveSession:async(s,value,id)=>{
       if(failSave)throw new LocalStoreError();copies=[{...s,sessionId:value.id,editorDeviceId:value.editorDeviceId,writerEpoch:value.writerEpoch,server:structuredClone(value)}];if(attempt?.request.id===id)attempt=null}}
   const controller=new WorkoutOnlineController(api,store),disconnect=controller.connect(auth)
   return {controller,disconnect,change,store,api,starts,getAttempt:()=>attempt,getCopies:()=>copies,setFailSave:v=>{failSave=v},setFailPrepare:v=>{failPrepare=v}}
@@ -249,6 +254,23 @@ test('rest settings change only on confirmation, retain previous values on failu
   assert.equal(await state.controller.requestRestSettings(null), null)
   assert.equal(state.controller.getSnapshot().data.settings.restLowSeconds, 190)
 })
+test('definitive START clock rejection retires only that attempt and permits a corrected start', async () => {
+  const s = setup()
+  await settle()
+  await s.controller.select(ROUTINE)
+  const save = s.api.start
+  let rejected
+  s.api.start = async (_scope, request) => { rejected = request; throw new WorkoutApiError('CLOCK_CONTEXT_INVALID', 422) }
+  await s.controller.start()
+  assert.equal(s.controller.getSnapshot().issue, '기기의 날짜와 시간 설정을 확인해 주세요.')
+  assert.equal(s.controller.getSnapshot().startUnconfirmed, false)
+  assert.equal(s.getAttempt(), null)
+  s.api.start = save
+  await s.controller.start()
+  assert.notEqual(s.starts[0].id, rejected.id)
+  assert.equal(s.getCopies().length, 1)
+  s.disconnect()
+})
 test('START is dispatched only after durable attempt, and duplicate clicks do not start twice',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE)
   const disk=gate(),prepare=s.store.prepareStart;s.store.prepareStart=async(...args)=>{await disk.promise;return prepare(...args)}
@@ -287,6 +309,7 @@ test('lost START ACK and reload reuse the exact stored UUID, time, date, zone an
   const s=setup();await settle();await s.controller.select(ROUTINE)
   const startCall=s.api.start;let lost=true;s.api.start=async(...args)=>{const response=await startCall(...args);if(lost){lost=false;throw Error('lost after commit')}return response}
   await s.controller.start();const original=structuredClone(s.getAttempt());assert.ok(original);assert.equal(s.controller.getSnapshot().copySaved,false)
+  assert.equal(s.controller.getSnapshot().startUnconfirmed, true)
   s.disconnect();const fresh=new WorkoutOnlineController(s.api,s.store),stop=fresh.connect({getSnapshot:()=>({status:'authenticated',userId:USER,pending:null}),subscribe:()=>()=>{}})
   await settle();await fresh.start();assert.equal(s.starts.length,2);assert.deepEqual(s.starts[0],s.starts[1]);assert.equal(JSON.stringify(s.starts[1]),original.requestJson);assert.equal(s.getAttempt(),null);stop()
 })
@@ -386,7 +409,8 @@ test('routine deletion version conflict preserves selection without automatic re
   assert.equal(await s.controller.deleteRoutine('1'),false);assert.equal(calls,0,'a version changed after opening confirmation must be reviewed again')
   await s.controller.deleteRoutine(routine.version)
   assert.equal(calls,1);assert.equal(s.controller.getSnapshot().selected.version,routine.version)
-  assert.ok(s.controller.getSnapshot().issue.includes('다른 곳에서 루틴이 수정'));s.disconnect()
+  assert.equal(s.controller.getSnapshot().issueCode, 'ROUTINE_VERSION_CONFLICT')
+  assert.match(s.controller.getSnapshot().issue, /루틴이 변경됐어요/);s.disconnect()
 })
 
 test('provisional assessment validates owner, generation, session, kind and matching saved version',async()=>{

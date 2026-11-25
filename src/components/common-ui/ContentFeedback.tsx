@@ -53,16 +53,24 @@ export function FieldValidation({ error, describedBy, children }: {
   </div>
 }
 
-export function EmptyState({ icon, title, description }: {
+export function EmptyState({ icon, title, description, action, embedded = false, error = false }: {
   icon: ReactNode
   title: string
-  description: string
+  description?: string
+  action?: ReactNode
+  embedded?: boolean
+  error?: boolean
 }) {
-  return <section className={styles.empty}>
+  return <section className={styles.empty} data-content-state={error ? 'error' : 'empty'} data-embedded={embedded || undefined}>
     <span className={styles.emptyIcon} aria-hidden="true">{icon}</span>
-    <h2>{title}</h2>
-    <p>{description}</p>
+    <h2 role={error ? 'alert' : undefined}>{title}</h2>
+    {description && <p>{description}</p>}
+    {action && <div className={styles.emptyAction}>{action}</div>}
   </section>
+}
+
+export function ContentError({ title, action, embedded, description }: { title: string; action?: ReactNode; embedded?: boolean; description?: string }) {
+  return <EmptyState icon={<FeedbackIcon name="error" size={24} />} title={title} description={description} action={action} embedded={embedded} error />
 }
 
 export function ConnectionBanner({ state, title, description }: {

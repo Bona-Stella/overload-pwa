@@ -1,5 +1,9 @@
 import {useEffect,useLayoutEffect,useRef,useState} from 'react'
-import {Button,Card} from '../../components/ui.tsx'
+import {RefreshButton} from '../../components/common-ui/RefreshButton.tsx'
+import {readFailure,readWithDeadline} from '../../app/read-deadline.ts'
+import {ContentError} from '../../components/common-ui/ContentFeedback.tsx'
+import {Toast} from '../../components/common-ui/Toast.tsx'
+import {useReadErrorToast} from '../../components/common-ui/useReadErrorToast.ts'
 import {ReviewWeightChange,WeightApprovalStatus,WeightReview} from '../workout-flow/WeightReview.tsx'
 import {WeightApprovalHistory} from '../workout-flow/WorkoutSummary.tsx'
 import type {WeightSummary} from '../workout-flow/WorkoutSummary.tsx'
@@ -9,7 +13,7 @@ import type {SavedReview,ReviewApproval} from './saved-weight-review.ts'
 import {newId} from '../../id.ts'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 
-const historyCheckIssue = '서버가 승인 요청을 수락했습니다. 승인 이력을 다시 조회해 주세요.'
+const historyCheckIssue = '중량 승인은 접수됐어요. 승인 이력을 다시 확인해 주세요.'
 function confirmsApproval(view: SavedReview, expected: ReviewApproval['approvals']) {
  return expected.every(request => view.approvals.some(event => event.id === request.id
   && event.sessionExerciseId === request.sessionExerciseId && event.previousWeightKg === request.previousWeightKg
@@ -18,6 +22,7 @@ function confirmsApproval(view: SavedReview, expected: ReviewApproval['approvals
 
 export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRoutineApproved,authorized,preview=false,onReadSettled}:{api:Pick<WorkoutApi,'weightReview'|'approveReview'>;session:Session;readOnly:boolean;disabled:boolean;onChanged:()=>Promise<void>;onRoutineApproved?:(scope:Scope,routineId:string,version:string)=>void;authorized:()=>boolean;preview?:boolean;onReadSettled?:(version:string)=>void}){
  const [view,setView]=useState<SavedReview|null>(null),[issue,setIssue]=useState(''),[busy,setBusy]=useState(false),[reload,setReload]=useState(0)
+ const [settledReload,setSettledReload]=useState(0)
  const [readVersion,setReadVersion]=useState<string|null>(null)
  const access=useRef(authorized)
  useEffect(()=>{access.current=authorized},[authorized])
@@ -29,8 +34,9 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
   flight.current?.abort()
   flight.current = abort
   const authorizedRead = () => !abort.signal.aborted && mounted.current && access.current()
-  void api.weightReview({userId:session.userId,dataGeneration:session.dataGeneration},session.id,abort.signal).then(saved => {
+  void readWithDeadline(abort.signal, signal => api.weightReview({userId:session.userId,dataGeneration:session.dataGeneration},session.id,signal)).then(saved => {
    if (!authorizedRead()) return
+   setSettledReload(reload)
    setReadVersion(session.version)
    const expected = awaitingHistory.current
    const confirmed = expected && confirmsApproval(saved, expected.requests)
@@ -40,10 +46,11 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
    setIssue('')
    if (confirmed && saved.routineVersion !== null) onRoutineApproved?.(saved, session.initialPlan.routineId, saved.routineVersion)
    if (confirmed || (!readOnly && saved.version !== session.version)) void onChanged()
-  }).catch(() => {
+  }).catch(error => {
    if (authorizedRead()) {
-    setReadVersion(session.version)
-    setIssue(awaitingHistory.current?.acknowledged ? historyCheckIssue : '당시 중량 검토와 승인 이력을 조회하지 못했습니다.')
+    setSettledReload(reload)
+   setReadVersion(session.version)
+    setIssue(awaitingHistory.current?.acknowledged ? historyCheckIssue : readFailure(error, '승인 이력을 불러오지 못했어요.'))
    }
   })
   return () => abort.abort()
@@ -51,8 +58,10 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
  const current=view?.sessionId===session.id&&view.userId===session.userId&&view.dataGeneration===session.dataGeneration?view:null
  useLayoutEffect(()=>{if(readVersion===session.version)onReadSettled?.(readVersion)},[readVersion,session.version,onReadSettled])
  const frozen=current?.frozen
- const retryNotice=issue?<Card><p role="alert">{issue}</p><Button onClick={()=>setReload(n=>n+1)}>다시 조회</Button></Card>:null
- if(!current)return retryNotice??<div role="status" className="sr-only">당시 중량 검토 확인 중…</div>
+ const refreshing = reload !== settledReload
+ const feedback=useReadErrorToast(readOnly && current && !refreshing ? issue : null)
+ const retry=issue && <RefreshButton loading={refreshing} failure={!current ? issue : null} onRefresh={()=>setReload(n=>n+1)} />
+ if(!current)return issue ? <ContentError title={issue} action={retry} /> : <div role="status" className="sr-only">당시 중량 검토 확인 중…</div>
  const approvals=current.approvals.filter(a=>a.source==='WORKOUT_REVIEW')
  const weights:WeightSummary[]=(frozen?.exercises??[]).flatMap(item=>{
   const g=item.guidance
@@ -62,7 +71,6 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
  const historyWeights=readOnly?weights:weights.filter(w=>w.review?.approval)
  const otherApprovals=current.approvals.filter(a=>a.source!=='WORKOUT_REVIEW'||!historyWeights.some(w=>w.id===a.sessionExerciseId))
  const history=(historyWeights.length>0||otherApprovals.length>0)?<WeightApprovalHistory>
-    {readOnly&&issue&&<p role="alert">{issue}</p>}
     <WeightReview weights={historyWeights} readOnly preview={preview}/>
     {otherApprovals.map(a=>{
       const name=frozen?.exercises.find(i=>i.sessionExerciseId===a.sessionExerciseId)?.name
@@ -74,8 +82,8 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
       </section>
     })}
   </WeightApprovalHistory>:null
- if(readOnly)return history??retryNotice
- if(!frozen)return <>{retryNotice}{history}</>
+ if(readOnly)return <>{history}{retry}<Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" /></>
+ if(!frozen)return <>{retry}{history}</>
  const unapproved=weights.filter(w=>!approvals.some(a=>a.sessionExerciseId===w.id))
  const reviewable=unapproved.filter(w=>current.current.some(c=>c.sessionExerciseId===w.id&&c.available&&c.approvedWeightKg===w.review!.referenceKg))
  const blocked=reviewable.length>0&&reviewable.length<unapproved.length
@@ -97,12 +105,13 @@ export function SavedWeightReview({api,session,readOnly,disabled,onChanged,onRou
    if(saved.routineVersion!==null)onRoutineApproved?.(saved,session.initialPlan.routineId,saved.routineVersion)
    setView(saved);await onChanged();return true
   }catch{
-   if(mounted.current&&access.current()&&!abort.signal.aborted){setIssue(submitted.acknowledged ? historyCheckIssue : '승인 저장 결과를 확인해야 합니다. 최신 이력을 다시 조회해 주세요. 자동으로 재전송하지 않습니다.');setReload(n=>n+1)}
+   if(mounted.current&&access.current()&&!abort.signal.aborted){setIssue(submitted.acknowledged ? historyCheckIssue : '중량 승인 결과를 확인하지 못했어요. 승인 이력을 다시 확인해 주세요.');setReload(n=>n+1)}
    return false
   }finally{if(mounted.current)setBusy(false)}
  }
- return <>{retryNotice}{blocked&&<p className="notice">현재 루틴 또는 승인 중량이 달라졌습니다. 과거 권고를 그대로 승인할 수 없습니다.</p>}
+ return <>{blocked&&<p className="notice">루틴이나 중량이 변경됐어요. 이전 추천 중량은 적용할 수 없어요.</p>}
   <WeightReview key={session.id+':'+frozen.sessionVersion} weights={reviewable} preview={preview} disabled={disabled||busy||!!issue||!latest} onApprove={approve} approvalIssue={issue}/>
   {history}
+  {retry}
  </>
 }

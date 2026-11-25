@@ -43,7 +43,7 @@ export function ActionDialog(props: ActionDialogProps) {
     descriptionId={descriptionId}
   >
     <div id={descriptionId} data-dialog-description className={styles.description}>{props.description}</div>
-    <div className={styles.actions}>
+    <div className={styles.actions} data-dialog-actions>
       {props.kind !== 'alert' && <ActionButton size="modal" appearance="contrast-outline" disabled={pending}
         onClick={props.onDismiss}>{props.cancelLabel}</ActionButton>}
       <ActionButton

@@ -33,7 +33,7 @@ test('optional goals stay blank in drafts and the current write contract rejects
   assert.equal(parseCardioPlan(empty).targetDistanceKm, null)
   assert.equal(parseCardioPlan({ ...empty, distance: '5' }).targetDistanceKm, '5')
   assert.equal(parseCardioPlan({ ...empty, intensity: '8' }).targetDistanceKm, null)
-  assert.throws(() => cardioPlan(empty), /서버에 저장하려면/)
+  assert.throws(() => cardioPlan(empty), /유산소 목표 시간을 입력해 주세요/)
   assert.throws(() => parseCardioPlan({ ...empty, minutes: '0' }))
   assert.throws(() => parseCardioPlan({ ...empty, minutes: '-3' }))
   assert.throws(() => parseCardioPlan({ ...empty, distance: 'NaN' }))

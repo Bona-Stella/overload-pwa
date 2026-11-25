@@ -73,7 +73,7 @@ test('verified account success renders one common toast outside the persistent a
   const state = { ...initial, status: 'authenticated', userId: ID, updatedAt: NOW, accountOpen: true,
     account: emptyAccount(), accountSuccess: { id: 1, message: '이메일 재인증을 완료했습니다.' } }
   const html = render(state)
-  assert.match(html, /id="auth-feedback" aria-live="polite"><\/div>/)
+  assert.doesNotMatch(html, /id="auth-feedback"/)
   assert.equal([...html.matchAll(/data-tone="success"/g)].length, 1)
   assert.match(html, /aria-hidden="true">이메일 재인증을 완료했습니다/)
   assert.doesNotMatch(render({ ...state, accountOpen: false }), /data-tone="success"/)
@@ -106,13 +106,13 @@ for (const providers of [['email'], ['google'], ['email','google'], []]) test(`a
   const html=accountHtml({ identities: providers.map(provider => ({ id: ID, provider })), contact: { status: 'VERIFIED', maskedEmail: 'a***@***' } })
   assert.match(html,/계정 설정|로그인 수단/);assert.match(html,/a\*\*\*@\*\*\*/);assert.doesNotMatch(html,new RegExp(ID))
   assert.doesNotMatch(html,/로그인 수단 연결|Google 연결|이메일 연결|해제 버튼|issuer|sub=/)
-  assert.match(html,/최근 이메일 OTP 검증은 이 화면에서 확인되지 않았습니다/)
+  assert.match(html,/이 화면에서 확인한 재인증 기록이 없어요/)
   if(!providers.length)assert.match(html,/연결된 로그인 수단을 확인할 수 없습니다/)
 })
 test('REQUIRED with EMAIL-only explains normal OTP login instead of inventing an address-registration form',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'email'}],contact:{status:'REQUIRED'}})
-  assert.match(html,/대표 이메일 등록 필요/);assert.match(html,/이메일 OTP로 다시 로그인/)
-  assert.doesNotMatch(html,/REQUIRED|type="email"|Google로 등록 이메일 확인|이메일로 재인증/)
+  assert.match(html,/대표 이메일 등록 필요/);assert.match(html,/같은 이메일로 다시 로그인/)
+  assert.doesNotMatch(html,/REQUIRED|type="email"|Google로 등록 이메일 확인|>이메일로 재인증<\/button>/)
 })
 test('Google contact uses a fixed CSRF-protected POST form with hidden internal identity only',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'REQUIRED'},form:{identityId:ID,csrf:'fake-form-csrf'}})
@@ -126,22 +126,22 @@ test('candidate UI remains REQUIRED until OTP success and uses only masked addre
 test('proof OTP field, local expiration, resend wait and verification budget are visible',()=>{
   const account={identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'},challenge:{id:ID,expiresAt:NOW+300_000},resendAt:NOW+60_000}
   const html=accountHtml(account)
-  for(const text of ['autoComplete="one-time-code"','inputMode="numeric"','maxLength="6"','5:00','최대 5회 오답','60초 후 요청 가능'])assert.ok(html.includes(text),text)
+  for(const text of ['autoComplete="one-time-code"','inputMode="numeric"','maxLength="6"','5:00','최대 5회 입력','60초 후 요청 가능'])assert.ok(html.includes(text),text)
   assert.match(accountHtml({...account,verifyAt:NOW+120_000}),/120초 후 코드 확인/)
-  assert.match(accountHtml({...account,challenge:{id:ID,expiresAt:NOW}}),/코드 만료/)
+  assert.match(accountHtml({...account,challenge:{id:ID,expiresAt:NOW}}),/코드가 만료됐어요/)
 })
 test('recent OTP feedback lasts through the ten-minute boundary but never claims server authorization',()=>{
-  assert.match(accountHtml({confirmedAt:NOW-600_000}),/이 화면에서 OTP 검증을 완료했습니다/)
-  assert.match(accountHtml({confirmedAt:NOW-600_001}),/최근 이메일 OTP 검증은 이 화면에서 확인되지 않았습니다/)
+  assert.match(accountHtml({confirmedAt:NOW-600_000}),/이메일 재인증을 완료했어요/)
+  assert.match(accountHtml({confirmedAt:NOW-600_001}),/이 화면에서 확인한 재인증 기록이 없어요/)
 })
 test('account loading and retryable lookup failure are distinct and contain no private identifiers',()=>{
   assert.match(accountHtml({loaded:false},{pending:'account'}),/계정 정보를 확인하고 있어요/)
-  assert.match(accountHtml({loaded:false}),/계정 정보를 불러오지 못했습니다|계정 정보 다시 확인/)
+  assert.match(accountHtml({loaded:false}),/data-content-state="error".*계정 정보를 불러오지 못했어요.*새로고침/s)
 })
 
 test('identity management keeps VERIFIED contact separate and offers explicit actions without raw identifiers',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}})
-  for(const label of ['이메일 로그인 연결','Google 로그인 추가 연결','Google 계정 연결 해제','대표 재인증 이메일과 로그인 수단은 별도','서버가 최종 검사'])assert.ok(html.includes(label),label)
+  for(const label of ['이메일 로그인 연결','Google 로그인 추가 연결','Google 계정 연결 해제','대표 재인증 이메일','10분 이내에 이메일로 재인증'])assert.ok(html.includes(label),label)
   assert.doesNotMatch(html,new RegExp(ID));assert.doesNotMatch(html,/type="email"/)
 })
 test('Google LINK renders fixed form POST containing only CSRF and never identityId or returnUrl',()=>{
@@ -156,7 +156,7 @@ for(const provider of ['email','google'])test(`${provider} unlink confirmation e
 })
 test('multiple same-provider identities expose neither guessed addresses nor an arbitrary unlink button',()=>{
   const html=accountHtml({identities:[{id:ID,provider:'google'},{id:'50000000-1111-4222-8333-000000000005',provider:'google'}],contact:{status:'VERIFIED',maskedEmail:'g***@***'}})
-  assert.match(html,/2개 연결됨|개별 계정을 구별할 수 없어/);assert.doesNotMatch(html,/Google 계정 연결 해제|sub=|example\.test/)
+  assert.match(html,/2개 연결됨/);assert.match(html,/개별 연결을 해제할 수 없어요/);assert.doesNotMatch(html,/Google 계정 연결 해제|sub=|example\.test/)
 })
 test('account settings disables the last identity and exposes both unlink actions when two are listed', () => {
   const email = { id: ID, provider: 'email' }
@@ -167,13 +167,13 @@ test('account settings disables the last identity and exposes both unlink action
     const unlink = buttons.filter(button => />(?:Google 계정 )?연결 해제<\/button>/.test(button))
     assert.equal(unlink.length, identities.length)
     assert.ok(unlink.every(button => /\bdisabled\b/.test(button) === (identities.length === 1)))
-    assert.match(markup, /서버 이력 확인 불가.*aria-label="로그인된 기기 관리".*계정 정보 새로 확인/s)
+    assert.match(markup, /이 화면에서 확인한 재인증 기록이 없어요.*aria-label="로그인된 기기 관리".*새로고침/s)
     assert.doesNotMatch(markup, /\d대/)
   }
 })
 test('the account device route renders unavailable data and disabled remote actions without a review source', () => {
   const markup = renderToStaticMarkup(React.createElement(LoggedInDevices, { onBack: () => {} }))
-  assert.match(markup, /접속 현황.*현재 서버에서 로그인된 기기 조회를 지원하지 않습니다/s)
+  assert.match(markup, /접속 현황.*로그인된 기기 목록은 아직 제공되지 않아요/s)
   assert.doesNotMatch(markup, /iPhone|MacBook|\d대|검토용|<dialog/)
   const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g)
   assert.equal(buttons.filter(button => /로그아웃.*<\/button>/.test(button) && /\bdisabled\b/.test(button)).length, 2)

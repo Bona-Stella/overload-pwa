@@ -10,7 +10,9 @@ import { ActionDialog } from '../../../src/components/common-ui/ActionDialog.tsx
 import { draftSaveFailure, recordDeletionConsequence } from '../../../src/components/common-ui/message-copy.ts'
 import type { DialogTone } from '../../../src/components/Dialog.tsx'
 import { FeedbackIcon } from '../../../src/components/common-ui/FeedbackIcon.tsx'
-import { ConnectionBanner, EmptyState, FieldValidation, SkeletonRegion, SkeletonSlot } from '../../../src/components/common-ui/ContentFeedback.tsx'
+import { ConnectionBanner, ContentError, EmptyState, FieldValidation, SkeletonRegion, SkeletonSlot } from '../../../src/components/common-ui/ContentFeedback.tsx'
+import { RefreshButton } from '../../../src/components/common-ui/RefreshButton.tsx'
+import { reviewRead } from './review-read.ts'
 import { StatusTag, StatusText } from '../../../src/components/common-ui/StatusIndicator.tsx'
 import { Toast } from '../../../src/components/common-ui/Toast.tsx'
 import type { ToastMessage } from '../../../src/components/common-ui/Toast.tsx'
@@ -18,6 +20,48 @@ import { TagPickerExamples } from './TagPickerExamples.tsx'
 import styles from './CommonUiPreview.module.css'
 
 const Front18Review = lazy(() => import('./Front18Review.tsx'))
+const refreshExamples = { success: '조회 성공', failure: '조회 실패', timeout: '응답 시간 초과' } as const
+type RefreshExample = keyof typeof refreshExamples
+
+function RefreshExamples() {
+  const [example, setExample] = useState<RefreshExample | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  const [recovered, setRecovered] = useState(false)
+  const [failure, setFailure] = useState<string | null>(null)
+  const request = useRef<AbortController | null>(null)
+  useEffect(() => () => request.current?.abort(), [])
+
+  const refresh = () => {
+    if (request.current) return
+    const abort = new AbortController()
+    request.current = abort
+    setRefreshing(true)
+    setFailure(null)
+    void reviewRead(abort.signal, () => {
+      if (example === 'failure') throw new TypeError('Preview response unavailable')
+    }, { timeout: example === 'timeout' })
+      .then(() => setRecovered(true), () => {
+        if (abort.signal.aborted) return
+        setFailure('연결할 수 없어요. 다시 시도해 주세요.')
+        setExample('success')
+      })
+      .finally(() => {
+        request.current = null
+        if (!abort.signal.aborted) setRefreshing(false)
+      })
+  }
+
+  return <section aria-label="조회 실패·새로고침 예시" className="stack">
+    <div className={styles.controls}>{Object.entries(refreshExamples).map(([key, label]) =>
+      <ActionButton key={key} disabled={refreshing} aria-pressed={example === key && !recovered} onClick={() => {
+        setExample(key as RefreshExample)
+        setFailure(null)
+        setRecovered(false)
+      }}>{label}</ActionButton>)}</div>
+    {example && (recovered ? <Card><p>운동 기록을 불러왔어요.</p></Card>
+      : <ContentError title="운동 기록을 불러오지 못했어요." action={<RefreshButton loading={refreshing} failure={failure} onRefresh={refresh} />} />)}
+  </section>
+}
 
 const confirmationExamples = {
   finish: {
@@ -244,6 +288,8 @@ function ComponentExamples() {
         <ActionButton size="small" onClick={() => setEmpty('history')}>기록 없음</ActionButton>
         <ActionButton size="small" onClick={() => setEmpty('search')}>검색 결과 없음</ActionButton>
       </div>
+      <h3>조회 실패·새로고침</h3>
+      <RefreshExamples />
       {emptyExample && <EmptyState title={emptyExample.title} description={emptyExample.description}
         icon={<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={emptyExample.path} /></svg>} />}
     </section>

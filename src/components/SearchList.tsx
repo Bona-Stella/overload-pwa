@@ -1,5 +1,8 @@
 import {useEffect,useId,useRef,useState} from 'react'
 import type {MouseEvent,ReactNode} from 'react'
+import {ContentError,EmptyState} from './common-ui/ContentFeedback.tsx'
+import {FeedbackIcon} from './common-ui/FeedbackIcon.tsx'
+import {LoadingSkeleton} from './LoadingSkeleton.tsx'
 import styles from '../features/workout-online/PublicCatalog.module.css'
 import filterStyles from './common-ui/FilterTags.module.css'
 import searchStyles from './SearchList.module.css'
@@ -14,8 +17,8 @@ export function SearchResults({options,onSelect,onDetail,disabled=false,label='�
   {o.exerciseId&&<button type="button" className={searchStyles.detail} aria-label={o.name+' 상세 보기'} disabled={disabled||!detail&&!onDetail} onClick={e=>onDetail?onDetail(o.id,e):detail?.(o)}><span aria-hidden="true">›</span></button>}
  </li>)}</ul>
 }
-export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,onDetail,query,onQuery,options,onSelect,selected,onClear,disabled,issue,loading=false,resultsPending=false,resultsFooter,onCloseSearch,onSearchOpenChange,autoFocus=false,defaultOpen=false,closeOnSelect=true,resultsLabel='검색 결과',label='이름 검색'}:{
- scopes?:{id:string;name:string}[];scope?:string;onScope?:(value:string)=>void;renderScope?:(control:SearchScopeControl)=>ReactNode;tags?:SearchTags;onDetail?:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;query:string;onQuery:(value:string)=>void;options:SearchOption[];onSelect:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;selected?:string;onClear:()=>void;disabled?:boolean;issue?:string;loading?:boolean;resultsPending?:boolean;resultsFooter?:ReactNode;onCloseSearch?:()=>void;onSearchOpenChange?:(open:boolean)=>void;autoFocus?:boolean;defaultOpen?:boolean;closeOnSelect?:boolean;resultsLabel?:string;label?:string
+export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,onDetail,query,onQuery,options,onSelect,selected,onClear,disabled,issue,emptyTitle='검색 결과가 없어요',loading=false,resultsPending=false,resultsFooter,onCloseSearch,onSearchOpenChange,autoFocus=false,defaultOpen=false,closeOnSelect=true,resultsLabel='검색 결과',label='이름 검색'}:{
+ scopes?:{id:string;name:string}[];scope?:string;onScope?:(value:string)=>void;renderScope?:(control:SearchScopeControl)=>ReactNode;tags?:SearchTags;onDetail?:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;query:string;onQuery:(value:string)=>void;options:SearchOption[];onSelect:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;selected?:string;onClear:()=>void;disabled?:boolean;issue?:string;emptyTitle?:string;loading?:boolean;resultsPending?:boolean;resultsFooter?:ReactNode;onCloseSearch?:()=>void;onSearchOpenChange?:(open:boolean)=>void;autoFocus?:boolean;defaultOpen?:boolean;closeOnSelect?:boolean;resultsLabel?:string;label?:string
 }){
  const [state,setState]=useState<{mode:'IDLE'|'EDITING'|'SELECTED';hideScope:boolean}>(()=>({mode:autoFocus||defaultOpen?'EDITING':selected?'SELECTED':'IDLE',hideScope:autoFocus}))
  const mode=state.mode==='SELECTED'&&!selected?'IDLE':state.mode,open=mode==='EDITING',id=useId(),region=useRef<HTMLDivElement>(null)
@@ -51,10 +54,10 @@ export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,
    </button>
   </div>
   {tags&&open&&<div className={styles.filters}><p className={styles.filterLabel}>{tags.label}</p><div className={`${filterStyles.strip} ${styles.filterStrip}`} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}
-  {issue?<p className="notice" role="status">{issue}</p>:open&&<><SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled || resultsPending} onSelect={(id,event)=>{
+  {open&&<>{options.length>0 && <SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled || resultsPending} onSelect={(id,event)=>{
     if(closeOnSelect)region.current?.querySelector('input')?.blur()
     onSelect(id,event)
     if(closeOnSelect)setState({mode:'SELECTED',hideScope:false})
-  }}/>{loading ? !resultsPending && <div aria-busy="true" /> : !options.length && <p role="status">검색 후보가 없습니다.</p>}{resultsFooter}</>}
+  }}/>} {!options.length && (issue ? <ContentError embedded title={issue} /> : loading ? !resultsPending && <LoadingSkeleton layout="row" label="검색 목록을 불러오고 있어요." /> : <EmptyState embedded icon={<FeedbackIcon name="search" size={24} />} title={emptyTitle} />)}{resultsFooter}</>}
  </div>
 }

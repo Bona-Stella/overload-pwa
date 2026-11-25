@@ -33,7 +33,7 @@ test('save status distinguishes durable drafts, unconfirmed requests and acknowl
 test('cardio validation keeps optional measurements and explains invalid actual input',()=>{
   const draft={distance:'',speed:'',bpm:'',correctedSeconds:null}
   assert.equal(cardioCompletionInput(draft,'TREADMILL',1000).distanceKm,null)
-  assert.throws(()=>cardioCompletionInput(draft,'TREADMILL',0),/실제 활동 시간/)
+  assert.throws(()=>cardioCompletionInput(draft,'TREADMILL',0),/운동 시간을 기록해 주세요/)
   assert.throws(()=>cardioCompletionInput({...draft,distance:'0.0001'},'TREADMILL',1000),/0.001~1000 km/)
   assert.throws(()=>cardioCompletionInput({...draft,speed:'12',speedSource:'manual'},'TREADMILL',1000),/실제 거리를 입력/)
   assert.throws(()=>cardioCompletionInput({...draft,bpm:'301'},'TREADMILL',1000),/20~300 BPM/)

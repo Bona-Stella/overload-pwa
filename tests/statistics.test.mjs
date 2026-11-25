@@ -196,11 +196,11 @@ test('activity uses cardioByKind for both content and empty state without legacy
   const data=planned();data.statistics.cardio[0].name='LEGACY_CARDIO_SENTINEL'
   const render=()=>renderToStaticMarkup(React.createElement(StatisticsView,{data:data.statistics,planning:data,screen:'activity',onScreen(){},onOpen(){},onHistory(){}}))
   data.cardioByKind=[]
-  assert.match(render(),/유산소 기록이 없습니다/);assert.doesNotMatch(render(),/LEGACY_CARDIO_SENTINEL/)
+  assert.match(render(),/유산소 기록이 없어요/);assert.doesNotMatch(render(),/LEGACY_CARDIO_SENTINEL/)
   data.cardioByKind=planned().cardioByKind;data.statistics.cardio=[]
   const html=render()
   assert.match(html,/러닝머신 · 30분 · 3.8 km/);assert.match(html,/직접 입력 3.8 km/)
-  assert.doesNotMatch(html,/유산소 기록이 없습니다|LEGACY_CARDIO_SENTINEL/)
+  assert.doesNotMatch(html,/유산소 기록이 없어요|LEGACY_CARDIO_SENTINEL/)
 })
 
 test('overview requires planning fields while preserving null evidence and unknown cardio measurements',()=>{
@@ -299,7 +299,7 @@ test('an explicit zero cumulative actual time and empty performed arrays retain 
   const data = cardioTimeData('0')
   assert.deepEqual(data.cardioByKind, []); assert.deepEqual(data.statistics.cardio, [])
   const html = renderCardioTime(data)
-  assert.match(html, /실제 누적 0초 \/ 계획 30분/); assert.match(html, /유산소 기록이 없습니다/)
+  assert.match(html, /실제 누적 0초 \/ 계획 30분/); assert.match(html, /유산소 기록이 없어요/)
 })
 
 test('cardio display rounds seconds and preserves large integer counter precision', () => {

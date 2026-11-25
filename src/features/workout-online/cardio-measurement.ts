@@ -52,11 +52,11 @@ export function actualCardioMeasurement(draft: CardioMeasurementDraft, activeMs:
   }
   if (draft.distanceSource === 'derived') {
     const measured = measuredCardio(draft.speed, '', activeMs)
-    if (measured.distanceKm !== draft.distance) throw Error('현재 시간·속도로 계산 거리를 저장할 수 없습니다. 실제 거리를 입력하거나 거리와 속도를 비워 주세요.')
+    if (measured.distanceKm !== draft.distance) throw Error('계산한 거리와 입력값이 달라요. 실제 거리를 입력하거나 거리와 속도를 비워 주세요.')
     return measured
   }
   if (!draft.distance.trim() && draft.speed.trim() && (draft.distanceSource === 'manual' || draft.speedSource === 'manual')) {
-    throw Error('현재 서버는 평균 속도만 저장할 수 없습니다. 실제 거리를 입력하거나 평균 속도를 비워 주세요.')
+    throw Error('평균 속도를 저장하려면 실제 거리를 입력해 주세요.')
   }
   return measuredCardio(draft.speed, draft.distance, activeMs, draft.distanceSource === 'stored')
 }

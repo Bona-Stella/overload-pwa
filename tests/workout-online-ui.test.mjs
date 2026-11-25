@@ -99,7 +99,7 @@ test('new account shows empty routines without demo seeds or workout input contr
   const html=render(RoutineWorkspace,{state:{...state,data:{...bootstrap,routines:[]}},controller:{},enabled:true,
     training:{schedule:{version:'0',activeId:OTHER,autoEnabled:false,presets:[{id:OTHER,name:'01 주간 일정',version:'0',included:false,assignments:[]}]},
       protection:null,loading:false,busy:false,canWrite:true}})
-  assert.match(html,/아직 루틴이 없습니다/);assert.match(html,/새 루틴/)
+  assert.match(html,/data-content-state="empty".*등록된 루틴이 없어요/s);assert.equal((html.match(/새 루틴/g) ?? []).length,1)
   assert.doesNotMatch(html,/PUSH|PULL|LEGS|세트 완료|운동 종료<|타이머 시작/)
 })
 test('compact routine cards show only active exercise summaries and keep detail separate from the action menu',()=>{

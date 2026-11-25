@@ -39,7 +39,7 @@ export function parseCardioPlan(d: CardioDraft): Omit<CardioPlan, 'targetSeconds
         throw new Error('유산소 이름·시간 및 선택값의 허용 범위를 확인해 주세요.');
     return { ...(d.activityId ? { activityId: d.activityId } : {}), ...(d.standardExerciseId ? { standardExerciseId: d.standardExerciseId } : {}), kind: d.kind, name: d.name, targetSeconds, targetDistanceKm, intensity: intensity === null ? null : { mode: d.intensityMode, value: intensity }, inclinePercent, resistance };
 }
-export const missingCardioTime = '현재 서버에 저장하려면 유산소 목표 시간이 필요합니다.'
+export const missingCardioTime = '유산소 목표 시간을 입력해 주세요.'
 export function cardioPlan(d: CardioDraft): CardioPlan {
     const plan = parseCardioPlan(d)
     if (plan.targetSeconds === null) throw new Error(`${d.name} · ${missingCardioTime}`)

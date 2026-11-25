@@ -5,6 +5,8 @@ import type { SchedulePreset } from './preset-schedule.ts'
 import { activeWeights, activeCardio } from '../home/model.ts'
 import { scheduleRoutineLabel } from '../home/tags.ts'
 import { AchievementIcon } from '../../components/AchievementIcon.tsx'
+import { EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
+import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
 import home from '../home/Home.module.css'
 import { newestRoutines } from './routine-order.ts'
 import { dayNames } from './routine-schedule.ts'
@@ -94,8 +96,8 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
     {presetNavigation}
     {listState ?? <div hidden={scheduleEditing}>
       <div className={styles.listHeading} data-preset={!!presetHeader}><strong>저장된 루틴 {summaries.length}개</strong><select aria-label="저장된 루틴 필터" disabled={day !== null} value={day !== null ? `day:${day}` : filter} onChange={e => { closeMenus(); setFilter(e.target.value) }}>{day !== null && <option value={`day:${day}`}>{dayNames[day-1]}요일</option>}<option value="all">전체</option><option value="newest">최신순</option><option value="oldest">오래된순</option><option value="assigned" disabled={!week}>{presetHeader ? '이 일정 배정' : '배정된 루틴'}</option><option value="unassigned" disabled={!week}>{presetHeader ? '이 일정 미배정' : '미배정된 루틴'}</option></select>{listRetry}</div>
-      {!summaries.length && <section className={styles.card}><p>아직 루틴이 없습니다. 표준 운동으로 첫 루틴을 만들어 주세요.</p></section>}
-      {!!summaries.length && !filtered.length && <p className="muted">{day !== null ? `${dayNames[day-1]}요일에 배정된 루틴이 없습니다.` : '조건에 맞는 루틴이 없습니다.'}</p>}
+      {!summaries.length && <section className={styles.card}><EmptyState embedded icon={<FeedbackIcon name="routine" size={24} />} title="등록된 루틴이 없어요" description="첫 번째 루틴을 만들어 보세요." /></section>}
+      {!!summaries.length && !filtered.length && <EmptyState icon={<FeedbackIcon name="search" size={24} />} title={day !== null ? `${dayNames[day-1]}요일에 배정된 루틴이 없어요` : '조건에 맞는 루틴이 없어요'} />}
       <div className={styles.cardList}>{filtered.map(r => {
         const summary = composition(details.get(r.id)), days = assigned.filter(a => a.routineId === r.id).sort((a,b) => a.dayOfWeek-b.dayOfWeek).map(a => dayNames[a.dayOfWeek - 1]).join('·') || (week ? '미배정' : '')
         return <article className={`${styles.compactCard} ${assignedIds.has(r.id) ? styles.assignedCard : ''}`} key={r.id} aria-label={`${r.name} 루틴 카드`}>

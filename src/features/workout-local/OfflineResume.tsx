@@ -14,7 +14,7 @@ export function OfflineResumeOffer({ status, disabled, onContinue }: { status: '
   if (status === 'failed') return <StatusNotice error>이 기기의 운동을 확인하지 못했습니다. 다시 연결해 로그인 상태를 확인해 주세요.</StatusNotice>
   if (status === 'loading') return <LoadingSkeleton layout="workout" label="이 기기에 저장된 운동을 확인하는 중입니다." />
   if (status === 'unavailable') return <p className="muted small">이 환경에서 이어갈 수 있는 로컬 운동을 확인하지 못했습니다. 온라인에서 로그인하고 운동을 연 기기에서만 이어갈 수 있습니다.</p>
-  return <div className="card stack"><h2>이 기기의 운동 이어가기</h2><p>마지막으로 서버 인증을 확인한 계정의 기존 진행 운동만 엽니다. 현재 서버 로그인과 운동 상태가 확인된 것은 아닙니다.</p><p className="muted small">이 브라우저의 로컬 접근 제한은 인증이나 암호화가 아닙니다. 기기를 공유할 때는 온라인에서 로그아웃하세요.</p><button className="primary" disabled={disabled} onClick={onContinue}>이 기기의 운동 이어가기</button></div>
+  return <div className="card stack"><h2>이 기기의 운동 이어가기</h2><p>인터넷에 연결되면 로그인 상태와 저장 결과를 확인할 수 있어요.</p><p className="muted small">공용 기기에서는 인터넷에 연결한 뒤 로그아웃해 주세요.</p><button className="primary" disabled={disabled} onClick={onContinue}>이 기기의 운동 이어가기</button></div>
 }
 
 export function OfflineResume({ onExitGuard, onActiveChange, onReconnect }: { onExitGuard: ExitGuardRegistration; onActiveChange: (active: boolean) => void; onReconnect: () => void }) {

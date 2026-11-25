@@ -1,3 +1,4 @@
+import { readWithDeadline } from '../../app/read-deadline.ts'
 import { WorkoutApi } from './api.ts'
 import { onlineIssue } from './controller.ts'
 import { WorkoutStore, LocalStoreError } from './storage.ts'
@@ -14,7 +15,7 @@ import { increment } from '../workout-local/model.ts'
 type Store = Pick<WorkoutStore, 'localCopies' | 'closedWrite' | 'saveClosedWrite' | 'saveSession' | 'deviceId' | 'openLocal' | 'readLocal' | 'saveLocal' | 'saveSyncLocal'>
 type Api = Pick<WorkoutApi, 'detail' | 'assessment' | 'changes' | 'records' | 'recover' | 'deleteSession' | 'resolveClosed' | 'routine' | 'finish' | 'snapshot' | 'resolve'>
 export type ClosedState = { server: Session | null; assessment: AssessmentView | null; changes: ChangeEvents | null; copies: LocalWorkout[]; pending: ClosedWrite | null;
-  busy: boolean; writable: boolean; issue: string | null; notice: string }
+  busy: boolean; writable: boolean; issue: string | null; notice: string; noticeTone?: 'info' | 'success' }
 export type ClosedDisplay = Pick<ClosedState, 'server' | 'assessment' | 'changes'>
 /** One online closed-session edit at a time, with one durable result-check slot. No automatic write replay. */
 export class ClosedWorkoutController {
@@ -64,13 +65,17 @@ export class ClosedWorkoutController {
     } catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
   }
   private async read(initial?: Session) {
-    const [candidate, assessment, changes, copies, pending] = await Promise.all([
-      initial ?? this.api.detail(this.scope, this.id, this.abort.signal), this.api.assessment(this.scope, this.id, this.abort.signal), this.api.changes(this.scope, this.id, this.abort.signal),
-      this.store.localCopies(this.scope, this.id), this.store.closedWrite(this.scope, this.id),
+    const [{ server, assessment, changes }, copies, pending] = await Promise.all([
+      readWithDeadline(this.abort.signal, async signal => {
+        const [candidate, assessment, changes] = await Promise.all([
+          initial ?? this.api.detail(this.scope, this.id, signal), this.api.assessment(this.scope, this.id, signal), this.api.changes(this.scope, this.id, signal),
+        ])
+        signal.throwIfAborted()
+        const server = initial && (candidate.version !== assessment.version || candidate.version !== changes.version)
+          ? await this.api.detail(this.scope, this.id, signal) : candidate
+        return { server, assessment, changes }
+      }), this.store.localCopies(this.scope, this.id), this.store.closedWrite(this.scope, this.id),
     ])
-    if (!this.current()) return
-    const server = initial && (candidate.version !== assessment.version || candidate.version !== changes.version)
-      ? await this.api.detail(this.scope, this.id, this.abort.signal) : candidate
     if (!this.current()) return
     if (server.status === 'ACTIVE' || server.version !== assessment.version || server.version !== changes.version) this.conflict('조회 중 기록이 바뀌었습니다. 최신 기록을 다시 확인해 주세요.')
     await this.store.saveSession(this.scope, server)
@@ -79,8 +84,8 @@ export class ClosedWorkoutController {
     if (pending?.status === 'PENDING' && this.canWrite() && (pending.ack || closedWriteFact(pending, server, changes))) {
       const confirmed: ClosedWrite = { ...pending, status: 'CONFIRMED' }
       await this.store.saveClosedWrite(confirmed, pending, this.canWrite)
-      this.set({ pending: confirmed, notice: '서버 기록과 변경 이력에서 처리 결과를 확인했습니다.' })
-    } else if (pending?.status === 'PENDING') this.set({ notice: '이전 요청 결과를 확인해야 합니다. 원문과 로컬 원본을 보존했습니다.' })
+      this.set({ pending: confirmed, notice: '저장 결과를 확인했어요.', noticeTone: 'info' })
+    }
   }
   refresh = async () => { if (!this.current() || this.state.busy) return; this.set({ busy: true, issue: null }); try { await this.read(); this.set({ writable: !!this.lease?.held() }) } catch (error) { this.failure(error) } finally { this.set({ busy: false }) } }
   private async dispatch(write: ClosedWrite) {
@@ -102,13 +107,13 @@ export class ClosedWorkoutController {
     if (!this.current()) return false
     await this.read() // Verify current state/history after every response, including a missing response.
     if (this.state.pending?.status !== 'CONFIRMED') this.conflict((error as { status?: number })?.status === 409
-      ? '기록 버전이 바뀌었거나 요청과 충돌했습니다. 최신 기록을 확인하고 다시 선택해 주세요. 자동 재적용하지 않았습니다.'
-      : '서버 처리 결과를 확정하지 못했습니다. 원래 요청과 로컬 원본을 보존했습니다.')
-    this.set({ notice: '서버 저장과 변경 이력을 확인했습니다.' }); return true
+      ? '기록이 변경됐어요. 최신 기록을 확인해 주세요.'
+      : '변경 결과를 확인하지 못했어요.')
+    this.set({ notice: write.kind === 'delete' ? '운동 기록을 삭제했어요.' : write.kind === 'recovery' ? '운동 기록을 복구했어요.' : '운동 기록을 저장했어요.', noticeTone: 'success' }); return true
   }
   private async submit(input: { kind: 'records'; body: RecordEdit } | { kind: 'recovery'; body: Recovery } | { kind: 'delete'; body: { dataGeneration: string; expectedVersion: string } } | { kind: 'approval'; body: ClosedResolution }) {
     if (!this.canWrite() || this.state.busy || this.state.server?.deletedAt || !this.state.server) return false
-    if (this.state.pending?.status === 'PENDING') { this.set({ issue: '앞선 요청 결과를 확인하거나 최신 기록 검토를 먼저 완료해 주세요.' }); return false }
+    if (this.state.pending?.status === 'PENDING') { this.set({ issue: '먼저 이전 변경의 저장 결과를 확인해 주세요.' }); return false }
     this.set({ busy: true, issue: null, notice: '' })
     try {
       if (input.body.expectedVersion !== this.state.server.version) this.conflict('화면의 기록이 바뀌었습니다. 다시 확인해 주세요.')
@@ -163,7 +168,7 @@ export class ClosedWorkoutController {
     const pending = this.state.pending
     if (!pending || pending.status !== 'PENDING' || !this.canWrite() || this.state.busy) return
     const next: ClosedWrite = { ...pending, status: 'REVIEWED' }
-    try { await this.store.saveClosedWrite(next, pending, this.canWrite); this.set({ pending: next, issue: null, notice: '현재 서버 기록 검토를 완료했습니다. 추가 변경은 새로 명시적으로 선택해 주세요.' }) } catch (error) { this.failure(error) }
+    try { await this.store.saveClosedWrite(next, pending, this.canWrite); this.set({ pending: next, issue: null, notice: '현재 기록을 확인했어요.', noticeTone: 'info' }) } catch (error) { this.failure(error) }
   }
   confirmFinish = async (local: LocalWorkout) => {
     if (!this.canWrite() || this.state.busy || !local.finish?.request || local.finish.ack || this.state.server?.deletedAt || this.state.server?.status !== 'FINISHED') return

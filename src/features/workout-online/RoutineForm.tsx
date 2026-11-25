@@ -13,7 +13,6 @@ import { ExerciseEditHeading } from './ExerciseEditHeading.tsx'
 import { CardioSearch } from './CardioSearch.tsx'
 import { cardioPlan, draftCardio, emptyCardio, selectCardio } from './cardio-draft.ts'
 import type { CardioDraft as PlanDraft } from './cardio-draft.ts'
-import { scheduleIssue } from '../statistics/weekly-schedule.ts'
 import type { RoutineTag } from '../home/tags.ts'
 import styles from './Routine.module.css'
 import editStyles from './RoutineEdit.module.css'
@@ -25,6 +24,8 @@ import { EquipmentFields } from './EquipmentFields.tsx'
 import { CombinationMemo } from './CombinationMemo.tsx'
 import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
 
 import { newWeights, updatedWeights } from './routine-weights.ts'
 import type { WeightDraft } from './routine-weights.ts'
@@ -53,7 +54,7 @@ function EmptyExerciseList({ weight = false }: { weight?: boolean }) {
 }
 
 export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, activities = [], onSaved, managementBlocked = false, navigationKey, backLabel = '루틴 목록으로' }: {
-  activities?:CardioActivity[]; onSaved?:(id: string, name: string)=>void; managementBlocked?:boolean; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: Pick<WorkoutOnlineController, 'saveRoutine' | 'removedRoutine' | 'invalidateScope'>; onClose: () => void; navigationKey?: string; backLabel?: string
+  activities?:CardioActivity[]; onSaved?:(id: string, name: string)=>void; managementBlocked?:boolean; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: Pick<WorkoutOnlineController, 'saveRoutine' | 'removedRoutine' | 'invalidateScope'> & Partial<Pick<WorkoutOnlineController, 'getSnapshot'>>; onClose: () => void; navigationKey?: string; backLabel?: string
 }) {
   const editing = routine !== null
   const [id] = useState(() => routine?.id ?? newId())
@@ -64,7 +65,6 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   const form = useRef<HTMLFormElement>(null)
   const keyboardOccludesPage = useContext(EditorViewportOccluded)
   const addedCard = useRef<HTMLElement>(null)
-  const feedback = useRef<HTMLDivElement>(null)
   const searchRegion = useRef<HTMLElement>(null)
   const cardioSearchRegion = useRef<HTMLElement>(null)
   const pickerFrame = useRef(0)
@@ -113,11 +113,8 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), initialWeightKg: p.initialWeightKg, approvedWeightKg: p.approvedWeightKg, approve: false, nextWeightKg: p.approvedWeightKg })) ?? [])
   const [cardio, setCardio] = useState<CardioDraft[]>(() => routine?.cardioPlacements.map(p => ({id:p.id,existing:true,...draftCardio(p.plan)})) ?? [])
   const [removed, setRemoved] = useState<Routine | null>(null)
-  const [error, setError] = useState('')
+  const feedback = useSuccessToast(`routine:${generation}:${id}`)
   const [submitted, setSubmitted] = useState<CreateRoutine | UpdateRoutine | null>(null)
-  useEffect(() => {
-    if (!saving && (error || submitted)) feedback.current?.scrollIntoView({ block: 'center' })
-  }, [error, saving, submitted])
   const chosenCardio = cardio.filter(c => c.existing || c.standardExerciseId)
   const draft = JSON.stringify({ name, weights, cardio: chosenCardio, tag })
   const [initialDraft] = useState(draft)
@@ -157,8 +154,8 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
   function lookupRemoved() {
     if (!routine) return
     void controller.removedRoutine(routine.id).then(value => {
-      if (!value) return
-      if (value.version !== routine.version) setError('루틴이 변경되었습니다. 닫은 뒤 최신 루틴을 다시 조회해 주세요.')
+      if (!value) { feedback.show('복원할 종목을 불러오지 못했어요.', 'error'); return }
+      if (value.version !== routine.version) feedback.show('루틴이 변경됐어요. 최신 루틴을 확인해 주세요.', 'warning')
       else setRemoved(value)
     })
   }
@@ -171,8 +168,15 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       setSaveAttempt(submitted ? 'retry' : 'submit')
       setSubmitted(body)
       validating = false
-      setError('')
-      confirmed = await controller.saveRoutine(body, routine?.id)
+      feedback.clear()
+      confirmed = await controller.saveRoutine(body, routine?.id, !!submitted)
+      if (!confirmed && !abort.current.signal.aborted) {
+        const outcome = controller.getSnapshot?.()
+        if (outcome?.routineSaveRejected) {
+          setSubmitted(null)
+          feedback.show(outcome.issue ?? '루틴을 저장하지 못했어요.', 'error')
+        } else feedback.show('루틴 저장 결과를 확인하지 못했어요.', 'warning')
+      }
     }
     try {
       let body = submitted
@@ -208,12 +212,11 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       }
     } catch (error) {
       if (boundaryError(error)) controller.invalidateScope(error)
-      if (!abort.current.signal.aborted) setError(validating && error instanceof Error ? error.message : scheduleIssue(error))
+      if (!abort.current.signal.aborted) feedback.show(validating && error instanceof Error ? error.message : '루틴을 저장하지 못했어요.', validating ? 'warning' : 'error')
     }
     finally{guard.current=false;if(!abort.current.signal.aborted && !saved.current)setSaveAttempt(null)}
   }
-  const saveLabel = saveAttempt === 'retry' || !saving && submitted ? '고정된 저장 요청 다시 확인' : editing ? '변경 사항 저장' : '루틴 생성'
-  const showFixedRequest = submitted && saveAttempt !== 'submit'
+  const saveLabel = saveAttempt === 'retry' || !saving && submitted ? '저장 결과 확인' : editing ? '변경 사항 저장' : '루틴 생성'
   const title = editing ? '루틴 편집' : '루틴 생성'
   const cardClass = `stack ${editStyles.exercise}`
   return <form ref={form} className={`${styles.editor} stack online-routine ${editStyles.form}${editing ? '' : ' ' + editStyles.create}`} data-keyboard-editor data-picking={picker !== null} aria-label={title} noValidate onSubmit={event => { event.preventDefault(); void save() }}>
@@ -295,14 +298,11 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
         </div>
       </details>}
     </fieldset>
-    {(error || showFixedRequest) && <div ref={feedback} className="stack">
-      {error && <p className="notice error" role="alert">{error}</p>}
-      {showFixedRequest && <p className="muted small">제출 내용을 고정했습니다. 응답이 확인되지 않았다면 같은 내용으로 확인하거나, 닫은 뒤 서버의 최신 루틴을 조회해 주세요.</p>}
-    </div>}
     <footer className={editStyles.footer}>
       <button type="button" className="outline action-pill" disabled={locked} data-button-pending={saving || undefined} onClick={close}>취소</button>
       <Button type="submit" variant="primary" className="full" disabled={!saving && (locked || managementBlocked)} loading={saving}>{saveLabel}</Button>
     </footer>
     {confirmation}
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="calc(var(--save-height) + 2 * var(--save-padding))" />
   </form>
 }

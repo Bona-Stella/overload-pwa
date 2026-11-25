@@ -9,6 +9,7 @@ import { createLocalWorkout } from '../../../src/features/workout-local/model.ts
 import { exercises, manufacturers, reviewSample } from './routine-samples.ts'
 import { reviewRest } from './workout-model.ts'
 import { processWeightReview } from './process-weight-review.ts'
+import { reviewRead } from './review-read.ts'
 
 export type RecordExample = 'correction' | 'recovery' | 'delete' | 'delete-local' | 'delete-conflict' | 'delete-success' | 'delete-busy' | 'summary-failed'
 
@@ -37,9 +38,14 @@ export function Front18Record({ example, session, onBack }: { example?: RecordEx
     const loseFirstResponse = () => { if (!firstWrite) return false; firstWrite = false; return true }
     const api = Object.assign(new WorkoutApi({ workoutRequest: unavailable }), {
       detail: async () => structuredClone(remote),
-      assessment: async () => {
-        if (summaryFailed) { summaryFailed = false; return unavailable() }
-        return { ...response(), completionAssessment: remote.completionAssessment, currentAssessment: { state: 'EVALUATED', evaluation: null }, weightReview: null }
+      assessment: (_scope: Scope, _id: string, signal: AbortSignal) => {
+        const failed = summaryFailed
+        summaryFailed = false
+        const result = () => {
+          if (failed) throw new TypeError('Preview response unavailable')
+          return { ...response(), completionAssessment: remote.completionAssessment, currentAssessment: { state: 'EVALUATED' as const, evaluation: null }, weightReview: null }
+        }
+        return example === 'summary-failed' ? reviewRead(signal, result) : Promise.resolve(result())
       },
       changes: async () => ({ ...response(), events: structuredClone(events) }),
       ...review,

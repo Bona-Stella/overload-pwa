@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LoggedInDevices } from '../../../src/features/auth/LoggedInDevices.tsx'
 import type { DevicesNavigation, DevicesState, LoggedInDevice } from '../../../src/features/auth/LoggedInDevices.tsx'
+import { useReviewRecovery } from './review-read.ts'
 
 const sampleDevices: readonly LoggedInDevice[] = [
   { id: 'preview-phone', name: 'iPhone 15 Pro', kind: 'phone', environment: 'iOS · Safari', presence: 'online', signedInAt: '2026-11-17T10:21:00+09:00', lastSeenAt: '2026-11-17T10:22:00+09:00' },
@@ -37,8 +38,10 @@ function example(scenario: Scenario): DevicesState {
 
 export function DevicesReview(navigation: DevicesNavigation) {
   const [scenario, setScenario] = useState<Scenario>('idle')
-  return <LoggedInDevices {...navigation} state={example(scenario)} onRetry={() => setScenario('idle')}
-    previewControls={<label>기기 상태 예시<select value={scenario} onChange={event => setScenario(event.target.value as Scenario)}>
+  const read = useReviewRecovery()
+  return <LoggedInDevices {...navigation} state={example(scenario)} refreshing={read.pending}
+    onRetry={() => read.recover(() => setScenario('idle'))}
+    previewControls={<label>기기 상태 예시<select value={scenario} onChange={event => { read.cancel(); setScenario(event.target.value as Scenario) }}>
       {Object.entries(scenarios).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
     </select></label>} />
 }

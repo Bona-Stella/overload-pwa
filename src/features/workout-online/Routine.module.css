@@ -30,7 +30,7 @@
 
 .cardSummary{display:block;margin-top:5px}
 
-.weekSection { padding:13px; gap:10px; background:var(--surface-card); border:1px solid var(--border-subtle); border-radius:5px; }
+.weekSection { padding:13px; gap:10px; background:var(--surface-card); border:var(--border-card); border-radius:var(--radius-card-compact); }
 .weekSection [hidden],.list [hidden] { display:none; }
 .viewToggle { display:grid; place-items:center; padding:7px; min-width:36px; min-height:36px; }
 .list .weekSection .weekTiles button { min-height:64px; }

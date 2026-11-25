@@ -74,11 +74,13 @@ export class AuthApi {
       const response = await this.fetcher(path, { method, credentials: 'include', cache: 'no-store', redirect: 'error', signal: controller.signal,
         headers: { Accept: 'application/json', ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(csrf ? { [csrf.headerName]: csrf.token } : {}) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }) })
+      if (method === 'GET') controller.signal.throwIfAborted()
       if (response.status === 401) this.clearCsrf()
       let data: unknown = null
       if (response.status !== 204) {
         try { data = await response.json() } catch { throw new AuthError(controller.signal.aborted ? 'TIMEOUT' : 'RESPONSE_INVALID', response.status) }
       }
+      if (method === 'GET') controller.signal.throwIfAborted()
       if (!response.ok) {
         const code = object(data) && typeof data.code === 'string' && /^[A-Z_]{1,80}$/.test(data.code) ? data.code : 'REQUEST_FAILED'
         const header = response.headers.get('Retry-After') ?? ''

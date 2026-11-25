@@ -28,18 +28,17 @@ export function IdentityManagement({ state, controller }: { state: AuthState; co
         {email ? identities.length === 1 ? <div className={styles.actions}>{emailAction}{unlink}</div> : emailAction
           : <>{unlink}{account.linkForm && controller ? <form action="/oauth2/link/google" method="post" className="stack" onSubmit={event => { if (!controller.beginLinkNavigation()) event.preventDefault() }}>
             <input type="hidden" name="_csrf" value={account.linkForm.csrf} />
-            <p className="muted small">현재 Overload 계정에 추가할 Google 계정을 직접 선택합니다. 다른 계정 소유 신원은 가져오지 않습니다. 이메일 증명이 필요하면 먼저 아래에서 재인증해 주세요.</p>
+            <p className="muted small">추가할 Google 계정을 선택해 주세요.</p>
             <button type="submit" className="primary full" disabled={busy}>Google에서 연결 계속</button>
             <button type="button" className="quiet" disabled={busy} onClick={() => controller.cancelIdentityChange()}>Google 연결 준비 취소</button>
           </form> : <Button variant={identities.length ? 'quiet' : 'secondary'} className={styles.action}
             data-connect={!identities.length || undefined} disabled={locked}
             onClick={() => void controller?.prepareGoogleLink()}><AccountIcon name="link" />{identities.length ? 'Google 로그인 추가 연결' : 'Google 계정 연결'}</Button>}</>}
-        {identities.length > 1 && <p className="muted small">여러 {name} 신원의 개별 계정을 구별할 수 없어 해제를 제공하지 않습니다. 계정 이름이나 주소를 추측하지 않습니다.</p>}
+        {identities.length > 1 && <p className="muted small">연결된 {name} 계정이 여러 개라 이 화면에서 개별 연결을 해제할 수 없어요.</p>}
       </div>
     })}
-    {!verified && <p className="notice">대표 이메일을 먼저 등록해 주세요. 등록 후에도 연결은 직접 선택해야 합니다.</p>}
-    <AccountNote>로그인 수단은 최소 1개 이상 유지해야 합니다. 실제 가용성은 서버가 판단합니다.</AccountNote>
-    <AccountNote>대표 재인증 이메일과 로그인 수단은 별도입니다. 연결·해제에는 최근 10분 이내의 이메일 OTP 확인이 필요하며 서버가 최종 검사합니다. 서로 다른 계정을 자동으로 합치지 않습니다.</AccountNote>
+    {!verified && <p className="notice">로그인 수단을 변경하려면 대표 이메일을 먼저 등록해 주세요.</p>}
+    <AccountNote>연결하거나 해제하려면 10분 이내에 이메일로 재인증해야 해요. 로그인 수단은 하나 이상 남겨 주세요.</AccountNote>
     {state.issue?.code === 'EMAIL_OWNERSHIP_PROOF_REQUIRED' && <a className="auth-proof-link" href="#account-email-proof">아래 대표 이메일 재인증으로 이동</a>}
     {selection && controller && <Dialog tone="warning" title={`${selection.identity.provider === 'email' ? '이메일' : 'Google'} 로그인 수단을 해제할까요?`} onClose={() => controller.cancelIdentityChange()}>
       <div className="stack">

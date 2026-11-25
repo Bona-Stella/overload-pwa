@@ -1,8 +1,12 @@
 import { partialAchievement } from '../statistics/display-achievement.ts'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
-import { Button, Card, Metadata, StatusNotice } from '../../components/ui.tsx'
+import { Button, Card, Metadata } from '../../components/ui.tsx'
 import { Toast } from '../../components/common-ui/Toast.tsx'
+import { ContentError, EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
+import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
+import { readWithDeadline } from '../../app/read-deadline.ts'
+import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
 import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import { ConnectedDropdown } from '../../components/common-ui/ConnectedDropdown.tsx'
 import type { AppTab } from '../../app/types.ts'
@@ -93,6 +97,8 @@ type Props = {
   refreshKey: string; active: Session | null; attempt: boolean; busy: boolean; localReady: boolean; issue: string | null;
   progress?: ActiveWorkoutProgress
   action?: 'start' | 'retry' | 'resume' | null
+  startUnconfirmed?: boolean
+  startIssueTone?: 'warning'
   onStart: (routine: Routine) => Promise<void>; onResume: () => void; onRetry: () => void; onNavigate: (tab: AppTab) => void;
   onHistory?:()=>void; onOpen: (id: string) => void; onInvalid: (error: unknown) => void
   onRefreshRoutines?: () => void
@@ -110,7 +116,7 @@ export function HomePanel(props: Props) {
   const [todayResult, setTodayResult] = useState<typeof result>(null)
   const [weekly, setWeekly] = useState<{ key: string; context: string; data: HomeWeek } | null>(null)
   const [weekFailed, setWeekFailed] = useState<string | null>(null)
-  const [recent, setRecent] = useState<{ owner: string; data?: Awaited<ReturnType<typeof loadRecent>>; failed?: boolean } | null>(null)
+  const [recent, setRecent] = useState<{ owner: string; request: string; data?: Awaited<ReturnType<typeof loadRecent>>; failed?: boolean } | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
   const [cache] = useState(() => new Map<string, Routine>())
   const invalid = useRef(props.onInvalid)
@@ -128,6 +134,7 @@ export function HomePanel(props: Props) {
   const owner = scope.userId + ':' + scope.dataGeneration
   const context = [owner, schedule?.activeId, zone, today].join('|')
   const requestKey = [context, summaryKey, activeVersion, schedule?.appliedVersion, refreshKey, reload].join('|')
+  const recentRequest = JSON.stringify([refreshKey, reload])
   const inputs = useRef({ scope, schedule, clock, zone, routines })
   useEffect(() => { inputs.current = { scope, schedule, clock, zone, routines } }, [scope, schedule, clock, zone, routines])
   useEffect(() => {
@@ -141,30 +148,30 @@ export function HomePanel(props: Props) {
       } else markFailed(requestKey)
       if (boundaryError(error)) invalid.current(error)
     }
-    const reads = loadHome(current.scope, api, current.routines, current.schedule, statistics, cache, current.clock, current.zone, abort.signal)
-    void reads.todayPlan.then(data => {
-      if (!abort.signal.aborted) setTodayResult({ key: requestKey, context, data })
-    }).catch(error => reject(error, setFailed))
-    void reads.plan.then(data => {
-      if (!abort.signal.aborted) { setResult({ key: requestKey, context, data }); setFailed(null) }
-    }).catch(error => reject(error, setFailed))
-    void reads.week.then(data => {
-      if (!abort.signal.aborted) { setWeekly({ key: requestKey, context, data }); setWeekFailed(null) }
-    }).catch(error => reject(error, setWeekFailed))
+    const currentSchedule = current.schedule
+    let planSettled = false, weekSettled = false
+    void readWithDeadline(abort.signal, async signal => {
+      const reads = loadHome(current.scope, api, current.routines, currentSchedule, statistics, cache, current.clock, current.zone, signal)
+      await Promise.allSettled([
+        reads.todayPlan.then(data => { if (!signal.aborted) setTodayResult({ key: requestKey, context, data }) }, error => { if (!signal.aborted) reject(error, setFailed) }),
+        reads.plan.then(data => { if (!signal.aborted) { setResult({ key: requestKey, context, data }); setFailed(null) } }, error => { if (!signal.aborted) reject(error, setFailed) }).finally(() => { planSettled = !signal.aborted }),
+        reads.week.then(data => { if (!signal.aborted) { setWeekly({ key: requestKey, context, data }); setWeekFailed(null) } }, error => { if (!signal.aborted) reject(error, setWeekFailed) }).finally(() => { weekSettled = !signal.aborted }),
+      ])
+    }).catch(error => { if (!planSettled) reject(error, setFailed); if (!weekSettled) reject(error, setWeekFailed) })
     return () => abort.abort()
   }, [context, requestKey, props.enabled, api, statistics, cache])
   useEffect(() => {
     if (props.enabled === false) return
     const abort = new AbortController()
-    void loadRecent(api, scope, abort.signal).then(data => {
-      if (!abort.signal.aborted) setRecent({ owner, data })
+    void readWithDeadline(abort.signal, signal => loadRecent(api, scope, signal)).then(data => {
+      if (!abort.signal.aborted) setRecent({ owner, request: recentRequest, data })
     }).catch(error => {
       if (abort.signal.aborted) return
       if (boundaryError(error)) invalid.current(error)
-      setRecent(previous => ({ owner, failed: true, data: !readAccessDenied(error) && !boundaryError(error) && previous?.owner === owner ? previous.data : undefined }))
+      setRecent(previous => ({ owner, request: recentRequest, failed: true, data: !readAccessDenied(error) && !boundaryError(error) && previous?.owner === owner ? previous.data : undefined }))
     })
     return () => abort.abort()
-  }, [api, scope, owner, refreshKey, reload, props.enabled])
+  }, [api, scope, owner, recentRequest, props.enabled])
   const refreshFailed = failed === requestKey
   const completePlan = schedule && result?.context === context ? result : null
   const partialPlan = schedule && todayResult?.key === requestKey ? todayResult : null
@@ -179,15 +186,19 @@ export function HomePanel(props: Props) {
   const protectedView = protection !== null
   const protectionNotice = protection === 'ACTIVE' ? '일반 보기 · 디로딩 진행 중에는 일반 운동과 루틴을 변경할 수 없습니다.'
     : protection === 'COMPLETED' ? '디로딩 완료 당일 · 일반 운동은 다음 날부터 시작할 수 있습니다.' : null
-  const refreshIssue = props.readIssue ?? training.issue ?? (data && refreshFailed ? '홈 정보를 갱신하지 못했습니다. 마지막으로 확인한 내용을 표시합니다.' : undefined)
-  const readFeedback = useReadErrorToast(props.startupHome !== false && data && !props.issue ? refreshIssue : null)
-  return <><HomeView {...props} localReady={props.localReady && editingSupported}
+  const refreshIssue = props.readIssue ?? (schedule ? training.issue : undefined)
+    ?? (data && refreshFailed ? '홈을 새로 불러오지 못했어요.' : undefined)
+    ?? (week && weekUnavailable ? '이번 주 일정을 새로 불러오지 못했어요.' : undefined)
+    ?? (recentResult?.data && (recentResult.failed || recentResult.data.failed) ? '최근 운동을 모두 불러오지 못했어요.' : undefined)
+  return <HomeView {...props} localReady={props.localReady && editingSupported}
     data={data} chooserPending={!!partialPlan && !completePlan && partialPlan.data.summaries.length > 0}
-    week={week ?? undefined} weekFailed={weekUnavailable} today={today} loading={loading}
+    week={week ?? undefined} weekFailed={weekUnavailable || !!weekFailed?.startsWith(context + '|')} today={today} loading={loading}
+    homeFailed={!!failed?.startsWith(context + '|') || !!training.issue && !data}
+    refreshing={props.busy || training.loading || !!schedule && (loading || !weekUnavailable && weekly?.key !== requestKey) || recentResult?.request !== recentRequest}
     recent={recentResult?.data && { recent: recentResult.data.details, recentRows: recentResult.data.rows,
       recentLimited: recentResult.data.limited, recentFailed: recentResult.data.failed }} recentFailed={recentResult?.failed}
     canStart={editingSupported && props.localReady && !loading && !refreshFailed && !training.loading && !training.issue && !training.busy}
-    protectedView={protectedView} issue={props.issue ?? protectionNotice} refreshIssue={refreshIssue}
+    protectedView={protectedView} protectionNotice={protectionNotice} refreshIssue={refreshIssue} feedbackVisible={props.startupHome !== false}
     header={<HomeTrainingHeader analysis={analysis} protection={protection} />}
     presetFilter={schedule ? { presets: schedule.presets, activeId: schedule.activeId, visit: props.visit } : undefined}
     showHttpNote={!!review && !editingSupported} onRefresh={() => {
@@ -196,8 +207,6 @@ export function HomePanel(props: Props) {
       if (props.onRefreshRoutines) props.onRefreshRoutines()
       else setReload(n => n + 1)
     }} />
-    <Toast toast={readFeedback.toast} onDismiss={readFeedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
-  </>
 }
 
 type HomeViewData = Pick<HomeData, 'summaries' | 'routines'> & Partial<Pick<HomeData, 'recent' | 'recentRows' | 'recentLimited' | 'recentFailed'>> & {
@@ -205,8 +214,10 @@ type HomeViewData = Pick<HomeData, 'summaries' | 'routines'> & Partial<Pick<Home
   overview?: Pick<HomeData['overview'], 'plannedDays'>
 }
 
-type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 'issue' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen' | 'routineRefreshes' | 'onRetryRoutineRefresh'> & {
+type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 'issue' | 'startUnconfirmed' | 'startIssueTone' | 'onStart' | 'onResume' | 'onRetry' | 'onNavigate' | 'onHistory' | 'onOpen' | 'routineRefreshes' | 'onRetryRoutineRefresh'> & {
   refreshIssue?: string
+  protectionNotice?: string | null
+  feedbackVisible?: boolean
   active: Pick<Session, 'initialPlan'> | null
   progress?: ActiveWorkoutProgress
   data?: HomeViewData | null
@@ -214,6 +225,8 @@ type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 
   recentFailed?: boolean
   today: string
   loading?: boolean
+  homeFailed?: boolean
+  refreshing?: boolean
   chooserPending?: boolean
   week?: HomeWeek
   weekFailed?: boolean
@@ -275,28 +288,35 @@ export function HomeView(props: HomeViewProps) {
   const day = overview?.plannedDays.find(d => d.date === selected)
   const selectedEvidence=day?.selectedSessionId?evidence?.get(day.selectedSessionId):undefined
   const status = dayStatus(day, selected, today, selectedEvidence ? partialAchievement(selectedEvidence) : 'unknown')
+  const unconfirmed = !!props.issue && (props.startUnconfirmed ?? props.attempt)
+  const feedback = useReadErrorToast(props.feedbackVisible !== false
+    ? unconfirmed ? '운동이 시작됐는지 확인하지 못했어요.' : props.issue ?? (data && (props.refreshIssue ?? (routineRefresh?.failed ? '최신 루틴을 불러오지 못했어요.' : null)))
+    : null, unconfirmed || props.issue && props.startIssueTone === 'warning' ? 'warning' : 'error')
+  const homeError = !active && !data && (props.homeFailed || !loading)
+  const weekError = !overview && props.weekFailed
+  const recentError = props.recentFailed && !(props.recent?.recentRows ?? data?.recentRows)
+  const refresh = <RefreshButton loading={props.refreshing ?? loading} onRefresh={() => props.onRefresh?.()}
+    failure={homeError ? '홈을 불러오지 못했어요.' : weekError && !active ? '이번 주 일정을 불러오지 못했어요.' : recentError ? '최근 운동을 불러오지 못했어요.' : undefined} />
   return <section className={styles.home} aria-label="홈">
     <HomeHeader>{props.header}</HomeHeader>
     {props.headerActions}
-    {props.issue && <StatusNotice error>{props.issue}</StatusNotice>}
     {active && props.progress && <ActiveRoutine routineName={active.initialPlan.routineName} progress={props.progress} busy={props.busy} loading={props.action === 'resume'} onResume={props.onResume} />}
       {!active && <Card hero className={!data || restDay && !props.todayNotice ? styles.today : `${styles.today} ${styles.planCard}`} aria-label="오늘의 루틴" aria-busy={!data && !!loading}>
-        {!data ? loading ? <HomePlaceholder area="today" /> : <><StatusNotice error>홈 정보를 불러오지 못했습니다. 연결을 확인한 후 다시 시도하세요.</StatusNotice><Button onClick={props.onRefresh}>홈 다시 불러오기</Button></> : <>
+        {!data ? homeError ? <ContentError embedded title="홈을 불러오지 못했어요." action={refresh} /> : <HomePlaceholder area="today" /> : <>
         <div className={styles.kicker}><span>TODAY'S ROUTINE</span><time dateTime={today}>{today.slice(5).replace('-', '.')} {weekdays[dayOfWeek(today) - 1]}</time></div>
         <h2>{props.todayNotice ?? chosen?.name ?? (restDay ? '오늘은 쉬어가는 날' : chosenId ? '루틴 확인 필요' : '첫 루틴을 준비해 보세요')}</h2>
         {!props.todayNotice && chosen?.tag && <span className={styles.routineTag}>{chosen.tag}</span>}
         {!props.todayNotice && (chosen ? <RoutinePlan routine={chosen} /> : <p className="muted small">{restDay ? '정해진 휴식일입니다. 다른 루틴을 선택할 수 있습니다.' : chosenId ? '이 루틴의 최신 구성을 확인하지 못했습니다. 새로고침하거나 다른 루틴을 선택하세요.' : '루틴 탭에서 운동과 주간 일정을 등록할 수 있습니다.'}</p>)}
+        {props.protectionNotice && <p className="muted small">{props.protectionNotice}</p>}
         </>}
       </Card>}
-      {chosenId && routineRefresh && (routineRefresh.failed
-        ? <StatusNotice error>승인한 중량은 저장되었습니다. 최신 루틴을 확인하지 못했습니다. <Button onClick={() => props.onRetryRoutineRefresh?.(chosenId)}>루틴 다시 조회</Button></StatusNotice>
-        : <StatusNotice>승인한 중량이 반영된 루틴을 확인하는 중입니다.</StatusNotice>)}
-      {!props.active && showStart && <Button className={styles.start} variant="primary" loading={!!props.action}
+      {chosenId && routineRefresh ? <RefreshButton className={styles.start} loading={!routineRefresh.failed}
+        onRefresh={() => props.onRetryRoutineRefresh?.(chosenId)} />
+      : !props.active && showStart && <Button className={styles.start} variant="primary" loading={!!props.action}
         data-click-action={props.attempt ? 'retry-start' : 'start'}
         disabled={!props.action && (props.busy || (props.attempt ? !props.localReady : !props.canStart || props.protectedView || !!routineRefresh || !chosen || !activeWeights(chosen).length && !activeCardio(chosen).length))}
         onClick={() => { if (props.attempt) props.onRetry(); else if (chosen) void props.onStart(chosen) }}>
-        {props.action === 'retry' || props.attempt && props.action !== 'start' ? '기존 시작 요청 다시 확인' : '운동 시작'}</Button>}
-      {props.attempt && !props.action && <StatusNotice>시작 결과 확인 필요 · 보존된 같은 요청을 다시 확인합니다.</StatusNotice>}
+        {props.action === 'retry' ? '확인 중' : '운동 시작'}</Button>}
       {!props.hideChooser && (data ? <ConnectedDropdown className={styles.chooser} label="오늘만 다른 루틴 선택">{close => <div className={styles.chooserContent}>
         {presetFilter && <div className={`${filterStyles.strip} ${styles.choiceFilters}`} role="group" aria-label="루틴 일정 필터">
           <button type="button" aria-pressed={selectedFilter === 'all'} onClick={() => chooseFilter('all')}><span>전체</span></button>
@@ -310,9 +330,9 @@ export function HomeView(props: HomeViewProps) {
             <span className={styles.choiceTitle}><strong className={optionText.title}>휴식</strong></span><small className={optionText.description}>오늘은 운동하지 않고 쉬어갑니다.</small>
           </button>
         </div> : <>
-        {!data.summaries.length && <><p>아직 루틴이 없습니다.</p><Button onClick={() => { close(); props.onNavigate('routines') }}>루틴 만들러 가기</Button></>}
+        {!data.summaries.length && <EmptyState embedded icon={<FeedbackIcon name="routine" size={22} />} title="등록된 루틴이 없어요" action={<Button onClick={() => { close(); props.onNavigate('routines') }}>루틴 만들러 가기</Button>} />}
         {props.chooserPending ? <p role="status">루틴 구성을 확인하는 중입니다.</p> : <>
-        {!!data.summaries.length && !candidates?.length && <p role="status">조건에 맞는 루틴이 없습니다.</p>}
+        {!!data.summaries.length && !candidates?.length && <EmptyState embedded icon={<FeedbackIcon name="search" size={22} />} title="조건에 맞는 루틴이 없어요" />}
         {!!candidates?.length && <div className={styles.choices} role="group" aria-label="선택할 루틴">{candidates.map(r => {
           const detail = data.routines.get(r.id)
           const days = (filteredPreset ?? data.schedule).assignments.filter(a => a.routineId === r.id).map(a => weekdays[a.dayOfWeek - 1]).join('·')
@@ -326,7 +346,7 @@ export function HomeView(props: HomeViewProps) {
         {(restSelected || overrideId) && <Button variant="quiet" onClick={() => setOverride(null)}>오늘의 원래 일정으로</Button>}
       </div>}</ConnectedDropdown> : <HomePlaceholder area="chooser" />)}
       <Card aria-label="이번 주 일정" className={styles.week} aria-busy={!overview && !props.weekFailed}>
-        {!overview ? props.weekFailed ? <><StatusNotice error>이번 주 일정을 확인하지 못했습니다.</StatusNotice><Button onClick={props.onRefresh}>다시 조회</Button></> : <HomePlaceholder area="week" /> : <>
+        {!overview ? weekError ? <ContentError embedded title="이번 주 일정을 불러오지 못했어요." action={!homeError && refresh} /> : <HomePlaceholder area="week" /> : <>
         <div className={styles.sectionTitle}><h2>이번 주 일정</h2><span>{dates[0].slice(5).replace('-', '.')} – {dates[6].slice(5).replace('-', '.')}</span></div>
         <div className={styles.days} ref={dayGrid} data-pointer-input={datePointer !== null || undefined} onFocus={event => {
           if (event.target.matches(':focus-visible')) setDatePointer(null)
@@ -351,13 +371,13 @@ export function HomeView(props: HomeViewProps) {
       </Card>
       <section aria-label="최근 운동" className={styles.recent} aria-busy={!(props.recent?.recentRows ?? data?.recentRows) && !props.recentFailed}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button variant="quiet" onClick={() => props.onHistory?props.onHistory():props.onNavigate('history')}>전체 보기 ›</Button></div>
         {!(props.recent?.recentRows ?? data?.recentRows) && !props.recentFailed && <HomePlaceholder area="recent" />}
-        {(props.recent?.recentRows ?? data?.recentRows)?.length === 0 && <Card><p>표시할 운동 기록이 없습니다.</p><Metadata>실제 수행이 있는 종료 기록이 표시됩니다.</Metadata></Card>}
+        {(props.recent?.recentRows ?? data?.recentRows)?.length === 0 && <EmptyState icon={<FeedbackIcon name="record" size={24} />} title="아직 운동 기록이 없어요" />}
         {(props.recent?.recentRows ?? data?.recentRows)?.map(item => <RecentWorkout key={item.id} row={item} detail={(props.recent ?? data)?.recent?.get(item.id)} onOpen={props.onOpen} />)}
         {(props.recent?.recentLimited || data?.recentLimited) && <Metadata>최근 60개 종료 기록 범위입니다. 이전 기록은 기록 탭에서 확인하세요.</Metadata>}
-        {(props.recentFailed || props.recent?.recentFailed || data?.recentFailed) && <Metadata>최근 운동을 모두 확인하지 못했습니다. 다시 조회해 주세요.</Metadata>}
-        <div className={styles.tools}><Metadata>종료 당시 최초 계획 · 현재 유효 수행 기준</Metadata><Button variant="quiet" loading={loading && !!data} disabled={loading && !data}
-          title={props.refreshIssue} aria-description={props.refreshIssue} onClick={props.onRefresh}>새로고침</Button></div>
+        {recentError && <ContentError title="최근 운동을 불러오지 못했어요." action={!homeError && !weekError && refresh} />}
+        {!homeError && !weekError && !recentError && <div className={styles.tools}>{refresh}</div>}
         {props.showHttpNote && <p className={styles.httpNote}>HTTP에서는 홈·로그인·기록을 검토할 수 있습니다. 운동 편집은 PC localhost 또는 HTTPS에서, 설치형 PWA는 별도 HTTPS 빌드에서 확인하세요.</p>}
       </section>
+    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </section>
 }

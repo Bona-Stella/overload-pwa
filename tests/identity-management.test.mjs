@@ -50,7 +50,7 @@ test('Google LINK form preparation only fetches fresh CSRF, never fetches OAuth 
 for(const providers of [[EMAIL],[GOOGLE],[EMAIL,GOOGLE]])test(`EMAIL link readback preserves UUID/contact for ${providers.map(x=>x.provider).join('+')}`,async()=>{
   const f=fake(providers);await open(f);await f.controller.linkEmail();const s=f.controller.getSnapshot()
   assert.equal(s.userId,USER);assert.equal(s.account.contact.maskedEmail,'a***@***');assert.equal(s.account.identities.filter(x=>x.provider==='email').length,1)
-  assert.match(s.accountSuccess?.message,providers.includes(EMAIL)?/이미 같은 계정/:/연결했습니다/);assert.ok(!f.calls.includes('mail'))
+  assert.match(s.accountSuccess?.message,providers.includes(EMAIL)?/이미 연결된 이메일이에요/:/이메일 로그인을 연결했어요/);assert.equal(s.accountSuccess?.tone,providers.includes(EMAIL)?'info':undefined);assert.ok(!f.calls.includes('mail'))
 })
 test('VERIFIED alone never creates EMAIL identity and REQUIRED blocks mutation without sending mail',async()=>{
   const f=fake();await open(f);assert.deepEqual(f.controller.getSnapshot().account.identities,[GOOGLE]);assert.equal(f.controller.getSnapshot().account.confirmedAt,null)
@@ -62,17 +62,17 @@ test('server proof refusal uses existing REAUTH; completing OTP never automatica
   f.api.linkEmail=async()=>{attempts++;throw new AuthError('EMAIL_OWNERSHIP_PROOF_REQUIRED',403)}
   await f.controller.linkEmail();assert.equal(f.controller.getSnapshot().issue.code,'EMAIL_OWNERSHIP_PROOF_REQUIRED');assert.ok(!f.calls.includes('mail'))
   await f.controller.requestEmailProof();await f.controller.verifyEmailProof('012345');assert.equal(attempts,1)
-  f.api.linkEmail=success;await f.controller.linkEmail();assert.match(f.controller.getSnapshot().accountSuccess?.message,/연결했습니다/)
+  f.api.linkEmail=success;await f.controller.linkEmail();assert.match(f.controller.getSnapshot().accountSuccess?.message,/연결했어요/)
 })
 test('EMAIL ownership conflict explains separate accounts and never merges',async()=>{
   const f=fake();await open(f);f.api.linkEmail=async()=>{throw new AuthError('IDENTITY_ALREADY_OWNED',409)}
-  await f.controller.linkEmail();assert.match(f.controller.getSnapshot().issue.message,/이 이메일 로그인.*다른 계정.*자동으로 합쳐지지/);assert.deepEqual(f.controller.getSnapshot().account.identities,[GOOGLE])
+  await f.controller.linkEmail();assert.match(f.controller.getSnapshot().issue.message,/이 이메일은 다른 계정에 연결돼 있어요/);assert.deepEqual(f.controller.getSnapshot().account.identities,[GOOGLE])
 })
 for(const target of [EMAIL,GOOGLE])test(`${target.provider} UNLINK requires explicit final confirmation, preserves representative contact`,async()=>{
   const f=fake([EMAIL,GOOGLE]);await open(f);f.controller.selectUnlink(target);assert.ok(f.controller.getSnapshot().account.unlink);assert.equal(f.calls.filter(Array.isArray).length,0)
   f.controller.cancelIdentityChange();await f.controller.confirmUnlink();assert.equal(f.calls.filter(Array.isArray).length,0)
   f.controller.selectUnlink(target);await f.controller.confirmUnlink();assert.equal(f.calls.filter(Array.isArray).length,1)
-  const s=f.controller.getSnapshot();assert.equal(s.userId,USER);assert.equal(s.account.contact.status,'VERIFIED');assert.ok(!s.account.identities.some(x=>x.id===target.id));assert.match(s.accountSuccess?.message,/대표 재인증 이메일은 유지/)
+  const s=f.controller.getSnapshot();assert.equal(s.userId,USER);assert.equal(s.account.contact.status,'VERIFIED');assert.ok(!s.account.identities.some(x=>x.id===target.id));assert.match(s.accountSuccess?.message,/로그인 수단을 해제했어요/)
 })
 test('last usable identity is judged by server, not client count or guessed provider readiness',async()=>{
   const f=fake([EMAIL]);await open(f);f.api.unlinkIdentity=async()=>{throw new AuthError('LAST_LOGIN_IDENTITY',409)}
@@ -101,14 +101,14 @@ for(const error of [new AuthError('AUTHENTICATION_REQUIRED',401),new AuthError('
 for(const error of [new AuthError('NETWORK'),new AuthError('TIMEOUT'),new AuthError('RESPONSE_INVALID'),new AuthError('IDENTITY_CHANGE_UNAVAILABLE',503)])test(`uncertain ${error.code} rereads actual state without claiming mutation success`,async()=>{
   const f=fake();await open(f);let writes=0;const count=f.calls.filter(x=>x==='identities').length
   f.api.linkEmail=async()=>{writes++;f.setIdentities([EMAIL,GOOGLE]);throw error};await f.controller.linkEmail()
-  assert.equal(writes,1);assert.ok(f.calls.filter(x=>x==='identities').length>count);assert.equal(f.controller.getSnapshot().account.identities.length,2);assert.match(f.controller.getSnapshot().notice,/현재 이메일 로그인 연결 상태.*자동 재실행하지/);assert.doesNotMatch(f.controller.getSnapshot().notice,/연결했습니다/);assert.equal(f.controller.getSnapshot().issue,null)
+  assert.equal(writes,1);assert.ok(f.calls.filter(x=>x==='identities').length>count);assert.equal(f.controller.getSnapshot().account.identities.length,2);assert.match(f.controller.getSnapshot().accountSuccess?.message,/이메일 로그인 연결을 확인했어요/);assert.equal(f.controller.getSnapshot().accountSuccess?.tone,'info');assert.equal(f.controller.getSnapshot().issue,null)
 })
 test('uncertain write followed by failed GET hides stale account data',async()=>{
   const f=fake();await open(f);f.api.linkEmail=async()=>{f.api.identities=async()=>{throw new AuthError('NETWORK')};throw new AuthError('TIMEOUT')}
   await f.controller.linkEmail();assert.equal(f.controller.getSnapshot().account.loaded,false);assert.deepEqual(f.controller.getSnapshot().account.identities,[]);assert.equal(f.controller.getSnapshot().notice,'')
 })
 test('204 response without actual deletion is not shown as success',async()=>{
-  const f=fake([EMAIL,GOOGLE]);await open(f);f.api.unlinkIdentity=async()=>{};f.controller.selectUnlink(EMAIL);await f.controller.confirmUnlink();assert.equal(f.controller.getSnapshot().issue.code,'RESPONSE_INVALID');assert.match(f.controller.getSnapshot().notice,/불확실/)
+  const f=fake([EMAIL,GOOGLE]);await open(f);f.api.unlinkIdentity=async()=>{};f.controller.selectUnlink(EMAIL);await f.controller.confirmUnlink();assert.equal(f.controller.getSnapshot().issue.code,'RESPONSE_INVALID');assert.match(f.controller.getSnapshot().issue.message,/연결 해제 결과를 확인하지 못했어요/);assert.equal(f.controller.getSnapshot().accountSuccess,undefined)
 })
 test('Google LINK form requires explicit submit; bfcache resume clears navigation and confirmation',async()=>{
   const f=fake([EMAIL]);await open(f);await f.controller.prepareGoogleLink();assert.deepEqual(f.controller.getSnapshot().account.linkForm,{csrf:'test-csrf'});assert.equal(f.calls.filter(x=>x==='link-form').length,1)

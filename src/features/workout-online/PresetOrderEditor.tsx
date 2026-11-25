@@ -77,9 +77,9 @@ export function PresetOrderEditor({ schedule, busy, readOnly, locked = readOnly,
       </section>
     })}
     {tooFew && <p role="status">자동 순환에는 포함 프리셋이 최소 2개 필요합니다.</p>}
-    {stale && <button type="button" className="outline action-pill" onClick={() => leave(onReload)}>최신 구성 다시 열기</button>}
     <div className="row"><button data-close-text={readOnly||undefined} type="button" className="outline action-pill" disabled={busy} onClick={close}>{readOnly ? '닫기' : '취소'}</button>
-      {readRetry || (!readOnly && <button type="button" className="primary" disabled={busy || locked || !!drag || stale || tooFew || !changed} onClick={async () => {
+      {readRetry || (stale ? <button type="button" className="primary" disabled={busy} onClick={() => leave(onReload)}>최신 일정 확인</button>
+        : !readOnly && <button type="button" className="primary" disabled={busy || locked || !!drag || tooFew || !changed} onClick={async () => {
         if (await onSave(ordered) && navigationKey) { saved.current = true; navigateBack(onClose) }
       }}>변경사항 저장</button>)}</div>
     {confirmation}

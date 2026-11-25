@@ -5,7 +5,7 @@ import type { LocalWorkout } from './types.ts'
 
 /** Read only server-confirmed facts; stale/dirty revisions cannot show a recommendation. */
 export function useProgressAssessment(workout: LocalWorkout | null, api?: Pick<WorkoutApi, 'progressAssessment'>) {
-  const [result, setResult] = useState<{ key: string; value?: ProgressAssessment; failed?: boolean } | null>(null)
+  const [result, setResult] = useState<{ key: string; attempt: number; value?: ProgressAssessment; failed?: boolean } | null>(null)
   const [attempt, setAttempt] = useState(0)
   const { userId, dataGeneration, sessionId, writerEpoch, localRevision, serverVersion } = workout ?? {}
   const confirmed = !!workout && workout.syncState === 'CLEAN' && !workout.finish && workout.localRevision === workout.serverRevision
@@ -18,10 +18,10 @@ export function useProgressAssessment(workout: LocalWorkout | null, api?: Pick<W
     void api.progressAssessment({ userId, dataGeneration }, sessionId, abort.signal).then(value => {
       if (abort.signal.aborted) return
       const matches = value.writerEpoch === writerEpoch && value.localRevision === localRevision && value.version === serverVersion
-      setResult(matches ? { key, value } : { key })
-    }).catch(() => { if (!abort.signal.aborted) setResult({ key, failed: true }) })
+      setResult(matches ? { key, attempt, value } : { key, attempt })
+    }).catch(() => { if (!abort.signal.aborted) setResult({ key, attempt, failed: true }) })
     return () => abort.abort()
   }, [api, key, userId, dataGeneration, sessionId, writerEpoch, localRevision, serverVersion, attempt])
   const current = key && result?.key === key ? result : null
-  return { value: current?.value, pending: available && !current, failed: !!current?.failed, retry: () => setAttempt(v => v + 1) }
+  return { value: current?.value, pending: available && (!current || current.attempt !== attempt), failed: !!current?.failed, retry: () => setAttempt(v => v + 1) }
 }

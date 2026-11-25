@@ -6,6 +6,7 @@ import type { ProgressAssessment, Session, SnapshotRequest } from '../../../src/
 import { newId } from '../../../src/id.ts'
 import { reviewSample } from './routine-samples.ts'
 import { reviewRest } from './workout-model.ts'
+import { reviewRead } from './review-read.ts'
 
 export type WorkoutExample = 'reps' | 'weight' | 'reps-range' | 'weight-range' | 'extra' | 'time' | 'time-range'
   | 'distance' | 'speed' | 'speed-only' | 'estimated-speed' | 'derived-distance' | 'motion' | 'bpm'
@@ -117,13 +118,12 @@ export function createWorkoutExample(example: WorkoutExample) {
   const draft = () => controller.draft(id, 1, { ...draftFor(local, id, 1), weight: '31' })
   const sync = () => controller.change(workout => { workout.snapshot.appliedPlan.weightExercises[0].setCount++ })
   return { controller, initial, id, remote: () => remote, draft, sync, get summaryFault() { return summaryFault },
-    assessmentApi: example === 'assessment' ? { progressAssessment: async (): Promise<ProgressAssessment> => {
-      await new Promise(resolve => setTimeout(resolve, 620))
+    assessmentApi: example === 'assessment' ? { progressAssessment: (_scope: unknown, _id: string, signal: AbortSignal): Promise<ProgressAssessment> => reviewRead(signal, () => {
       if (assessmentFault) { assessmentFault = false; unavailable() }
       const { userId, dataGeneration, writerEpoch, localRevision, version } = remote
       return { userId, dataGeneration, writerEpoch, localRevision, version, sessionId: remote.id,
         status: 'ACTIVE', kind: 'PROVISIONAL', reasonCodes: [], evaluation: null }
-    } } : undefined,
+    }) } : undefined,
     failWrite: () => { failedWrite = true },
     holdWrite: () => { if (!hold) hold = new Promise(resolve => { release = resolve }) },
     releaseWrite: () => { hold = undefined; release?.(); release = undefined },

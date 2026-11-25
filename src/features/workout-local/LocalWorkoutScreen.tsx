@@ -1,3 +1,4 @@
+import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
 import type { ReferenceRecord } from '../workout-online/reference-reminder.ts'
 import type { Routine } from '../workout-online/types.ts'
 import { useEffect, useState, useSyncExternalStore } from 'react'
@@ -75,7 +76,8 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
     !state.writable && !state.issue && !state.syncIssue && state.syncStatus !== 'OTHER' && !preparingSummary && !confirmingFinish
       && <p key="access">읽기 전용 · 편집 권한과 현재 서버 상태를 확인해 주세요.</p>,
     permissionIssue && <p key="permission">{permissionIssue}</p>,
-    progress.failed && <p key="assessment">잠정 중량 검토를 불러오지 못했어요.<br />수행 기록은 유지돼요.<br /><Button onClick={progress.retry}>중량 검토 다시 확인</Button></p>,
+    progress.failed && <div key="assessment"><p>잠정 중량 검토를 불러오지 못했어요.<br />수행 기록은 유지돼요.</p>
+      <RefreshButton loading={progress.pending} failure="잠정 중량 검토를 불러오지 못했어요." onRefresh={progress.retry} /></div>,
     !!(sync || editor) && (state.workout.approvalResults.some(r => r.status === 'PENDING') || !!state.workout.pendingResolution)
       && <ApprovalControls key="approval" state={state} controller={controller} />,
   ].filter(Boolean)

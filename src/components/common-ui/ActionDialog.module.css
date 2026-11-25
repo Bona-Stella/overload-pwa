@@ -6,10 +6,9 @@ dialog.dialog {
   padding: 16px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-radius: var(--radius-card);
 }
 
 dialog.dialog::backdrop { background: rgb(0 0 0 / 65%); backdrop-filter: none; }
 
 .description { color: var(--text-muted); font-size: 14px; line-height: 1.55; }
-.actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin-top: 16px; }
+.actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }

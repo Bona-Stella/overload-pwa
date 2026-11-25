@@ -623,7 +623,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(async () => (await body()).includes('연결이 끊겼습니다'), 'routine creation failure')
     assert.equal(await evaluate(`document.querySelector('form[aria-label="루틴 생성"] input[placeholder="나의 루틴"]').value`),createdName)
     assert.doesNotMatch(await body(), /주간 일정에 배정할까요/)
-    await click('고정된 저장 요청 다시 확인')
+    await click('저장 결과 확인')
     await wait(async () => (await body()).includes('주간 일정에 배정할까요?'), 'creation notice')
     for (const width of [320, 393]) {
       await verifyWidth(width)
@@ -649,7 +649,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('닫기')
     await click('취소', 'textContent', 'dialog[open] button')
     assert.equal(await evaluate('!!document.querySelector(' + JSON.stringify(editor) + ')'), true)
-    await click('최신 일정 다시 열기')
+    await click('최신 일정 확인')
     await click('버리기', 'textContent', 'dialog[open] button')
     await wait(() => evaluate('!document.querySelector("dialog[open]") && document.querySelector("[aria-label=\'월요일 루틴\']").value === ""'), 'latest schedule reopened')
     assert.equal(await evaluate('document.querySelector("[aria-label=\'월요일 루틴\']").value'), '')
@@ -667,7 +667,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await set(fault, 'network'); await click('변경 사항 저장')
     await wait(async () => (await body()).includes('연결이 끊겼습니다'), 'routine save failure')
     assert.equal(await evaluate(`document.querySelector('form[aria-label="루틴 편집"] input[placeholder="나의 루틴"]').value`), '시연용 수정 루틴')
-    await click('고정된 저장 요청 다시 확인')
+    await click('저장 결과 확인')
     await wait(async () => (await body()).includes('시연용 수정 루틴'), 'routine edited')
     assert.doesNotMatch(await body(), /주간 일정에 배정할까요/)
 
@@ -712,8 +712,8 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await body(), /주간 일정 미배정/)
     assert.equal(await hasStart(), false)
     await set(scenario, 'read-error'); await navTo('홈')
-    assert.match(await body(), /홈 정보를 불러오지 못했습니다/)
-    await click('홈 다시 불러오기')
+    assert.match(await body(), /홈을 불러오지 못했어요/)
+    await click('새로고침')
     assert.match(await body(), /TODAY'S ROUTINE/)
 
     await send('Page.navigate', { url: origin + '/routine-preview?tab=settings' })
@@ -789,14 +789,14 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await audit('다른 기기 로그아웃 시연', 'warning')
     await click('취소', 'textContent', 'dialog button')
     await set(devicesMode, 'only')
-    assert.match(await body(), /다른 기기에 로그인되어 있지 않습니다/)
+    assert.match(await body(), /다른 기기에 로그인되어 있지 않아요/)
     assert.ok(await evaluate(`[...document.querySelectorAll('${devicesPage} button')].find(b=>b.textContent==='다른 기기 모두 로그아웃').disabled`))
     for (const [mode, message] of [
       ['unknown', /현재 접속한 기기를 확인할 수 없습니다/],
-      ['empty', /로그인된 기기가 없습니다/],
+      ['empty', /로그인된 기기가 없어요/],
       ['loading', /로그인된 기기를 확인하고 있어요/],
-      ['error', /로그인된 기기 정보를 불러오지 못했습니다/],
-      ['unsupported', /현재 서버에서 로그인된 기기 조회를 지원하지 않습니다/],
+      ['error', /로그인된 기기를 불러오지 못했어요/],
+      ['unsupported', /로그인된 기기 목록은 아직 제공되지 않아요/],
     ]) {
       await set(devicesMode, mode)
       assert.match(await body(), message)
@@ -883,7 +883,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     for (const invalid of ['', '0', '2.5', '2147483648']) {
       await set(restSeconds, invalid); await click('변경 사항 저장', 'textContent', restPage + ' button')
       assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).getAttribute('aria-invalid')`), 'true')
-      assert.match(await body(), /1~10회 휴식 시간은/)
+      assert.match(await evaluate(`document.querySelector('[data-tone="warning"]')?.textContent`), /1~10회 휴식 시간을/)
     }
     await set(restSeconds, '185')
     await click('취소', 'textContent', cardAction)
@@ -933,7 +933,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     }
     assert.match(await evaluate(`document.querySelector('${list} button').textContent`),/ETC.*손목 스트레칭/)
     await set(query,'ＬＡＴ　PullDown')
-    assert.match(await body(),/검색 후보가 없습니다/)
+    assert.match(await body(),/검색 결과가 없어요/)
     await click('등','textContent',group+' button')
     assert.deepEqual(await names(),['랫 풀다운'])
     const press = async key => {

@@ -7,6 +7,11 @@ import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
+import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
+import { ContentError, EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
+import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
+import { Toast } from '../../components/common-ui/Toast.tsx'
+import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import styles from '../workout-flow/WorkoutFlow.module.css'
 import { Dialog } from '../../components/Dialog.tsx'
 import { recordDeletionConsequence } from '../../components/common-ui/message-copy.ts'
@@ -94,7 +99,7 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
       .catch(error => { if (!abort.signal.aborted) failure(error) }).finally(() => { if (!abort.signal.aborted) setBusy(false) })
     return () => abort.abort()
   }, [api, userId, dataGeneration, refreshKey, failure])
-  return <section className="card stack" aria-label="종료 운동 이력"><div className="section-heading"><h2 id="workout-history-title">종료 운동 이력</h2><button className="quiet" disabled={busy} onClick={() => void load()}>이력 다시 조회</button></div>
+  return <section className="card stack" aria-label="종료 운동 이력"><div className="section-heading"><h2 id="workout-history-title">종료 운동 이력</h2><RefreshButton loading={busy} onRefresh={() => void load()} /></div>
     {issue && <p className="notice" role="alert">{issue}</p>}{busy && <p role="status">이력을 확인 중입니다.</p>}
     {page?.sessions.length === 0 && <p>종료한 운동이 없습니다.</p>}
     {page?.sessions.map(s => <button className="outline full" key={s.id} disabled={busy} onClick={() => onOpen(s.id)}>{s.routineName} · {s.workoutDate} · {s.deletedAt ? '삭제된 운동' : s.status === 'FINISHED' ? '명시 종료 ' + time(s.endedAt) : '서버 자동 종료 ' + time(s.closedAt)}</button>)}
@@ -112,7 +117,8 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
   const [retry, setRetry] = useState(0)
   const ready = accountReady && view && !view.state.busy && (view.state.server ? reviewVersion === view.state.server.version : !!view.state.issue)
   const showRecord = !!view?.state.server && (ready || presented)
-  const issue = !view?.state.busy && view?.state.issue
+  const [lastIssue, setLastIssue] = useState<string | null>(null)
+  const issue = view?.state.busy ? lastIssue : view?.state.issue ?? lastIssue
   const showSummaryWait = useDelayedPending(summary && !showRecord && !issue)
   if (showRecord && !presented) setPresented(true)
   useLayoutEffect(() => { if (ready && latest.current.authorized()) latest.current.onSettled?.() }, [ready])
@@ -128,7 +134,11 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
         cache.delete(recordId)
         latest.current.onInvalid?.(error)
       }, cache.get(recordId))
-    const update = () => setView({ controller: c, state: c.getSnapshot() })
+    const update = () => {
+      const state = c.getSnapshot()
+      if (!state.busy) setLastIssue(state.issue)
+      setView({ controller: c, state })
+    }
     const unsubscribe = c.subscribe(() => {
       const state = c.getSnapshot()
       if (!state.busy && !state.issue && state.server && state.assessment && state.changes) {
@@ -147,8 +157,9 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
   return <>
     {!showRecord && <>
       <RecordSubpageHeader title={summary ? '운동 기록 요약' : '운동 기록 상세'} onBack={onBack} backLabel={backLabel} />
-      {issue ? <Card>{summary && session?.status === 'FINISHED' && <p>운동 종료와 기록 저장을 확인했습니다. 운동 요약만 불러오지 못했습니다.</p>}<StatusNotice error>{issue}</StatusNotice>
-        <Button onClick={() => setRetry(value => value + 1)}>{summary ? '요약 다시 조회' : '다시 조회'}</Button></Card>
+      {issue ? <ContentError title={summary ? '운동 요약을 불러오지 못했어요.' : '운동 기록을 불러오지 못했어요.'}
+        description={summary && session?.status === 'FINISHED' ? '운동을 종료했고 기록은 저장됐어요.' : undefined}
+        action={<RefreshButton loading={!!view?.state.busy} failure={issue} onRefresh={() => setRetry(value => value + 1)} />} />
         : summary ? showSummaryWait && <StatusNotice>운동 기록 요약을 불러오고 있습니다.</StatusNotice>
           : <LoadingSkeleton layout="detail" label="운동 기록을 확인하는 중입니다." />}
     </>}
@@ -165,6 +176,10 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
   const [confirm, confirmation] = useConfirmation()
   const menuRef = useRef<HTMLDetailsElement>(null)
   const server = state.server, disabled = state.busy || !state.writable || !!server?.deletedAt || state.pending?.status === 'PENDING'
+  const pending = state.pending?.status === 'PENDING'
+  const notice = !dialog && server && (state.issue || (!pending && state.notice))
+  const feedback = useReadErrorToast(notice || null, state.issue ? pending ? 'warning' : 'error' : state.noticeTone ?? 'info')
+  const toast = <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   useEffect(() => {
     const close = (e: PointerEvent | KeyboardEvent) => {
       const menu=menuRef.current
@@ -175,23 +190,21 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     document.addEventListener('pointerdown',close);document.addEventListener('keydown',close)
     return ()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',close)}
   }, [])
-  if (!server) return <Card>{state.issue && <StatusNotice error>{state.issue}</StatusNotice>}<Button disabled={state.busy} onClick={() => void controller.refresh()}>기록 새로고침</Button></Card>
+  if (!server) return <ContentError title="운동 기록을 불러오지 못했어요." action={<RefreshButton loading={state.busy} failure={state.issue} onRefresh={() => void controller.refresh()} />} />
   const name = (id: string) => recordName(server,id,definitions)
   const status = <>
     {server.status==='AUTO_CLOSED' && <StatusNotice>연결 종료로 기록이 자동 마감되었습니다. 실제 종료 시각은 기록되지 않았으며, 기기에 남은 완료 수행을 확인할 수 있습니다.</StatusNotice>}
     {server.deletedAt && <StatusNotice>삭제된 운동입니다. 기록 변경과 복구를 할 수 없습니다.</StatusNotice>}
     {!state.writable && <StatusNotice>읽기 전용</StatusNotice>}
-    {state.issue && <StatusNotice error>{state.issue}</StatusNotice>}
-    {!dialog && state.notice && <StatusNotice>{state.notice}</StatusNotice>}
-    {state.pending?.status === 'PENDING' && !(state.busy && dialog) && <Card><p>이전 변경의 저장 결과를 확인해 주세요. 입력은 보존되어 있습니다.</p>
-      <Button disabled={!state.writable || !!server.deletedAt} pending={state.busy} onClick={() => void controller.retry()}>저장 결과 다시 확인</Button>
+    {pending && !dialog && <Card><StatusNotice>변경 결과를 아직 확인하지 못했어요.</StatusNotice>
+      <Button disabled={!state.writable || !!server.deletedAt} pending={state.busy} onClick={() => void controller.retry()}>저장 결과 확인</Button>
       <Button variant="quiet" disabled={!state.writable} pending={state.busy} onClick={() => void confirm({
         title: '현재 기록을 확인했나요?', description: <p>현재 기록과 변경 이력을 검토 완료로 표시해요.<br />추가 변경은 다시 선택해 주세요.</p>,
         confirmLabel: '검토 완료', onConfirm: () => controller.reviewed(),
       })}>현재 기록 확인 완료</Button></Card>}
     {!server.deletedAt && state.copies.filter(c=>c.finish?.request&&!c.finish.ack).map((c,i)=><Button key={i}
       disabled={state.busy || !state.writable || server.status!=='FINISHED' || c.writerEpoch!==server.writerEpoch || c.editorDeviceId!==server.editorDeviceId}
-      onClick={()=>void controller.confirmFinish(c)}>운동 종료 저장 결과 확인</Button>)}
+      onClick={()=>void controller.confirmFinish(c)}>종료 결과 확인</Button>)}
   </>
   const menuAction = (action: () => void) => { if(menuRef.current)menuRef.current.open=false; action() }
   const menu = <details className={styles.recordMenu} ref={menuRef}><summary aria-label="운동 기록 메뉴"><span aria-hidden="true">⋮</span></summary><div>
@@ -214,7 +227,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     <Card hero><p>{server.workoutDate} · {new Date(server.workoutDate+'T12:00:00Z').toLocaleDateString('ko-KR',{weekday:'long',timeZone:'UTC'})}</p>
       <h1>{server.deletedAt?'삭제된 운동':server.status==='FINISHED'?'운동 완료':'운동 자동 마감'}</h1><p>{server.initialPlan.routineName}</p>
       <dl className={styles.recordTimes}><div><dt>운동 시작</dt><dd>{clockTime(server.startedAt,server.startedTimeZone)}</dd></div><div><dt>운동 종료</dt><dd>{clockTime(server.endedAt,server.startedTimeZone)}</dd></div></dl>
-      <Button pending={state.busy} onClick={()=>void controller.refresh()}>기록 새로고침</Button>
+      <RefreshButton loading={state.busy} onRefresh={()=>void controller.refresh()} />
     </Card>
     {status}
     {mode==='correction' && !server.deletedAt && <Card className={styles.completedRecords}><h2>완료 수행</h2>
@@ -233,19 +246,20 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
         <div className={styles.recordEditRow}><span>유산소</span><RecordFacts record={record} server={server} manufacturers={manufacturers}/>
           <Button variant="quiet" disabled={disabled} onClick={()=>setDialog(record.status==='COMPLETED'?{kind:'CARDIO',record}:{kind:'SKIPPED',record})}>{record.status==='SKIPPED'?'삭제':'정정'}</Button></div>
       </section>)}
-      {!server.snapshot.state.performedSets.length&&!server.snapshot.state.cardioResults.length&&<p className="muted small">완료한 수행이 없습니다.</p>}
+      {!server.snapshot.state.performedSets.length&&!server.snapshot.state.cardioResults.length&&<EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="완료한 운동이 없어요" />}
     </Card>}
     {mode==='history' && <>
       <Card><h2>공식 기준 기록 평가</h2><Evaluation value={state.assessment?.completionAssessment??null} title="운동 종료 당시" name={name}/><Evaluation value={state.assessment?.currentAssessment.evaluation??null} title="현재 기록 기준" name={name}/></Card>
-      <Card><h2>기록 변경 이력</h2>{state.changes?.events.map(e=><ChangeEntry key={e.id} event={e} manufacturers={manufacturers} name={name}/>)}{!state.changes?.events.length&&<p className="muted small">변경 이력이 없습니다.</p>}</Card>
+      <Card><h2>기록 변경 이력</h2>{state.changes?.events.map(e=><ChangeEntry key={e.id} event={e} manufacturers={manufacturers} name={name}/>)}{!state.changes?.events.length&&<EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="변경 이력이 없어요" />}</Card>
     </>}
     {[...new Set(server.snapshot.approvalResults.filter(r=>r.status==='PENDING').map(r=>r.sessionExerciseId))].map(id=><ClosedApproval key={id} server={server} id={id} controller={controller} disabled={disabled}/>)}
     {dialogs}
+    {toast}
   </section>
   return <><WorkoutSummary reviewContent={reviewContent} {...summaryData(server,state.assessment,definitions,state.copies.some(c => c.originalCombinationChanged === true))} manufacturers={manufacturers} onBack={onBack} backLabel={backLabel}
     detail={!summary} takeInitialScroll={takeInitialScroll} recordMenu={!summary?menu:undefined} timing={!summary?{start:clockTime(server.startedAt,server.startedTimeZone),end:clockTime(server.endedAt,server.startedTimeZone)}:undefined}>
     {status}
-  </WorkoutSummary>{!summary&&dialogs}</>
+  </WorkoutSummary>{!summary&&dialogs}{toast}</>
 }
 function DeleteDialog({ server, controller, busy, issue, resultPending, onClose, closePointerGuard }: { server: Session; controller: ClosedWorkoutController; busy: boolean; issue: string | null; resultPending: boolean; onClose: () => void; closePointerGuard: RepeatPointerGuard }) {
   const [version] = useState(server.version)
@@ -254,7 +268,7 @@ function DeleteDialog({ server, controller, busy, issue, resultPending, onClose,
     <div className="stack">
       <p>{server.workoutDate} · {server.initialPlan.routineName}<br />기록과 통계에서 제외돼요.<br />{recordDeletionConsequence}</p>
       {failed && <StatusNotice error>{resultPending
-        ? <>삭제 결과를 확인하지 못했어요.<br />이 창을 닫고 기록에서 저장 결과를 다시 확인해 주세요.</>
+        ? <>삭제 결과를 확인하지 못했어요.<br />이 창을 닫고 ‘저장 결과 확인’을 눌러 주세요.</>
         : issue ?? <>운동을 삭제하지 못했어요.<br />최신 기록을 확인해 주세요.</>}</StatusNotice>}
       <div className="row">
         <Button variant="neutral" disabled={busy} onPointerDown={closePointerGuard.pointerDown} onPointerCancel={closePointerGuard.pointerCancel}
