@@ -39,10 +39,16 @@ export async function auditMessageDialog({ send, evaluate }, use, expectedTone) 
           const button = action.matches('button') ? action : action.querySelector('button');
           return button?.getClientRects().length ? [action.getBoundingClientRect().top - block.getBoundingClientRect().bottom] : [];
         });
+        const pairs = [...dialog.querySelectorAll(':scope > :is([data-dialog-actions], .row), :scope > .stack > :is([data-dialog-actions], .row)')]
+          .filter(row => row.children.length === 2 && [...row.children].every(button => button.matches('button') && button.getClientRects().length))
+          .map(row => [...row.children].map(button => {
+            const box = button.getBoundingClientRect();
+            return [box.width, box.height];
+          }));
         resolve({
           viewport: innerWidth, left: rect.left, right: rect.right, width: rect.width, padding: css.padding,
           tone: dialog.dataset.messageTone, title: title.textContent, titleAligned: getComputedStyle(title).textAlign,
-          cardBorder, dialogBorder, cardOuter, dialogOuter, actionGaps,
+          cardBorder, dialogBorder, cardOuter, dialogOuter, actionGaps, pairs,
           icon: icon?.dataset.feedbackIcon, iconColor: icon ? getComputedStyle(icon).color : null,
           fits: dialog.scrollWidth <= dialog.clientWidth && title.scrollWidth <= title.clientWidth,
           descriptions: descriptions.map(p => ({text: p.innerText, aligned: getComputedStyle(p).textAlign,
@@ -63,6 +69,7 @@ export async function auditMessageDialog({ send, evaluate }, use, expectedTone) 
         assert.equal(sample.padding, '16px', use)
         assert.ok(sample.actionGaps.every(gap => Math.abs(gap - 20) < 0.1), `${use} description-to-action spacing at ${width}: ${sample.actionGaps}`)
         assert.ok(sample.left >= 16 && sample.right <= width - 16 && sample.width <= 340 && sample.fits, `${use} at ${width}`)
+        for (const [left, right] of sample.pairs) assert.ok(left.every((value, i) => Math.abs(value - right[i]) < 0.1), `${use} has equal action sizes at ${width}`)
         for (const p of sample.descriptions) assert.deepEqual([p.aligned, p.words, p.fits], ['center', 'keep-all', true], `${use} at ${width}: ${p.text}`)
         for (const action of sample.actions.filter(action => action.recovery && !action.disabled)) {
           assert.deepEqual([action.background, action.text, action.border], ['rgb(240, 241, 244)', 'rgb(17, 18, 22)', '1px'], use)

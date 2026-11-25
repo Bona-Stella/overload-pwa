@@ -1,11 +1,11 @@
 .workspace:global(.workout-online) { margin-block: 0; }
 .detail {
   display: grid;
-  gap: 20px;
+  gap: var(--card-gap-section);
   min-width: 0;
 }
-.detail .edit { padding: 7px 12px; background: var(--surface-input); border-color: var(--hero-border); font-size: 13px; }
-.detail .summary { grid-template-columns: minmax(0, 1fr); gap: 20px; padding: 12px; }
+.edit { font-size: 13px; }
+.detail .summary { grid-template-columns: minmax(0, 1fr); }
 .identity { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px; }
 .detail .date, .detail .date time { margin: 0; color: var(--text-muted); font-size: var(--font-metadata); }
 .date { padding-top: 4px; text-align: end; white-space: nowrap; }
@@ -31,9 +31,7 @@
 .groupHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding-inline: 4px; }
 .groupHeading h2 { margin: 0; color: var(--accent); font-size: 13px; font-weight: 700; }
 .groupHeading > span { color: var(--text-muted); font-size: 12px; }
-.group .exercise, .group .schedule { grid-template-columns: minmax(0, 1fr); padding: 12px; }
-.detail .summary, .group .exercise, .group .schedule { border-radius: 5px; }
-.group .exercise { gap: 12px; }
+.group .exercise, .group .schedule { grid-template-columns: minmax(0, 1fr); }
 .exerciseHeading { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: 17px; line-height: 1.4; }
 .number { flex: none; color: var(--accent); font-size: 13px; font-variant-numeric: tabular-nums; }
 .truncate { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -47,7 +45,7 @@
   border-top: 1px solid var(--border-subtle);
   text-align: center;
 }
-.summary .metrics { margin: 0; padding-top: 20px; border-color: var(--hero-border); }
+.summary .metrics { margin: 0; padding-top: var(--card-gap-dense); border-color: var(--hero-border); }
 .metrics > div { display: grid; align-content: start; gap: 4px; min-width: 0; padding-inline: 4px; }
 .metrics > div + div { border-inline-start: 1px solid var(--hero-border); }
 .metrics dt { color: var(--text-muted); font-size: 10px; font-weight: 400; }

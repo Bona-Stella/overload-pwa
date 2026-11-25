@@ -1,0 +1,2722 @@
+[
+  {
+    "index": 1,
+    "motion": [
+      {
+        "elapsed": 0.20000004768371582,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.997553, -0.0699075, 0.0699075, 0.997553, 0, 0)",
+        "angle": -4,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 325.8000000715256,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.104757, -0.994498, 0.994498, -0.104757, 0, 0)",
+        "angle": -96,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 697.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.901654, 0.432458, -0.432458, -0.901654, 0, 0)",
+        "angle": 154,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1371.3999999761581,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.761639, -0.648002, 0.648002, 0.761639, 0, 0)",
+        "angle": -40,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2113.2000000476837,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.268418, 0.963303, -0.963303, -0.268418, 0, 0)",
+        "angle": 106,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2516,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.992981, -0.118274, 0.118274, 0.992981, 0, 0)",
+        "angle": -7,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        6525,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        9234,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        9296,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        9307,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        12010,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        12078,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14779,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14790,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14795,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        17501,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 2,
+    "motion": [
+      {
+        "elapsed": 0.10000002384185791,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.970227, -0.242199, 0.242199, 0.970227, 0, 0)",
+        "angle": -14,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 325.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.268888, -0.963172, 0.963172, -0.268888, 0, 0)",
+        "angle": -106,
+        "center": [
+          163.046875,
+          914.3749694824219
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 698.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.844258, 0.535937, -0.535937, -0.844258, 0, 0)",
+        "angle": 148,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1361.8000000715256,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.704928, -0.709279, 0.709279, 0.704928, 0, 0)",
+        "angle": -45,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2110.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.146199, 0.989255, -0.989255, -0.146199, 0, 0)",
+        "angle": 98,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2524,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.948912, -0.31554, 0.31554, 0.948912, 0, 0)",
+        "angle": -18,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5929,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8636,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8676,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8683,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11388,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11437,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14139,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14159,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14183,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16886,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 3,
+    "motion": [
+      {
+        "elapsed": 0,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(1, 0, 0, 1, 0, 0)",
+        "angle": 0,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 324.89999997615814,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.0699426, -0.997551, 0.997551, -0.0699426, 0, 0)",
+        "angle": -94,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 702.8999999761581,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.93488, 0.354965, -0.354965, -0.93488, 0, 0)",
+        "angle": 159,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1375.1000000238419,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.840367, -0.542017, 0.542017, 0.840367, 0, 0)",
+        "angle": -33,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2114,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.419356, 0.907822, -0.907822, -0.419356, 0, 0)",
+        "angle": 115,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2511,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.997572, -0.0696417, 0.0696417, 0.997572, 0, 0)",
+        "angle": -4,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5860,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8561,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8568,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8581,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11288,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11294,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        13994,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14038,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14041,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16745,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 4,
+    "motion": [
+      {
+        "elapsed": 0.10000002384185791,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(1, 0, 0, 1, 0, 0)",
+        "angle": 0,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 329.39999997615814,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.0215421, -0.999768, 0.999768, -0.0215421, 0, 0)",
+        "angle": -91,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 701.1000000238419,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.950976, 0.309266, -0.309266, -0.950976, 0, 0)",
+        "angle": 162,
+        "center": [
+          163.04686737060547,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1369.3999999761581,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.858848, -0.512231, 0.512231, 0.858848, 0, 0)",
+        "angle": -31,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2110.7000000476837,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.387503, 0.921868, -0.921868, -0.387503, 0, 0)",
+        "angle": 113,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2511.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.999382, -0.0351384, 0.0351384, 0.999382, 0, 0)",
+        "angle": -2,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5853,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8575,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8590,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8597,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11303,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11356,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14058,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14076,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14089,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16792,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 5,
+    "motion": [
+      {
+        "elapsed": 0,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(1, 0, 0, 1, 0, 0)",
+        "angle": 0,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 329.6999999284744,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.104382, -0.994537, 0.994537, -0.104382, 0, 0)",
+        "angle": -96,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 699.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.946662, 0.322229, -0.322229, -0.946662, 0, 0)",
+        "angle": 161,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1372.2999999523163,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.812823, -0.582511, 0.582511, 0.812823, 0, 0)",
+        "angle": -36,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2101.899999976158,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.406795, 0.91352, -0.91352, -0.406795, 0, 0)",
+        "angle": 114,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2517.2999999523163,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.999391, -0.0348973, 0.0348973, 0.999391, 0, 0)",
+        "angle": -2,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        6026,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8734,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8818,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8846,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11550,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11584,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14290,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14293,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14295,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16997,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 6,
+    "motion": [
+      {
+        "elapsed": 0.09999990463256836,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(1, 0, 0, 1, 0, 0)",
+        "angle": 0,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 329.7999999523163,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.0205019, -0.99979, 0.99979, -0.0205019, 0, 0)",
+        "angle": -91,
+        "center": [
+          163.04686737060547,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 696.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.950987, 0.309232, -0.309232, -0.950987, 0, 0)",
+        "angle": 162,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1366.1999999284744,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.840588, -0.541675, 0.541675, 0.840588, 0, 0)",
+        "angle": -33,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2105.6999999284744,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.463312, 0.886195, -0.886195, -0.463312, 0, 0)",
+        "angle": 118,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2523.2999999523163,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.993001, -0.118104, 0.118104, 0.993001, 0, 0)",
+        "angle": -7,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5890,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8603,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8606,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8610,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11317,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11356,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14060,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14079,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14086,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16789,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 7,
+    "motion": [
+      {
+        "elapsed": 0.10000002384185791,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.997542, -0.0700729, 0.0700729, 0.997542, 0, 0)",
+        "angle": -4,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 323.60000002384186,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.0698724, -0.997556, 0.997556, -0.0698724, 0, 0)",
+        "angle": -94,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 696.3999999761581,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.934726, 0.355369, -0.355369, -0.934726, 0, 0)",
+        "angle": 159,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1365.6000000238419,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.813385, -0.581726, 0.581726, 0.813385, 0, 0)",
+        "angle": -36,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2100.899999976158,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.387689, 0.92179, -0.92179, -0.387689, 0, 0)",
+        "angle": 113,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2517.3000000715256,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.992902, -0.118937, 0.118937, 0.992902, 0, 0)",
+        "angle": -7,
+        "center": [
+          163.04688262939453,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5891,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8599,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8633,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8648,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11354,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11386,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14089,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14124,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14126,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16832,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 8,
+    "motion": [
+      {
+        "elapsed": 0,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(1, 0, 0, 1, 0, 0)",
+        "angle": 0,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 331.10000002384186,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.0211954, -0.999775, 0.999775, -0.0211954, 0, 0)",
+        "angle": -91,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 698.5,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.961224, 0.27577, -0.27577, -0.961224, 0, 0)",
+        "angle": 164,
+        "center": [
+          163.04686737060547,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1370.1000000238419,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.859025, -0.511933, 0.511933, 0.859025, 0, 0)",
+        "angle": -31,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2107,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.463589, 0.886051, -0.886051, -0.463589, 0, 0)",
+        "angle": 118,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2509.399999976158,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.999395, -0.0347918, 0.0347918, 0.999395, 0, 0)",
+        "angle": -2,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5868,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8576,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8579,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8585,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11291,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11295,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        13998,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14019,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14032,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16733,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 9,
+    "motion": [
+      {
+        "elapsed": 0.20000004768371582,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(1, 0, 0, 1, 0, 0)",
+        "angle": 0,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 328.2999999523163,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.0206727, -0.999786, 0.999786, -0.0206727, 0, 0)",
+        "angle": -91,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 692.3999999761581,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.961229, 0.275751, -0.275751, -0.961229, 0, 0)",
+        "angle": 164,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1362.8999999761581,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.859036, -0.511916, 0.511916, 0.859036, 0, 0)",
+        "angle": -31,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2113.7999999523163,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.41957, 0.907723, -0.907723, -0.41957, 0, 0)",
+        "angle": 115,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2511,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.997518, -0.0704089, 0.0704089, 0.997518, 0, 0)",
+        "angle": -4,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5891,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8592,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8640,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8645,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11353,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11374,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14081,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14119,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14121,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16824,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  },
+  {
+    "index": 10,
+    "motion": [
+      {
+        "elapsed": 0.10000002384185791,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(1, 0, 0, 1, 0, 0)",
+        "angle": 0,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 330.60000002384186,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.0208637, -0.999782, 0.999782, -0.0208637, 0, 0)",
+        "angle": -91,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 698.1000000238419,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.95103, 0.309098, -0.309098, -0.95103, 0, 0)",
+        "angle": 162,
+        "center": [
+          163.046875,
+          914.3750305175781
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 1368.1000000238419,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.840664, -0.541557, 0.541557, 0.840664, 0, 0)",
+        "angle": -33,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2100.399999976158,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(-0.463437, 0.88613, -0.88613, -0.463437, 0, 0)",
+        "angle": 118,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      },
+      {
+        "elapsed": 2510.899999976158,
+        "active": true,
+        "label": "새로고침",
+        "opacity": "1",
+        "animation": "_sync-turn_1gzol_1",
+        "duration": "1.25s",
+        "direction": "reverse",
+        "matrix": "matrix(0.999389, -0.0349626, 0.0349626, 0.999389, 0, 0)",
+        "angle": -2,
+        "center": [
+          163.046875,
+          914.375
+        ],
+        "slot": [
+          154.046875,
+          905.375,
+          18,
+          18
+        ],
+        "button": [
+          142.046875,
+          892.375,
+          108.890625,
+          44
+        ],
+        "scroll": 0,
+        "alternative": "none",
+        "announcement": "새로고침 중"
+      }
+    ],
+    "layout": [
+      [
+        142.046875,
+        892.375,
+        108.890625,
+        44
+      ],
+      [
+        20,
+        757.125,
+        353,
+        222
+      ]
+    ],
+    "pass": true,
+    "trace": [
+      [
+        5884,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        8597,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        8629,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        8633,
+        [
+          null,
+          null
+        ]
+      ],
+      [
+        11340,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        11373,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        14074,
+        [
+          false,
+          "연결할 수 없어요. 다시 시도해 주세요."
+        ]
+      ],
+      [
+        14118,
+        [
+          false,
+          null
+        ]
+      ],
+      [
+        14120,
+        [
+          true,
+          null
+        ]
+      ],
+      [
+        16825,
+        [
+          null,
+          null
+        ]
+      ]
+    ]
+  }
+]

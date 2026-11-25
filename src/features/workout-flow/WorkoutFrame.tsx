@@ -1,7 +1,7 @@
 
 import { suggestedApproval } from '../workout-online/approval-weight.ts'
 import type { LoadType } from '../workout-online/types.ts'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import type { ReactNode, RefObject } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import type { RepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
@@ -43,8 +43,16 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
   const root = useRef<HTMLDivElement>(null)
   const ownClock = useRef<HTMLDivElement>(null)
   const footer = useRef<HTMLElement>(null)
+  const mouseHover = useRef<{ button: Element; action: string } | null>(null)
   const appliedScroll = useRef<ExerciseScrollPosition | null>(null)
   const hasActions = !!actions
+  useLayoutEffect(() => {
+    const hovered = mouseHover.current
+    if (hovered && (!footer.current?.contains(hovered.button) || hovered.button.textContent !== hovered.action)) {
+      hovered.button.removeAttribute('data-mouse-hover')
+      mouseHover.current = null
+    }
+  }, [actions])
   const timeBar = clockRef ?? ownClock
   const currentExercise = swipe?.currentId
   useLayoutEffect(() => {
@@ -97,6 +105,21 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     {swipe ? <ExerciseSwipe options={swipe} cardio={cardioFocus}>{children}</ExerciseSwipe> : children}
     {dim !== undefined && <div className={styles.restDimmer}><RestCountdown seconds={dim} /></div>}
     {hasActions && <footer className={styles.footer} ref={footer} inert={actionsBlocked}
+      onPointerMove={event => {
+        if (event.pointerType !== 'mouse' || !(event.target instanceof Element)) return
+        const button = event.target.closest('button')
+        if (!button || mouseHover.current?.button === button) return
+        button.setAttribute('data-mouse-hover', '')
+        mouseHover.current = { button, action: button.textContent ?? '' }
+      }}
+      onPointerOut={event => {
+        if (!(event.target instanceof Element)) return
+        const button = event.target.closest('button[data-mouse-hover]')
+        if (button && !(event.relatedTarget instanceof Node && button.contains(event.relatedTarget))) {
+          button.removeAttribute('data-mouse-hover')
+          mouseHover.current = null
+        }
+      }}
       onPointerDownCapture={footerGuard?.pointerDown} onPointerCancelCapture={footerGuard?.pointerCancel}
       onClickCapture={footerGuard?.blocksClick}>{actions}</footer>}
     {feedback}
@@ -125,7 +148,7 @@ export function ExerciseNavigation({ previous, next, onList, onGo, preview = fal
 }) {
   return <nav className={styles.exerciseNav} aria-label="운동 종목 이동">
     <Button shape="control" variant="quiet" disabled={!previous} onClick={preview ? undefined : () => previous && onGo(previous.id)}>‹ 이전{previous && <small title={previous.name}>{previous.name}</small>}</Button>
-    <Button onClick={preview ? undefined : onList}>종목 목록</Button>
+    <Button compact onClick={preview ? undefined : onList}>종목 목록</Button>
     <Button shape="control" variant="quiet" disabled={!next} onClick={preview ? undefined : () => next && onGo(next.id)}>다음 ›{next && <small title={next.name}>{next.name}</small>}</Button>
   </nav>
 }
@@ -150,15 +173,12 @@ export function RestCountdown({ seconds }: { seconds: number }) {
 export function RestActions({ remaining, flash, onEnd, onExtend, disabled }: {
   remaining: number; flash?: boolean; onEnd: () => void; onExtend: () => void; disabled?: boolean
 }) {
-  const [mouseHover, setMouseHover] = useState(false)
   return <>
     {remaining > 0 && remaining <= 10 && <div className={`${styles.prepare} ${styles.restFlashBar}`} data-flash={flash || undefined}>
       <b>다음 세트 준비</b><strong>{remaining}초</strong>
     </div>}
     <div className={styles.actions}>
-      <Button shape="control" variant="primary" className={styles.restEnd} data-mouse-hover={mouseHover || undefined} pending={disabled}
-        onPointerMove={event => { if (event.pointerType === 'mouse') setMouseHover(true) }}
-        onPointerLeave={() => setMouseHover(false)} onClick={onEnd}>휴식 종료</Button>
+      <Button shape="control" variant="primary" pending={disabled} onClick={onEnd}>휴식 종료</Button>
       <Button shape="control" pending={disabled} onClick={onExtend}>+30초</Button>
     </div>
   </>

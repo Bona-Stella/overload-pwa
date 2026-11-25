@@ -68,7 +68,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const load = useCallback(async (cursor: ClosedPage['next'] = null) => {
     if (!enabled || flight.current && !flight.current.signal.aborted) return
     flight.current?.abort(); const abort = new AbortController(); flight.current = abort
-    await Promise.resolve(); if (abort.signal.aborted) return
+    // Publish a manual refresh's busy state in the click update.
     setBusy(true); setLoadingMore(cursor !== null)
     try {
       const next = await readWithDeadline(abort.signal, signal => api.closed({ userId, dataGeneration }, cursor, signal))

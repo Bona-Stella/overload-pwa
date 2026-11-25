@@ -27,6 +27,16 @@
   --space-card: 18px;
   --radius-card: 18px;
   --radius-card-compact: 5px;
+  --card-padding: 12px;
+  --card-padding-compact: 10px var(--card-padding);
+  --card-padding-hero: 16px var(--card-padding);
+  --card-padding-statistics: 14px var(--card-padding);
+  --card-padding-status-form: 21px;
+  --card-gap: 12px;
+  --card-gap-dense: 8px;
+  --card-gap-independent: 16px;
+  --card-gap-section: 20px;
+  --card-gap-title: 4px;
   --radius-control: 10px;
   --radius-action: 999px;
   --font-metadata: 11px;
@@ -82,11 +92,15 @@
 .theme :global(.online-session-badge), .theme :global(.badge) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .theme :global(.workout-online [aria-pressed='true']) { border-color: var(--accent); }
 .theme :global(dialog) { background: var(--surface-card); color: var(--text-primary); border: var(--border-card); border-radius: var(--radius-card); }
+.theme :global(dialog:not([data-message-tone])) {
+  --card-padding-override: var(--space-card);
+  --card-radius-override: var(--radius-card);
+}
 .theme :global(dialog[data-message-tone]) { border-radius: var(--radius-card-compact); }
 .theme :global(.local-set-equipment) { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
 .theme :global(a) { color: var(--accent); }
 .theme :global(summary) { cursor: pointer; }
-@media (max-width: 374px) { .theme { --space-page: 14px; --space-card: 14px; } }
+@media (max-width: 374px) { .theme { --space-page: 14px; --space-card: 14px; --card-padding-status-form: 16px; } }
 @media (prefers-reduced-motion: reduce) { .theme *, .theme *::before, .theme *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 
 .theme :global(dialog) {font-family:var(--font-family-app);font-size:14px;line-height:1.6;}

@@ -28,6 +28,13 @@ dialog.message {
   /* The existing stack already supplies 18px between rows. */
   margin-block-start: 2px;
 }
+:is(.message, .message > :global(.stack)) > :is([data-dialog-actions], :global(.row)):has(> button + button):not(:has(> :nth-child(3))) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  justify-items: stretch;
+}
+.message :is([data-dialog-actions], :global(.row)) > button { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .messageHeading .symbol { color: var(--accent); }
 .message[data-message-tone='success'] .symbol { color: var(--status-done); }
 .message[data-message-tone='warning'] .symbol { color: var(--status-warning); }
@@ -42,4 +49,4 @@ dialog.message {
   font-size: 22px;
   font-weight: 400;
 }
-.message :is(:global(.row), :global(.stack)) > button[data-action-shape='pill'] { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.message :global(.stack) > button[data-action-shape='pill'] { white-space: normal; overflow-wrap: anywhere; min-width: 0; }

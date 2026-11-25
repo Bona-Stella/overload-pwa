@@ -4,6 +4,23 @@ import { auditRefreshMotion } from './refresh-audit.mjs'
 
 export async function checkFront18Preview({ click, evaluate, send, waitFor, modalClosed, capture, dialogs }) {
   const shown = text => waitFor(() => evaluate(`document.body.innerText.includes(${JSON.stringify(text)})`), text)
+  const cardSurface = async (selector, padding) => {
+    await waitFor(() => evaluate(`Boolean(document.querySelector(${JSON.stringify(selector)})?.getClientRects().length)`), selector)
+    assert.deepEqual(await evaluate(`(() => {
+      const style = getComputedStyle(document.querySelector(${JSON.stringify(selector)}));
+      return [style.padding, style.borderRadius, style.borderWidth, style.borderColor, style.backgroundColor];
+    })()`), [padding, '5px', '1px', 'rgb(53, 57, 65)', 'rgb(27, 29, 34)'], selector)
+  }
+  const compactButton = selector => evaluate(`(() => {
+    const button = document.querySelector(${JSON.stringify(selector)});
+    const surface = button?.querySelector('[data-compact-surface]');
+    if (!surface) return null;
+    const style = getComputedStyle(surface);
+    const hit = button.getBoundingClientRect(), face = surface.getBoundingClientRect();
+    return [hit.height >= 44, hit.width >= 44, face.height, Math.abs(hit.top + hit.height / 2 - face.top - face.height / 2) < 1,
+      style.paddingLeft, style.paddingRight, style.borderWidth, style.borderColor, style.borderRadius];
+  })()`)
+  const compactDimensions = [true, true, 30, true, '12px', '12px', '1px', 'rgb(53, 57, 65)', '999px']
   const save = type => waitFor(() => evaluate(`document.querySelector('[data-workout-save-status]')?.dataset.workoutSaveStatus === '${type}'`), type)
   const toast = (text, tone) => waitFor(() => evaluate(`[...document.querySelectorAll(${JSON.stringify(tone ? `[data-tone=${tone}]` : '[data-tone]')})].some(e => e.innerText.includes(${JSON.stringify(text)}))`), text)
   const tools = async label => { await click('운동 검수 도구 열기'); await click(label, 'dialog button'); await modalClosed() }
@@ -62,6 +79,12 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   for (const width of [320, 375, 393, 430, 1280]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: width < 500 })
     await settleViewport(width)
+    assert.deepEqual(await compactButton('[data-swipe-current] button[data-button-size=compact]'), compactDimensions)
+    assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-workout-frame] footer button')).borderRadius"), '5px')
+    assert.deepEqual(await evaluate(`(() => {
+      const style = getComputedStyle(document.querySelector('[data-swipe-current] [role=table]').closest('.app-card'));
+      return [style.padding, style.rowGap, style.borderRadius];
+    })()`), ['12px 8px', '7px', '5px'], 'existing set-grid clearance at ' + width)
     await evaluate('scrollTo({top:96,behavior:"instant"})')
     await settleViewport(width)
     const before = await position()
@@ -283,6 +306,7 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   await menu()
   await click('루틴 조회·성공 Toast·확인 Dialog')
   await shown('저장된 루틴')
+  await cardSurface('.app-card[aria-label="루틴 주간 일정"]', '12px')
   await click('기존 루틴 데이터 조회 실패')
   await toast('루틴을 불러오지 못했어요.', 'error')
   await fresh('기존 루틴 데이터 조회 실패', '[aria-label="루틴"] [data-refresh]')
@@ -316,6 +340,8 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   await toast('루틴 변경사항을 저장했습니다.')
   await click('루틴 상세 · 삭제 확인')
   await shown('운동 시작')
+  await waitFor(() => evaluate("Boolean(document.querySelector('[aria-label=\"루틴 상세\"] button[data-button-size=compact]'))"), 'routine detail edit')
+  assert.deepEqual(await compactButton('[aria-label="루틴 상세"] button[data-button-size=compact]'), compactDimensions)
   await click('다음 운동 시작에서 루틴 버전 변경')
   await click('운동 시작')
   await toast('루틴이 변경됐어요. 다시 확인해 주세요.', 'warning')
@@ -455,7 +481,11 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   await fresh('성장 추적 기간·배치 조회 실패')
   await menu()
   await click('휴식 설정 저장·충돌·폐기')
+  await cardSurface('[aria-label="세트 사이 휴식"] .app-card', '12px')
+  await waitFor(() => evaluate("Boolean(document.querySelector('[aria-label=\"세트 사이 휴식\"] button[data-button-size=compact]'))"), 'rest settings edit')
+  assert.deepEqual(await compactButton('[aria-label="세트 사이 휴식"] button[data-button-size=compact]'), compactDimensions)
   await click('편집')
+  await cardSurface('[aria-label="세트 사이 휴식"] .app-card', '12px')
   await input('input[name="restLowSeconds"]', '135')
   await click('다음 휴식 설정 충돌')
   await click('변경 사항 저장')
@@ -470,6 +500,7 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   await menu()
   await click('홈 로딩·운동 시작')
   await shown('오늘만 다른 루틴 선택')
+  await cardSurface('.app-card[aria-label="이번 주 일정"]', '12px')
   await click('기존 홈 데이터 조회 실패')
   await toast('일정을 불러오지 못했어요.', 'error')
   await fresh('홈 기존 데이터 조회 실패')

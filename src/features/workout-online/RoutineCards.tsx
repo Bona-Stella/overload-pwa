@@ -5,6 +5,7 @@ import type { SchedulePreset } from './preset-schedule.ts'
 import { activeWeights, activeCardio } from '../home/model.ts'
 import { scheduleRoutineLabel } from '../home/tags.ts'
 import { AchievementIcon } from '../../components/AchievementIcon.tsx'
+import { Card } from '../../components/ui.tsx'
 import { EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
 import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
 import home from '../home/Home.module.css'
@@ -71,32 +72,38 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
           <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.7">{vertical ? <><rect x="3" y="4" width="5" height="16" rx="1"/><rect x="10" y="4" width="5" height="16" rx="1"/><rect x="17" y="4" width="4" height="16" rx="1"/></> : <><rect x="3" y="4" width="18" height="4" rx="1"/><rect x="3" y="10" width="18" height="4" rx="1"/><rect x="3" y="16" width="18" height="4" rx="1"/></>}</svg>
         </button>
   return <div className={styles.list} ref={root}>
-    <header hidden={scheduleEditing} className={styles.hero}><div className={styles.eyebrow}>YOUR TRAINING PLAN</div><div className={styles.title}><h2>나의 루틴</h2><button type="button" disabled={busy || managementBlocked} onClick={onNew}>+ 새 루틴</button></div><p className="muted small">다음 운동을 위한 준비. 나에게 맞는 순서로.</p></header>
-    <section className={`${home.home} ${styles.weekSection}`} aria-label="루틴 주간 일정">
-      <div hidden={scheduleEditing}>
+    <header hidden={scheduleEditing} className={styles.hero}>
+      <div className={styles.eyebrow}>YOUR TRAINING PLAN</div>
+      <div className={styles.title}>
+        <div><h2>나의 루틴</h2><p className="muted small">다음 운동을 위한 준비. 나에게 맞는 순서로.</p></div>
+        <button type="button" className="action-pill" disabled={busy || managementBlocked} onClick={onNew}>+ 새 루틴</button>
+      </div>
+    </header>
+    <Card className={`${home.home} ${styles.weekSection}`} aria-label="루틴 주간 일정">
+      <div className={styles.weekContent} hidden={scheduleEditing}>
         {presetHeader ? presetHeader(viewToggle) : <div className={styles.title}><strong>이번 주 일정</strong>{viewToggle}</div>}
-        {scheduleState ?? (vertical ? <div className={styles.weekRows} aria-label="세로 주간 일정">{dayNames.map((name, i) => {
+        {scheduleState ?? (vertical ? <div className={`${styles.weekRows} ${home.dateSelection}`} aria-label="세로 주간 일정">{dayNames.map((name, i) => {
           const r = dayRoutine(i + 1), detail = r ? details.get(r.id) : undefined
           const weight = detail ? activeWeights(detail).length : 0, cardio = detail ? activeCardio(detail).length : 0
           const counts = detail ? [weight ? `웨이트 ${weight}종목` : '',cardio ? `유산소 ${cardio}종목` : ''].filter(Boolean).join(' · ') : ''
-          return <button type="button" key={name} className={styles.weekRow} disabled={!week} aria-pressed={day === i + 1} aria-label={[`${name}요일`,r?.tag,dayLabel(i + 1),counts].filter(Boolean).join(' · ')} onClick={() => chooseDay(i + 1)}>
+          return <button type="button" key={name} className={styles.weekRow} disabled={!week} aria-pressed={day === i + 1} data-selected-day={day === i + 1 || undefined} aria-label={[`${name}요일`,r?.tag,dayLabel(i + 1),counts].filter(Boolean).join(' · ')} onClick={() => chooseDay(i + 1)}>
             <b className={styles.weekDay}>{name}</b><span className={styles.weekInfo}>{r?.tag && <span className={styles.tag}>{r.tag}</span>}<strong title={dayLabel(i+1)}>{dayLabel(i + 1)}</strong></span>
             {detail && <span className={styles.planCounts}>{!!weight && <span aria-label={`웨이트 ${weight}종목`}><AchievementIcon kind="weight" />{weight}</span>}{!!cardio && <span aria-label={`유산소 ${cardio}종목`}><AchievementIcon kind="cardio" />{cardio}</span>}</span>}
           </button>
-        })}</div> : <div className={`${home.days} ${styles.weekTiles}`} aria-label="가로 주간 일정">{dayNames.map((name, i) => {
+        })}</div> : <div className={`${home.days} ${home.dateSelection} ${styles.weekTiles}`} aria-label="가로 주간 일정">{dayNames.map((name, i) => {
           const r = dayRoutine(i + 1)
-          return <button type="button" key={name} disabled={!week} aria-pressed={day === i + 1} aria-label={[`${name}요일`, r?.tag, dayLabel(i + 1)].filter(Boolean).join(' · ')} onClick={() => chooseDay(i + 1)}>
+          return <button type="button" key={name} disabled={!week} aria-pressed={day === i + 1} data-selected-day={day === i + 1 || undefined} aria-label={[`${name}요일`, r?.tag, dayLabel(i + 1)].filter(Boolean).join(' · ')} onClick={() => chooseDay(i + 1)}>
             <strong>{name}</strong><span className={styles.weekName} title={dayLabel(i + 1)}>{r ? scheduleRoutineLabel(r.name, r.tag ?? undefined) : dayLabel(i + 1)}</span>
           </button>
         })}</div>)}
         {!scheduleState && day !== null && <p className={styles.selectedDay}>{dayNames[day - 1]}요일 · {dayLabel(day)}<button type="button" className="quiet" aria-label="요일 필터 해제" onClick={() => {setDay(null);setFilter('all')}}>×</button></p>}
       </div>
       {schedule}
-    </section>
+    </Card>
     {presetNavigation}
     {listState ?? <div hidden={scheduleEditing}>
       <div className={styles.listHeading} data-preset={!!presetHeader}><strong>저장된 루틴 {summaries.length}개</strong><select aria-label="저장된 루틴 필터" disabled={day !== null} value={day !== null ? `day:${day}` : filter} onChange={e => { closeMenus(); setFilter(e.target.value) }}>{day !== null && <option value={`day:${day}`}>{dayNames[day-1]}요일</option>}<option value="all">전체</option><option value="newest">최신순</option><option value="oldest">오래된순</option><option value="assigned" disabled={!week}>{presetHeader ? '이 일정 배정' : '배정된 루틴'}</option><option value="unassigned" disabled={!week}>{presetHeader ? '이 일정 미배정' : '미배정된 루틴'}</option></select>{listRetry}</div>
-      {!summaries.length && <section className={styles.card}><EmptyState embedded icon={<FeedbackIcon name="routine" size={24} />} title="등록된 루틴이 없어요" description="첫 번째 루틴을 만들어 보세요." /></section>}
+      {!summaries.length && <Card><EmptyState embedded icon={<FeedbackIcon name="routine" size={24} />} title="등록된 루틴이 없어요" description="첫 번째 루틴을 만들어 보세요." /></Card>}
       {!!summaries.length && !filtered.length && <EmptyState icon={<FeedbackIcon name="search" size={24} />} title={day !== null ? `${dayNames[day-1]}요일에 배정된 루틴이 없어요` : '조건에 맞는 루틴이 없어요'} />}
       <div className={styles.cardList}>{filtered.map(r => {
         const summary = composition(details.get(r.id)), days = assigned.filter(a => a.routineId === r.id).sort((a,b) => a.dayOfWeek-b.dayOfWeek).map(a => dayNames[a.dayOfWeek - 1]).join('·') || (week ? '미배정' : '')

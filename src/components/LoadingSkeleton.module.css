@@ -1,13 +1,13 @@
-.region { display: grid; gap: 12px; min-width: 0; --radius-card: 5px; }
-.region[data-loading-skeleton="summary"] > .region { gap: 22px; }
+.region { display: grid; gap: var(--card-gap); min-width: 0; }
+.region[data-loading-skeleton="summary"] > .region { gap: var(--card-gap-section); }
 .region .card {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: var(--card-gap);
   min-width: 0;
   margin: 0;
-  padding: 12px;
-  border-radius: 5px;
+  padding: var(--card-padding);
+  border-radius: var(--radius-card-compact);
 }
 .line {
   display: block;

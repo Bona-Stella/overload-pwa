@@ -1,0 +1,1393 @@
+{
+  "http": [
+    {
+      "host": "http://127.0.0.1:4173",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "host": "http://127.0.0.1:4173",
+      "path": "/common-ui-preview.html",
+      "status": 200
+    },
+    {
+      "host": "http://127.0.0.1:4173",
+      "path": "/common-ui-preview.html?front18=1",
+      "status": 200
+    },
+    {
+      "host": "http://192.168.0.3:4173",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "host": "http://192.168.0.3:4173",
+      "path": "/common-ui-preview.html",
+      "status": 200
+    },
+    {
+      "host": "http://192.168.0.3:4173",
+      "path": "/common-ui-preview.html?front18=1",
+      "status": 200
+    }
+  ],
+  "previews": {
+    "common": {
+      "visibleCards": 0,
+      "title": "공통 UI Preview",
+      "loading": true,
+      "loaded": true
+    },
+    "front18": {
+      "visibleCards": 0,
+      "title": "FRONT 18 안내·오류·복구 검수",
+      "routine": true
+    }
+  },
+  "screens": {
+    "home": {
+      "selector": "section[aria-label=\"홈\"]:not([aria-busy])",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 66,
+              "width": 292,
+              "height": 115,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 261,
+              "width": 292,
+              "height": 132,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 66,
+              "width": 335,
+              "height": 115,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 261,
+              "width": 335,
+              "height": 132,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 66,
+              "width": 353,
+              "height": 115,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 261,
+              "width": 353,
+              "height": 132,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 66,
+              "width": 390,
+              "height": 115,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 261,
+              "width": 390,
+              "height": 132,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 401,
+              "y": 66,
+              "width": 478,
+              "height": 115,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 401,
+              "y": 261,
+              "width": 478,
+              "height": 132,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        }
+      ]
+    },
+    "routines": {
+      "selector": "[aria-label=\"루틴\"]",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 171.125,
+              "width": 292,
+              "height": 242,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 171.125,
+              "width": 335,
+              "height": 242,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 151.15625,
+              "width": 353,
+              "height": 242,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 151.15625,
+              "width": 390,
+              "height": 242,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 151.15625,
+              "width": 478,
+              "height": 242,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        }
+      ]
+    },
+    "routine-detail": {
+      "selector": "[aria-label=\"루틴 상세\"]",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 88,
+              "width": 292,
+              "height": 136.578125,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 274.765625,
+              "width": 292,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 444.140625,
+              "width": 292,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 739.078125,
+              "width": 292,
+              "height": 58,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 88,
+              "width": 335,
+              "height": 136.578125,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 274.765625,
+              "width": 335,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 444.140625,
+              "width": 335,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 739.078125,
+              "width": 335,
+              "height": 58,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 88,
+              "width": 353,
+              "height": 136.578125,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 274.765625,
+              "width": 353,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 444.140625,
+              "width": 353,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 739.078125,
+              "width": 353,
+              "height": 58,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 88,
+              "width": 390,
+              "height": 136.578125,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 274.765625,
+              "width": 390,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 444.140625,
+              "width": 390,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 739.078125,
+              "width": 390,
+              "height": 58,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 88,
+              "width": 478,
+              "height": 136.578125,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 274.765625,
+              "width": 478,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 444.140625,
+              "width": 478,
+              "height": 159.375,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 739.078125,
+              "width": 478,
+              "height": 58,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        }
+      ]
+    },
+    "records": {
+      "selector": "[aria-label=\"운동 기록·분석\"]",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 18,
+              "width": 292,
+              "height": 269.78125,
+              "radius": "5px",
+              "padding": "16px 12px 14px",
+              "gap": "0px"
+            },
+            {
+              "x": 14,
+              "y": 657.28125,
+              "width": 292,
+              "height": 48,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 18,
+              "width": 335,
+              "height": 272.390625,
+              "radius": "5px",
+              "padding": "16px 14px 14px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 18,
+              "width": 353,
+              "height": 272.390625,
+              "radius": "5px",
+              "padding": "16px 14px 14px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 18,
+              "width": 390,
+              "height": 272.390625,
+              "radius": "5px",
+              "padding": "16px 14px 14px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 18,
+              "width": 478,
+              "height": 272.390625,
+              "radius": "5px",
+              "padding": "16px 14px 14px",
+              "gap": "0px"
+            }
+          ]
+        }
+      ]
+    },
+    "activity": {
+      "selector": "[aria-label=\"운동 기록·분석\"] .record-statistics-body",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 262.390625,
+              "width": 142,
+              "height": 88.59375,
+              "radius": "5px",
+              "padding": "14px 10px",
+              "gap": "12px"
+            },
+            {
+              "x": 164,
+              "y": 262.390625,
+              "width": 142,
+              "height": 88.59375,
+              "radius": "5px",
+              "padding": "14px 10px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 366.984375,
+              "width": 292,
+              "height": 470.4375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 853.421875,
+              "width": 292,
+              "height": 265.046875,
+              "radius": "5px",
+              "padding": "14px 10px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 1134.46875,
+              "width": 292,
+              "height": 283.09375,
+              "radius": "5px",
+              "padding": "14px 10px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 265.1875,
+              "width": 163.5,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 191.5,
+              "y": 265.1875,
+              "width": 163.5,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 373.6875,
+              "width": 335,
+              "height": 473.234375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 862.921875,
+              "width": 335,
+              "height": 265.046875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 1143.96875,
+              "width": 335,
+              "height": 283.09375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 265.1875,
+              "width": 172.5,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 200.5,
+              "y": 265.1875,
+              "width": 172.5,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 373.6875,
+              "width": 353,
+              "height": 473.234375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 862.921875,
+              "width": 353,
+              "height": 265.046875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 1143.96875,
+              "width": 353,
+              "height": 283.09375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 265.1875,
+              "width": 191,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 219,
+              "y": 265.1875,
+              "width": 191,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 373.6875,
+              "width": 390,
+              "height": 473.234375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 862.921875,
+              "width": 390,
+              "height": 265.046875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 1143.96875,
+              "width": 390,
+              "height": 283.09375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 265.1875,
+              "width": 235,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 636.5,
+              "y": 265.1875,
+              "width": 235,
+              "height": 92.5,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 373.6875,
+              "width": 478,
+              "height": 473.234375,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 862.921875,
+              "width": 478,
+              "height": 265.046875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 1143.96875,
+              "width": 478,
+              "height": 266.046875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            }
+          ]
+        }
+      ]
+    },
+    "settings": {
+      "selector": "[aria-label=\"설정\"][data-tab-overview]",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 18,
+              "width": 292,
+              "height": 153,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 187,
+              "width": 292,
+              "height": 322,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 14,
+              "y": 525,
+              "width": 292,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 14,
+              "y": 745,
+              "width": 292,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 18,
+              "width": 335,
+              "height": 153,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 187,
+              "width": 335,
+              "height": 322,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 20,
+              "y": 525,
+              "width": 335,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 20,
+              "y": 745,
+              "width": 335,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 18,
+              "width": 353,
+              "height": 153,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 187,
+              "width": 353,
+              "height": 322,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 20,
+              "y": 525,
+              "width": 353,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 20,
+              "y": 745,
+              "width": 353,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 18,
+              "width": 390,
+              "height": 153,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 187,
+              "width": 390,
+              "height": 322,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 20,
+              "y": 525,
+              "width": 390,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 20,
+              "y": 745,
+              "width": 390,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 18,
+              "width": 478,
+              "height": 154.578125,
+              "radius": "5px",
+              "padding": "16px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 188.578125,
+              "width": 478,
+              "height": 322,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 393.5,
+              "y": 526.578125,
+              "width": 478,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            },
+            {
+              "x": 393.5,
+              "y": 746.578125,
+              "width": 478,
+              "height": 130,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "0px"
+            }
+          ]
+        }
+      ]
+    },
+    "rest": {
+      "selector": "[aria-label=\"세트 사이 휴식\"]",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 78,
+              "width": 292,
+              "height": 243,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 78,
+              "width": 335,
+              "height": 243,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 78,
+              "width": 353,
+              "height": 243,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 78,
+              "width": 390,
+              "height": 243,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "0px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 78,
+              "width": 478,
+              "height": 243,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "0px"
+            }
+          ]
+        }
+      ]
+    },
+    "account": {
+      "selector": "[aria-label=\"계정 설정\"]",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 80,
+              "width": 292,
+              "height": 158,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 80,
+              "width": 335,
+              "height": 158,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 80,
+              "width": 353,
+              "height": 158,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 80,
+              "width": 390,
+              "height": 330.28125,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 426.28125,
+              "width": 390,
+              "height": 173.890625,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 616.171875,
+              "width": 390,
+              "height": 104.890625,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 737.0625,
+              "width": 390,
+              "height": 66,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 80,
+              "width": 478,
+              "height": 330.28125,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 426.28125,
+              "width": 478,
+              "height": 173.890625,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 616.171875,
+              "width": 478,
+              "height": 104.890625,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 737.0625,
+              "width": 478,
+              "height": 66,
+              "radius": "5px",
+              "padding": "0px 12px",
+              "gap": "12px"
+            }
+          ]
+        }
+      ]
+    },
+    "devices": {
+      "selector": "[aria-label=\"로그인된 기기\"]",
+      "samples": [
+        {
+          "viewport": 320,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 14,
+              "y": 76,
+              "width": 292,
+              "height": 117.1875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 14,
+              "y": 205.1875,
+              "width": 292,
+              "height": 44,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 375,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 76,
+              "width": 335,
+              "height": 117.1875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 205.1875,
+              "width": 335,
+              "height": 44,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 393,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 76,
+              "width": 353,
+              "height": 117.1875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 205.1875,
+              "width": 353,
+              "height": 44,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 430,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 20,
+              "y": 76,
+              "width": 390,
+              "height": 117.1875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 20,
+              "y": 205.1875,
+              "width": 390,
+              "height": 44,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        },
+        {
+          "viewport": 1280,
+          "pageOverflow": 0,
+          "cards": [
+            {
+              "x": 393.5,
+              "y": 76,
+              "width": 478,
+              "height": 117.1875,
+              "radius": "5px",
+              "padding": "14px 12px",
+              "gap": "12px"
+            },
+            {
+              "x": 393.5,
+              "y": 205.1875,
+              "width": 478,
+              "height": 44,
+              "radius": "5px",
+              "padding": "12px",
+              "gap": "12px"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "apiResponses": {
+    "auth 401": 2,
+    "auth 200": 14,
+    "auth 202": 1,
+    "auth 204": 1,
+    "routines 200": 28,
+    "manufacturers 200": 1,
+    "workout-settings 200": 1,
+    "standard-exercises 200": 2,
+    "workout-sessions 200": 25,
+    "deload-periods 200": 1,
+    "deload-analysis 200": 1,
+    "weekly-schedule 200": 1,
+    "statistics 200": 2
+  },
+  "authWrites": [
+    "/api/v1/auth/email-otp/request",
+    "/__review/otp",
+    "/api/v1/auth/email-otp/verify"
+  ],
+  "blockedWrites": []
+}

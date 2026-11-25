@@ -24,7 +24,7 @@
   flex-direction: column;
   min-block-size: 0;
 }
-.catalogCard { gap: 14px; }
+.catalogCard { gap: var(--card-gap); }
 .catalogList > header,
 .catalogCard > :not(:global(.exercise-search)),
 .catalogCard :global(.record-search) > :not(.results) { flex-shrink: 0; }

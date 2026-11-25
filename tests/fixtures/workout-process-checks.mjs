@@ -70,18 +70,18 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
     const layout = await evaluate(`(() => {
       const bar = document.querySelector('${clock}')
       const header = bar.parentElement.getBoundingClientRect()
-      const footer = document.querySelector('${frame} footer').getBoundingClientRect()
-      return { width: header.width, footer: footer.width, widths: [...bar.children].map(e => e.clientWidth),
+      const footer = document.querySelector('${frame} footer')
+      return { width: header.width, footer: footer.getBoundingClientRect().width, widths: [...bar.children].map(e => e.clientWidth),
         border: ['Top', 'Right', 'Bottom', 'Left'].map(side => getComputedStyle(bar)['border' + side + 'Width']),
         inner: [...bar.children].map(e => getComputedStyle(e).borderLeftWidth),
-        rounded: [bar, document.querySelector('${frame} [aria-label="진행 중량"]'), document.querySelector('${footer}')].map(e => getComputedStyle(e).borderRadius) }
+        rounded: [bar, document.querySelector('${frame} [aria-label="진행 중량"]'), footer.querySelector('button')].map(e => getComputedStyle(e).borderRadius) }
     })()`)
     assert.equal(layout.width, width)
     assert.equal(layout.width, layout.footer)
     assert.ok(Math.max(...layout.widths) - Math.min(...layout.widths) <= 2)
     assert.deepEqual(layout.border, ['0px', '0px', '1px', '0px'])
     assert.deepEqual(layout.inner, ['0px', '1px', '1px'])
-    assert.deepEqual(layout.rounded, ['0px', '5px', '999px'])
+    assert.deepEqual(layout.rounded, ['0px', '5px', '5px'])
   }
   await action('운동 시작하기')
   await wait(async () => await timerHeading() === 'WEIGHT 수행', 'started weight')

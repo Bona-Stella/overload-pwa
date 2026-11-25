@@ -84,7 +84,7 @@ function GrowthChartSection({ points, zone }: { points: GrowthPoint[]; zone: str
 function GrowthHistoryCard({ points, name, zone, onOpen, partial = false }: {
   points: GrowthPoint[]; name: string; zone: string; onOpen: (id: string) => void; partial?: boolean
 }) {
-  return <Card>
+  return <Card className={styles.historyCard}>
     <div className={styles.heading}><h2>승인 중량 변경 이력</h2><GrowthCount count={points.length} partial={partial} /></div>
     {points.length>0&&<ul className={styles.historyList}>{points.toReversed().map(p=><li key={p.id}><GrowthEvent point={p} name={name} zone={zone} onOpen={onOpen} /></li>)}</ul>}
   </Card>

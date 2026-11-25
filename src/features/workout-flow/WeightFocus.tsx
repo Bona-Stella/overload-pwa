@@ -64,7 +64,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       <p className={styles.eyebrow}>WEIGHT</p>
       <div className={styles.focusTitle}>
         <h1 ref={titleRef} className={styles.exerciseTitle} title={title} aria-label={title}>{title}</h1>
-        <Button className={styles.listTrigger} onClick={preview ? undefined : onList}>종목 보기/변경</Button>
+        <Button compact className={styles.listTrigger} onClick={preview ? undefined : onList}>종목 보기/변경</Button>
       </div>
       <p className="muted small">{description}</p>
       {progressNote && <p className="muted small">{progressNote}</p>}

@@ -627,6 +627,11 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(async () => (await body()).includes('주간 일정에 배정할까요?'), 'creation notice')
     for (const width of [320, 393]) {
       await verifyWidth(width)
+      assert.deepEqual(await evaluate(`(() => {
+        const card = document.querySelector('[aria-label="새 루틴 일정 배정"]')
+        const css = getComputedStyle(card)
+        return [css.borderRadius, css.padding, css.marginBlock, css.gap]
+      })()`), ['5px', '12px', '0px', '12px'])
       const buttons = await evaluate(`[...document.querySelectorAll('[aria-label="새 루틴 일정 배정"] button')].map(b=>({ text:b.textContent, height:b.offsetHeight, width:b.offsetWidth, fits:b.scrollWidth <= b.clientWidth }))`)
       assert.deepEqual(buttons.map(b => b.text), ['나중에', '배정하기'])
       assert.ok(buttons.every(b => b.fits && b.height === 44))
@@ -743,7 +748,14 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('취소')
     await click('앱 설치 · 오프라인 준비', 'textContent', 'summary strong')
     assert.match(await body(), /검토용 설치 안내/)
+    const installationSurface = () => evaluate(`(() => {
+      const data = document.querySelector('${settingsPage} [aria-label="데이터 및 앱"]')
+      const card = data.nextElementSibling, css = getComputedStyle(card)
+      return [css.borderRadius, css.padding, css.marginBlock, card.offsetTop - data.offsetTop - data.offsetHeight]
+    })()`)
+    assert.deepEqual(await installationSurface(), ['5px', '0px 12px', '0px', 8])
     await click('앱 설치 · 오프라인 준비', 'textContent', 'summary strong')
+    assert.deepEqual(await installationSurface(), ['5px', '0px 12px', '0px', 8])
     await click('내 계정', 'ariaLabel', settingsPage + ' button')
     assert.match(await body(), /대표 재인증 이메일/)
     const accountPage = 'section[aria-label="계정 설정"]'
@@ -770,6 +782,12 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
       await verifyWidth(width)
       assert.ok(await evaluate(`[...document.querySelectorAll('${devicesPage} .app-card')].every(card => card.scrollWidth <= card.clientWidth && getComputedStyle(card).borderRadius === '5px')`),
         'devices detail fits ' + width)
+      assert.deepEqual(await evaluate(`(() => {
+        const page = document.querySelector('${devicesPage}')
+        const summary = page.querySelector('.app-card'), cards = [...page.querySelectorAll('.app-card[aria-label]')]
+        const [first, second] = cards.slice(1).map(card => card.getBoundingClientRect())
+        return [getComputedStyle(summary).padding, getComputedStyle(cards[0]).padding, second.top - first.bottom]
+      })()`), ['14px 12px', '12px', 8])
     }
     await set(devicesMode, 'here')
     assert.match(await body(), /이 기기에서 운동 진행 중/)

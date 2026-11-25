@@ -89,10 +89,11 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
       return [rect.width, rect.height, css.padding, css.gap, css.bottom,
         getComputedStyle(document.querySelector('[data-weight-focus]')).paddingBottom]
     })()`)
-    const hidden = () => evaluate(`(() => {
+    const footerHidden = `(() => {
       const footer = document.querySelector('footer')
       return getComputedStyle(footer).display === 'none' && footer.getClientRects().length === 0
-    })()`)
+    })()`
+    const hidden = () => evaluate(footerHidden)
     const baseline = await footerGeometry()
     assert.ok(baseline[1] > 44)
     const focusMemo = () => evaluate(`(() => {
@@ -251,8 +252,13 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             await delay(200)
             assert.equal(await hidden(), true, 'partially closed keyboard still hides footer')
           }
-          await evaluate(`window.memoViewportTest.height = window.memoViewportTest.fullHeight; window.memoViewportTest.offsetTop = 0; window.visualViewport.dispatchEvent(new Event('resize'))`)
-          if (cycle !== 1) assert.equal(await hidden(), true, 'footer waits for settled dismissal')
+          const hiddenAtDismissal = await evaluate(`(() => {
+            window.memoViewportTest.height = window.memoViewportTest.fullHeight
+            window.memoViewportTest.offsetTop = 0
+            window.visualViewport.dispatchEvent(new Event('resize'))
+            return ${footerHidden}
+          })()`)
+          if (cycle !== 1) assert.equal(hiddenAtDismissal, true, 'footer waits for settled dismissal')
           await wait(async () => !(await hidden()), 'footer restored after blur and keyboard dismissal')
           assert.deepEqual(await footerGeometry(), baseline, 'footer dimensions and reserved space restored')
           const expectedScroll = await evaluate(`Math.min(${beforeCloseScroll}, document.documentElement.scrollHeight - innerHeight)`)

@@ -347,7 +347,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     onExtend={() => { if (!manualEndPending.current) void act(w => { const current = model.exerciseRest(w, id); if (current) current.endsAt = new Date(Date.parse(current.endsAt) + 30000).toISOString() }) }} />
   else if (weight && completionOrdinal !== undefined) {
     const ordinal = completionOrdinal
-    actions = <Button className={`${styles.setCompletion}${restProtected || endingRest ? ' ' + styles.restProtected : ''}`}
+    actions = <Button className={restProtected || endingRest ? styles.restProtected : undefined}
       variant="primary" data-click-action={id + ':complete:' + ordinal} pending={restProtected || endingRest}
       loading={awaitingReview || activeCompletion?.ordinal === ordinal && activeCompletion.saving} onClick={event => complete(ordinal, event)}>{ordinal}세트 완료</Button>
   }

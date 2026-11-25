@@ -32,7 +32,7 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
   const loginMethod = methods.map(method => method === 'google' ? 'Google' : '이메일').join(' · ') || '확인 불가'
   const devices = account?.deviceCount === undefined ? '조회 미지원' : account.deviceCount + '대'
   return <section aria-label="설정" className={styles.page} hidden={hidden} data-tab-overview>
-    <Card className={styles.account} aria-busy={accountLoading}>
+    <Card hero aria-busy={accountLoading}>
       <button type="button" className={styles.accountLink} onClick={onAccount} disabled={busy} aria-label="내 계정" aria-describedby={emailId}>
         <span className={styles.avatar} aria-hidden="true">{initial?.toUpperCase()}</span>
         <span className={styles.text}>
@@ -59,23 +59,25 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
         <RowContent icon="sliders" title="유산소 거리 자동 추정" description="완료 확인에 목표 거리 표시 · 이 기기" />
         <span className={styles.estimateStatus} aria-hidden="true">{estimate ? '켜짐' : '꺼짐'}</span>
       </button>}
-      <Toast toast={feedback.toast ?? accountFeedback.toast} onDismiss={feedback.toast ? feedback.dismiss : accountFeedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
       <SettingsRow icon="weight" title="운동 종목 보기" description="운동 이름과 별칭으로 검색" onClick={onCatalog} busy={busy} />
       <SettingsRow icon="sliders" title="디로딩 설정" description="추천 분석 설정 · 적용률 안내" />
     </Card>
-    <Card className={styles.rows} aria-label="데이터 및 앱">
-      <SettingsRow icon="database" title="운동 데이터 상태" description="서버 저장 · 이 기기의 미전송 기록" />
-      <SettingsRow icon="download" title="운동 데이터 내보내기" description="운동 기록 다운로드" />
-    </Card>
-    <PwaStatus review={review} className={styles.install} summary={<>
-      <RowContent icon="phone" title="앱 설치 · 오프라인 준비" description="홈 화면 설치 및 오프라인 사용 안내" />
-      <SettingsIcon name="down" />
-    </>} />
+    <div className={styles.dataCards}>
+      <Card className={styles.rows} aria-label="데이터 및 앱">
+        <SettingsRow icon="database" title="운동 데이터 상태" description="서버 저장 · 이 기기의 미전송 기록" />
+        <SettingsRow icon="download" title="운동 데이터 내보내기" description="운동 기록 다운로드" />
+      </Card>
+      <PwaStatus review={review} className={styles.install} summary={<>
+        <RowContent icon="phone" title="앱 설치 · 오프라인 준비" description="홈 화면 설치 및 오프라인 사용 안내" />
+        <SettingsIcon name="down" />
+      </>} />
+    </div>
     <Card className={styles.rows} aria-label="계정 및 데이터 삭제">
       <SettingsRow icon="reset" title="전체 운동 데이터 초기화" description="가입 초기 운동 상태로 복원" danger />
       <SettingsRow icon="withdraw" title="회원 탈퇴" description="계정과 운동 데이터 삭제" danger />
     </Card>
     <Button className={styles.logout} disabled={busy} onClick={onLogout}><SettingsIcon name="logout" />로그아웃</Button>
+    <Toast toast={feedback.toast ?? accountFeedback.toast} onDismiss={feedback.toast ? feedback.dismiss : accountFeedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </section>
 }
 

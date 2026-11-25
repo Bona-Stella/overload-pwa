@@ -12,6 +12,8 @@ body:has(.auth-app) { min-width: 0; }
 .auth-app button { min-height: 48px; }
 .auth-app input { scroll-margin-block: 24px; }
 .auth-back { justify-self: start; }
+#auth-feedback:empty + .auth-panel { margin-block-start: 18px; }
+.auth-recovery { --card-padding-override: var(--card-padding-status-form); }
 .auth-code { text-align: center; letter-spacing: .3em; font-size: 1.7rem; min-height: 64px; }
 .auth-code-caption { display: flex; justify-content: space-between; color: var(--muted); font-size: .75rem; }
 .auth-address { overflow-wrap: anywhere; }

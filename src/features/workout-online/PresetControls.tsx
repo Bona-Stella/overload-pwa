@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Card } from '../../components/ui.tsx'
 import { dayNames } from './routine-schedule.ts'
 import { canDeletePreset, presetLimit, presetNumber, routinePresetEntries } from './preset-schedule.ts'
 import type { PresetSchedule, SchedulePreset } from './preset-schedule.ts'
@@ -47,12 +48,12 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
 export function RoutineCreatedNotice({ name, onLater, onAssign, blocked = false }: {
   name: string; onLater: () => void; onAssign: () => void; blocked?: boolean
 }) {
-  return <section className="card stack" aria-label="새 루틴 일정 배정">
+  return <Card aria-label="새 루틴 일정 배정">
     <h2>주간 일정에 배정할까요?</h2>
     <p className={styles.createdMessage}>“{name}”</p>
     <div className={styles.createdActions}><button type="button" className="outline action-pill" onClick={onLater}>나중에</button>
       <button type="button" className="primary" disabled={blocked} onClick={onAssign}>배정하기</button></div>
-  </section>
+  </Card>
 }
 
 export function PresetNavigation({ schedule, viewed, busy, readOnly, onView, onAdd }: {

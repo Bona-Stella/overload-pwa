@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Card } from '../../components/ui.tsx'
 import type { AuthController, AuthState } from './controller.ts'
 
 type Props = { state: AuthState; controller: AuthController; now: number; onLegal: (name: string) => void }
@@ -11,7 +12,7 @@ export function LoginScreens({ state, controller, now, onLegal }: Props) {
   const resend = Math.max(0, Math.ceil((state.resendAt - clock) / 1000))
   const verifyWait = Math.max(0, Math.ceil(((state.verifyAt ?? 0) - clock) / 1000))
   const remaining = challenge ? Math.max(0, Math.ceil((challenge.expiresAt - clock) / 1000)) : 0
-  if (challenge) return <section className="card stack" aria-busy={busy}>
+  if (challenge) return <Card className="auth-panel" aria-busy={busy}>
     <button className="quiet auth-back" disabled={busy} onClick={() => { setCode(''); controller.cancelOtp() }}>‹ 이메일 주소 변경</button>
     <p className="eyebrow">CHECK YOUR EMAIL</p><h1>6자리 코드를<br />입력해 주세요</h1>
     <p className="muted auth-address">{challenge.email}</p>
@@ -23,7 +24,7 @@ export function LoginScreens({ state, controller, now, onLegal }: Props) {
       <button type="button" className="outline action-pill" disabled={busy || resend > 0} onClick={() => { setCode(''); void controller.requestOtp(challenge.email) }}>{resend > 0 ? `${resend}초 후 재발송` : '인증코드 재발송'}</button>
     </form>
     <p className="muted small">새 코드를 요청하면 이전 코드는 사용할 수 없습니다. 유효시간과 재요청 제한은 서버 확인이 기준입니다.</p>
-  </section>
+  </Card>
   return <div className="auth-entry stack" aria-busy={busy}>
     <p className="auth-wordmark">OVERLOAD<span> / </span></p>
     <div className="auth-entry-heading"><p className="eyebrow">YOUR PROGRESS, TOGETHER</p><h1>꾸준히 쌓은 나의 기록,<br />어디서든 이어서<span className="brand-dot">.</span></h1><p className="muted">하나의 계정으로 시작하는 나만의 운동.</p></div>

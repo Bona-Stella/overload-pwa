@@ -1,5 +1,5 @@
-.main:global(.stack), .main :global(.record-statistics-body) { gap: 22px; }
-.main .weeklySummary { gap: 0; padding: 16px 14px 14px; border-radius: 5px; }
+.main:global(.stack), .main :global(.record-statistics-body) { gap: var(--card-gap-section); }
+.main .weeklySummary { gap: 0; padding: 16px 14px 14px; }
 .summaryHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .summaryHeading h2 { color: var(--accent); }
 .summaryHeading > span { flex: none; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
@@ -10,7 +10,7 @@
 .progress { height: 7px; margin-top: 9px; border-radius: 4px; overflow: hidden; background: var(--border-subtle); }
 .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .main .completion { margin-top: 8px; min-block-size: 1.5em; font-size: 12px; }
-.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--card-gap-dense); margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
 .metrics > div { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: 76px; padding: 9px 8px; border-radius: 5px; background: var(--surface-input); }
 .metrics svg { width: 16px; height: 16px; color: var(--accent); flex: none; margin-bottom: 10px; }
 .metrics strong { max-width: 100%; min-block-size: 1lh; font-size: 16px; line-height: 1.3; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
@@ -23,14 +23,19 @@
 .main .analysisCard { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-width: 0; min-height: 107px; padding: 12px; border: 1px solid transparent; border-radius: 5px; background: var(--surface-card); color: var(--accent); text-align: left; font-weight: 400; }
 .analysisTop { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
 .analysisTop > span { font-size: 12px; color: var(--text-muted); }
-.analysisText { display: grid; gap: 3px; }
+.analysisText { display: grid; gap: var(--card-gap-title); }
 .analysisText strong { font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
 .analysisText small { font-size: 12px; font-weight: 400; line-height: 1.4; color: var(--text-muted); }
 .recentHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
 .recentRange { font-size: var(--font-metadata); color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .main .recentHeading > button { min-height: 44px; margin-block: -7px; padding: 7px 0 7px 10px; font-size: 12px; color: var(--accent); }
-.main .recent :global(.record-feed), .main .recent :global(.record-feed > .stack) { gap: 8px; }
-.recentCard:global(.session-record-card) { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: 8px; padding: 12px; border-radius: 5px; color: var(--text-primary); }
+.main .recent :global(.record-feed) { gap: var(--card-gap-dense); }
+.recentCard { composes: cardSurface from '../../components/ui.module.css'; }
+.recentCard:global(.session-record-card) {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--card-gap-dense);
+  min-width: 0; width: 100%; padding: var(--card-padding); text-align: left;
+  background: var(--surface-card); color: var(--text-primary); border-radius: var(--radius-card-compact);
+}
 .recentCard .recentCardHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto 8px; align-items: center; gap: 6px; }
 .recentCard .recentCardHeading time { grid-column: auto; min-width: 0; white-space: normal; overflow-wrap: anywhere; font-size: 11px; font-variant-numeric: tabular-nums; }
 .recentCardHeading .recentStatus { display: inline-flex; align-items: center; gap: 4px; width: auto; height: auto; margin: 0; font-size: 11px; line-height: 1.5; white-space: nowrap; }

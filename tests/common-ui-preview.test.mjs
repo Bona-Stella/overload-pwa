@@ -220,9 +220,15 @@ test('independent common UI preview renders reusable controls and handles intera
           return { x: x + width / 2, y: y + height / 2 }
         })()`)
         await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...target })
-        assert.equal(await evaluate("getComputedStyle(document.querySelector('dialog [data-appearance=danger-primary]')).backgroundColor"), 'rgb(180, 55, 74)')
+        await waitFor(() => evaluate(`(() => {
+          const button = document.querySelector('dialog [data-appearance=danger-primary]')
+          return button?.matches(':hover') && getComputedStyle(button).backgroundColor === 'rgb(180, 55, 74)'
+        })()`), 'destructive action hover color')
         await send('Input.dispatchMouseEvent', { type: 'mousePressed', button: 'left', buttons: 1, clickCount: 1, ...target })
-        assert.equal(await evaluate("getComputedStyle(document.querySelector('dialog [data-appearance=danger-primary]')).backgroundColor"), 'rgb(137, 38, 55)')
+        await waitFor(() => evaluate(`(() => {
+          const button = document.querySelector('dialog [data-appearance=danger-primary]')
+          return button?.matches(':active') && getComputedStyle(button).backgroundColor === 'rgb(137, 38, 55)'
+        })()`), 'destructive action active color')
         await send('Input.dispatchMouseEvent', { type: 'mouseReleased', button: 'left', buttons: 0, clickCount: 1, x: 3, y: 3 })
         await send('Emulation.setEmulatedMedia', { features: [] })
         await click('닫기', 'dialog button')

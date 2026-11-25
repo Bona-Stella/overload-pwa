@@ -1,0 +1,5 @@
+.details {
+  composes: cardSurface from '../components/ui.module.css';
+  min-width: 0;
+  padding: var(--card-padding);
+}

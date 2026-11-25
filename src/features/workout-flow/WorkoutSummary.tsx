@@ -155,6 +155,6 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
     </Card>}
     {children}
     <Card className={detailStyles.preservation}><h2>기록 보존 안내</h2><p className="muted small">{dataNote??'합성 데이터 · 이 탭에서만 확인할 수 있는 시연 결과입니다.'}</p></Card>
-    <Button shape="control" className={detail ? detailStyles.returnButton : undefined} onClick={onBack}>{returnLabel} 돌아가기</Button>
+    <Button onClick={onBack}>{returnLabel} 돌아가기</Button>
   </article>
 }

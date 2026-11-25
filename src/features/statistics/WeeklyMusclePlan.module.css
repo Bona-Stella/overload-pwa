@@ -1,5 +1,5 @@
-.page:global(.stack) { min-width: 0; gap: 16px; }
-.page :global(.app-card) { min-width: 0; padding: 14px 12px; border-radius: 5px; gap: 12px; }
+.page:global(.stack) { min-width: 0; gap: var(--card-gap-independent); }
+.page :global(.app-card) { padding: var(--card-padding-statistics); }
 .page .controls label { display: grid; gap: 6px; min-width: 0; font-size: 12px; color: var(--text-muted); }
 .page .controls select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 30px 8px 12px; border: 0; border-radius: 10px; background-color: var(--surface-input); color: var(--text-primary); font-size: 16px; text-overflow: ellipsis; }
 .segment { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-page); }

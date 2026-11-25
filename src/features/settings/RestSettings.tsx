@@ -123,7 +123,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
             <h2>반복 구간별 휴식 시간</h2>
             <p>{refreshed ? `최신 저장값은 ${bands.map(({ field }) => `${settings[field]}초`).join(' · ')}예요.` : draft ? '구간별 휴식 시간을 수정할 수 있어요.' : '목표 반복 횟수에 따른 휴식 기준'}</p>
           </div>
-          <Button className={styles.cardAction} disabled={busy && !saving} pending={saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>
+          <Button compact className={styles.cardAction} disabled={busy && !saving} pending={saving} onClick={toggleEdit}>{draft ? '취소' : '편집'}</Button>
         </div>
         {draft ? <>
           <div className={`${styles.columns} ${styles.labels}`} aria-hidden="true"><span>시작 세트</span><span>끝 세트</span><span>휴식 (초)</span></div>

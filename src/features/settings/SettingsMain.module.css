@@ -1,9 +1,9 @@
-.page { display: grid; gap: 16px; min-width: 0; }
-.page .account, .page .rows, .page .install, .page .logout {
-  min-width: 0; margin: 0; border: 1px solid var(--border-subtle);
-  border-radius: 5px; background: var(--surface-card);
+.page { display: grid; gap: var(--card-gap-independent); min-width: 0; }
+.page .logout {
+  min-width: 0; margin: 0; border: var(--border-card);
+  border-radius: var(--radius-card-compact); background: var(--surface-card);
 }
-.page .account { padding: 16px; gap: 12px; background: var(--hero-gradient); border-color: var(--hero-border); }
+.dataCards { display: grid; gap: var(--card-gap-dense); min-width: 0; }
 .page .accountLink, .rows .row, .install > summary {
   display: grid; align-items: center; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px;
   width: 100%; min-width: 0; padding: 0; border: 0; border-radius: 0;
@@ -28,11 +28,11 @@
   margin: 0; font-size: 14px; font-weight: 700;
 }
 .accountStats svg { width: 14px; height: 14px; color: #9fbce3; }
-.page .rows, .page .install { gap: 0; padding: 0 12px; }
+.page .rows, .page .install { gap: 0; padding: 0 var(--card-padding); }
 .rows .row, .install > summary { min-height: 64px; }
 .rows .row + .row { border-top: 1px solid var(--border-subtle); }
 .rows .row[data-unavailable] { color: #b0b5bf; opacity: 1; }
-.text { display: grid; gap: 3px; min-width: 0; line-height: 1.4; }
+.text { display: grid; gap: var(--card-gap-title); min-width: 0; line-height: 1.4; }
 .text strong, .text small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .text strong { font-weight: 650; }
 .row .text strong, .install .text strong { font-size: 14px; }
@@ -50,7 +50,6 @@
 .estimateStatus { color: var(--text-muted); font-size: 12px; }
 .row[aria-checked='true'] .estimateStatus { color: var(--accent); }
 .row[role='switch'] .text small { white-space: normal; }
-.page .install { margin-top: -8px; }
 .install > summary { cursor: pointer; list-style: none; }
 .install > summary::-webkit-details-marker { display: none; }
 .install[open] > summary > svg { transform: rotate(180deg); }

@@ -1,12 +1,12 @@
-.page { display: grid; gap: 12px; min-width: 0; }
+.page { display: grid; gap: var(--card-gap); min-width: 0; }
 .page h2, .page h3, .page p { margin: 0; }
 .page h2 { font-size: 14px; font-weight: 650; }
-.page .card { display: grid; gap: 12px; min-width: 0; padding: 12px; border-radius: 5px; }
-.page .summary { background: #202630; border-color: var(--hero-border); }
+.page .summary { padding: var(--card-padding-statistics); background: #202630; border-color: var(--hero-border); }
+.deviceList { display: grid; gap: var(--card-gap-dense); min-width: 0; }
 .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .row > span { color: var(--text-muted); font-size: 12px; }
 .summary .row > svg { color: #9fbce3; }
-.metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin: 6px 0 0; }
+.metrics { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); margin: 0; }
 .metrics > div { display: flex; flex-direction: column-reverse; gap: 3px; min-width: 0; text-align: center; }
 .metrics > div + div { border-inline-start: 1px solid var(--hero-border); }
 .metrics dt { color: var(--text-muted); font-size: 12px; }

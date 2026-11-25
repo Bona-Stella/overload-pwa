@@ -23,7 +23,7 @@
 .detail :global([aria-label='운동 기록 요약']) strong { max-width: 100%; font-size: 16px; white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .detail :global([aria-label='운동 기록 요약']) section { padding-inline: 4px; }
 .detail > .review { display: block; padding-block: 0; }
-.detail > .pendingReview { padding-block: 8px; }
+.detail > .pendingReview { padding: 8px 12px; }
 .pendingReview > :global(.approval-toolbar), .review > details > summary { min-height: 44px; }
 .detail .reviewTitle { margin: 0; font-size: 16px; font-weight: 700; line-height: 1.4; color: var(--text-primary); }
 .review > details > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-block: 8px; cursor: pointer; list-style: none; }
@@ -66,11 +66,11 @@
 .detail .cardioActual p { margin: 0; font-size: 12px; line-height: 1.5; }
 .cardioHeading + p { margin-top: 10px; margin-bottom: 6px; }
 .detail .preservation { gap: 10px; }
-.detail > .returnButton { border-radius: 5px; }
 .preservation h2,.preservation p { margin: 0; }
 .preservation h2 { font-size: 14px; }
 @media(max-width:350px) {
-  .detail > :global(.app-card) { padding-inline: 10px; }
+  .detail > :global(.app-card):where(:not(.pendingReview, .recordPending)) { padding-inline: 10px; }
   .detail .summaryTop .date,.status { font-size: 10px; }
   .detail :global([aria-label='운동 기록 요약']) strong { font-size: 14px; }
 }
+.recordPending:global(.app-card) { padding: var(--space-card); }

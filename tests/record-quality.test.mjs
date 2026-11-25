@@ -135,7 +135,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
      const button = [...document.querySelectorAll('article > button')].find(e => e.textContent === ${JSON.stringify(label)} && e.getClientRects().length)
      if (!button) return false
      const box = button.getBoundingClientRect(), article = button.parentElement.getBoundingClientRect()
-     return getComputedStyle(button).borderRadius === '5px' && box.height >= 44
+     return getComputedStyle(button).borderRadius === '999px' && box.height >= 44
        && Math.abs(box.left - article.left) < 1 && Math.abs(box.right - article.right) < 1
        && box.left >= 0 && box.right <= innerWidth
     })()`), label + ' at ' + w)

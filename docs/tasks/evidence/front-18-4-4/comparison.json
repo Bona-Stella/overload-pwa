@@ -1,0 +1,1075 @@
+{
+  "widths": [
+    320,
+    375,
+    393,
+    430,
+    1280
+  ],
+  "representative": {
+    "created": {
+      "before": [
+        "18px",
+        [
+          "21px",
+          "21px",
+          "21px",
+          "21px"
+        ],
+        [
+          20,
+          116.05,
+          353,
+          180.47
+        ]
+      ],
+      "after": [
+        "5px",
+        [
+          "12px",
+          "12px",
+          "12px",
+          "12px"
+        ],
+        [
+          20,
+          98.05,
+          353,
+          150.47
+        ]
+      ]
+    },
+    "approval": {
+      "before": [
+        "18px",
+        [
+          "21px",
+          "21px",
+          "21px",
+          "21px"
+        ],
+        [
+          20,
+          834.7,
+          353,
+          395.72
+        ]
+      ],
+      "after": [
+        "5px",
+        [
+          "21px",
+          "21px",
+          "21px",
+          "21px"
+        ],
+        [
+          20,
+          816.7,
+          353,
+          395.72
+        ]
+      ]
+    },
+    "otp": {
+      "before": [
+        "18px",
+        [
+          "21px",
+          "21px",
+          "21px",
+          "21px"
+        ],
+        [
+          20,
+          38,
+          353,
+          672.81
+        ]
+      ],
+      "after": [
+        "5px",
+        [
+          "12px",
+          "12px",
+          "12px",
+          "12px"
+        ],
+        [
+          20,
+          38,
+          353,
+          618.81
+        ]
+      ]
+    },
+    "auth": {
+      "before": [
+        "18px",
+        [
+          "21px",
+          "21px",
+          "21px",
+          "21px"
+        ],
+        [
+          20,
+          140.47,
+          353,
+          274.13
+        ]
+      ],
+      "after": [
+        "5px",
+        [
+          "21px",
+          "21px",
+          "21px",
+          "21px"
+        ],
+        [
+          20,
+          122.47,
+          353,
+          274.13
+        ]
+      ]
+    },
+    "deviceSummary": {
+      "before": [
+        "5px",
+        [
+          "12px",
+          "12px",
+          "12px",
+          "12px"
+        ],
+        [
+          20,
+          196.19,
+          353,
+          119.19
+        ]
+      ],
+      "after": [
+        "5px",
+        [
+          "14px",
+          "12px",
+          "14px",
+          "12px"
+        ],
+        [
+          20,
+          196.19,
+          353,
+          117.19
+        ]
+      ]
+    },
+    "installation": {
+      "before": [
+        "5px",
+        [
+          "0px",
+          "12px",
+          "0px",
+          "12px"
+        ],
+        [
+          20,
+          664.58,
+          353,
+          310.38
+        ]
+      ],
+      "after": [
+        "5px",
+        [
+          "0px",
+          "12px",
+          "0px",
+          "12px"
+        ],
+        [
+          20,
+          664.58,
+          353,
+          310.38
+        ]
+      ]
+    }
+  },
+  "traces": {
+    "touch 운동 시작하기": {
+      "frames": 137,
+      "labels": [
+        "운동 시작하기",
+        "1세트 완료"
+      ]
+    },
+    "touch 1세트 완료": {
+      "frames": 137,
+      "labels": [
+        "1세트 완료",
+        "휴식 종료"
+      ]
+    },
+    "touch 휴식 종료": {
+      "frames": 139,
+      "labels": [
+        "휴식 종료",
+        "2세트 완료"
+      ]
+    },
+    "mouse 운동 시작하기": {
+      "frames": 136,
+      "labels": [
+        "1세트 완료"
+      ]
+    },
+    "mouse 1세트 완료": {
+      "frames": 137,
+      "labels": [
+        "휴식 종료"
+      ]
+    },
+    "mouse 휴식 종료": {
+      "frames": 139,
+      "labels": [
+        "휴식 종료",
+        "2세트 완료"
+      ]
+    }
+  },
+  "summary": {
+    "total": 78,
+    "updated": 7,
+    "direct43": 42,
+    "common43": 5,
+    "previous": 2,
+    "exceptions": 22,
+    "currentRender": 63,
+    "renderUnmeasured": 15,
+    "liveSample": 18,
+    "fixtureSample": 45,
+    "additional": 2,
+    "additionalUpdated": 1,
+    "additionalException": 1
+  },
+  "coverage": {
+    "1": {
+      "name": "A01 오늘의 루틴·진행 중인 운동",
+      "type": "강조",
+      "source": "src/features/home/Home.module.css",
+      "measured": [
+        "live",
+        "home"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "2": {
+      "name": "A01 이번 주 일정",
+      "type": "기본",
+      "source": "src/features/home/Home.module.css",
+      "measured": [
+        "live",
+        "home"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "3": {
+      "name": "A01 선택 날짜 상세",
+      "type": "중첩",
+      "source": "src/features/home/Home.module.css",
+      "measured": [
+        "live",
+        "home"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "4": {
+      "name": "A01 홈 최근 운동 항목",
+      "type": "목록",
+      "source": "src/features/home/Home.module.css",
+      "measured": [
+        "live",
+        "home"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "5": {
+      "name": "A02 오프라인 운동 이어가기 제안",
+      "type": "특수",
+      "source": "src/features/workout-local/OfflineResume.tsx",
+      "measured": [
+        "after",
+        "offline-offer"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "6": {
+      "name": "B01 나의 루틴 헤더",
+      "type": "강조",
+      "source": "src/features/workout-online/Routine.module.css",
+      "measured": [
+        "live",
+        "routine"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "7": {
+      "name": "B01 이번 주 일정",
+      "type": "기본",
+      "source": "src/features/workout-online/Routine.module.css",
+      "measured": [
+        "live",
+        "routine"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "8": {
+      "name": "B01 저장된 루틴 항목",
+      "type": "목록",
+      "source": "src/features/workout-online/Routine.module.css",
+      "measured": [
+        "live",
+        "routine-list"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "9": {
+      "name": "B01 새 루틴 일정 배정 제안",
+      "type": "기본",
+      "source": "src/features/workout-online/PresetControls.tsx",
+      "measured": [
+        "after",
+        "created"
+      ],
+      "classification": "4-4 일반 Card 적용",
+      "finalStatus": "4-4 적용 · 실측"
+    },
+    "10": {
+      "name": "B02 루틴 요약",
+      "type": "강조",
+      "source": "src/features/workout-online/RoutineDetail.module.css",
+      "measured": [
+        "live",
+        "routine-detail"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "11": {
+      "name": "B02 웨이트·유산소 종목 상세",
+      "type": "목록",
+      "source": "src/features/workout-online/RoutineDetail.module.css",
+      "measured": [
+        "live",
+        "routine-detail"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "12": {
+      "name": "B02 주간 일정 배정 상세",
+      "type": "기본",
+      "source": "src/features/workout-online/RoutineDetail.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "13": {
+      "name": "B03/B04 이름·태그 입력 컨테이너",
+      "type": "입력",
+      "source": "src/features/workout-online/RoutineEdit.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "14": {
+      "name": "B03/B04 웨이트·유산소 구성 카드",
+      "type": "입력",
+      "source": "src/features/workout-online/RoutineEdit.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "15": {
+      "name": "B03 새 루틴의 종목 없음 슬롯",
+      "type": "상태",
+      "source": "src/features/workout-online/RoutineEdit.module.css",
+      "measured": null,
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측 미확인"
+    },
+    "16": {
+      "name": "B03/B04 웨이트 선택·교체 검색 컨테이너",
+      "type": "입력",
+      "source": "src/features/workout-online/RoutineEdit.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "17": {
+      "name": "B06 자동 순환 포함·제외 그룹",
+      "type": "입력",
+      "source": "src/features/workout-online/PresetOrderEditor.tsx",
+      "measured": [
+        "after",
+        "schedule-order"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "18": {
+      "name": "B07 분류·프리셋 선택 표면",
+      "type": "입력",
+      "source": "src/features/statistics/WeeklyMusclePlan.module.css",
+      "measured": [
+        "after",
+        "muscle-plan"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "19": {
+      "name": "B07 주간 계획 요약",
+      "type": "통계",
+      "source": "src/features/statistics/WeeklyMusclePlan.module.css",
+      "measured": [
+        "after",
+        "muscle-plan"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "20": {
+      "name": "B07 계획 세트 분포",
+      "type": "통계",
+      "source": "src/features/statistics/WeeklyMusclePlan.module.css",
+      "measured": [
+        "after",
+        "muscle-plan"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "21": {
+      "name": "C01 준비운동 시간",
+      "type": "특수",
+      "source": "src/features/workout-flow/WorkoutFlow.module.css",
+      "measured": [
+        "after",
+        "warmup"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "22": {
+      "name": "C01 준비운동 안내",
+      "type": "특수",
+      "source": "src/features/workout-flow/WorkoutFlow.module.css",
+      "measured": [
+        "after",
+        "warmup"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "23": {
+      "name": "C02 진행 중량·장비·한쪽 원판",
+      "type": "특수",
+      "source": "src/features/workout-flow/WorkoutFlow.module.css",
+      "measured": [
+        "after",
+        "workout"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "24": {
+      "name": "C02 세트 입력·이전 세트",
+      "type": "특수",
+      "source": "src/features/workout-flow/WorkoutFlow.module.css",
+      "measured": [
+        "after",
+        "workout"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "25": {
+      "name": "C02/C03 운동 시계·휴식 상태 / 하단 진행 액션",
+      "type": "특수",
+      "source": "src/features/workout-flow/WorkoutFlow.module.css",
+      "measured": [
+        "after",
+        "workout"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "26": {
+      "name": "C03 당시 유산소 계획",
+      "type": "특수",
+      "source": "src/features/workout-flow/CardioFocus.tsx",
+      "measured": [
+        "after",
+        "cardio-complete"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "27": {
+      "name": "C03 유산소 측정 타이머",
+      "type": "특수",
+      "source": "src/features/workout-flow/CardioFocus.tsx",
+      "measured": [
+        "after",
+        "cardio-complete"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "28": {
+      "name": "C03 유산소 확인 입력",
+      "type": "입력",
+      "source": "src/features/workout-flow/CardioFocus.tsx",
+      "measured": [
+        "after",
+        "cardio-review"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "29": {
+      "name": "C03 유산소 실제 완료 기록",
+      "type": "특수",
+      "source": "src/features/workout-flow/CardioFocus.tsx",
+      "measured": [
+        "after",
+        "cardio-complete"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "30": {
+      "name": "C04 이번 운동만 수정 안내·조작",
+      "type": "입력",
+      "source": "src/features/workout-local/LocalWorkoutFlow.tsx",
+      "measured": [
+        "after",
+        "workout-edit"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "31": {
+      "name": "C04 기구 변경 폼·유산소 재구성",
+      "type": "입력",
+      "source": "src/features/workout-local/LocalWorkoutFlow.tsx",
+      "measured": [
+        "after",
+        "workout-edit"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "32": {
+      "name": "C05/D03 운동 요약 헤더",
+      "type": "강조",
+      "source": "src/features/workout-flow/WorkoutRecordDetail.module.css",
+      "measured": [
+        "after",
+        "record-detail"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "33": {
+      "name": "C05/D03 웨이트·유산소 수행",
+      "type": "기본",
+      "source": "src/features/workout-flow/WorkoutRecordDetail.module.css",
+      "measured": [
+        "after",
+        "record-detail"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "34": {
+      "name": "C05/D03 과거 중량 검토 접이형·내부 행",
+      "type": "통계",
+      "source": "src/features/workout-flow/WorkoutRecordDetail.module.css",
+      "measured": null,
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측 미확인"
+    },
+    "35": {
+      "name": "C05/D03 승인 대기 검토",
+      "type": "입력",
+      "source": "src/features/workout-flow/WorkoutRecordDetail.module.css",
+      "measured": null,
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측 미확인"
+    },
+    "36": {
+      "name": "C05/D03 기록 보존 안내",
+      "type": "기본",
+      "source": "src/features/workout-flow/WorkoutRecordDetail.module.css",
+      "measured": [
+        "after",
+        "record-detail"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "37": {
+      "name": "C06 읽기 전용 세션·기기 인계",
+      "type": "특수",
+      "source": "src/features/workout-online/WorkoutWorkspace.tsx",
+      "measured": [
+        "after",
+        "handoff"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "38": {
+      "name": "D01 이번 주 요약",
+      "type": "통계",
+      "source": "src/features/statistics/RecordMain.module.css",
+      "measured": [
+        "after",
+        "statistics-main"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "39": {
+      "name": "D01 주간 요약 지표 타일",
+      "type": "중첩",
+      "source": "src/features/statistics/RecordMain.module.css",
+      "measured": [
+        "after",
+        "statistics-main"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "40": {
+      "name": "D01 운동 분석 진입 타일",
+      "type": "목록",
+      "source": "src/features/statistics/RecordMain.module.css",
+      "measured": [
+        "after",
+        "statistics-main"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "41": {
+      "name": "D01 기록 탭 최근 운동 항목",
+      "type": "목록",
+      "source": "src/features/statistics/RecordMain.module.css",
+      "measured": [
+        "after",
+        "statistics-main"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "42": {
+      "name": "D02 월·일정/종목 필터 외곽",
+      "type": "입력",
+      "source": "src/features/statistics/RecordMain.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "43": {
+      "name": "D02 전체 운동 이력 항목",
+      "type": "목록",
+      "source": "src/features/statistics/RecordMain.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "44": {
+      "name": "D04/D06 정정·평가 이력 요약",
+      "type": "강조",
+      "source": "src/features/workout-online/ClosedWorkout.tsx",
+      "measured": [
+        "after",
+        "record-correction"
+      ],
+      "classification": "4-3 공통 Card",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "45": {
+      "name": "D04 완료 수행 컨테이너",
+      "type": "입력",
+      "source": "src/features/workout-online/ClosedWorkout.tsx",
+      "measured": [
+        "after",
+        "record-correction"
+      ],
+      "classification": "4-3 공통 Card",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "46": {
+      "name": "D03/D04/D06 변경 결과 미확인·재확인",
+      "type": "상태",
+      "source": "src/features/workout-online/ClosedWorkout.tsx",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "47": {
+      "name": "D06 공식 평가·변경 이력",
+      "type": "통계",
+      "source": "src/features/workout-online/ClosedWorkout.tsx",
+      "measured": [
+        "after",
+        "record-evaluation"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "48": {
+      "name": "D04/D06 기록 관리의 승인 확인 필요",
+      "type": "상태",
+      "source": "src/features/workout-online/ClosedWorkout.tsx",
+      "measured": [
+        "after",
+        "approval"
+      ],
+      "classification": "4-4 공통 Card 및 상태 폼 패딩 유지",
+      "finalStatus": "4-4 적용 · 실측"
+    },
+    "49": {
+      "name": "D04 정정 Dialog 내부 원본 사실",
+      "type": "입력",
+      "source": "src/features/workout-online/ClosedWorkout.tsx",
+      "measured": null,
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측 미확인"
+    },
+    "50": {
+      "name": "E01 기간 선택 외곽",
+      "type": "입력",
+      "source": "src/features/statistics/Activity.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "51": {
+      "name": "E01 완료 세트·총중량 타일",
+      "type": "통계",
+      "source": "src/features/statistics/Activity.module.css",
+      "measured": [
+        "after",
+        "activity"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "52": {
+      "name": "E01 운동량 추이·검색",
+      "type": "통계",
+      "source": "src/features/statistics/Activity.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "53": {
+      "name": "E01 달성 현황·주간 타일",
+      "type": "통계",
+      "source": "src/features/statistics/Activity.module.css",
+      "measured": [
+        "after",
+        "activity"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "54": {
+      "name": "E01 유산소 현황·상세",
+      "type": "통계",
+      "source": "src/features/statistics/Activity.module.css",
+      "measured": [
+        "after",
+        "activity"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "55": {
+      "name": "E02 분석할 운동 검색",
+      "type": "입력",
+      "source": "src/features/statistics/Growth.module.css",
+      "measured": [
+        "after",
+        "growth"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "56": {
+      "name": "E02 성장 분석·중량 그래프",
+      "type": "통계",
+      "source": "src/features/statistics/Growth.module.css",
+      "measured": [
+        "after",
+        "growth"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "57": {
+      "name": "E02 최신 공식 승인 중량 요약",
+      "type": "중첩",
+      "source": "src/features/statistics/Growth.module.css",
+      "measured": [
+        "after",
+        "growth"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "58": {
+      "name": "E02 승인 중량 변경 이력",
+      "type": "목록",
+      "source": "src/features/statistics/Growth.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "59": {
+      "name": "E03 기간·보기 방식 컨트롤",
+      "type": "입력",
+      "source": "src/features/statistics/WeeklyMusclePlan.module.css",
+      "measured": [
+        "after",
+        "muscle-statistics"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "60": {
+      "name": "E03 주간 세트 달성",
+      "type": "통계",
+      "source": "src/features/statistics/WeeklyMusclePlan.module.css",
+      "measured": [
+        "after",
+        "muscle-statistics"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "61": {
+      "name": "E03 근육별·분류별 달성 분포",
+      "type": "통계",
+      "source": "src/features/statistics/WeeklyMusclePlan.module.css",
+      "measured": [
+        "after",
+        "muscle-statistics"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "62": {
+      "name": "F01 내 계정 요약",
+      "type": "강조",
+      "source": "src/features/settings/SettingsMain.module.css",
+      "measured": [
+        "live",
+        "settings-closed"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "63": {
+      "name": "F01 운동 설정 / 데이터 및 앱 / 계정·데이터 삭제 그룹",
+      "type": "기본",
+      "source": "src/features/settings/SettingsMain.module.css",
+      "measured": [
+        "live",
+        "settings-closed"
+      ],
+      "classification": "기존 규격 유지",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "64": {
+      "name": "F01 앱 설치·오프라인 준비",
+      "type": "기본",
+      "source": "src/features/settings/SettingsMain.module.css",
+      "measured": [
+        "live",
+        "settings-open"
+      ],
+      "classification": "4-4 details에 카드 표면 재사용 · 부모 gap",
+      "finalStatus": "4-4 적용 · 실측"
+    },
+    "65": {
+      "name": "F02 내 이메일·인증 / 로그인 수단 / 보안 / 기기 링크",
+      "type": "입력",
+      "source": "src/features/auth/AccountSettings.module.css",
+      "measured": null,
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측 미확인"
+    },
+    "66": {
+      "name": "F03 기기 요약",
+      "type": "통계",
+      "source": "src/features/auth/LoggedInDevices.module.css",
+      "measured": [
+        "live",
+        "devices"
+      ],
+      "classification": "4-4 통계 패딩 토큰 · 지표 margin 제거",
+      "finalStatus": "4-4 적용 · 실측"
+    },
+    "67": {
+      "name": "F03 현재 및 다른 기기 항목",
+      "type": "목록",
+      "source": "src/features/auth/LoggedInDevices.module.css",
+      "measured": [
+        "after",
+        "devices"
+      ],
+      "classification": "4-4 공통 Card와 반복 gap",
+      "finalStatus": "4-4 적용 · 실측"
+    },
+    "68": {
+      "name": "F04 반복 구간별 휴식 시간",
+      "type": "입력",
+      "source": "src/features/settings/RestSettings.module.css",
+      "measured": [
+        "live",
+        "rest-edit"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "69": {
+      "name": "F05 알림 옵션 그룹",
+      "type": "입력",
+      "source": "src/features/settings/RestAlertSettings.module.css",
+      "measured": [
+        "after",
+        "rest-alerts"
+      ],
+      "classification": "기존 규격 유지",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "70": {
+      "name": "F05 실서비스 알림 시연 표면",
+      "type": "특수",
+      "source": "src/features/settings/RestAlertSettings.module.css",
+      "measured": [
+        "after",
+        "rest-alert-preview"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    },
+    "71": {
+      "name": "F06 표준 운동 검색·목록 외곽",
+      "type": "입력",
+      "source": "src/features/workout-online/PublicCatalog.tsx",
+      "measured": [
+        "live",
+        "catalog"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "72": {
+      "name": "F07 운동 식별·기구/분류 / 주요·보조 근육",
+      "type": "기본",
+      "source": "src/features/workout-online/PublicCatalog.tsx",
+      "measured": [
+        "live",
+        "catalog-detail"
+      ],
+      "classification": "4-3 공통 Card",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "73": {
+      "name": "F07 자세 미디어 슬롯과 상위 카드",
+      "type": "특수",
+      "source": "src/features/workout-online/PublicCatalog.tsx",
+      "measured": [
+        "live",
+        "catalog-detail"
+      ],
+      "classification": "4-3 공통 Card",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "74": {
+      "name": "F07 운동 방법 접이형",
+      "type": "기본",
+      "source": "src/features/workout-online/PublicCatalog.tsx",
+      "measured": [
+        "live",
+        "catalog-detail"
+      ],
+      "classification": "4-3 공통 Card",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "75": {
+      "name": "F09 이메일 인증코드 입력",
+      "type": "입력",
+      "source": "src/features/auth/LoginScreens.tsx",
+      "measured": [
+        "after",
+        "otp"
+      ],
+      "classification": "4-4 입력 Card 적용",
+      "finalStatus": "4-4 적용 · 실측"
+    },
+    "76": {
+      "name": "F10 로그인 상태 조회 오류(연결 재확인)",
+      "type": "상태",
+      "source": "src/features/auth/AuthApp.tsx",
+      "measured": [
+        "after",
+        "auth-error"
+      ],
+      "classification": "4-4 공통 Card 및 상태 패딩 유지",
+      "finalStatus": "4-4 적용 · 실측"
+    },
+    "77": {
+      "name": "공통 독립 EmptyState·조회 오류",
+      "type": "상태",
+      "source": "src/components/common-ui/ContentFeedback.module.css",
+      "measured": [
+        "after",
+        "devices-error"
+      ],
+      "classification": "4-3 직접 적용",
+      "finalStatus": "기존 적용 · 실측"
+    },
+    "78": {
+      "name": "공통 초기 로딩 skeleton 묶음",
+      "type": "상태",
+      "source": "src/components/LoadingSkeleton.module.css",
+      "measured": [
+        "after",
+        "devices-loading"
+      ],
+      "classification": "기존 보호 스타일",
+      "finalStatus": "승인 예외 유지 · 실측"
+    }
+  }
+}

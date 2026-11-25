@@ -740,8 +740,10 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       for(const name of ['벤치프레스','케이블 오버헤드 트라이셉스 익스텐션','아주 긴 운동 이름 '.repeat(15)]){
         await evaluate(`window.feedback.title(${JSON.stringify(name)})`)
         await new Promise(r=>setTimeout(r,80))
-        const box=await evaluate(`(()=>{const h=document.querySelector('[data-workout-frame] h1'),r=document.createRange();r.selectNodeContents(h);const b=[...document.querySelectorAll('button')].find(b=>b.textContent==='종목 보기/변경'),hr=h.getBoundingClientRect(),br=b.getBoundingClientRect();return{font:parseFloat(getComputedStyle(h).fontSize),width:h.clientWidth,textWidth:r.getBoundingClientRect().width,title:h.textContent,ellipsis:getComputedStyle(h).textOverflow,button:[br.left,br.top,br.width,br.height],overlap:hr.right>br.left,overflow:document.documentElement.scrollWidth>innerWidth}})()`)
+        const box=await evaluate(`(()=>{const h=document.querySelector('[data-workout-frame] h1'),r=document.createRange();r.selectNodeContents(h);const b=[...document.querySelectorAll('button')].find(b=>b.textContent==='종목 보기/변경'),hr=h.getBoundingClientRect(),br=b.getBoundingClientRect(),face=b.querySelector('[data-compact-surface]').getBoundingClientRect(),center=rect=>rect.top+rect.height/2;return{font:parseFloat(getComputedStyle(h).fontSize),width:h.clientWidth,textWidth:r.getBoundingClientRect().width,title:h.textContent,ellipsis:getComputedStyle(h).textOverflow,button:[br.left,br.top,br.width,br.height],centerOffset:Math.abs(center(hr)-center(face)),faceHeight:face.height,overlap:hr.right>br.left,overflow:document.documentElement.scrollWidth>innerWidth}})()`)
         assert(box.font>=16&&box.font<=29);assert.equal(box.overlap,false);assert.equal(box.overflow,false);assert.match(box.title,/01\./)
+        assert.ok(box.centerOffset < 0.5, 'the title and the visible capsule share a vertical center')
+        assert.deepEqual([box.faceHeight,box.button[3]],[30,48])
         if(name==='벤치프레스'){button=box.button;assert(box.font>=22)}
         else {assert.deepEqual(box.button,button,'title fit preserves button bounds');if(box.font>16)assert(box.textWidth<=box.width+1);else assert.equal(box.ellipsis,'ellipsis')}
         fonts.push({width,name,font:box.font,available:box.width,rendered:box.textWidth})
@@ -765,13 +767,14 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await wait(()=>evaluate('document.querySelector("#progress-probe").textContent==="NONE"'))
     for(const width of [320,375,393,430,1280]){
       await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:width<500})
-      for(const direction of ['increase','decrease']){
-        await evaluate(`window.feedback.advice({direction:${JSON.stringify(direction)},kg:'99999999999999.999999'})`)
+      for(const [direction,kg] of [['increase','85'],['decrease','85'],['increase','99999999999999.999999'],['decrease','99999999999999.999999']]){
+        await evaluate(`window.feedback.advice(${JSON.stringify({direction,kg})})`)
         await new Promise(r=>setTimeout(r,80))
-        const size=await evaluate(`(()=>{const [a,b]=document.querySelector('footer').children,r=a.getBoundingClientRect(),s=b.getBoundingClientRect();return{card:[r.width,r.height],button:[s.width,s.height],gap:s.top-r.bottom,clipped:a.scrollHeight>a.clientHeight}})()`)
+        const size=await evaluate(`(()=>{const [a,b]=document.querySelector('footer').children,r=a.getBoundingClientRect(),s=b.getBoundingClientRect();return{card:[r.width,r.height],button:[s.width,s.height],gap:s.top-r.bottom,clipped:a.scrollHeight>a.clientHeight||a.scrollWidth>a.clientWidth}})()`)
         assert.equal(size.card[0],size.button[0])
         assert.equal(size.button[1],50,'a taller recommendation cannot stretch the action')
-        assert(size.card[1]>=64);assert.equal(size.gap,6);assert.equal(size.clipped,false)
+        assert(size.card[1]>=50);if(kg==='85')assert.equal(size.card[1],50)
+        assert.equal(size.gap,6);assert.equal(size.clipped,false)
       }
     }
 
@@ -1296,7 +1299,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         const { x, y, width, height } = button.getBoundingClientRect()
         const css = getComputedStyle(button)
         return { x, y, width, height, disabled: button.disabled, opacity: css.opacity, filter: css.filter,
-          hovered: button.matches(':hover'), hoverCapable: matchMedia('(hover: hover)').matches,
+          hovered: button.matches(':hover'), hoverCapable: matchMedia('(hover: hover)').matches, mouseHover: button.hasAttribute('data-mouse-hover'),
           cursor: css.cursor, busy: button.getAttribute('aria-busy'),
           appearance: [css.backgroundColor, css.color, css.padding, css.borderRadius],
           footerWidth: button.closest('footer').clientWidth }
@@ -1316,7 +1319,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           const footer = button.closest('footer')
           const {x,y,width,height} = button.getBoundingClientRect()
           window.restTransitionFrames.push({ disabled:button.disabled, hovered:button.matches(':hover'), hoverCapable:matchMedia('(hover: hover)').matches,
-            filter:css.filter, cursor:css.cursor, opacity:css.opacity, background:css.backgroundColor, color:css.color,
+            mouseHover:button.hasAttribute('data-mouse-hover'), filter:css.filter, cursor:css.cursor, opacity:css.opacity, background:css.backgroundColor, color:css.color,
             padding:css.padding, radius:css.borderRadius, busy:button.getAttribute('aria-busy'), text:button.textContent.trim(),
             rect:[x,y,width,height],
             footer:[footer.clientWidth,footer.clientHeight,footer.children.length],
@@ -1332,8 +1335,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         observer.observe(document.body, { childList: true, attributes: true, subtree: true })
       }, label)
       const afterAppearance = ms => run(ms => new Promise(resolve => setTimeout(resolve, Math.max(0, window.setShownAt + ms - performance.now()))), ms)
-      const checkAppearance = ({hovered,hoverCapable,filter,cursor,...appearance}) => {
-        assert.equal(filter,hovered && hoverCapable ? 'brightness(1.13)' : 'none')
+      const checkAppearance = ({hovered,hoverCapable,mouseHover,filter,cursor,...appearance}) => {
+        assert.equal(filter,hovered && hoverCapable && mouseHover ? 'brightness(1.13)' : 'none')
         assert.equal(cursor,'pointer')
         return appearance
       }
@@ -1574,7 +1577,14 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         // Capture the fallback frame before delivering the deliberately late response.
         await wait(()=>evaluate('window.finalFooterTrace.some(frame=>frame.ready)'))
         if (result === 'late') await evaluate('window.restSafety.assessments[0].answer()')
-        if (result !== 'fail') await wait(()=>evaluate("document.querySelector('footer').textContent.includes('증량 가능')"))
+        if (result !== 'fail') {
+          await wait(()=>evaluate("document.querySelector('footer').textContent.includes('증량 가능')"))
+          assert.deepEqual(await evaluate(`(() => {
+            const advice = document.querySelector('footer > [data-direction]')
+            const action = document.querySelector('footer > button')
+            return [advice.getBoundingClientRect().height, action.getBoundingClientRect().height]
+          })()`), [50, 50])
+        }
         const frames=await evaluate('window.finalFooterTrace')
         assert.ok(frames.every(frame=>Math.abs(frame.reserve-frame.height-8)<0.1))
         assert.equal(frames.find(frame=>frame.ready).advice,result==='answer')

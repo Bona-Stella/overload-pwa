@@ -1,5 +1,6 @@
-.screen:global(.stack) { gap: 16px; min-width: 0; }
-.screen :global(.app-card) { min-width: 0; padding: 14px 12px; border-radius: 5px; gap: 12px; }
+.screen:global(.stack) { gap: var(--card-gap-independent); min-width: 0; }
+.screen :global(.app-card) { padding: var(--card-padding-statistics); }
+.screen :is(.searchCard, .historyCard):global(.app-card) { padding: var(--card-padding); }
 .screen h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.4; }
 .screen .searchCard h2 { font-size: 15px; }
 .screen .searchCard :global(.record-search) { margin: 0; }
@@ -23,8 +24,8 @@
 
 .placement { min-width: 0; font-size: 12px; }
 .placement select { min-width: 0; width: 100%; }
-.summary { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 5px; background: var(--accent-soft); }
-.latestRow { --latest-label-font: 12px; --latest-label-line: 1.6; --latest-gap: 3px; display: flex; align-items: flex-start; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.summary { display: grid; gap: var(--card-gap-dense); min-width: 0; padding: var(--card-padding); border-radius: var(--radius-card-compact); background: var(--accent-soft); }
+.latestRow { --latest-label-font: 12px; --latest-label-line: 1.6; --latest-gap: var(--card-gap-title); display: flex; align-items: flex-start; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
 .latest { display: grid; gap: var(--latest-gap); min-width: 0; }
 .latest > span, .latest time { color: var(--text-muted); font-size: var(--latest-label-font); }
 .latest > span { line-height: var(--latest-label-line); }

@@ -3,9 +3,10 @@ import type { ComponentPropsWithRef, ReactNode } from 'react'
 import { useDelayedPending } from './useDelayedPending.ts'
 import styles from './ui.module.css'
 
-export function Button({ variant = 'secondary', shape = 'pill', className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithRef<'button'> & {
+export function Button({ variant = 'secondary', shape = 'pill', compact = false, className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithRef<'button'> & {
   variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'neutral' | 'warning' | 'destructive' | 'recovery'
   shape?: 'pill' | 'control'
+  compact?: boolean
   /** This button initiated a task and may show delayed progress. */
   loading?: boolean
   /** Temporarily lock this button while leaving its normal appearance. */
@@ -17,14 +18,17 @@ export function Button({ variant = 'secondary', shape = 'pill', className = '', 
     : variant === 'warning' || variant === 'destructive' || variant === 'recovery' ? `${variant}-action` : variant
   return <button {...props} disabled={disabled || loading || pending} aria-busy={loading || props['aria-busy']}
     data-action-shape={control ? 'control' : 'pill'} data-modal-neutral={variant === 'neutral' || undefined}
+    data-button-size={compact ? 'compact' : undefined}
     data-button-pending={!disabled && (loading || pending) || undefined} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined}
     type={type} className={`${styles.button} ${showSpinner ? styles.loadingButton : ''} ${appearance} ${className}`}>
-    {children}
+    {compact ? <span className={styles.compactSurface} data-compact-surface>
+      <span className={styles.compactLabel} data-compact-label>{children}</span>
+    </span> : children}
     {showSpinner && <span className={styles.buttonSpinner} data-button-spinner aria-hidden="true" />}
   </button>
 }
 export function Card({ hero = false, className = '', ...props }: ComponentPropsWithRef<'section'> & { hero?: boolean }) {
-  return <section {...props} className={`app-card ${styles.card} ${hero ? styles.hero : ''} ${className}`} />
+  return <section {...props} className={`app-card ${styles.cardSurface} ${styles.card} ${hero ? styles.hero : ''} ${className}`} />
 }
 export function SectionHeading({ title, eyebrow, children }: { title: string; eyebrow?: string; children?: ReactNode }) {
   return <header className={styles.heading}><div>{eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}<h1>{title}</h1></div>{children}</header>

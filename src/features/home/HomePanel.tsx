@@ -348,7 +348,7 @@ export function HomeView(props: HomeViewProps) {
       <Card aria-label="이번 주 일정" className={styles.week} aria-busy={!overview && !props.weekFailed}>
         {!overview ? weekError ? <ContentError embedded title="이번 주 일정을 불러오지 못했어요." action={!homeError && refresh} /> : <HomePlaceholder area="week" /> : <>
         <div className={styles.sectionTitle}><h2>이번 주 일정</h2><span>{dates[0].slice(5).replace('-', '.')} – {dates[6].slice(5).replace('-', '.')}</span></div>
-        <div className={styles.days} ref={dayGrid} data-pointer-input={datePointer !== null || undefined} onFocus={event => {
+        <div className={`${styles.days} ${styles.dateSelection}`} ref={dayGrid} data-pointer-input={datePointer !== null || undefined} onFocus={event => {
           if (event.target.matches(':focus-visible')) setDatePointer(null)
         }} onKeyDown={() => setDatePointer(null)}>{dates.map((date, index) => {
           const planned = overview.plannedDays.find(d => d.date === date)

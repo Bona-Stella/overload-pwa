@@ -26,7 +26,7 @@
 @media (prefers-reduced-motion: reduce) {
   .swipeViewport[data-swipe-settling] > .swipeTrack { transition: none; }
 }
-.flow { --radius-card: 5px; --radius-control: 5px; --workout-input-space: var(--editor-keyboard-space, 0px); margin-top: calc(-20px - env(safe-area-inset-top)); padding-top: calc(var(--workout-clock-height, 80px) + 12px); padding-bottom: calc(var(--workout-footer-height, 0px) + var(--workout-input-space) + 8px); }
+.flow { --radius-card: 5px; --radius-control: 5px; --card-padding-override: var(--space-card); --workout-input-space: var(--editor-keyboard-space, 0px); margin-top: calc(-20px - env(safe-area-inset-top)); padding-top: calc(var(--workout-clock-height, 80px) + 12px); padding-bottom: calc(var(--workout-footer-height, 0px) + var(--workout-input-space) + 8px); }
 .flow :is(input, textarea, select) { border-radius: var(--radius-control); }
 .flow:not([data-fixed-actions]) { padding-bottom: calc(var(--workout-input-space) + env(safe-area-inset-bottom) + 8px); }
 .flow:has([data-workout-memo]) { --workout-input-space: max(var(--memo-keyboard-space, 0px), var(--editor-keyboard-space, 0px)); }
@@ -87,21 +87,22 @@
 .topNav strong > span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .topNav[data-exercise-navigation] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); }
 .topNav small { display: block; margin-top: 4px; font-size: 10px; color: var(--text-muted); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.warmup { text-align: center; justify-items: center; padding-block: 34px; }
+.flow .warmup { text-align: center; justify-items: center; padding-block: 34px; }
 .warmupMark { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid var(--hero-border); border-radius: 50%; color: var(--accent); font-size: 28px; }
 .focus { display: grid; gap: 5px; padding-top: 4px; }
 .focusTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
 .focusTitle h1 { flex: 1; }
-.focusTitle .listTrigger { flex-shrink: 0; padding-inline: 8px; font-size: 11px; }
+.focusTitle .listTrigger { flex-shrink: 0; font-size: 11px; }
 .flow .exerciseTitle { font-size: var(--workout-title-size, clamp(22px, 6.5vw, 29px)); min-width: 0; min-height: calc(clamp(22px, 6.5vw, 29px) * 1.2); margin-bottom: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.focusTitle .exerciseTitle { margin-block: 0; }
 .equipment { display: grid; gap: 2px; align-content: center; min-width: 0; font-size: 11px; line-height: 1.4; text-align: right; color: var(--text-primary); }
 .equipment span { display: block; margin-top: 3px; }
-.exerciseNav { display: grid; grid-template-columns: minmax(0, 1fr) 80px minmax(0, 1fr); gap: 8px; }
+.exerciseNav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; }
 .exerciseNav button { min-width: 0; padding: 4px 0; font-size: 12px; line-height: 1.25; }
 .exerciseNav button:first-child { text-align: left; }
 .exerciseNav button:last-child { text-align: right; }
 .exerciseNav small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-muted); margin-top: 3px; font-size: 10px; }
-.working { grid-template-columns: minmax(0, 1fr) minmax(64px, .48fr); gap: 4px 10px; padding-block: 12px; }
+.flow .working { grid-template-columns: minmax(0, 1fr) minmax(64px, .48fr); gap: 4px 10px; padding-block: 12px; }
 .working:has(.plateSide) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(64px, .7fr); }
 .working:has(.plateSide) .workingHead { display: grid; grid-template-columns: subgrid; column-gap: normal; }
 .working:has(.plateSide) .weightChange { justify-self: end; }
@@ -155,6 +156,7 @@
   display: flex; align-items: center; justify-content: center; text-align: center;
   height: var(--workout-action-height); min-height: var(--workout-action-height); padding: 0 12px;
 }
+.flow[data-workout-frame] footer.footer button { border-radius: var(--radius-control); }
 .footer > * { width: 100%; min-width: 0; margin: 0; }
 :global([data-keyboard-open]) .flow .footer,
 .flow:has([data-workout-memo]:focus) :is(.footer, .restDimmer) { display: none; }
@@ -164,14 +166,11 @@
 :is(.restProtected, .checkCell[data-completion-protected] > button):disabled { opacity: 1; cursor: pointer; }
 /* Match the enabled button's hover feedback while native activation is blocked. */
 :is(.restProtected, .checkCell[data-completion-protected] > button):disabled:hover { filter: brightness(1.13); }
-/* The new rest button may mount directly under the pointer used to complete the set. */
-.footer button.restEnd:not([data-mouse-hover]):hover { filter: none; }
-@media (hover: none) {
-  .footer > button.setCompletion:hover,
-  .footer > button.setCompletion:disabled:hover { filter: none; }
-}
+/* A newly displayed action can appear under an unmoved pointer or a synthetic touch hover. */
+.flow[data-workout-frame] footer.footer > button:not([data-mouse-hover]):hover,
+.flow[data-workout-frame] footer.footer > .actions > button:not([data-mouse-hover]):hover { filter: none; }
 .prepare strong { font-size: 18px; padding-inline: 5px; border-radius: 5px; }
-.recommendation { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 2px; width: 100%; min-height: 64px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface-card); color: var(--text-muted); }
+.recommendation { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; align-content: center; gap: 2px; width: 100%; min-height: var(--workout-action-height); padding: 2px 14px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface-card); color: var(--text-muted); }
 .recommendation[data-direction='increase'] { border-color: var(--status-done); color: var(--status-done); }
 .recommendation[data-direction='decrease'] { border-color: var(--status-warning); color: var(--status-warning); }
 .recommendation b { font-size: 13px; }
@@ -192,6 +191,8 @@
 .flow[data-cardio-focus] .footer button { font-size: 14px; }
 .flow[data-cardio-focus] .footer .actions > :global(.outline) { background: var(--surface-input); }
 .summary > button:first-child { justify-self: start; }
+.recordAnalysis:global(.app-card) { padding: var(--card-padding-statistics); }
+.approvalConfirmation { --card-padding-override: var(--card-padding-status-form); }
 .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
 .metrics dt { font-size: 11px; color: var(--text-muted); }
 .metrics dd { margin: 0; font-size: 15px; font-weight: 700; }
@@ -257,7 +258,7 @@
 /* Shared Onyx text hierarchy and compact weight-review controls. */
 .summary h1 {font-size:22px;line-height:1.3;}
 .summary h2 {font-size:14px;line-height:1.4;}
-.summary > :global(.app-card) > p {font-size:12px;line-height:1.5;}
+.summary > :global(.app-card):where(:not(.approvalConfirmation)) > p {font-size:12px;line-height:1.5;}
 .summary .recordItem h3,.summary .recordItem h4,.summary .recordHead > b {font-size:14px;font-weight:650;}
 .summary .recordSet strong {font-size:13px;font-weight:650;}
 .summary .recordSet small,.summary .recordGoal,.summary .recordTimes {font-size:var(--font-metadata);font-weight:400;color:var(--text-muted);}

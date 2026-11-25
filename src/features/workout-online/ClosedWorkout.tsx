@@ -13,6 +13,7 @@ import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
 import { Toast } from '../../components/common-ui/Toast.tsx'
 import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import styles from '../workout-flow/WorkoutFlow.module.css'
+import detailStyles from '../workout-flow/WorkoutRecordDetail.module.css'
 import { Dialog } from '../../components/Dialog.tsx'
 import { recordDeletionConsequence } from '../../components/common-ui/message-copy.ts'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
@@ -196,7 +197,7 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
     {server.status==='AUTO_CLOSED' && <StatusNotice>연결 종료로 기록이 자동 마감되었습니다. 실제 종료 시각은 기록되지 않았으며, 기기에 남은 완료 수행을 확인할 수 있습니다.</StatusNotice>}
     {server.deletedAt && <StatusNotice>삭제된 운동입니다. 기록 변경과 복구를 할 수 없습니다.</StatusNotice>}
     {!state.writable && <StatusNotice>읽기 전용</StatusNotice>}
-    {pending && !dialog && <Card><StatusNotice>변경 결과를 아직 확인하지 못했어요.</StatusNotice>
+    {pending && !dialog && <Card className={detailStyles.recordPending}><StatusNotice>변경 결과를 아직 확인하지 못했어요.</StatusNotice>
       <Button disabled={!state.writable || !!server.deletedAt} pending={state.busy} onClick={() => void controller.retry()}>저장 결과 확인</Button>
       <Button variant="quiet" disabled={!state.writable} pending={state.busy} onClick={() => void confirm({
         title: '현재 기록을 확인했나요?', description: <p>현재 기록과 변경 이력을 검토 완료로 표시해요.<br />추가 변경은 다시 선택해 주세요.</p>,
@@ -249,8 +250,8 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
       {!server.snapshot.state.performedSets.length&&!server.snapshot.state.cardioResults.length&&<EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="완료한 운동이 없어요" />}
     </Card>}
     {mode==='history' && <>
-      <Card><h2>공식 기준 기록 평가</h2><Evaluation value={state.assessment?.completionAssessment??null} title="운동 종료 당시" name={name}/><Evaluation value={state.assessment?.currentAssessment.evaluation??null} title="현재 기록 기준" name={name}/></Card>
-      <Card><h2>기록 변경 이력</h2>{state.changes?.events.map(e=><ChangeEntry key={e.id} event={e} manufacturers={manufacturers} name={name}/>)}{!state.changes?.events.length&&<EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="변경 이력이 없어요" />}</Card>
+      <Card className={styles.recordAnalysis}><h2>공식 기준 기록 평가</h2><Evaluation value={state.assessment?.completionAssessment??null} title="운동 종료 당시" name={name}/><Evaluation value={state.assessment?.currentAssessment.evaluation??null} title="현재 기록 기준" name={name}/></Card>
+      <Card className={styles.recordAnalysis}><h2>기록 변경 이력</h2>{state.changes?.events.map(e=><ChangeEntry key={e.id} event={e} manufacturers={manufacturers} name={name}/>)}{!state.changes?.events.length&&<EmptyState embedded icon={<FeedbackIcon name="record" size={24} />} title="변경 이력이 없어요" />}</Card>
     </>}
     {[...new Set(server.snapshot.approvalResults.filter(r=>r.status==='PENDING').map(r=>r.sessionExerciseId))].map(id=><ClosedApproval key={id} server={server} id={id} controller={controller} disabled={disabled}/>)}
     {dialogs}
@@ -287,11 +288,11 @@ function ClosedApproval({ server, id, controller, disabled }: { server: Session;
     confirmLabel: keep ? '현재 중량 유지' : '중량 승인',
     onConfirm: async () => { await controller.resolve(id, keep ? 'KEEP_CURRENT' : 'REAPPROVE', keep ? '' : weight, server.version) },
   })
-  return <section className="card stack"><h3>승인 확인 필요</h3><p>수행은 보존되었습니다. 지금 해결해도 과거 수행의 승인 문맥과 최초 평가는 바뀌지 않습니다.</p>
+  return <Card className={`${styles.approvalConfirmation} stack`}><h3>승인 확인 필요</h3><p>수행은 보존되었습니다. 지금 해결해도 과거 수행의 승인 문맥과 최초 평가는 바뀌지 않습니다.</p>
     <button className="outline action-pill" disabled={disabled} onClick={() => decide(true)}>종료 후 현재 중량 유지</button>
     <label>지금 재승인할 중량 kg<input inputMode="decimal" value={weight} disabled={disabled} onChange={e => setWeight(e.target.value)} /></label>
     <button className="outline action-pill" disabled={disabled} onClick={() => decide(false)}>종료 후 명시 재승인</button>{confirmation}
-  </section>
+  </Card>
 }
 function CorrectionDialog({ target, server, controller, busy, onClose, manufacturers, definitions }: { target: EditTarget; server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void; manufacturers: Manufacturer[]; definitions: StandardExercise[] }) {
   const [initial] = useState(server), [weight, setWeight] = useState(target.kind === 'SET' ? target.record.weightKg : ''), [reps, setReps] = useState(target.kind === 'SET' ? String(target.record.reps) : '')

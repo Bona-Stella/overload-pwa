@@ -40,7 +40,7 @@ export function RoutineDetail({ routine, exercises, activities, manufacturers, p
   const created = routine.createdAt ? new Date(routine.createdAt) : null
   return <section className={styles.detail} aria-label="루틴 상세">
     <RecordSubpageHeader title="루틴 상세" onBack={onBack} backLabel="루틴 목록으로"
-      action={<Button className={styles.edit} disabled={managementBlocked} onClick={onEdit}>편집</Button>} />
+      action={<Button compact className={styles.edit} disabled={managementBlocked} onClick={onEdit}>편집</Button>} />
     <Card hero className={styles.summary}>
       <div className={styles.identity}>
         <div className={styles.routineTitle}>

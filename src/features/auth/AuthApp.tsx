@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useScreenHistory, useNavigationGuard, navigateBack, navigateTabRoot, navigateToCurrentTabRoot } from '../../app/navigation.ts'
 import { Dialog } from '../../components/Dialog'
+import { Card } from '../../components/ui.tsx'
 import { useAuth } from './context.ts'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { LoginScreens } from './LoginScreens'
@@ -145,7 +146,7 @@ export function AuthApp() {
     {!showingOfflineWorkout && !state.accountOpen && <AuthFeedback state={state} />}
     {state.status === 'checking' ? checkingHome
       ? <HomeStartup label="로그인 상태를 확인하고 있어요." /> : <LoadingSkeleton layout="auth" label="로그인 상태를 확인하고 있어요." />
-      : state.status === 'unavailable' ? !showingOfflineWorkout && <section className="card stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></section>
+      : state.status === 'unavailable' ? !showingOfflineWorkout && <Card className="auth-panel auth-recovery stack"><p className="eyebrow">CONNECTION</p><h1>연결을 확인해 주세요</h1><p className="muted">현재 로그인 상태를 확인하지 못했습니다. 연결 문제만으로 로그아웃 처리하지 않습니다.</p><button className="primary full" disabled={busy} onClick={async () => { if (await flushLocal()) void controller.restore() }}>{busy ? '확인 중…' : '로그인 상태 다시 확인'}</button></Card>
       : authenticated ? state.accountOpen ? <AccountSettings key={state.userId + ':' + (state.account?.challenge?.id ?? 'none')} state={state} controller={controller} now={now} onBack={accountBack} /> : null
       : <LoginScreens state={state} controller={controller} now={now} onLegal={setDialog} />}
     {authenticated && tab === 'settings' && <SettingsMain userId={state.userId} hidden={!settingsMain || focused} busy={busy} account={settingsSummary?.data ?? undefined} accountLoading={!settingsSummary || settingsSummary.request !== settingsAccountRetry} accountIssue={settingsSummary?.message}

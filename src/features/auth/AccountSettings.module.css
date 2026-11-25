@@ -1,9 +1,9 @@
-.page { display: grid; gap: 16px; min-width: 0; }
-.page .card { display: grid; gap: 12px; min-width: 0; border-radius: 5px; padding: 12px; }
+.page { display: grid; gap: var(--card-gap-independent); min-width: 0; }
+.page .card { gap: var(--card-gap); }
 .page h2 { font-size: 15px; margin: 0; }
 .heading, .item { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .heading > .status, .item > .status { margin-inline-start: auto; }
-.itemText { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.itemText { display: grid; gap: var(--card-gap-title); min-width: 0; overflow-wrap: anywhere; }
 .itemText strong { font-size: 14px; font-weight: 650; }
 .itemText small, .note, .status { color: var(--text-muted); font-size: 12px; line-height: 1.5; }
 .icon { width: 15px; height: 15px; flex: none; }

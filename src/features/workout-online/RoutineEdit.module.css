@@ -23,9 +23,9 @@
 }
 .group small { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
 .exercise:global(.app-card) {
-  grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px; border-radius: 5px;
+  grid-template-columns: minmax(0, 1fr); gap: var(--card-gap); padding: var(--card-padding);
 }
-.form > fieldset { gap: 12px; }
+.form > fieldset { gap: var(--card-gap); }
 .exerciseHeading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .exerciseHeading > b { color: var(--accent); font-size: 13px; font-variant-numeric: tabular-nums; }
 .exerciseName { min-width: 0; }

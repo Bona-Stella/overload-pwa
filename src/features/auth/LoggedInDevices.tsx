@@ -73,7 +73,7 @@ function DeviceCard({ device, snapshot, current = false, canPreviewLogout = fals
   const editor = snapshot.workout.kind === 'active' ? snapshot.workout.deviceId : null
   const isEditor = editor === device.id
   const readOnly = current && !isEditor && editor !== null && snapshot.devices.some(item => item.id === editor)
-  return <Card className={styles.card} aria-label={current ? '현재 접속한 기기' : deviceName(device)}>
+  return <Card aria-label={current ? '현재 접속한 기기' : deviceName(device)}>
     {current && <div className={styles.row}><span>현재 접속한 기기</span><Presence device={device} /></div>}
     <div className={styles.deviceHeading}>
       <span className={styles.deviceIcon}><AccountIcon name={device.kind} /></span>
@@ -113,7 +113,7 @@ export function LoggedInDevices({ onBack, headingRef, state = { status: 'unsuppo
   return <section className={styles.page} aria-label="로그인된 기기">
     <RecordSubpageHeader title="로그인된 기기" backLabel="계정 설정으로" headingRef={headingRef} onBack={onBack} />
     {preview && <><p className={styles.preview}>검토용 예시 · 실제 로그인 세션과 별개입니다.</p>{previewControls}</>}
-    <Card className={`${styles.card} ${styles.summary}`}>
+    <Card className={styles.summary}>
       <div className={styles.row}><h2>접속 현황</h2><AccountIcon name="devices" /></div>
       <dl className={styles.metrics}>
         <div><dt>로그인된 기기</dt><dd>{countLabel(snapshot ? devices.length : null)}</dd></div>
@@ -121,15 +121,15 @@ export function LoggedInDevices({ onBack, headingRef, state = { status: 'unsuppo
         <div><dt>오프라인</dt><dd>{countLabel(online === null ? null : devices.length - online)}</dd></div>
       </dl>
     </Card>
-    {state.status === 'unsupported' ? <Card className={styles.card}><AccountNote>로그인된 기기 목록은 아직 제공되지 않아요.</AccountNote></Card>
+    {state.status === 'unsupported' ? <Card><AccountNote>로그인된 기기 목록은 아직 제공되지 않아요.</AccountNote></Card>
       : state.status === 'loading' ? <LoadingSkeleton layout="settings" label="로그인된 기기를 확인하고 있어요." />
       : state.status === 'error' ? <ContentError title="로그인된 기기를 불러오지 못했어요." action={onRetry && <RefreshButton onRefresh={onRetry} loading={refreshing} />} />
       : snapshot && <>
       {current && <DeviceCard device={current} snapshot={snapshot} current />}
       {devices.length > 0 && !current && <AccountNote>현재 접속한 기기를 확인할 수 없습니다.</AccountNote>}
       <div className={styles.row}><h2>{current ? '다른 기기' : '로그인 기기 목록'}</h2><span>{countLabel(others.length)}</span></div>
-      {others.length ? others.map(device => <DeviceCard key={device.id} device={device} snapshot={snapshot}
-        canPreviewLogout={canPreview} onPreviewLogout={() => setTarget({ kind: 'device', device })} />)
+      {others.length ? <div className={styles.deviceList}>{others.map(device => <DeviceCard key={device.id} device={device} snapshot={snapshot}
+        canPreviewLogout={canPreview} onPreviewLogout={() => setTarget({ kind: 'device', device })} />)}</div>
         : <EmptyState icon={<AccountIcon name="devices" />} title={current ? '다른 기기에 로그인되어 있지 않아요' : '로그인된 기기가 없어요'} />}
     </>}
     <div className={styles.footer}>
