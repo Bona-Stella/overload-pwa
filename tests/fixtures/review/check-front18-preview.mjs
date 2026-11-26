@@ -1,3 +1,4 @@
+import { chooseDropdown, dropdownOptions } from '../dropdown-driver.mjs'
 import assert from 'node:assert/strict'
 import { auditMessageDialog } from './modal-audit.mjs'
 import { auditRefreshMotion } from './refresh-audit.mjs'
@@ -255,7 +256,7 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   await menu()
   await click('기록 삭제 결과 미확인')
   await waitFor(() => evaluate(`(() => {
-    const menu = document.querySelector('summary[aria-label="운동 기록 메뉴"]')
+    const menu = document.querySelector('button[aria-label="운동 기록 메뉴"]')
     if (!menu?.getClientRects().length) return false
     menu.click()
     return true
@@ -364,9 +365,10 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   const scheduleForm = 'form[aria-label="주간 일정 편집"]'
   await click('주간 일정 배정·편집')
   await shown('저장 즉시 적용합니다.')
-  const monday = 'form[aria-label="주간 일정 편집"] select[aria-label="월요일 루틴"]'
-  const nextRoutine = await evaluate(`(() => { const el = document.querySelector(${JSON.stringify(monday)}); return [...el.options].find(option => option.value !== el.value).value; })()`)
-  await input(monday, nextRoutine)
+  const monday = 'form[aria-label="주간 일정 편집"] button[data-dropdown-label="월요일 루틴"]'
+  await waitFor(() => evaluate(`document.querySelector(${JSON.stringify(monday)})?.matches(':disabled') === false`), 'schedule is writable')
+  const nextRoutine = (await dropdownOptions(evaluate, monday)).find(option => !option.selected).id
+  await chooseDropdown(evaluate, monday, nextRoutine)
   await click('일정 저장', 'form[aria-label="주간 일정 편집"] button')
   await audit('주간 일정 변경 저장', 'info')
   await dismiss()
@@ -382,9 +384,9 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   await waitFor(() => evaluate(`document.querySelector(${JSON.stringify(monday)})?.matches(':disabled') === false &&
     [...document.querySelectorAll(${JSON.stringify(scheduleForm + ' button')})].some(b => b.textContent === '일정 저장')`), 'schedule write protection released after read')
   await click('다음 일정 저장 충돌')
-  const anotherRoutine = await evaluate(`(() => { const el = document.querySelector(${JSON.stringify(monday)}); return [...el.options].find(option => option.value !== el.value).value; })()`)
-  await input(monday, anotherRoutine)
-  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(monday)}).value`), anotherRoutine)
+  const anotherRoutine = (await dropdownOptions(evaluate, monday)).find(option => !option.selected).id
+  await chooseDropdown(evaluate, monday, anotherRoutine)
+  assert.equal(await evaluate(`document.querySelector(${JSON.stringify(monday)}).dataset.value`), anotherRoutine)
   await click('일정 저장', scheduleForm + ' button')
   await audit('일정 충돌 전 변경 저장 확인', 'info')
   await click('저장', 'dialog button')

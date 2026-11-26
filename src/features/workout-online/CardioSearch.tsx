@@ -18,7 +18,7 @@ export function CardioSearch({ activities, onSelect, onCancel }: {
   return <div className="exercise-search" onKeyDown={event => {
     if (event.key === 'Escape' && !event.nativeEvent.isComposing) onCancel?.()
   }}>
-    <SearchList defaultOpen tags={{ label: '유산소 유형', options: tags, selected: filter, onSelect: setFilter }}
+    <SearchList defaultOpen tags={{ label: '유산소 유형', hideLabel: true, options: tags, selected: filter, onSelect: setFilter }}
       query={query} onQuery={setQuery} onClear={() => { setQuery(''); setFilter('ALL') }}
       label="유산소 검색 · 이름 또는 별칭" resultsLabel="표준 유산소 목록"
       issue={!activities.length ? '선택 가능한 표준 유산소 종목이 없습니다.' : undefined}

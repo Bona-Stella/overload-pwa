@@ -8,10 +8,15 @@
 .detail .summaryTop .date { min-width: 0; margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-muted); overflow-wrap: anywhere; }
 .menu { position: relative; align-self: stretch; width: var(--record-menu-size); margin-inline-end: calc(0px - var(--record-menu-outset)); }
 /* The icon follows the compact row. The trigger extends into the reserved space beside the routine name. */
-.menu > details { position: absolute; inset: 0; }
-.menu > details > summary { width: 100%; height: var(--record-menu-size); min-height: var(--record-menu-size); padding: 0; }
-.menu > details > summary > span { position: absolute; inset-block-start: 50%; inset-inline-end: var(--record-menu-outset); transform: translateY(-50%); line-height: 1; pointer-events: none; }
-.menu > details > div { top: var(--record-menu-size); }
+.menu > :global([data-dropdown='action']) { position: absolute; inset: 0; z-index: 3; }
+.menu > :global([data-dropdown='action']) > button[aria-haspopup] { justify-items: end; }
+.menu > :global([data-dropdown='action']) > button[aria-haspopup] > span {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: var(--record-menu-outset);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
 .status { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); font-size: 11px; white-space: nowrap; }
 .status b { display: inline-grid; place-items: center; width: 14px; font-size: 14px; font-weight: 400; }
 .status[data-state='complete'] { color: var(--status-done); }
@@ -74,3 +79,7 @@
   .detail :global([aria-label='운동 기록 요약']) strong { font-size: 14px; }
 }
 .recordPending:global(.app-card) { padding: var(--space-card); }
+
+.menu :global([data-dropdown-panel][data-placement='below']) {
+  inset-block-start: calc(var(--record-menu-size) + var(--dropdown-gap));
+}

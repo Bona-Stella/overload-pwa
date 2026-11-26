@@ -1,3 +1,4 @@
+import { DropdownField, SelectDropdown } from '../../components/common-ui/SelectDropdown.tsx'
 import filterTags from '../../components/common-ui/FilterTags.module.css'
 import { Button } from '../../components/ui.tsx'
 import { presetNumber } from '../workout-online/preset-schedule.ts'
@@ -17,9 +18,8 @@ import styles from '../workout-online/Routine.module.css'
 const weekdays = ['월', '화', '수', '목', '금', '토', '일']
 export function ScheduleEditor({ state, routines, busy, readOnly = false, readRetry, onSave, onCancel, preset, navigationKey }: { state: { assignments: Assignment[] }; routines: RoutineList['routines']; busy: boolean; readOnly?: boolean; readRetry?: ReactNode; onSave: (assignments: Assignment[]) => void | Promise<boolean>; onCancel: () => void; navigationKey?: string; preset?: { controls: (leave: (action: () => void) => void) => ReactNode; onReload?: () => void; priorityId?: string; active: boolean; stale: boolean; initialApply?: boolean } }) {
   const [draft, setDraft] = useState<Assignment[]>(() => state.assignments.map(a => ({ ...a })))
-  const [filter, setFilter] = useState('all'), [popup, setPopup] = useState<'assignment'|'tag'|null>(null)
+  const [filter, setFilter] = useState('all')
   const tags = routineTags.filter(tag => routines.some(r => r.tag === tag))
-  const chooseFilter = (value: string) => { setFilter(value); setPopup(null) }
   const assignedIds = new Set(state.assignments.map(a => a.routineId))
   const priority = preset?.priorityId ? routines.find(r => r.id === preset.priorityId) : undefined
   const candidates = routines.filter(r => r.id !== priority?.id).filter(r => filter === 'all' || (filter === 'assigned' ? assignedIds.has(r.id) : filter === 'unassigned' ? !assignedIds.has(r.id) : r.tag === filter.slice(4)))
@@ -37,42 +37,42 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, readRe
     if (navigationKey) navigateBack(() => leave(onCancel))
     else leave(onCancel)
   }
-  const first = useRef<HTMLButtonElement>(null), tagButton = useRef<HTMLButtonElement>(null), filters = useRef<HTMLFieldSetElement>(null)
-  useEffect(() => { first.current?.focus() }, [])
-  useEffect(() => {
-    if (!popup) return
-    const outside = (event: PointerEvent) => { if (event.target instanceof Node && !filters.current?.contains(event.target)) setPopup(null) }
-    document.addEventListener('pointerdown', outside, true)
-    return () => document.removeEventListener('pointerdown', outside, true)
-  }, [popup])
+  const filters = useRef<HTMLFieldSetElement>(null)
+  useEffect(() => { filters.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus() }, [])
+  const filtersDisabled = busy || readOnly
+  const assignmentFilter = filter === 'assigned' || filter === 'unassigned'
+  const tagFilter = filter.startsWith('tag:')
   const canSubmit = !busy && !readOnly && !preset?.stale && (!preset || dirty || preset.initialApply)
   return <form className={styles.scheduleEditor} data-preset={!!preset} aria-label="주간 일정 편집" onSubmit={e => { e.preventDefault(); if (canSubmit) { if (preset) setConfirm(true); else onSave(draft) } }}>
     <div className="section-heading"><h2>주간 일정 편집</h2><button data-close-text type="button" className="quiet" disabled={busy} onClick={close}>닫기</button></div>
     <p>{preset && !preset.active ? '조회 중인 일정의 배정만 저장합니다.' : '저장 즉시 적용합니다. 지난 일정과 시작한 운동의 계획은 유지합니다.'}</p>
     {preset?.controls(leave)}
-    <fieldset ref={filters} className={styles.candidateFilters} aria-label="루틴 후보 필터" disabled={busy || readOnly} onKeyDown={e=>{if(popup&&e.key==='Escape'){setPopup(null);(popup==='assignment'?first:tagButton).current?.focus()}}}>
-      <div className={styles.candidateTags}>
-        <button type="button" className={filterTags.chip} ref={first} aria-expanded={popup==='assignment'} aria-pressed={filter==='assigned'||filter==='unassigned'} aria-controls="schedule-candidate-assignment" onClick={()=>setPopup(value=>value==='assignment'?null:'assignment')}><span>{filter==='assigned'?'배정 완료':filter==='unassigned'?'배정 미완료':'배정 유무'} <span aria-hidden="true">▾</span></span></button>
-        {popup==='assignment'&&<div id="schedule-candidate-assignment" className={styles.candidateTagOptions} aria-label="배정 유무 후보">{([['assigned','배정 완료'],['unassigned','배정 미완료']] as const).map(([value,label])=><button type="button" className={filterTags.chip} key={value} aria-pressed={filter===value} onClick={()=>{chooseFilter(value);first.current?.focus()}}><span>{label}</span></button>)}</div>}
-      </div>
-      <div className={styles.candidateTags}>
-        <button type="button" className={filterTags.chip} ref={tagButton} aria-label={filter.startsWith('tag:') ? filter.slice(4) : '태그'} aria-expanded={popup==='tag'} aria-pressed={filter.startsWith('tag:')} aria-controls="schedule-candidate-tags" disabled={!tags.length} onClick={() => setPopup(value=>value==='tag'?null:'tag')}><span>{filter.startsWith('tag:') ? filter.slice(4) : '태그'} <span aria-hidden="true">▾</span></span></button>
-        {popup==='tag' && <div id="schedule-candidate-tags" className={styles.candidateTagOptions} aria-label="후보 태그">{tags.map(tag => <button type="button" className={filterTags.chip} key={tag} aria-pressed={filter === `tag:${tag}`} onClick={() => { chooseFilter(`tag:${tag}`); tagButton.current?.focus() }}><span>{tag}</span></button>)}</div>}
-      </div>
-      <button type="button" className={filterTags.chip} aria-pressed={filter === 'all'} onClick={() => chooseFilter('all')}><span>전체 보기</span></button>
+    <fieldset ref={filters} className={styles.candidateFilters} aria-label="루틴 후보 필터" disabled={filtersDisabled}>
+      <SelectDropdown label="배정 유무" variant="filter" value={assignmentFilter ? filter : undefined} selected={assignmentFilter}
+        disabled={filtersDisabled} options={[{ id: 'assigned', name: '배정 완료' }, { id: 'unassigned', name: '배정 미완료' }]} onChange={setFilter} />
+      <SelectDropdown label="태그" variant="filter" value={tagFilter ? filter : undefined} selected={tagFilter}
+        disabled={filtersDisabled || !tags.length} options={tags.map(tag => ({ id: `tag:${tag}`, name: tag }))} onChange={setFilter} />
+      <button type="button" className={filterTags.chip} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}><span>전체 보기</span></button>
     </fieldset>
-    <fieldset className={styles.scheduleDays} disabled={busy || readOnly}>{weekdays.map((name, index) => {
-      const assigned = draft.find(a => a.dayOfWeek === index + 1)?.routineId ?? ''
-      return <label key={name}>{name}요일<select aria-label={`${name}요일 루틴`} value={assigned} onChange={event => {
-        const routineId = event.currentTarget.value
-        const dayOfWeek = index + 1
-        setDraft(values => {
-          const next = values.filter(assignment => assignment.dayOfWeek !== dayOfWeek)
-          if (routineId) next.push({ dayOfWeek, routineId })
-          return next.sort((a, b) => a.dayOfWeek - b.dayOfWeek)
-        })
-      }}>
-        {priority && <option value={priority.id}>✦ 새 루틴 · {priority.name}</option>}<option value="">휴식</option>{assigned && assigned !== priority?.id && !candidates.some(r => r.id === assigned) && <option value={assigned}>{routines.find(r => r.id === assigned)?.name ?? '사용할 수 없는 루틴 · 변경 필요'}</option>}{candidates.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
+    <fieldset className={styles.scheduleDays} disabled={filtersDisabled}>{weekdays.map((name, index) => {
+      const dayOfWeek = index + 1
+      const assigned = draft.find(a => a.dayOfWeek === dayOfWeek)?.routineId ?? ''
+      const options = [
+        ...(priority ? [{ id: priority.id, name: `✦ 새 루틴 · ${priority.name}` }] : []),
+        { id: '', name: '휴식' },
+        ...(assigned && assigned !== priority?.id && !candidates.some(r => r.id === assigned)
+          ? [{ id: assigned, name: routines.find(r => r.id === assigned)?.name ?? '사용할 수 없는 루틴 · 변경 필요' }] : []),
+        ...candidates,
+      ]
+      return <div className={styles.scheduleDay} key={name}>
+        <span>{name}요일</span>
+        <SelectDropdown label={`${name}요일 루틴`} value={assigned} options={options} disabled={filtersDisabled}
+          onChange={routineId => setDraft(values => {
+            const next = values.filter(assignment => assignment.dayOfWeek !== dayOfWeek)
+            if (routineId) next.push({ dayOfWeek, routineId })
+            return next.sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+          })} />
+      </div>
     })}</fieldset>{readRetry || (preset?.onReload
       ? <Button type="button" variant="primary" disabled={busy} onClick={() => { if (preset.onReload) void leave(preset.onReload) }}>최신 일정 확인</Button>
       : <Button type="submit" variant="primary" disabled={!canSubmit}>일정 저장</Button>)}
@@ -99,13 +99,11 @@ export function PresetAssignmentEditor({ base, current, id, priorityId, routines
   const options = current?.presets ?? base.presets
   return <ScheduleEditor key={id + ':' + base.version + ':' + preset.version} state={preset} routines={routines} busy={busy} readOnly={readOnly} readRetry={readRetry} navigationKey={navigationKey}
     preset={{ priorityId, active: id === current?.activeId, stale, initialApply, onReload: stale && current ? onReload : undefined, controls: leave => <>
-      <label>편집할 주간 일정<select aria-label="편집할 주간 일정" value={id} disabled={busy || !current || !!readRetry} onChange={event => {
-        const next = event.target.value
-        leave(() => onSelect(next))
-      }}>
-        {!options.some(p => p.id === id) && <option value={id} disabled>삭제된 일정</option>}
-        {options.map((p, index) => <option value={p.id} key={p.id}>{presetNumber(index)} · {p.name}</option>)}
-      </select></label>
+      <DropdownField label="편집할 주간 일정" value={id} disabled={busy || !current || !!readRetry}
+        options={[
+          ...(!options.some(p => p.id === id) ? [{ id, name: '삭제된 일정', disabled: true }] : []),
+          ...options.map((p, index) => ({ id: p.id, name: `${presetNumber(index)} · ${p.name}` })),
+        ]} onChange={next => { void leave(() => onSelect(next)) }} />
     </> }}
     onSave={onSave} onCancel={onClose} />
 }

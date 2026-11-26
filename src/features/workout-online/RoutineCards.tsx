@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { ActionMenu } from '../../components/common-ui/ActionMenu.tsx'
+import { SelectDropdown } from '../../components/common-ui/SelectDropdown.tsx'
+import { useRef, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { createRepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import type { SchedulePreset } from './preset-schedule.ts'
@@ -35,30 +37,13 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
   const [filter, setFilter] = useState('all')
   const [detailPointerGuard] = useState(createRepeatPointerGuard)
   const root = useRef<HTMLDivElement>(null)
-  const closeMenus = () => root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { menu.open = false })
   function deleteFromMenu(event: MouseEvent<HTMLButtonElement>, id: string) {
-    const menu = event.currentTarget.closest('details')!
-    menu.open = false
-    menu.querySelector('summary')?.focus({ preventScroll: true })
     const revealed = event.detail > 0
       ? document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLButtonElement>('button[data-routine-detail]')
       : null
     detailPointerGuard.arm(event, revealed && root.current?.contains(revealed) ? revealed : null)
     onDelete?.(id)
   }
-  useEffect(() => {
-    const outside = (event: PointerEvent) => root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { if (event.target instanceof Node && !menu.contains(event.target)) menu.open = false })
-    const scroll = () => root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { menu.open = false })
-    const escape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      const menu = root.current?.querySelector<HTMLDetailsElement>('details[open]')
-      if (menu) { menu.open = false; menu.querySelector('summary')?.focus() }
-    }
-    document.addEventListener('pointerdown', outside, true)
-    document.addEventListener('scroll', scroll, { capture: true, passive: true })
-    document.addEventListener('keydown', escape)
-    return () => { document.removeEventListener('pointerdown', outside, true); document.removeEventListener('scroll', scroll, true); document.removeEventListener('keydown', escape) }
-  }, [])
   const assigned = week?.assignments ?? []
   const assignedIds = new Set(assigned.map(a => a.routineId))
   const newest = newestRoutines(summaries), sorted = filter === 'oldest' ? [...newest].reverse() : newest
@@ -102,21 +87,28 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
     </Card>
     {presetNavigation}
     {listState ?? <div hidden={scheduleEditing}>
-      <div className={styles.listHeading} data-preset={!!presetHeader}><strong>저장된 루틴 {summaries.length}개</strong><select aria-label="저장된 루틴 필터" disabled={day !== null} value={day !== null ? `day:${day}` : filter} onChange={e => { closeMenus(); setFilter(e.target.value) }}>{day !== null && <option value={`day:${day}`}>{dayNames[day-1]}요일</option>}<option value="all">전체</option><option value="newest">최신순</option><option value="oldest">오래된순</option><option value="assigned" disabled={!week}>{presetHeader ? '이 일정 배정' : '배정된 루틴'}</option><option value="unassigned" disabled={!week}>{presetHeader ? '이 일정 미배정' : '미배정된 루틴'}</option></select>{listRetry}</div>
+      <div className={styles.listHeading} data-preset={!!presetHeader}><strong>저장된 루틴 {summaries.length}개</strong><SelectDropdown label="저장된 루틴 필터" className={styles.listFilter}
+        variant="filter" disabled={day !== null} value={day !== null ? `day:${day}` : filter} onChange={setFilter}
+        options={[
+          ...(day !== null ? [{ id: `day:${day}`, name: dayNames[day - 1] + '요일' }] : []),
+          { id: 'all', name: '전체' }, { id: 'newest', name: '최신순' }, { id: 'oldest', name: '오래된순' },
+          { id: 'assigned', name: presetHeader ? '이 일정 배정' : '배정된 루틴', disabled: !week },
+          { id: 'unassigned', name: presetHeader ? '이 일정 미배정' : '미배정된 루틴', disabled: !week },
+        ]} />{listRetry}</div>
       {!summaries.length && <Card><EmptyState embedded icon={<FeedbackIcon name="routine" size={24} />} title="등록된 루틴이 없어요" description="첫 번째 루틴을 만들어 보세요." /></Card>}
       {!!summaries.length && !filtered.length && <EmptyState icon={<FeedbackIcon name="search" size={24} />} title={day !== null ? `${dayNames[day-1]}요일에 배정된 루틴이 없어요` : '조건에 맞는 루틴이 없어요'} />}
       <div className={styles.cardList}>{filtered.map(r => {
         const summary = composition(details.get(r.id)), days = assigned.filter(a => a.routineId === r.id).sort((a,b) => a.dayOfWeek-b.dayOfWeek).map(a => dayNames[a.dayOfWeek - 1]).join('·') || (week ? '미배정' : '')
         return <article className={`${styles.compactCard} ${assignedIds.has(r.id) ? styles.assignedCard : ''}`} key={r.id} aria-label={`${r.name} 루틴 카드`}>
           <div className={styles.cardTop}><span className={styles.eyebrow}>ROUTINE {String(newest.findIndex(x => x.id === r.id) + 1).padStart(2, '0')}</span>{r.tag && <span className={styles.tag}>{r.tag}</span>}{!presetAssignments && <span className={styles.cardDays} title={days}>{days}</span>}
-            {(onEdit || onDelete) && <details className={styles.cardMenu} onToggle={e => { const current = e.currentTarget; if (current.open) root.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => { if (menu !== current) menu.open = false }) }}><summary aria-label={`${r.name} 메뉴`}>⋯</summary><div>
-              {onEdit && <button type="button" disabled={busy || managementBlocked} onClick={e => { e.currentTarget.closest('details')!.open = false; onEdit(r.id) }}>수정</button>}
-              {onDelete && <button type="button" className="danger" disabled={busy || managementBlocked} onClick={event => deleteFromMenu(event, r.id)}>삭제</button>}
-            </div></details>}
+            {(onEdit || onDelete) && <ActionMenu label={`${r.name} 메뉴`} className={styles.cardMenu} actions={[
+              ...(onEdit ? [{ label: '수정', disabled: busy || managementBlocked, run: () => onEdit(r.id) }] : []),
+              ...(onDelete ? [{ label: '삭제', danger: true, disabled: busy || managementBlocked, run: (event: MouseEvent<HTMLButtonElement>) => deleteFromMenu(event, r.id) }] : []),
+            ]} />}
           </div>
           <button type="button" className={styles.cardBody} aria-label={`${r.name} 상세`} data-routine-detail
             onPointerDown={detailPointerGuard.pointerDown} onPointerCancel={detailPointerGuard.pointerCancel}
-            onClick={event => { if (!detailPointerGuard.blocksClick(event)) { closeMenus(); onSelect(r.id) } }}><span className={styles.cardName}>{r.name}</span><span className={styles.exerciseLine}><b>WEIGHT</b><span title={summary?.weight.text}>{summary?.weight.text}</span></span><span className={styles.exerciseLine}><b>CARDIO</b><span title={summary?.cardio.text}>{summary?.cardio.text}</span></span></button>
+            onClick={event => { if (!detailPointerGuard.blocksClick(event)) onSelect(r.id) }}><span className={styles.cardName}>{r.name}</span><span className={styles.exerciseLine}><b>WEIGHT</b><span title={summary?.weight.text}>{summary?.weight.text}</span></span><span className={styles.exerciseLine}><b>CARDIO</b><span title={summary?.cardio.text}>{summary?.cardio.text}</span></span></button>
           {presetAssignments?.(r.id)}
         </article>
       })}</div>

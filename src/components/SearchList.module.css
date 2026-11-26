@@ -11,3 +11,19 @@
 .search .results > li {display:flex;align-items:center;gap:4px;}
 .search .results > li > button:first-child {flex:1;min-width:0;}
 .search .results > li > .detail {display:grid;place-items:center;flex:0 0 36px;width:36px;min-height:44px;padding:0 8px 0 0;background:transparent;color:var(--text-muted);font-size:22px;line-height:1;}
+
+.search .results {
+  padding: 5px;
+  overscroll-behavior-y: contain;
+}
+.search .results > li { border: 0; }
+.search .results > li > button:first-child {
+  min-height: 60px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+}
+.search .results > li > button:first-child:hover:not(:disabled) { background: var(--accent-soft); }
+.search .results > li > button:first-child > span:last-child { gap: 4px; }
+.search .results > li > button:focus-visible { outline-offset: -2px; }

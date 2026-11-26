@@ -1,6 +1,11 @@
 .strip {
   display: flex;
   gap: 6px;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
 }
 
 .strip > button[aria-pressed], .chip.chip[aria-pressed] {
@@ -13,6 +18,8 @@
   border: 0;
   background: transparent;
   font-size: 12px;
+  font-weight: 650;
+  line-height: 1.6;
   white-space: nowrap;
 }
 
@@ -33,3 +40,6 @@
 }
 
 .chip > span { display: flex; justify-content: center; gap: 4px; background: var(--surface-card); }
+
+.strip::-webkit-scrollbar { display: none; }
+.strip > button:focus-visible { outline-offset: -3px; }

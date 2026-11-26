@@ -47,8 +47,7 @@
 .selectedDay button { flex:none; }
 .listHeading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; font-size:14px; }
 .listHeading strong { min-width:0; }
-.listHeading select { width:auto; max-width:145px; min-width:0; min-height:36px; padding:6px; }
-.list .listHeading button { flex:none; min-height:36px; padding:4px 8px; font-size:12px; }
+.listFilter { margin-inline-start: auto; }
 .filters { margin-bottom:10px; flex-wrap:wrap; }
 .filters label { flex:1; min-width:0; }
 .filters select { width:100%; min-width:0; font-size:13px; }
@@ -60,10 +59,6 @@
 .cardTop { display:flex; align-items:center; gap:8px; min-height:28px; }
 .tag { flex:none; font-size:11px; color:var(--accent); }
 .cardMenu { position:relative; margin-left:auto; flex:none; }
-.compactCard .cardMenu summary { display:grid; place-items:center; min-width:36px; min-height:32px; padding:0; cursor:pointer; list-style:none; font-size:22px; line-height:1; }
-.cardMenu summary::-webkit-details-marker { display:none; }
-.cardMenu > div { position:absolute; right:0; top:100%; z-index:2; display:grid; min-width:100px; padding:4px; background:var(--surface-input); border:1px solid var(--border-subtle); border-radius:5px; }
-.cardMenu button { min-height:44px; text-align:left; }
 .compactCard .cardBody { display:grid; gap:4px; padding:0; width:100%; min-width:0; text-align:left; background:transparent; border:0; border-radius:0; color:var(--text-primary); font-weight:400; line-height:1.4; }
 .cardName { font-size:18px; font-weight:650; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .cardDays { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:12px; }
@@ -75,15 +70,9 @@
 .scheduleEditor { display:grid; gap:14px; min-width:0; width:100%; grid-template-columns:minmax(0,1fr); }
 .scheduleEditor fieldset { padding:0; margin:0; border:0; min-width:0; }
 .candidateFilters { display:flex; flex-wrap:wrap; gap:6px; align-items:center; width:100%; }
-.candidateTags { position:relative; min-width:0; }
-.candidateTagOptions { position:absolute; top:calc(100% + 4px); right:0; z-index:3; display:grid; gap:4px; min-width:110px; max-height:260px; overflow:auto; padding:5px; border:1px solid var(--border-subtle); border-radius:5px; background:var(--surface-input); }
 .tagField { position:relative; min-width:0; }
-.tagOptions { position:absolute; inset:calc(100% + 4px) 0 auto; z-index:6; max-height:min(360px,45dvh); overflow:auto; overscroll-behavior-y:contain; padding:5px; border:1px solid var(--border-subtle); border-radius:var(--radius-control); background:var(--surface-input); }
-.tagOptions button { display:grid; gap:4px; min-height:54px; width:100%; padding:10px; text-align:left; border-radius:4px; background:transparent; }
-.tagOptions button[aria-selected='true'] { color:var(--accent); background:var(--accent-soft); }
+.editor .tagField :global([data-dropdown='value']) > button { font-size:14px; font-weight:400; }
 .editor .identityField { display:grid; gap:4px; font-size:12px; font-weight:400; line-height:18px; color:var(--text-muted); }
-.editor .identityField .tagTrigger { min-width:0; width:100%; height:44px; min-height:44px; padding:10px 12px; font:inherit; color:var(--text-primary); background:var(--surface-input); border:1px solid var(--border-subtle); border-radius:var(--radius-control); }
-.editor .identityField .tagTrigger { display:flex; align-items:center; justify-content:space-between; font-size:14px; font-weight:400; text-align:left; }
 .tagDescription { display:block; margin-top:6px; color:var(--text-muted); font-size:12px; }
 .detailActions { display:flex; align-items:center; gap:4px; }
 .detailActions button { min-height:44px; padding:8px; }
@@ -93,8 +82,4 @@
 .exerciseActions button { min-width:0; min-height:44px; padding:8px 3px; }
 .scheduleEditor select { display:block; width:100%; min-width:0; min-height:44px; }
 .scheduleDays { display:grid; gap:9px; width:100%; grid-template-columns:minmax(0,1fr); }
-.scheduleDays label { display:grid; grid-template-columns:44px minmax(0,1fr); align-items:center; gap:8px; font-size:14px; }
-.scheduleDays option { white-space:normal; }
-.scheduleDays select { width:100%; max-width:100%; min-width:0; box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.listHeading[data-preset='true'] select,.scheduleEditor[data-preset='true'] .chip { min-height:44px; }
-.scheduleEditor[data-preset='true'] .candidateTags:first-child .candidateTagOptions { left:0; right:auto; }
+.scheduleDay { display:grid; grid-template-columns:44px minmax(0,1fr); align-items:center; gap:8px; font-size:14px; }

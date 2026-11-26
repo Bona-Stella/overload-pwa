@@ -1,3 +1,5 @@
+import { ActionMenu } from '../../components/common-ui/ActionMenu.tsx'
+import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import {SavedWeightReview} from './SavedWeightReview.tsx'
 import type {ReactNode} from 'react'
 import { durationLabel } from '../../components/duration.ts'
@@ -176,22 +178,11 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
   const [dialog, setDialog] = useState<'delete' | 'recovery' | EditTarget | null>(null)
   const [deleteCloseGuard] = useState(createRepeatPointerGuard)
   const [confirm, confirmation] = useConfirmation()
-  const menuRef = useRef<HTMLDetailsElement>(null)
   const server = state.server, disabled = state.busy || !state.writable || !!server?.deletedAt || state.pending?.status === 'PENDING'
   const pending = state.pending?.status === 'PENDING'
   const notice = !dialog && server && (state.issue || (!pending && state.notice))
   const feedback = useReadErrorToast(notice || null, state.issue ? pending ? 'warning' : 'error' : state.noticeTone ?? 'info')
   const toast = <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
-  useEffect(() => {
-    const close = (e: PointerEvent | KeyboardEvent) => {
-      const menu=menuRef.current
-      if(!menu?.open)return
-      if(e instanceof KeyboardEvent) { if(e.key!=='Escape')return; menu.open=false;menu.querySelector('summary')?.focus() }
-      else if(e.target instanceof Node&&!menu.contains(e.target))menu.open=false
-    }
-    document.addEventListener('pointerdown',close);document.addEventListener('keydown',close)
-    return ()=>{document.removeEventListener('pointerdown',close);document.removeEventListener('keydown',close)}
-  }, [])
   if (!server) return <ContentError title="운동 기록을 불러오지 못했어요." action={<RefreshButton loading={state.busy} failure={state.issue} onRefresh={() => void controller.refresh()} />} />
   const name = (id: string) => recordName(server,id,definitions)
   const status = <>
@@ -208,16 +199,12 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
       disabled={state.busy || !state.writable || server.status!=='FINISHED' || c.writerEpoch!==server.writerEpoch || c.editorDeviceId!==server.editorDeviceId}
       onClick={()=>void controller.confirmFinish(c)}>종료 결과 확인</Button>)}
   </>
-  const menuAction = (action: () => void) => { if(menuRef.current)menuRef.current.open=false; action() }
-  const menu = <details className={styles.recordMenu} ref={menuRef}><summary aria-label="운동 기록 메뉴"><span aria-hidden="true">⋮</span></summary><div>
-    <Button shape="control" disabled={disabled} onClick={()=>menuAction(()=>setMode('correction'))}>기록 정정</Button>
-    <Button shape="control" disabled={disabled || !state.copies.length || !state.changes} onClick={()=>menuAction(()=>setDialog('recovery'))}>누락 수행 복구</Button>
-    <Button shape="control" data-danger disabled={disabled} onClick={event => {
-      deleteCloseGuard.arm(event)
-      menuAction(() => setDialog('delete'))
-    }}>기록 전체 삭제</Button>
-    <Button shape="control" onClick={()=>menuAction(()=>setMode('history'))}>평가 변경 이력</Button>
-  </div></details>
+  const menu = <ActionMenu label="운동 기록 메뉴" className={styles.recordMenu} icon="⋮" actions={[
+    { label: '기록 정정', disabled, run: () => setMode('correction') },
+    { label: '누락 수행 복구', disabled: disabled || !state.copies.length || !state.changes, run: () => setDialog('recovery') },
+    { label: '평가 변경 이력', run: () => setMode('history') },
+    { label: '기록 전체 삭제', danger: true, disabled, run: event => { deleteCloseGuard.arm(event); setDialog('delete') } },
+  ]} />
   const dialogs = <>
     {confirmation}
     {dialog==='delete' && <DeleteDialog server={server} controller={controller} busy={state.busy} issue={state.issue} resultPending={state.pending?.status === 'PENDING'} closePointerGuard={deleteCloseGuard} onClose={()=>setDialog(null)}/>}
@@ -396,7 +383,9 @@ function RecoveryDialog({ state, controller, onClose, manufacturers, definitions
   }
   return <Dialog title="누락 수행 복구" dismissBlocked={locked} onClose={onClose}><div className={styles.recordForm}>
     <p className="muted small">이 기기에 남은 완료 기록 중 누락된 수행만 선택해 복구합니다. 이미 저장되거나 삭제된 수행은 복구할 수 없습니다.</p>
-    <label>보관된 운동 기록<select value={copyIndex} disabled={locked || confirming} onChange={e=>{setCopyIndex(Number(e.target.value));setSelected([]);setIssue('')}}>{initial.copies.map((c,i)=><option value={i} key={i}>{time(c.startedAt)} · {c.snapshot.performedSets.length}세트</option>)}</select></label>
+    <DropdownField label="보관된 운동 기록" value={String(copyIndex)} disabled={locked || confirming}
+      options={initial.copies.map((c, i) => ({ id: String(i), name: `${time(c.startedAt)} · ${c.snapshot.performedSets.length}세트` }))}
+      onChange={id => { setCopyIndex(Number(id)); setSelected([]); setIssue('') }} />
     <section aria-label="복구 가능한 수행">{rows.filter(r=>r.selectable).map(renderRow)}{!rows.some(r=>r.selectable)&&<p className="muted small">복구 가능한 누락 수행이 없습니다.</p>}</section>
     {rows.some(r=>!r.selectable)&&<details><summary>복구할 수 없는 기록 확인</summary>{rows.filter(r=>!r.selectable).map(renderRow)}</details>}
     {issue&&<StatusNotice error>{issue}</StatusNotice>}

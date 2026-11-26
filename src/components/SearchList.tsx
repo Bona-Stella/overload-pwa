@@ -7,7 +7,7 @@ import styles from '../features/workout-online/PublicCatalog.module.css'
 import filterStyles from './common-ui/FilterTags.module.css'
 import searchStyles from './SearchList.module.css'
 import {useExerciseDetails} from './search-detail-context.ts'
-export type SearchTags={label:string;options:{id:string;name:string}[];selected:string;onSelect:(id:string)=>void}
+export type SearchTags={label:string;hideLabel?:boolean;options:{id:string;name:string}[];selected:string;onSelect:(id:string)=>void}
 export type SearchOption={id:string;name:string;description:string;icon?:ReactNode;exerciseId?:string}
 export type SearchScopeControl={options:{id:string;name:string}[];value:string;disabled?:boolean;onOpen:()=>void;onChange:(id:string)=>void}
 export function SearchResults({options,onSelect,onDetail,disabled=false,label='검색 결과'}:{onDetail?:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;options:SearchOption[];onSelect:(id:string,event:MouseEvent<HTMLButtonElement>)=>void;disabled?:boolean;label?:string}){
@@ -53,7 +53,7 @@ export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,
     <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">{mode==='IDLE'?<><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></>:<path d="m6 6 12 12M18 6 6 18"/>}</svg>
    </button>
   </div>
-  {tags&&open&&<div className={styles.filters}><p className={styles.filterLabel}>{tags.label}</p><div className={`${filterStyles.strip} ${styles.filterStrip}`} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}
+  {tags&&open&&<div className={styles.filters}>{!tags.hideLabel&&<p className={styles.filterLabel}>{tags.label}</p>}<div className={`${filterStyles.strip} ${styles.filterStrip}`} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}
   {open&&<>{options.length>0 && <SearchResults onDetail={onDetail} options={options} label={resultsLabel} disabled={disabled || resultsPending} onSelect={(id,event)=>{
     if(closeOnSelect)region.current?.querySelector('input')?.blur()
     onSelect(id,event)

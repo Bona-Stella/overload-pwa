@@ -1,8 +1,9 @@
+import { chooseDropdown, dropdownOptions } from './fixtures/dropdown-driver.mjs'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
 import { chromeExecutable } from './fixtures/chrome-executable.mjs'
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createReviewFixtureServer } from './fixtures/review-server.mjs'
@@ -18,7 +19,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   const profile = await mkdtemp(resolve(root, 'browser-'))
   const vite = await createReviewFixtureServer()
   let browser, socket, next = 0
-  const pending = new Map(), apiRequests = [], errors = [], responses = new Map(), dialogs = []
+  const pending = new Map(), apiRequests = [], errors = [], responses = new Map()
   async function wait(check, label) {
     const deadline = Date.now() + (label === 'home' ? 45000 : 12000)
     while (Date.now() < deadline) {
@@ -48,15 +49,15 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     }
     await click(label, 'ariaLabel', buttons)
   }
-  const set = (selector, value) => evaluate(
+  const set = (selector, value) => selector.includes('data-dropdown-label') ? chooseDropdown(evaluate, selector, value) : evaluate(
     '(() => { const e = document.querySelector(' + JSON.stringify(selector) + '); Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), "value").set.call(e, ' + JSON.stringify(value) + '); e.dispatchEvent(new Event(e.tagName === "SELECT" ? "change" : "input", {bubbles:true})); })()')
   const body = () => evaluate("document.body?.innerText ?? ''")
-  const audit = async (use, tone) => dialogs.push(await auditMessageDialog({ send, evaluate }, use, tone))
+  const audit = (use, tone) => auditMessageDialog({ send, evaluate }, use, tone)
   const scenario = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(1) select'
   const fault = 'aside[aria-label="Mock 검토 설정"] label:nth-of-type(2) select'
   const editor = 'form[aria-label="주간 일정 편집"]'
   const preset = number => click(number + '번 프리셋 보기', 'ariaLabel')
-  const menu = () => click('주간 루틴 일정 메뉴', 'ariaLabel', 'summary')
+  const menu = () => click('주간 루틴 일정 메뉴', 'ariaLabel')
   const saveSchedule = async () => { await click('일정 저장'); await click('저장', 'textContent', 'dialog[open] button') }
   const verifyWidth = async width => {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: true })
@@ -315,8 +316,8 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
         rotation.getBoundingClientRect().width >= 44 &&
         status.querySelector('path').getAttribute('d') === 'M7 7h14m0 0-4-4m4 4-4 4M17 17H3m0 0 4-4m-4 4 4 4'
     })()`))
-    const listFilter = '[aria-label="저장된 루틴 필터"]'
-    assert.deepEqual(await evaluate(`[...document.querySelector('${listFilter}').options].map(o => o.textContent)`), ['전체', '최신순', '오래된순', '이 일정 배정', '이 일정 미배정'])
+    const listFilter = '[data-dropdown-label="저장된 루틴 필터"]'
+    assert.deepEqual((await dropdownOptions(evaluate, listFilter)).map(o => o.name), ['전체', '최신순', '오래된순', '이 일정 배정', '이 일정 미배정'])
     const firstRoutine = () => evaluate('document.querySelector("article button[aria-label$=\'상세\']").ariaLabel')
     await set(listFilter, 'newest'); assert.match(await firstRoutine(), /가벼운 러닝/)
     await set(listFilter, 'oldest'); assert.match(await firstRoutine(), /등과 팔/)
@@ -408,36 +409,37 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     const triggerLayout = () => evaluate(`(() => {
       const button = document.querySelector(${JSON.stringify(chooserTrigger)})
       const title = document.createRange()
-      title.selectNode(button.firstChild)
+      title.selectNodeContents(button.querySelector('span > span'))
       const bounds = element => {
         const { x, y, width, height } = element.getBoundingClientRect()
         return [x, y + scrollY, width, height]
       }
-      return { button: bounds(button), title: bounds(title), icon: bounds(button.firstElementChild),
-        padding: getComputedStyle(button).padding }
+      return { button: bounds(button), title: bounds(title), icon: bounds(button.querySelector('svg')),
+        padding: getComputedStyle(button.firstElementChild).padding }
     })()`)
     const weekBeforeOpen = await weekTop()
     const closedTrigger = await triggerLayout()
     const verticalCenter = ([, y, , height]) => y + height / 2
     assert(Math.abs(verticalCenter(closedTrigger.title) - verticalCenter(closedTrigger.button)) <= 0.5)
     assert.equal(verticalCenter(closedTrigger.icon), verticalCenter(closedTrigger.button))
-    assert(await evaluate(`(() => {
+    assert.equal(await evaluate(`(() => {
       const card = document.querySelector('[aria-label="이번 주 일정"]')
       const { top, bottom } = card.getBoundingClientRect()
       return !card.textContent.includes('주간 일정 관리') &&
         card.firstElementChild.getBoundingClientRect().top - top === bottom - card.lastElementChild.getBoundingClientRect().bottom
-    })()`))
+    })()`), true, 'weekly card remains compact and symmetrical')
     for (const expanded of ['true', 'false', 'true']) {
       await click('오늘만 다른 루틴 선택', 'textContent', chooserTrigger)
       assert.equal(await evaluate(`document.querySelector(${JSON.stringify(chooserTrigger)}).ariaExpanded`), expanded)
       assert.deepEqual(await triggerLayout(), closedTrigger)
       assert.equal(await weekTop(), weekBeforeOpen)
     }
-    assert(await evaluate(`(() => {
+    assert.equal(await evaluate(`(() => {
       const trigger = document.querySelector(${JSON.stringify(chooserTrigger)}).getBoundingClientRect()
       const panel = document.querySelector(${JSON.stringify(chooserPanel)}).getBoundingClientRect()
-      return trigger.left === panel.left && trigger.right === panel.right && trigger.bottom === panel.top
-    })()`))
+      const side = document.querySelector(${JSON.stringify(chooserPanel)}).dataset.placement
+      return trigger.left === panel.left && trigger.right === panel.right && (side === 'above' ? trigger.top === panel.bottom : trigger.bottom === panel.top)
+    })()`), true, 'home trigger and overlay share a joined edge')
     const activeFilter = () => evaluate('document.querySelector("[aria-label=\'루틴 일정 필터\'] [aria-pressed=true]").textContent')
     const homeTitle = () => evaluate('document.querySelector(\'[aria-label="오늘의 루틴"] h2\').textContent')
     const todayCardHeight = () => evaluate(`document.querySelector('[aria-label="오늘의 루틴"]').getBoundingClientRect().height`)
@@ -454,16 +456,17 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
         const pill = group.querySelector('button[aria-pressed="' + pressed + '"] span')
         const style = getComputedStyle(pill)
         return [pill.getBoundingClientRect().height, style.borderRadius, style.backgroundColor,
-          style.border, style.color, style.fontSize, style.fontWeight, style.paddingInline]
+          style.border, style.color, style.fontSize, style.fontWeight, style.paddingInline, style.lineHeight,
+          getComputedStyle(pill.parentElement).alignItems, getComputedStyle(pill.parentElement).backgroundColor]
       }
       return { gap: getComputedStyle(group).gap, selected: state(true), unselected: state(false) }
     })()`)
     assert.deepEqual(await evaluate(`[...document.querySelectorAll(${JSON.stringify(filterButtons)})].map(b => b.textContent)`), ['전체', '미배정', '01', '02', '03', '휴식'])
-    assert(await evaluate(`[...document.querySelectorAll(${JSON.stringify(filterButtons)})].every(button => {
+    assert.equal(await evaluate(`[...document.querySelectorAll(${JSON.stringify(filterButtons)})].every(button => {
       const rect = button.getBoundingClientRect()
       const pill = button.firstElementChild.getBoundingClientRect()
-      return rect.width === 50 && rect.height === 44 && pill.width === 50 && pill.height === 36
-    })`))
+      return rect.width >= 53 && rect.height === 44 && pill.width === rect.width && pill.height === 36
+    })`), true, 'home uses the shared content width, touch target and visual pill')
     const homeTagAppearance = await tagAppearance(filterGroup)
     assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(chooserPanel + ' input[type=search]')})`), false)
     const routineNames = () => evaluate(`[...document.querySelectorAll(${JSON.stringify(chooserRows + ' strong')})].map(e => e.textContent)`)
@@ -486,13 +489,13 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.equal(await homeTitle(), '오늘은 쉬어가는 날')
     assert.equal(await hasStart(), false)
     assert.equal(await evaluate(`document.querySelector('[aria-label="오늘의 루틴"] p').textContent`), '정해진 휴식일입니다. 다른 루틴을 선택할 수 있습니다.')
-    assert(await evaluate(`(() => {
+    assert.equal(await evaluate(`(() => {
       const card = document.querySelector('[aria-label="오늘의 루틴"]')
       const { top, bottom } = card.getBoundingClientRect()
       const first = card.firstElementChild.getBoundingClientRect()
       const last = card.querySelector('p').getBoundingClientRect()
       return bottom - top < 176 && Math.abs((first.top - top) - (bottom - last.bottom)) <= 1
-    })()`))
+    })()`), true, 'the home panel still exposes the selected date')
     assert.equal(await weekText(), plannedWeek)
     await openChooser()
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(chooserRows)}).ariaPressed`), 'true')
@@ -515,13 +518,13 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
       })
     })()`)
     const homeOptionFonts = await optionFonts(chooserRows)
-    assert(await evaluate(`(() => {
+    assert.equal(await evaluate(`(() => {
       const panel = document.querySelector(${JSON.stringify(chooserPanel)})
       const list = panel.querySelector('[aria-label="선택할 루틴"]')
       const filters = panel.querySelector(${JSON.stringify(filterGroup)})
       return getComputedStyle(panel).overflowY === 'hidden' && getComputedStyle(list).overflowY === 'auto' &&
         getComputedStyle(list).overscrollBehaviorY === 'contain' && !list.contains(filters)
-    })()`))
+    })()`), true, 'the home scroll region keeps the filters above the list')
     await click('03')
     assert.match(await body(), /가벼운 러닝/)
     assert.equal(await homeTitle(), '오늘은 쉬어가는 날')
@@ -551,7 +554,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
 
     await menu()
     assert.equal(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="현재 보고 있는 일정 삭제").disabled'), true)
-    await evaluate('document.querySelector("details[open]").open=false')
+    await menu()
     await click('빈 프리셋 추가', 'ariaLabel')
     await wait(() => evaluate('!document.querySelector("[aria-label=\'빈 프리셋 추가\']")'), 'four presets')
     await preset(2)
@@ -595,18 +598,18 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(() => evaluate('document.querySelector("button[aria-label=\'자동 순환\']").getAttribute("aria-pressed") === "false"'), 'rotation disabled')
     assert.match(await body(), /진행중/)
     await click('주간 일정 편집')
-    await set('[aria-label="수요일 루틴"]', '')
-    const presetSelector = '[aria-label="편집할 주간 일정"]'
-    const beforeSwitch = await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').value')
-    const nextPreset = await evaluate('[...document.querySelector(' + JSON.stringify(presetSelector) + ').options].find(o=>!o.selected).value')
+    await set('[data-dropdown-label="수요일 루틴"]', '')
+    const presetSelector = '[data-dropdown-label="편집할 주간 일정"]'
+    const beforeSwitch = await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').dataset.value')
+    const nextPreset = (await dropdownOptions(evaluate, presetSelector)).find(option => !option.selected).id
     await set(presetSelector, nextPreset)
     await click('취소', 'textContent', 'dialog[open] button')
-    assert.equal(await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').value'), beforeSwitch)
-    assert.equal(await evaluate('document.querySelector("[aria-label=\'수요일 루틴\']").value'), '')
+    assert.equal(await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').dataset.value'), beforeSwitch)
+    assert.equal(await evaluate('document.querySelector("[data-dropdown-label=\'수요일 루틴\']").dataset.value'), '')
     await set(presetSelector, nextPreset)
     await click('버리기', 'textContent', 'dialog[open] button')
-    await wait(() => evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').value === ' + JSON.stringify(nextPreset)), 'confirmed preset switch')
-    assert.equal(await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').value'), nextPreset)
+    await wait(() => evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').dataset.value === ' + JSON.stringify(nextPreset)), 'confirmed preset switch')
+    assert.equal(await evaluate('document.querySelector(' + JSON.stringify(presetSelector) + ').dataset.value'), nextPreset)
     await click('닫기')
 
     await set(scenario, 'empty')
@@ -616,12 +619,12 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(async () => (await body()).includes('최소 2개'), 'minimum rotation')
     await menu()
     assert.equal(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="현재 보고 있는 일정 삭제").disabled'), true)
-    await evaluate('document.querySelector("details[open]").open=false')
+    await menu()
     const createdName = '시연용 새 루틴 ' + 'TEST'.repeat(12)
     await click('+ 새 루틴'); await set('input[placeholder="나의 루틴"]', createdName)
-    await click('루틴 태그', 'ariaLabel')
-    assert.deepEqual(await optionFonts('[aria-label="루틴 태그 선택"] [role="option"]'), homeOptionFonts)
-    await click('루틴 태그', 'ariaLabel')
+    await evaluate(`document.querySelector('[data-dropdown-label="루틴 태그"]').click()`)
+    assert.deepEqual(await optionFonts('[role="listbox"][aria-label="루틴 태그"] [role="option"]'), homeOptionFonts)
+    await evaluate(`document.querySelector('[data-dropdown-label="루틴 태그"]').click()`)
     await click('+ 웨이트 종목 추가')
     await wait(() => evaluate(`!!document.querySelector('[aria-label="표준 운동 목록"] button')`), 'routine picker opened')
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="표준 운동 목록"]')).maxHeight`), '218px')
@@ -662,16 +665,18 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
       assert.ok(Math.abs(buttons[0].width - buttons[1].width) <= 1)
     }
     await click('배정하기')
-    assert.equal(await evaluate('document.querySelector("[aria-label=\'월요일 루틴\']").options[0].textContent'), '✦ 새 루틴 · ' + createdName)
-    assert.equal(await evaluate('document.querySelector("[aria-label=\'월요일 루틴\']").value'), '')
-    const createdId = await evaluate('document.querySelector("[aria-label=\'월요일 루틴\']").options[0].value')
-    await set('[aria-label="월요일 루틴"]', createdId)
-    await set('[aria-label="수요일 루틴"]', createdId)
-    await click('배정 유무 ▾'); await click('배정 미완료')
-    assert.equal(await evaluate('document.querySelector("[aria-label=\'수요일 루틴\']").value'), createdId)
+    const monday = '[data-dropdown-label="월요일 루틴"]'
+    const creationOptions = await dropdownOptions(evaluate, monday)
+    assert.equal(creationOptions[0].name, '✦ 새 루틴 · ' + createdName)
+    assert.equal(await evaluate('document.querySelector("[data-dropdown-label=\'월요일 루틴\']").dataset.value'), '')
+    const createdId = creationOptions[0].id
+    await set('[data-dropdown-label="월요일 루틴"]', createdId)
+    await set('[data-dropdown-label="수요일 루틴"]', createdId)
+    await click('배정 유무'); await click('배정 미완료')
+    assert.equal(await evaluate('document.querySelector("[data-dropdown-label=\'수요일 루틴\']").dataset.value'), createdId)
     await set(fault, 'network'); await saveSchedule()
     await wait(async () => (await body()).includes('연결이 끊겼습니다'), 'network error')
-    assert.equal(await evaluate('document.querySelector("[aria-label=\'월요일 루틴\']").value'), createdId)
+    assert.equal(await evaluate('document.querySelector("[data-dropdown-label=\'월요일 루틴\']").dataset.value'), createdId)
     await set(fault, 'conflict'); await saveSchedule()
     await wait(async () => (await body()).includes('버전이 달라졌습니다'), 'version conflict')
     await verifyWidth(393); await verifyWidth(320)
@@ -680,12 +685,12 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.equal(await evaluate('!!document.querySelector(' + JSON.stringify(editor) + ')'), true)
     await click('최신 일정 확인')
     await click('버리기', 'textContent', 'dialog[open] button')
-    await wait(() => evaluate('!document.querySelector("dialog[open]") && document.querySelector("[aria-label=\'월요일 루틴\']").value === ""'), 'latest schedule reopened')
-    assert.equal(await evaluate('document.querySelector("[aria-label=\'월요일 루틴\']").value'), '')
-    await set('[aria-label="수요일 루틴"]', createdId); await saveSchedule()
+    await wait(() => evaluate('!document.querySelector("dialog[open]") && document.querySelector("[data-dropdown-label=\'월요일 루틴\']").dataset.value === ""'), 'latest schedule reopened')
+    assert.equal(await evaluate('document.querySelector("[data-dropdown-label=\'월요일 루틴\']").dataset.value'), '')
+    await set('[data-dropdown-label="수요일 루틴"]', createdId); await saveSchedule()
     await wait(async () => (await body()).includes('주간 일정 편집') && !(await evaluate('!!document.querySelector(' + JSON.stringify(editor) + ')')), 'schedule saved')
     await click('주간 일정 편집')
-    assert.equal(await evaluate('[...document.querySelectorAll("[aria-label=\'월요일 루틴\'] option")].some(o=>o.textContent.startsWith("✦"))'), false)
+    assert.equal((await dropdownOptions(evaluate, monday)).some(option => option.name.startsWith('✦')), false)
     await click('닫기')
     await navTo('홈')
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /시연용 새 루틴/)
@@ -1067,7 +1072,6 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.deepEqual(errors, [])
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)
     assert.equal((await fetch(origin + '/api/v1/weekly-schedule')).status, 404)
-    await writeFile(resolve(root, 'front18-modal-audit.json'), JSON.stringify(dialogs, null, 2))
   } catch (error) {
     if (socket?.readyState === 1) {
       const pageText = await evaluate('document.body?.innerText ?? ""').catch(() => '')

@@ -218,15 +218,6 @@
 .reviewChange, .reviewEvidence { min-width: 0; max-width: 100%; white-space: nowrap; overflow-x: auto; scrollbar-width: none; }
 .reviewEvidence { text-align: right; }
 .reviewValues [data-incomplete] { color: var(--status-warning); }
-.recordMenu { position: relative; }
-.recordMenu > summary { display: grid; place-items: center; min-width: 44px; min-height: 44px; cursor: pointer; list-style: none; font-size: 22px; }
-.recordMenu > summary::-webkit-details-marker { display: none; }
-.recordMenu > div { position: absolute; top: 100%; right: 0; z-index: 3; display: grid; width: max-content; max-width: min(280px, 80vw); padding: 6px; background: var(--surface-card); border: 1px solid var(--line); border-radius: var(--radius-control); box-shadow: 0 8px 20px #0005; }
-.recordMenu button { min-height: 44px; text-align: left; border: 0; border-radius: 0; background: transparent; }
-.recordMenu button + button { border-top: 1px solid var(--border-subtle); }
-.recordMenu button:hover:not(:disabled), .recordMenu button:active:not(:disabled) { background: var(--surface-input); }
-.recordMenu button:focus-visible { outline-offset: -3px; }
-.recordMenu button[data-danger] { color: var(--status-danger-text); }
 
 .recordTimes { display: grid; gap: 6px; margin: 0; font-size: 12px; }
 .recordTimes > div { display: flex; gap: 12px; justify-content: space-between; }

@@ -1,3 +1,4 @@
+import { ActionMenu } from '../../components/common-ui/ActionMenu.tsx'
 import type { ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { dayNames } from './routine-schedule.ts'
@@ -12,11 +13,6 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
 }) {
   const active = schedule.activeId === viewed.id
   const number = presetNumber(schedule.presets.indexOf(viewed))
-  const menuAction = (button: HTMLButtonElement, action: () => void) => {
-    const menu = button.closest('details')
-    if (menu) { menu.open = false; menu.querySelector('summary')?.focus({ preventScroll: true }) }
-    action()
-  }
   return <>
     <div className={styles.titleRow}>
       <span className={styles.kicker}>주간 루틴 일정</span>
@@ -33,13 +29,12 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 8a8 8 0 0 0-14-2L4 9m0-5v5h5m-5 7a8 8 0 0 0 14 2l2-3m0 5v-5h-5"/></svg>
         </button>
         {viewToggle}
-        <details className={styles.menu}><summary aria-label="주간 루틴 일정 메뉴">⋯</summary><div>
-          {onPlan && <button type="button" disabled={busy} onClick={e => menuAction(e.currentTarget, onPlan)}>계획 분석</button>}
-          {onRename ? <button type="button" disabled={busy || readOnly} onClick={e => menuAction(e.currentTarget, onRename)}>이름 변경</button>
-            : <button type="button" disabled>이름 변경 · 서버 미지원</button>}
-          <button type="button" disabled={busy} onClick={e => menuAction(e.currentTarget, onOrganize)}>주간 일정 전체 편집</button>
-          <button type="button" className="danger" disabled={busy || readOnly || !canDeletePreset(schedule, viewed)} onClick={e => menuAction(e.currentTarget, onDelete)}>현재 보고 있는 일정 삭제</button>
-        </div></details>
+        <ActionMenu label="주간 루틴 일정 메뉴" actions={[
+          ...(onPlan ? [{ label: '계획 분석', disabled: busy, run: onPlan }] : []),
+          onRename ? { label: '이름 변경', disabled: busy || readOnly, run: onRename } : { label: '이름 변경 · 서버 미지원', disabled: true },
+          { label: '주간 일정 전체 편집', disabled: busy, run: onOrganize },
+          { label: '현재 보고 있는 일정 삭제', danger: true, disabled: busy || readOnly || !canDeletePreset(schedule, viewed), run: onDelete },
+        ]} />
       </div>
     </div>
   </>

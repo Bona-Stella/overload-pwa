@@ -1,3 +1,4 @@
+import { chooseDropdown, dropdownOptions } from './fixtures/dropdown-driver.mjs'
 import {verifyNinthUi} from './fixtures/ninth-ui-checks.mjs'
 import {verifyEighthUi} from './fixtures/eighth-ui-checks.mjs'
 import {verifySeventhUi} from './fixtures/seventh-ui-checks.mjs'
@@ -212,7 +213,9 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   await click('분류별');assert.equal(await evaluate('document.querySelectorAll(".analysis-subtotal").length'),3);await click('근육별')
   assert.equal(await evaluate('document.querySelector("[role=switch]").getAttribute("aria-checked")'),'false')
   await evaluate('document.querySelector("[role=switch]").click()');await wait(()=>evaluate('document.querySelector("[role=switch]").getAttribute("aria-checked")==="true"'),'show zero on')
-  await click('분류별');await set('.muscle-analysis select',await evaluate('document.querySelector(".muscle-analysis select").options[1].value'))
+  await click('분류별')
+  const planPreset = '.muscle-analysis [data-dropdown-label="분석 대상 프리셋"]'
+  await chooseDropdown(evaluate, planPreset, (await dropdownOptions(evaluate, planPreset))[1].id)
   assert.equal(await evaluate('document.querySelector("[role=switch]").getAttribute("aria-checked")'),'true')
   await click('근육별');assert.ok(await evaluate('document.querySelectorAll(".record-gauge-guide").length>0'))
   report.interactions.push('plan preset, tabs, zero toggle preserved, downward guide markers')

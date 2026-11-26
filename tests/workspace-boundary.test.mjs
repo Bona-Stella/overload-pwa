@@ -1,3 +1,4 @@
+import { chooseDropdown, dropdownOptions } from './fixtures/dropdown-driver.mjs'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
@@ -211,7 +212,8 @@ test('real React reconciliation respects workout, settings, account, generation 
     await click(graphMenu+' button[aria-label="주간 근육 계획"]')
     await wait(() => visible(plan+' .analysis-row'))
     assert.equal(await evaluate('window.graphBoundary.routineReads'), 1, 'reentering uses the confirmed preset for this revision')
-    await evaluate(`(()=>{const preset=document.querySelector('[aria-label="주간 근육 계획"] select');preset.selectedIndex=1;preset.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+    const planPreset = '[aria-label="주간 근육 계획"] [data-dropdown-label="분석 대상 프리셋"]'
+    await chooseDropdown(evaluate, planPreset, (await dropdownOptions(evaluate, planPreset))[1].id)
     await wait(() => evaluate('document.querySelector("[aria-label=\\"주간 계획 요약\\"] strong")?.textContent==="0세트"'))
     assert.equal(await evaluate('window.graphBoundary.routineReads'), 1, 'an empty preset has no routines to fetch')
     await evaluate('history.back()')

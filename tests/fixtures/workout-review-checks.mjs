@@ -1,3 +1,4 @@
+import { chooseDropdown } from './dropdown-driver.mjs'
 
 import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
@@ -208,8 +209,6 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             const requestedScroll = await evaluate('window.scrollY')
             await delay(260)
             const afterPan = await evaluate(`({ padding: getComputedStyle(document.querySelector('[data-workout-frame]')).paddingBottom, height: document.documentElement.scrollHeight, scroll: window.scrollY })`)
-            await mkdir(outputDirectory, { recursive: true })
-            await writeFile(outputDirectory + '/memo-scroll-pan-diagnostic-' + width + '.json', JSON.stringify({ beforePan, requestedScroll, afterPan }, null, 2))
             assert.equal(afterPan.padding, beforePan.padding, 'viewport panning must not mutate memo scroll space')
             assert.equal(afterPan.scroll, requestedScroll, 'manual scroll with viewport resize must not snap back')
             assert.equal(await evaluate('window.memoViewportTest.scrollCalls.length'), scrollCalls, 'no application correction after manual pan')
@@ -651,8 +650,8 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('운동·세트 편집')
   await verifyEndClearance()
   await verifyFrameLayouts('set-edit')
-  await labelInput('제조사 · 선택', '10000000-0000-4000-8000-000000000017')
-  await labelInput('부하 방식 · 선택', 'STACK')
+  await chooseDropdown(evaluate, '[data-swipe-current] [data-dropdown-label="제조사 · 선택"]', '10000000-0000-4000-8000-000000000017')
+  await chooseDropdown(evaluate, '[data-swipe-current] [data-dropdown-label="부하 방식 · 선택"]', 'STACK')
   await click('오늘만 장비 변경 적용')
   assert.equal(await rowContains(1, '원판식'), false)
   assert.equal(await evaluate(`document.querySelector('[aria-label="현재 장비"]').textContent`), '해머 스트렝스핀·스택식')

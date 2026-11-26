@@ -28,26 +28,13 @@
 .page .trend :global(.record-search) { margin: 0; }
 .page .trend :global(.record-search-inputs) { grid-template-columns: 84px minmax(0,1fr) 42px; gap: 6px; }
 .page .trend :global(.record-search-inputs[data-expanded]) { grid-template-columns: minmax(0,1fr) 42px; }
-.page .trend :global(.record-search-inputs input), .page .trend .scopeTrigger { border: 0; border-radius: 999px; background: var(--surface-input); padding-inline: 12px; }
+.page .trend :global(.record-search-inputs input) { border: 0; border-radius: 999px; background: var(--surface-input); padding-inline: 12px; }
 /* iOS uses the editable field's font size when bringing it into focus. */
 .page .trend :global(.record-search-inputs input) { font-size: 16px; }
-.page .trend :global(.record-search-inputs input::placeholder), .page .trend .scopeTrigger { font-size: 12px; }
+.page .trend :global(.record-search-inputs input::placeholder) { font-size: 12px; }
 .page .trend :global(.record-search[data-search-state='IDLE'] .search-disclosure) { border-color: var(--border-subtle); background: var(--surface-input); color: var(--text-muted); }
-.scope { position: relative; }
-.page .trend .scopeTrigger { width: 100%; min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 4px; white-space: nowrap; }
-.scopeTrigger svg { flex: none; color: var(--text-muted); }
-.scopeList { position: absolute; top: calc(100% + 6px); inset-inline-start: 0; z-index: 2; min-width: 132px; padding: 5px; border: 1px solid var(--border-subtle); border-radius: 12px; background: var(--surface-input); overflow-y: auto; overscroll-behavior: contain; }
-.scopeList[data-placement='above'] { top: auto; bottom: calc(100% + 6px); }
-.scopeList:focus { outline: none; }
-.scopeList[data-keyboard='true']:focus { outline: 2px solid var(--border-focus); outline-offset: 2px; }
-.scopeOption { display: flex; align-items: center; min-height: 44px; padding-inline: 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
-.scopeOption[aria-selected='true'] { background: var(--accent-soft); color: var(--accent); }
-.scopeList[data-keyboard='true'] .scopeOption[data-active='true'] { box-shadow: inset 0 0 0 1px var(--border-focus); }
-.page .trend :global(.record-search [role='group']) { scrollbar-width: none; }
-.page .trend :global(.record-search [role='group']::-webkit-scrollbar) { display: none; }
 .page .trend :global(.record-search [role='group'] > button) { flex: none; }
 .page .trend :global(.record-search [role='group'] > button > span) { min-height: 36px; padding-inline: 12px; border-radius: 999px; white-space: nowrap; }
-.page .trend :global(.record-search li > button:first-child) { min-height: 56px; padding-block: 8px; }
 .page .chartHeading { padding-top: 12px; border-top: 1px solid var(--border-subtle); }
 .chartHeading > span { min-width: 0; }
 .chartHeading > b { flex: none; }

@@ -1,3 +1,4 @@
+import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
 import { growthChartData } from './growth-chart.ts'
@@ -207,11 +208,9 @@ function Selected({ exercise, api, scope, period, zone, onInvalid, onOpen, onPer
 
   const controls = <>
     <GrowthPeriods period={view?.period ?? period} onChange={onPeriod} />
-    {view && view.options.placements.length > 1 && <label className={styles.placement}>추적할 루틴 배치
-      <select value={view.placement?.placementId} onChange={event => setPlacementId(event.target.value)}>
-        {view.options.placements.map((item, index) => <option key={item.placementId} value={item.placementId}>{item.routineName} · 배치 {index + 1}{item.deleted ? ' · 삭제됨' : ''}</option>)}
-      </select>
-    </label>}
+    {view && view.options.placements.length > 1 && <DropdownField label="추적할 루틴 배치" className={styles.placement} value={view.placement?.placementId}
+      options={view.options.placements.map((item, index) => ({ id: item.placementId,
+        name: `${item.routineName} · 배치 ${index + 1}${item.deleted ? ' · 삭제됨' : ''}` }))} onChange={setPlacementId} />}
   </>
   const readIssue = '승인 이력을 불러오지 못했어요.'
   const feedback = useReadErrorToast(view && (failedSelection && !pending ? failedSelection.message : !view.moreBusy ? view.moreIssue : null))

@@ -813,7 +813,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"] [class*="cardioTime"]\').textContent'),/수정00:20:30$/,'summary displays the correction badge and rounded seconds')
     assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"]\').textContent'),/자동 기록 00:20:00/)
     await evaluate("window.feedback.record('detail')")
-    const recordMenu = 'summary[aria-label="운동 기록 메뉴"]'
+    const recordMenu = 'button[aria-label="운동 기록 메뉴"]'
     const menuAction = expression => evaluate(`(menu=>{${expression}})(document.querySelector(${JSON.stringify(recordMenu)}))`)
     await wait(()=>menuAction('return !!menu'))
     for (const width of [320,375,393,430,1280]) {
@@ -822,7 +822,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       const rows = await menuAction(`
         window.scrollTo(0,0)
         const row=menu.parentElement.parentElement.parentElement, [date,status]=row.children
-        const icon=menu.firstElementChild, divider=row.parentElement.nextElementSibling
+        const icon=menu.firstElementChild.firstElementChild, divider=row.parentElement.nextElementSibling
         const dateText=date.firstChild, statusText=status.lastChild, bounds=e=>e.getBoundingClientRect()
         const dateValue=dateText.data, statusValue=statusText.data
         const center=box=>(box.top+box.bottom)/2
@@ -831,13 +831,14 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
             dateText.data='11.22 · 일 · 07:45:30–23:50:10'
             statusText.data=text
             const [d,s,i,t,line]=[date,status,icon,menu,divider].map(bounds)
+            const hit=document.elementFromPoint(t.right-1,t.bottom-1)
             const card=bounds(divider.parentElement)
             return {
               gap:Math.round(t.left-s.right), iconEnd:Math.abs(i.right-line.right),
               centerDifference:Math.max(Math.abs(center(d)-center(i)),Math.abs(center(s)-center(i))),
               target:[t.width,t.height], dateFits:d.right<=s.left+.5,
               insideCard:t.right<=card.right&&t.top>=card.top&&t.bottom<=card.bottom,
-              hittable:document.elementFromPoint(t.right-1,t.bottom-1)===menu,
+              hittable:menu.contains(hit), hit:hit?.outerHTML.slice(0,180), xy:[t.right-1,t.bottom-1],
               overflow:document.documentElement.scrollWidth>innerWidth,
             }
           })
@@ -850,17 +851,18 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       }
     }
     await viewport(393)
+    await menuAction('menu.click()')
     const popup = await menuAction(`
-      menu.click()
       const target=menu.getBoundingClientRect(), pane=menu.nextElementSibling.getBoundingClientRect()
-      return { inside:pane.left>=0&&pane.right<=innerWidth, anchored:Math.abs(pane.top-target.bottom)<.5&&Math.abs(pane.right-target.right)<.5,
+      return { inside:pane.left>=0&&pane.right<=innerWidth, anchored:Math.abs(pane.top-target.bottom-4)<.5&&Math.abs(pane.right-target.right)<.5,
         actions:[...menu.nextElementSibling.querySelectorAll('button')].map(b=>b.textContent) }
     `)
-    assert.deepEqual(popup,{inside:true,anchored:true,actions:['기록 정정','누락 수행 복구','기록 전체 삭제','평가 변경 이력']})
+    assert.deepEqual(popup,{inside:true,anchored:true,actions:['기록 정정','누락 수행 복구','평가 변경 이력','기록 전체 삭제']})
     await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Escape',code:'Escape'})
-    assert.ok(await menuAction('return !menu.parentElement.open&&document.activeElement===menu'))
-    await menuAction("menu.click(); document.querySelector('h1').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))")
-    assert.ok(await menuAction('return !menu.parentElement.open'))
+    assert.ok(await menuAction('return menu.ariaExpanded === "false" &&document.activeElement===menu'))
+    await menuAction('menu.click()')
+    await evaluate("document.querySelector('h1').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))")
+    assert.ok(await menuAction('return menu.ariaExpanded === "false" '))
     await menuAction('menu.click()');await click('기록 정정')
     await evaluate('[...document.querySelectorAll("button")].filter(b=>b.textContent==="정정").at(-1).click()')
     await wait(()=>evaluate('!!document.querySelector(".duration-wheels")'))
@@ -1035,11 +1037,11 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     const past=await evaluate('(()=>{const c=document.querySelector(\'[aria-label="당시 중량 검토"]\');return{text:c.textContent,buttons:c.querySelectorAll("button").length,inputs:c.querySelectorAll("input").length}})()')
     assert.equal(past.buttons,0);assert.equal(past.inputs,0);assert.match(past.text,/45kg/);assert.match(past.text,/12회.*12회.*13회/)
     assert.match(await evaluate('document.querySelector(\'[aria-label="웨이트 수행"]\').textContent'),/45kg × 5회/)
-    assert.equal(await evaluate('!!document.querySelector(\'summary[aria-label="운동 기록 메뉴"]\')'),true,'record correction menu remains available')
+    assert.equal(await evaluate('!!document.querySelector(\'button[aria-label="운동 기록 메뉴"]\')'),true,'record correction menu remains available')
     await evaluate("window.feedback.record('pending-approval')")
     await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))')
-    await wait(() => evaluate(`!!document.querySelector('summary[aria-label="운동 기록 메뉴"]')`))
-    await evaluate(`document.querySelector('summary[aria-label="운동 기록 메뉴"]').click()`)
+    await wait(() => evaluate(`!!document.querySelector('button[aria-label="운동 기록 메뉴"]')`))
+    await evaluate(`document.querySelector('button[aria-label="운동 기록 메뉴"]').click()`)
     await click('평가 변경 이력')
     await click('종료 후 현재 중량 유지')
     await auditMessageDialog({ send, evaluate }, '종료 후 현재 루틴 중량 유지', 'info')
@@ -1705,7 +1707,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         const b=[...document.querySelectorAll(${JSON.stringify(scope+' button')})].find(b=>b.textContent===${JSON.stringify(label)})
         if(!b||b.disabled)return false;b.click();return true
       })()`)
-      await wait(()=>evaluate(`(() => { const menu=document.querySelector('summary[aria-label="운동 기록 메뉴"]'); if(!menu)return false;menu.click();return true })()`))
+      await wait(()=>evaluate(`(() => { const menu=document.querySelector('button[aria-label="운동 기록 메뉴"]'); if(!menu)return false;menu.click();return true })()`))
       await wait(()=>action('main','기록 전체 삭제'))
       await wait(()=>action('dialog[open]','삭제'))
       await wait(()=>evaluate(`document.querySelector('dialog[open] [role=alert]')?.textContent.includes('삭제 결과를 확인하지 못했어요.')`))

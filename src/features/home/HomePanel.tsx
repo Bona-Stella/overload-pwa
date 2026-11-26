@@ -9,6 +9,7 @@ import { readWithDeadline } from '../../app/read-deadline.ts'
 import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
 import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import { ConnectedDropdown } from '../../components/common-ui/ConnectedDropdown.tsx'
+import dropdown from '../../components/common-ui/ConnectedDropdown.module.css'
 import type { AppTab } from '../../app/types.ts'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { OnlineState } from '../workout-online/controller.ts'
@@ -338,15 +339,15 @@ export function HomeView(props: HomeViewProps) {
         disabled={!props.action && (props.busy || (props.attempt ? !props.localReady : !canStart))}
         onClick={() => { if (props.attempt) props.onRetry(); else if (chosen) void props.onStart(chosen) }}>
         {props.action === 'retry' ? '확인 중' : '운동 시작'}</Button>}
-      {!props.hideChooser && (data ? <ConnectedDropdown className={styles.chooser} label="오늘만 다른 루틴 선택">{close => <div className={styles.chooserContent}>
+      {!props.hideChooser && (data ? <ConnectedDropdown label="오늘만 다른 루틴 선택">{close => <div className={styles.chooserContent}>
         {presetFilter && <div className={`${filterStyles.strip} ${styles.choiceFilters}`} role="group" aria-label="루틴 일정 필터">
           <button type="button" aria-pressed={selectedFilter === 'all'} onClick={() => chooseFilter('all')}><span>전체</span></button>
           <button type="button" aria-pressed={selectedFilter === 'unassigned'} onClick={() => chooseFilter('unassigned')}><span>미배정</span></button>
           {presetFilter.presets.map((preset, index) => <button key={preset.id} type="button" title={preset.name} aria-label={presetNumber(index) + '번 일정 · ' + preset.name} aria-pressed={selectedFilter === preset.id} onClick={() => chooseFilter(preset.id)}><span>{presetNumber(index)}</span></button>)}
           <button type="button" aria-pressed={restFilter} onClick={() => chooseFilter('rest')}><span>휴식</span></button>
         </div>}
-        {restFilter ? <div className={styles.choices} role="group" aria-label="선택할 루틴">
-          <button type="button" aria-pressed={restSelected} disabled={chooserLocked}
+        {restFilter ? <div className={dropdown.scroll} data-dropdown-scroll role="group" aria-label="선택할 루틴">
+          <button className={dropdown.item} data-dropdown-item data-description type="button" aria-pressed={restSelected} disabled={chooserLocked}
             onClick={() => { setOverride({ date: today, routineId: null }); close() }}>
             <span className={styles.choiceTitle}><strong className={optionText.title}>휴식</strong></span><small className={optionText.description}>오늘은 운동하지 않고 쉬어갑니다.</small>
           </button>
@@ -354,11 +355,11 @@ export function HomeView(props: HomeViewProps) {
         {!data.summaries.length && <EmptyState embedded icon={<FeedbackIcon name="routine" size={22} />} title="등록된 루틴이 없어요" action={<Button onClick={() => { close(); props.onNavigate('routines') }}>루틴 만들러 가기</Button>} />}
         {props.chooserPending ? <p role="status">루틴 구성을 확인하는 중입니다.</p> : <>
         {!!data.summaries.length && !candidates?.length && <EmptyState embedded icon={<FeedbackIcon name="search" size={22} />} title="조건에 맞는 루틴이 없어요" />}
-        {!!candidates?.length && <div className={styles.choices} role="group" aria-label="선택할 루틴">{candidates.map(r => {
+        {!!candidates?.length && <div className={dropdown.scroll} data-dropdown-scroll role="group" aria-label="선택할 루틴">{candidates.map(r => {
           const detail = data.routines.get(r.id)
           const days = (filteredPreset ?? data.schedule).assignments.filter(a => a.routineId === r.id).map(a => weekdays[a.dayOfWeek - 1]).join('·')
           const assignmentLabel = days || (presetFilter ? assignedIds.has(r.id) ? '다른 일정 배정' : '미배정' : '요일 미지정')
-          return <button type="button" key={r.id} aria-pressed={chosenId === r.id} disabled={!startable(detail) || chooserLocked || props.routineRefreshes?.has(r.id)}
+          return <button className={dropdown.item} data-dropdown-item data-description type="button" key={r.id} aria-pressed={chosenId === r.id} disabled={!startable(detail) || chooserLocked || props.routineRefreshes?.has(r.id)}
             onClick={() => { setOverride({ date: today, routineId: r.id }); close() }}>
             <span className={styles.choiceTitle}><strong className={optionText.title} title={r.name}>{r.name}</strong><span className={optionText.description}>{assignmentLabel}</span></span><small className={optionText.description} title={detail ? representativeExercises(detail) : ''}>{detail ? representativeExercises(detail) : '구성 조회 실패'}</small>
           </button>

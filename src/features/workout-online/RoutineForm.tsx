@@ -273,7 +273,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
         </Card>
       })}
       <button data-close-text={editing && picker !== null || undefined} type="button" className="outline" aria-expanded={editing ? picker !== null : picker === 'add'} onClick={()=>{ if (!editing || picker === null) showPicker('add'); else setPicker(null) }}>{editing && picker !== null ? '종목 선택 닫기' : '+ 웨이트 종목 추가'}</button>
-      {picker !== null && <section ref={searchRegion} data-edit-picker className={`${styles.formbox} ${styles.searchRegion} stack`} aria-label={picker === 'add' ? '웨이트 종목 추가 선택' : '웨이트 종목 변경 선택'}><ExerciseSearch key={picker} exercises={exercises} onCancel={() => setPicker(null)} onSelect={exercise => {
+      {picker !== null && <section ref={searchRegion} data-edit-picker className={`${styles.formbox} ${styles.searchRegion} stack`} aria-label={picker === 'add' ? '웨이트 종목 추가 선택' : '웨이트 종목 변경 선택'}><ExerciseSearch key={picker} exercises={exercises} defaultOpen onCancel={() => setPicker(null)} onSelect={exercise => {
         const fresh: WeightDraft = { id: newId(), standardExerciseId: exercise.id, exerciseName: exercise.name, manufacturerId: null, loadType: null, setCount: '3', minReps: '6', maxReps: '10', initialWeightKg: '', approvedWeightKg: null, approve: false, nextWeightKg: '' }
         // A different exercise is a NEW placement; never retarget an immutable existing placement/approval.
         setWeights(values => picker === 'add' ? [...values, fresh] : values.map(w => w.id !== picker || w.standardExerciseId === exercise.id ? w : { ...fresh, setCount:w.setCount, minReps:w.minReps, maxReps:w.maxReps }))

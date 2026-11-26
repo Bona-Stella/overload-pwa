@@ -1,3 +1,4 @@
+import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import { RecordChart } from './RecordChart.tsx'
 import { sumDecimals, displayDecimal } from './display-decimal.ts'
 import { useEffect, useLayoutEffect, useState } from 'react'
@@ -41,7 +42,7 @@ export function MuscleAnalysisView({ data, plan, presets = [], selected, onSelec
   const { tab, showAll, metric } = view
   if (plan) return <section className={`stack muscle-analysis ${planStyles.page}`} aria-label="주간 근육 계획">
     <Card className={planStyles.controls}>
-      <label>분석 대상 프리셋<select value={selected} onChange={e => onSelect?.(e.target.value)}>{presets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <DropdownField label="분석 대상 프리셋" value={selected} options={presets} onChange={id => onSelect?.(id)} />
       <div className={planStyles.segment} aria-label="계획 보기">
         <Button aria-pressed={tab==='groups'} onClick={()=>setView({...view,tab:'groups'},true)}>분류별</Button>
         <Button aria-pressed={tab==='muscles'} onClick={()=>setView({...view,tab:'muscles'},true)}>근육별</Button>
