@@ -1,6 +1,6 @@
 # FRONT 18 — 5-3C 숫자 입력 최종 보완
 
-2026-11-26 · 5-3C 구현 및 검수 · 사용자 승인 대기
+2026-11-26 · 5-3C 구현 및 검수 기록
 
 ## 디자인 변경
 
@@ -53,4 +53,4 @@
 - LAN HTTP에서 `운동 시작`이 비활성화된 원인은 검수 빌드가 4173에만 IndexedDB 편집 잠금을 지정한 조건이었다. 4174에도 실제 검수 LAN 주소를 지정했다. Web Locks가 없는 LAN HTTP Chrome에서 START 201과 스냅샷·FINISH·심박수 정정 200을 확인했다. 홈·편집 잠금 회귀 20건이 통과했고 시험 루틴·운동 정리 후 ACTIVE가 비어 있었다.
 - Mac Chrome 393px에서 실제 OTP로 로그인해 시험 루틴을 생성하고 재조회했다. 루틴의 거리 `5.123456`km와 경사도 `3.512345%`는 일반 표시를 반올림해도 저장·START 원계획에 그대로 남았다. 페이스 `6:55`는 API에서 `6.916667`분/km였다. 루틴 생성 201, 조회 200, START 201, 스냅샷·FINISH·기록 정정 200을 확인했다. 실제 평균 심박수는 완료에서 130 BPM, 정정 후 131 BPM이었고 원본 타이머와 활동 시간이 보존됐다. 이번 시험 루틴과 기록을 정리한 후 ACTIVE가 비어 있음을 확인했고, 검증용 Chrome을 종료했다. [Mac 실서버 검증](evidence/front-18-5-3-final-refinement/test-results.json)
 - 프런트엔드 `806c6e6` 위의 작업 트리에서 전체 FRONT 734/734건, 집중 125/125건, TypeScript, ESLint, 운영·검수 빌드를 통과했다. 운영 32개·검수 34개 Service Worker 자산의 SHA-256이 일치했고 양쪽 사전 캐시와 운영 빌드에서 Preview 제외를 확인했다. 기존 PostCSS와 Vite 청크 경고는 빌드 로그에 남아 있다. 백엔드 `beccaf4`의 작업 트리와 프런트엔드 staged diff는 비어 있다. [검증 결과와 Git 변경 파일](evidence/front-18-5-3-final-refinement/test-results.json)
-- iPhone Safari와 설치형 PWA 실기기 확인은 남아 있다. 이전 휴식일의 간헐 시작 오류와 운동 저장 상태 간헐 실패의 직접 원인은 미확정이다. 5-4와 공식 문서 확정은 사용자 승인 후 진행한다.
+- iPhone Safari와 설치형 PWA 실기기 확인은 남아 있다. 이전 휴식일의 간헐 시작 오류와 운동 저장 상태 간헐 실패의 직접 원인은 미확정이다. 5-3C와 5-4의 최종 승인은 [Decision Log 10.45절](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage5-decision)에 기록했다.

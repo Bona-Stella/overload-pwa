@@ -1,6 +1,6 @@
 # FRONT 18 — 5-3B 사용자 검수 피드백 반영
 
-2026-11-26 · 5-3 디자인 검수 후속 · 사용자 재검수 대기
+2026-11-26 · 5-3 디자인 검수 후속 기록
 
 ## 디자인 수정
 
@@ -51,12 +51,14 @@
 
 ## 검수 주소와 이미지
 
+5-3B의 중간 유산소 목표 캡처는 보관본으로 옮겼다. 이 단계의 수치는 위 Chrome 계측에 남겼다.
+
 - 실제 앱은 루틴 → 생성·편집과 홈 → 오늘만 다른 루틴 선택에서 확인한다. [PC 앱](http://127.0.0.1:4173/) · [같은 Wi-Fi 앱](http://192.168.0.3:4173/)
 - 공통 Preview의 `버튼·입력 검수`에서 숫자 휠과 유산소 목표를 열 수 있다. 운동 검수는 FRONT 18의 운동 진행과 `준비운동부터 시작`을 사용한다. [PC 공통 Preview](http://127.0.0.1:4173/common-ui-preview.html?controls=1) · [LAN 공통 Preview](http://192.168.0.3:4173/common-ui-preview.html?controls=1) · [운동 Preview](http://127.0.0.1:4173/common-ui-preview.html?front18=1)
-- [수정 전 5-3 입력 393px](evidence/front-18-5-3/5-3-controls-393.png) · [수정 후 유산소 목표 393px](evidence/front-18-5-3-refinement/goal-editor-393.png) · [수정 후 홈 조회 실패 393px](evidence/front-18-5-3-refinement/home-detail-failure-after-393.png)
+- [수정 전 5-3 입력 393px](evidence/front-18-5-3/5-3-controls-393.png) · [5-3C 최종 유산소 목표 393px](evidence/front-18-5-3-final-refinement/speed-layout-393.png) · [수정 후 홈 조회 실패 393px](evidence/front-18-5-3-refinement/home-detail-failure-after-393.png)
 - [수정 전 종료 320px](evidence/front-18-5-3-refinement/workout-end-before-320.png) · [수정 후 종료 320px](evidence/front-18-5-3-refinement/workout-end-320.png) · [수정 전 중량 변경 320px](evidence/front-18-5-3-refinement/workout-weight-before-320.png) · [수정 후 중량 변경 320px](evidence/front-18-5-3-refinement/workout-weight-320.png)
 
-5-4와 공식 디자인 문서 확정은 사용자 재검수 후 진행한다. 백엔드·API·DB 계약과 휴식 구간 정책은 기존 범위를 따른다.
+당시 사용자 재검수 대상으로 남긴 디자인은 5-3C와 5-4에서 최종 승인됐다. [최종 승인 기록](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage5-decision)
 
 ## Git 변경
 

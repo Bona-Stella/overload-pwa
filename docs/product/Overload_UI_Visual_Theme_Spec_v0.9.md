@@ -2,7 +2,7 @@
 
 **기준일:** 2026-11-07 · v0.9 T02-B 개정 (기존 컬러/토큰 유지)
 
-FRONT 18 4단계의 현행 카드와 조작 규격은 [19절](#front18-card-visual)을 적용한다. 메시지의 의미별 시각 표현은 [18절](#front18-feedback-visual)을 따른다.
+FRONT 18의 현행 시각 규격은 [19절 카드](#front18-card-visual), [20절 버튼·입력](#front18-controls-visual), [18절 메시지](#front18-feedback-visual)를 적용한다.
 
 **범위:** React PWA 실제 구현용 시각 스타일 명세. [HTML 베이스라인](Overload_UI_Baseline_Wireframe_v0.9.html)은 밝은 무채색의 저충실도 자료다. 간단한 색조·아이콘과 기본 화면·상태 전환으로 현재 UI의 정보 위계를 검토한다.
 
@@ -77,7 +77,7 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 
 ## 5. 세트 완료 컨트롤
 
-- 진행 전에는 반복 횟수 값과 `− / +`에 평상시 테두리를 두지 않는다. 세 버튼의 터치 폭과 기존 키보드 포커스 윤곽을 유지하고, 중량 입력은 기존 스타일을 쓴다.
+- 진행 전에는 반복 횟수 값과 `− / +`에 평상시 테두리를 두지 않는다. 세 버튼의 터치 폭과 기존 키보드 포커스 윤곽을 유지한다. [숫자 조작 규격](#front18-number-visual)을 적용한다.
 - 완료 후 세트 번호·반복 값은 읽기 전용 `--text-primary`로 표시한다. 완료색은 **원형 테두리 ✓**에 적용하고 진행 막대를 유지한다. 완료 행의 배경은 채우지 않는다.
 - `CircleCheck`의 기본 원은 21px, 체크 글리프는 14px다. 중량 검토 행에서는 원 17px와 글리프 11px를 카드 왼쪽에 맞춘다. 두 곳 모두 44×44px 입력 영역과 선택 시 `--status-done`, 미선택 시 `--text-muted` 윤곽을 사용한다. [공통 체크 CSS](../../src/components/common-ui/CircleCheck.module.css) · [검토 행 CSS](../../src/features/workout-flow/WorkoutFlow.module.css)
 - 체크 탭: 「완료를 취소하시겠습니까?」 팝업 (`아니요 · 유지` / `완료 취소`). 후자를 선택했을 때만 입력과 `완료` 버튼 복귀. 실제 서버 삭제·정정/오프라인 원본 처리 정책을 준수.
@@ -122,9 +122,9 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 | 세로 일정 | 요일당 한 줄. 왼쪽 요일 / 중앙 태그·한 줄 이름 / 오른쪽 종목 수. `AchievementIcon` 공식 원형 아령·running.png18px, 수치 gap5px. 수행률로 바꾸지 않음 |
 | 배정 카드 | `--hero-gradient`의 블루그레이 배경, 미배정은 `--surface-card`. 양쪽 모두 `--border-subtle` 사용하며 선택형 블루 테두리 금지 |
 | 메타·요약 | 번호·태그/WEIGHT/CARDIO는 `--accent`, 요일은 `--text-muted`, 이름/계획은 `--text-primary`. 루틴명 말줄임과 전체 이름 접근성 유지 |
-| 이름·태그 | 라벨12px/line-height18px, 내부 gap6px, 필드44px/본문14px/padding10px 12px. `--surface-input`·동일 경계·radius. 설명 드롭다운은 이름+승인 설명, 팝오버는 입력 표면 사용 |
+| 이름·태그 | 루틴 이름은 [일반 입력](#front18-controls-visual)의 48px·5px·16px 규격을 적용한다. 태그 선택기는 기존 표면과 설명을 유지한다. 설명 드롭다운은 이름+승인 설명, 팝오버는 입력 표면 사용 |
 | 운동 조작·검색 | 하단 3개 동일 너비·최소44px 조작. 기존 인라인 검색과 원본32px `ExerciseIcon` 사용, 검색 영역 scroll-margin으로 가림 방지. 상세에서는 같은 폼을 비활성화하되 가독성을 낮추지 않음 |
-| 일정 후보 필터 | 3열 `minmax(0,1fr)`/gap6px. 기존 pill형 버튼과 `--accent`/`--on-accent` 선택 상태. 하위 팝오버는 흐름을 밀지 않고 외부/ESC로 닫음 |
+| 일정 후보 필터 | [공통 필터](#front18-controls-visual)의 콘텐츠 너비와 줄바꿈, `--accent`/`--on-accent` 선택 상태. 하위 팝오버는 흐름을 밀지 않고 외부/ESC로 닫음 |
 | 좁은 폭 | 393·320px, 가로 스크롤 금지. 선택창 폭/높이 고정, 루틴명 우선 말줄임. 필터 팝오버로 7개 선택값·레이아웃 변경 금지. 세로 행 수치와 아이콘을 축소해 밀도를 맞추지 않음 |
 
 검색 아이콘6종은32px, 주간 세로·최근 운동 달성 아이콘은18px로 역할을 구분한다. 달 SVG·T02-A 헤더/최근 운동의 원본 자산·기존 토큰·디로딩 테마 정책을 변경하지 않는다. HTML에는 실제 블루그레이 색을 적용하지 않고 회색 배경 차이로 역할만 시연한다.
@@ -149,7 +149,7 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 | WEIGHT 기록 | h4 기본 margin0, 제목과 완료/계획·총 볼륨 모두14px/700/--text-primary. Grid 가변 제목+내용 폭 수치. 수치는 nowrap, 극단적인 값은 해당 행 내부 가로 스크롤로 보존한다. 목표 행12px 보조색, 장비11px/400 보조 위계. |
 | 중량 검토 | 운동명14px, 기존 중량11px, 반복·세트 수12px. 두 행 구조와 ↑↓ 의미 라벨을 사용한다. 유지 항목·불필요한 제목 여백을 만들지 않는다. |
 | ⋮ 팝오버 | --surface-card, 공통 line/radius·그림자. 행 최소44px, 개별 박스 테두리 없음·인접행 구분선·삭제 위험색. hover/pressed는 --surface-input, focus-visible 유지. |
-| 하단 고정 | 화면 최대520px, gap6px, padding9px 및 하단 env(safe-area-inset-bottom), 실제 높이 예약. 휴식 종료·+30초는 같은 행 높이 체계다. 액션이 없으면 버튼 높이를 예약하지 않는다. |
+| 하단 고정 | 화면 최대 520px, 패딩 9px과 하단 `env(safe-area-inset-bottom)`, 실제 높이 예약. 휴식 종료·+30초는 높이 50px, 버튼 간격 8px이다. 액션이 없으면 버튼 높이를 예약하지 않는다. |
 | 입력·키보드 | 메모의 16px 입력과 기존 포커스 표시를 유지한다. 포커스 전 확보한 하단 공간과 키보드 종료 후 정리는 [모바일 입력](ui-ux.md#315-모바일-입력과-키보드)을 따른다. |
 
 완료/증량/감량은 색상만으로 전달하지 않는다. 기존 버튼·폰트·간격과 Safe Area를 보존하며 새로운 토큰을 추가하지 않았다. iPhone API 연동 후 native 키보드/관성/설치형 PWA는 별도 실기기 검증 대상이다.
@@ -174,7 +174,7 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 | 공통 세션 프레임 | 시간 바는 화면 가용 너비(최대 520px)의 고정 정보 영역이다. 상단·좌우 외곽 테두리와 둥근 외곽을 없애고 하단 경계선과 같은 폭의 세 열 사이 구분선만 둔다. 라벨·수치·가운데 진행 표시를 중앙 정렬한다. 본문 여백은 시간 바·하단 고정 푸터의 실측 높이와 Safe Area·키보드 inset에 맞춘다. 푸터 직접 액션과 분할 행 버튼은 높이 50px, 안쪽 상하 0px·좌우 12px를 사용한다. |
 | WEIGHT와 편집 | 운동 화면의 카드와 주요 CTA는 각 역할에 따라 [19절](#front18-card-visual)의 공통 표면과 운동 푸터 규격을 적용한다. 잠금 중량·승인값·장비·세트 위계를 유지한다. 원판 준비 상태에서는 기존 카드의 진행 중량과 장비 사이에 `한쪽 원판`을 같은 색상 계층으로 가운데 정렬한다. 수치 크기는 `clamp(24px, 6.5vw, 30px)`이다. `운동·세트 편집`과 `편집 닫기`는 일반 버튼 글자색을 쓰고 위험색은 종료에 유지한다. 기구 세팅 메모는 외부 카드 없이 제목·화살표와 5px 입력으로 구성한다. 화살표는 펼침에서 위, 접힘에서 아래를 가리킨다. |
 | 스와이프 | 두 종목의 화면 폭과 내부 배치를 보존하고 사이에 Onyx 페이지색 `#111216`의 24px 간격을 둔다. 동작 범위와 위치 복원은 [스와이프 명세](ui-ux.md#운동-종목-스와이프)를 따른다. |
-| CARDIO | 진행 영역에서만 카드 여백 12px, 당시 계획 3열, 타이머 최소 126px·25px 고정폭 숫자, 완료 입력 2열·8px 간격, 연필 터치 영역 44px을 사용한다. 타이머는 카드 표면에 `--accent` 12%, 테두리에 강조색 20%를 혼합한다. 준비·확인은 강조색, 측정 중은 `--status-done` 기반, 정지·적용된 시간 변경은 `--status-warning`과 텍스트를 사용한다. 비활성 경사도는 입력 표면으로 구분한다. 하단 액션은 공통 세션 푸터 규격을 따른다. |
+| CARDIO | 진행 영역에서만 카드 여백 12px, 진행 요약의 계획 3열, 타이머 최소 126px·25px 고정폭 숫자, 완료 입력 2열·8px 간격, 연필 터치 영역 44px을 사용한다. 타이머는 카드 표면에 `--accent` 12%, 테두리에 강조색 20%를 혼합한다. 준비·확인은 강조색, 측정 중은 `--status-done` 기반, 정지·적용된 시간 변경은 `--status-warning`과 텍스트를 사용한다. 실제 경사도는 저장 미지원 안내를 표시한다. [계획 편집](#front18-number-visual)의 정보 행과 추가 목표는 공통 입력 규격을 사용한다. 하단 액션은 공통 세션 푸터 규격을 따른다. |
 | 종료 직후 요약 / 기록 상세 | `RecordSubpageHeader`의 44px 버튼·22px 제목, 3열 요약 및 수행 행을 사용한다. 기록 상세의 일반 본문 카드 패딩은 상하 14px·좌우 12px이며 중량 검토와 결과 미확인에는 [전용 규격](#front18-card-visual-exceptions)을 적용한다. 종료 직후 요약은 [최상단](ui-ux.md#39-운동-완료-요약--workoutsummary)부터 보여 준다. |
 
 CARDIO 수치는 [전용 CSS](../../src/features/workout-flow/CardioFocus.module.css), 공통 고정 영역은 [WorkoutFlow CSS](../../src/features/workout-flow/WorkoutFlow.module.css), 요약과 상세는 [기록 배치 CSS](../../src/features/workout-flow/WorkoutRecordDetail.module.css)가 기준이다. 전역 Onyx 토큰은 1절을 적용한다. HTML에는 기존 밝은 무채색과 화면 프레임을 적용한다.
@@ -225,8 +225,8 @@ Onyx 전역 배경과 Dusty Blue `--accent`를 사용한다. 루틴에 한정된
 
 | 요소 | 화면 적용 |
 | --- | --- |
-| 휴식 시간 | `RecordSubpageHeader`와 키보드 포커스를 유지한다. [소형 보조 버튼](#front18-card-visual-actions)인 편집·취소는 반복 구간 카드의 제목 오른쪽에 정렬한다. 5px 카드와 12px 패딩, `--surface-card`·`--border-subtle`을 쓴다. 편집은 3개 균등 열과 32px 삭제 열이다. 제목·숫자를 가운데 맞추며 입력은 높이 36px의 알약형이다. |
-| 읽기 전용과 저장 | 정적 `이상`은 숫자 필드와 같은 높이·모서리에 `--surface-input`·`--text-muted`를 쓴다. 구간 추가·삭제는 비활성이다. 48px 저장 버튼은 `--text-primary` 배경과 `--surface-page` 글자다. |
+| 휴식 시간 | `RecordSubpageHeader`와 키보드 포커스를 유지한다. [소형 보조 버튼](#front18-card-visual-actions)인 편집·취소는 반복 구간 카드의 제목 오른쪽에 정렬한다. 5px 카드와 12px 패딩, `--surface-card`·`--border-subtle`을 쓴다. 편집은 3개 균등 열과 32px 삭제 열이다. 제목·숫자를 가운데 맞추며 행 사이 가로 구분선과 36px 무테 숫자 입력을 사용한다. 입력의 포커스와 오류 경계는 유지한다. 조회는 같은 너비의 가로 정보 열과 세로 구분선을 사용하며, 구간과 분:초를 가운데 정렬한다. 실제 설정은 3열, 승인된 4열은 Preview에 적용한다. |
+| 읽기 전용과 저장 | 한 카드 안에 같은 너비의 세 열을 배치한다. 세로 구분선과 가운데 정렬로 구간과 분:초를 표시한다. 승인된 4열은 합성 Preview에 적용한다. 편집의 구간 추가·삭제는 현행 고정 계약의 비활성 조작이다. 48px 저장 버튼은 `--text-primary` 배경과 `--surface-page` 글자를 쓴다. |
 | 알림 설정 | 공통 헤더와 5px 차콜 카드, `--border-subtle` 구분선. 우측 ON/OFF, 좌측 18px 아이콘의 활성 색은 `#9FBCE3`, 비활성은 `--text-muted`. 화면 어둡게는 원·중앙선과 ON의 반원 채움, 나머지는 광선/점·음파/음소거·종/사선 종 형태로 구분한다. |
 | 설정 컨트롤 | 두 위치 카드는 같은 크기로 2열 배치한다. 선택 카드와 3분할 시점 컨트롤에 `--accent`·`--accent-soft`를 쓴다. 볼륨은 `--accent`와 `#30343D`의 단일 트랙, 밝은 20px 손잡이와 `#B9D3FA` 퍼센트다. 재생·중지 아이콘은 같은 16px 자리에서 `▶`·`Ⅱ`로 바뀐다. |
 | 시연과 운동 | 미리보기의 2열 상단·하단 카드는 5px이며 OFF는 회색조와 낮은 불투명도다. 움직임 줄이기에서는 정적 외곽선을 쓴다. 어둡게 오버레이는 `rgb(8 9 12 / 91%)`, 10초 이하 숫자는 `--status-warning`이다. 실제 운동은 측정된 하단 푸터 높이와 키보드 여백까지 오버레이에서 제외한다. |
@@ -250,7 +250,7 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 
 ## 16. 공통 UI Preview 시각 규칙
 
-이 절은 최초 Preview 기록이다. 현재 메시지형 모달의 폭과 외곽, 일반 주요 버튼의 색상, 공통 토스트와 조회 오류는 [18절](#front18-feedback-visual)을 적용한다. 검색·태그·헤더·스켈레톤의 개별 규칙은 이 절을 참조한다.
+이 절은 최초 Preview 기록이다. 현재 메시지형 모달의 폭과 외곽, 일반 주요 버튼의 색상, 공통 토스트와 조회 오류는 [18절](#front18-feedback-visual)을 적용한다. 현재 검색·필터 치수는 [20절](#front18-controls-visual)을 적용한다. 헤더·스켈레톤과 Preview 시안은 아래 기록을 참조한다.
 
 아래 규칙은 2026-11-19에 구현한 공통 부품의 Preview에 적용한다. 표면·글자·포커스·상태에는 Onyx의 역할 토큰을 사용한다. 위험 확정의 채움색은 버튼 CSS Module 안의 `--danger-button-fill`로 관리한다. [Onyx 토큰](../../src/app/theme.module.css) · [결정과 적용 범위](Overload_UI_Decision_Log_v0.9.md#1039--공통-ui-컴포넌트와-독립-preview--2026-11-19)
 
@@ -272,7 +272,7 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 ## 17. 홈 연결형 드롭다운 시각 규칙 — 2026-11-23
 
 - 56px 트리거는 제목과 펼침 아이콘을 수직 중앙에 놓고 개폐 시 정렬을 유지한다. 같은 너비의 패널을 바로 아래에 연결하며 `--surface-card`와 `--border-subtle`을 쓴다. 패널은 화면 경계 안에서 최대 340px까지 펼친다. [공통 드롭다운 CSS](../../src/components/common-ui/ConnectedDropdown.module.css)
-- 홈 필터는 운동 종목 검색과 Pill 스타일을 공유한다. 홈에서는 50×27px로 표시하고 높이 44px의 터치 영역을 제공한다. 간격은 6px이며 선택 상태는 `--accent`와 `--on-accent`를 쓴다. 루틴명은 실제 루틴 편집의 태그 선택과 같은 14px·900, 보조 설명과 배정 요일은 12px·400이다. [공통 필터 CSS](../../src/components/common-ui/FilterTags.module.css) · [공통 목록 글자](../../src/components/common-ui/RoutineOptionText.module.css) · [홈 적용](../../src/features/home/Home.module.css)
+- 홈 필터는 운동 종목 검색과 Pill 스타일을 공유한다. 홈의 최종 칩 외형은 높이 36px이며 터치 영역은 44px 이상이다. 간격은 6px이며 선택 상태는 `--accent`와 `--on-accent`를 쓴다. 루틴명은 실제 루틴 편집의 태그 선택과 같은 14px·900, 보조 설명과 배정 요일은 12px·400이다. [공통 필터 CSS](../../src/components/common-ui/FilterTags.module.css) · [공통 목록 글자](../../src/components/common-ui/RoutineOptionText.module.css) · [홈 적용](../../src/features/home/Home.module.css)
 
 <a id="front18-feedback-visual"></a>
 
@@ -281,7 +281,7 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 ### 메시지형 Dialog
 
 - [일반 카드](#front18-card-visual)의 5px 모서리, `#1B1D22` 배경과 `1px solid #353941` 테두리를 공유한다. 최대 너비는 340px, 좁은 화면에서 좌우 여백은 각각 16px과 페이지 여백 중 큰 값, 내부 패딩은 16px이다. 기능형 Dialog의 내부 카드는 [화면별 예외](#front18-card-visual-exceptions)를 적용한다. [테마 토큰](../../src/app/theme.module.css) · [Dialog CSS](../../src/components/Dialog.module.css)
-- 아이콘·제목·설명은 가운데 정렬한다. 설명은 짧은 문장을 뜻 단위로 배치한다. `word-break: keep-all`과 `overflow-wrap: anywhere`로 한글 단어를 우선 보존하고 화면보다 긴 문자열의 넘침을 막는다. 제목과 설명의 기존 간격을 사용하며 설명 블록 하단과 액션 영역 상단 사이는 20px이다. 일반 액션은 캡슐형이다. 두 액션이 가로로 나란히 있을 때는 기존 버튼 간격을 유지하고 가용 너비를 **1:1**로 나눈다. 문구 길이와 테두리 두께가 달라도 버튼 외곽 너비는 같다. [공통 메시지 스타일](../../src/components/Dialog.module.css) · [액션 Dialog CSS](../../src/components/common-ui/ActionDialog.module.css)
+- 아이콘·제목·설명은 가운데 정렬한다. 설명은 짧은 문장을 뜻 단위로 배치한다. `word-break: keep-all`과 `overflow-wrap: anywhere`로 한글 단어를 우선 보존하고 화면보다 긴 문자열의 넘침을 막는다. 제목과 설명의 기존 간격을 사용하며 설명 블록 하단과 액션 영역 상단 사이는 20px이다. 일반 액션은 높이 48px의 캡슐형이다. 두 액션은 간격 8px을 두고 가용 너비를 **1:1**로 나눈다. 단일 액션은 가용 너비 전체를 사용한다. 문구 길이와 테두리 두께가 달라도 버튼 외곽 너비는 같다. [공통 메시지 스타일](../../src/components/Dialog.module.css) · [액션 Dialog CSS](../../src/components/common-ui/ActionDialog.module.css)
 
 | 모달 의미 | 아이콘 | 주요 액션 |
 | --- | --- | --- |
@@ -297,7 +297,7 @@ Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warni
 
 ### 일반 액션·Toast·조회 복구
 
-- 일반 액션에는 `--radius-action: 999px` 캡슐을 쓴다. 기본 Primary는 Dusty Blue `--accent` 채움과 `--on-accent` 글자, 기본 보조는 `--border-subtle: #353941`의 카드와 같은 회색 테두리다. `ActionButton` 자체의 일반·모달·소형 최소 높이는 각각 48·44·36px이다. 서비스의 소형 보조 `Button`과 운동 푸터는 [용도별 버튼 규격](#front18-card-visual-actions)을 적용한다. 토글·숫자 조절·전용 컨트롤의 기존 형태와 키보드 포커스를 유지한다. [버튼 CSS](../../src/components/common-ui/ActionButton.module.css) · [공통 테마 CSS](../../src/app/theme.module.css)
+- 일반 액션에는 `--radius-action: 999px` 캡슐을 쓴다. 기본 Primary는 Dusty Blue `--accent` 채움과 `--on-accent` 글자, 기본 보조는 `--border-subtle: #353941`의 카드와 같은 회색 테두리다. 초기 Preview의 `ActionButton`은 일반·모달·소형 최소 높이 48·44·36px을 사용했다. 서비스의 일반·소형 보조 `Button`과 운동 푸터는 [용도별 버튼 규격](#front18-controls-visual)을 적용한다. 토글·숫자 조절·전용 컨트롤의 기존 형태와 키보드 포커스를 유지한다. [버튼 CSS](../../src/components/common-ui/ActionButton.module.css) · [공통 테마 CSS](../../src/app/theme.module.css)
 - Toast는 페이지 흐름 밖의 캡슐형 알림이다. 정보는 강조색, 성공은 초록색, 주의는 노란색, 오류는 빨간 오류 아이콘으로 구분한다. 동기화는 두 회전 화살표, 전송은 구름과 위쪽 화살표 아이콘을 사용한다. [Toast CSS](../../src/components/common-ui/Toast.module.css) · [공통 아이콘](../../src/components/common-ui/FeedbackIcon.tsx)
 - 데이터 없는 조회 실패는 배경 배지 없는 오류 아이콘과 짧은 문구를 가운데 정렬한다. 공통 `RefreshButton`은 배경과 테두리 없이 왼쪽 18px 아이콘과 오른쪽 `새로고침`을 표시한다. 기본 최소 터치 높이는 44px이며 루틴 목록 제목의 기존 소형 배치는 36px이다. 조회 중 버튼을 비활성화하고 아이콘만 1.25초당 한 바퀴 반시계방향으로 회전시킨다. 대기 중 아이콘 대비를 유지하며, 모션 감소 설정에서는 정적인 점선 진행 표시를 제공한다. [조회 피드백 CSS](../../src/components/common-ui/ContentFeedback.module.css) · [루틴 목록 CSS](../../src/features/workout-online/Routine.module.css) · [동작 기준](ui-ux.md#front18-feedback)
 
@@ -358,14 +358,14 @@ Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warni
 
 | 용도 | 시각·조작 규격 |
 | --- | --- |
-| 일반 액션 | 999px 캡슐형, 기존 Primary·Secondary 색상과 포커스. 홈·기록으로 돌아가기 및 `+ 새 루틴` 포함 |
-| 운동 진행 고정 푸터 | 5px 모서리, 일반 진행 액션 높이 50px, 버튼 간격 6px. 기존 고정 위치·Safe Area·본문 예약 영역 유지 |
+| 일반 액션 | [20절의 공통 버튼](#front18-controls-visual). 홈·기록으로 돌아가기 및 `+ 새 루틴` 포함 |
+| 운동 진행 고정 푸터 | 5px 모서리, 일반 진행 액션 높이 50px, 휴식 푸터의 나란한 버튼 간격 8px. 기존 고정 위치·Safe Area·본문 예약 영역 유지 |
 | 증량·감량 권고 | 기본 높이 50px. 긴 내용은 줄바꿈에 필요한 높이만큼 확장 가능 |
 | 소형 보조 버튼 | 시각 높이 30px, 실제 조작 높이 48px, 최소 조작 너비 44px. 콘텐츠 너비, 좌우 12px 패딩, 캡슐형, `1px solid #353941` 테두리 |
 
 소형 보조는 휴식 설정의 편집·취소, 루틴 상세의 편집, 웨이트의 종목 보기/변경, 유산소의 종목 목록에서 사용한다. 버튼 내용은 가로·세로 가운데, 캡슐은 조작 영역의 가운데, 인접 버튼은 실제 종목명 행 또는 관련 제목·설명 블록의 세로 가운데에 맞춘다. 화면별 전용 배치는 해당 영역에서 관리한다.
 
-운동 시작, 세트 완료와 휴식 종료로 푸터 액션이 바뀔 때 교체된 버튼에 이전 포인터의 밝기 효과가 남지 않아야 한다. 정상 전환에서 불필요한 깜박임·어두워짐·불투명도 변화·위치 이동을 방지한다. 실제 대기, 비활성, 입력 검증, 중복 조작 방지와 키보드 포커스는 각 상태를 계속 반영한다. 토글과 숫자 휠은 기존 전용 규격을 사용하며 일반 버튼 높이와 입력 규격의 추가 통일은 5단계 범위다. [공통 Button CSS](../../src/components/ui.module.css) · [운동 푸터 CSS](../../src/features/workout-flow/WorkoutFlow.module.css)
+운동 시작, 세트 완료와 휴식 종료로 푸터 액션이 바뀔 때 교체된 버튼에 이전 포인터의 밝기 효과가 남지 않아야 한다. 정상 전환에서 불필요한 깜박임·어두워짐·불투명도 변화·위치 이동을 방지한다. 실제 대기, 비활성, 입력 검증, 중복 조작 방지와 키보드 포커스는 각 상태를 계속 반영한다. 토글과 숫자 휠은 [용도별 규격](#front18-controls-visual)을 적용한다. [공통 Button CSS](../../src/components/ui.module.css) · [운동 푸터 CSS](../../src/features/workout-flow/WorkoutFlow.module.css)
 
 <a id="front18-card-visual-settings"></a>
 
@@ -374,3 +374,28 @@ Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warni
 - 설정 목록과 설치 카드 외곽은 5px, 상하 패딩 0px·좌우 12px이다. 행의 64px 조작 영역과 인접 행의 1px 구분선을 적용하며 유산소 거리 자동 추정과 운동 종목 보기 사이도 구분한다. 데이터 카드와 접이식 `앱 설치 · 오프라인 준비` 카드의 8px 간격은 상위 그룹에서 관리한다. [설정 메인 CSS](../../src/features/settings/SettingsMain.module.css) · [설치 카드 표면](../../src/pwa/PwaStatus.module.css)
 - 홈 날짜 선택을 기준으로 선택·오늘 표시의 2px 강조 테두리와 999px 캡슐 윤곽을 공유한다. 홈에서 다른 날짜를 포인터로 선택했거나 키보드로 강조 중이면 오늘 윤곽은 1px 중립 테두리다. 비선택 상태, 클릭 영역과 키보드 포커스 정책을 유지한다. 루틴의 가로와 세로 날짜 보기에 같은 선택 윤곽을 사용한다. [홈 날짜 CSS](../../src/features/home/Home.module.css) · [루틴 날짜 적용](../../src/features/workout-online/RoutineCards.tsx)
 - 일정 번호와 추가 버튼은 44×44px 원형이다. 번호와 추가 아이콘을 중심에 두고 기존 선택·비선택 색을 사용한다. 프리셋 보기와 활성 전환, 순환 설정 및 빈 프리셋 생성은 각각 기존 동작을 따른다. [프리셋 CSS](../../src/features/workout-online/Presets.module.css) · [일정 화면 동작](ui-ux.md#32-루틴-목록--routinelist)
+
+<a id="front18-controls-visual"></a>
+
+## 20. FRONT 18 버튼·입력 — 5단계 최종 승인
+
+| 유형 | 시각·조작 규격 |
+| --- | --- |
+| 일반 액션 | 기본 48px, 좌우 16px, 999px 캡슐, 버튼 사이 8px, 가로·세로 가운데. 콘텐츠 너비 또는 화면별 전체 너비를 유지하며 긴 문구는 필요한 높이만큼 확장한다. 기존 색상·포커스·비활성·대기 표현을 사용한다. |
+| 소형 보조 | 외형 30px, 실제 조작 높이 48px, 좌우 12px, 콘텐츠 너비의 캡슐, `1px solid #353941`. 해당 제목 또는 정보 행의 세로 가운데에 맞춘다. |
+| 아이콘 전용 | 사각형 외형 모서리 5px 또는 배경·테두리가 없는 형태를 용도에 따라 사용한다. 이전·다음 기간과 달력은 사각형, 상단 뒤로가기와 Dialog 닫기는 무테다. 기본 조작 영역은 44×44px 이상이다. |
+| 분할 선택 | 외부·선택 영역 캡슐형, 같은 너비의 각 항목, 선택 면 높이 40px, 조작 높이 48px, 외부 위아래 4px. 기존 선택색을 사용한다. |
+| 필터·태그 | 캡슐 외형 36px, 조작 44px 이상, 좌우 12px, 콘텐츠 너비. 기존 선택색·내부 가로 스크롤 또는 줄바꿈을 유지한다. |
+| 운동 고정 푸터·권고 | 진행 액션 높이 50px, 모서리 5px. 휴식 푸터의 나란한 버튼 사이 8px. 증량·감량 권고의 기본 높이는 50px이며 긴 문구에 맞춰 늘어난다. |
+| 일반 텍스트·직접 숫자 입력 | 기본 48px, 모서리 5px, 좌우 12px, 글자 16px. 항목 사이 8px, 레이블과 입력 사이 4px. 텍스트와 숫자는 왼쪽, 외부 단위 표기는 오른쪽에 둔다. 표면·오류·포커스 표현을 유지하며 여러 줄 메모는 내용 높이를 사용한다. |
+| 검색 | 높이 44px, 캡슐형. 기존 검색 아이콘·입력 정렬과 원형 X를 유지한다. |
+
+일정 전환과 추가의 원형 44×44px, 날짜 선택, 기존 새로고침, 설정의 최소 64px 행, OTP, 휴식 설정 편집의 직접 숫자 입력, 볼륨 슬라이더·토글·네이티브 선택, 압축형 운동 세트 표와 ConnectedDropdown은 전용 규격을 따른다. 메시지형 Dialog의 전체 규격과 기능형 Dialog의 고유 표면은 해당 절을 적용한다. [일정·날짜·설정](#front18-card-visual-settings) · [공통 피드백](#front18-feedback-visual) · [기능성 표면](#front18-card-visual-exceptions)
+
+<a id="front18-number-visual"></a>
+
+### 숫자 조작과 휠
+
+- 숫자와 단위를 한 그룹으로 가운데 정렬한다. 숫자 영역은 기본 48px, 별도 테두리와 배경 없이 숫자를 눌러 휠을 연다. 설정 중량을 포함한 숫자 휠 진입 chevron은 제거했다. 일반 드롭다운과 접기·펼치기의 화살표는 유지한다. 외부 증감은 기본 48×48px이며 압축형 운동 세트 표는 좌우 폭 44px를 사용한다.
+- 휠 Dialog의 모서리는 5px, 기존 가용 너비를 유지한다. 52px 행과 배경이 강조된 52px 중앙 선택 띠를 둔다. 표시 높이는 화면에 맞춰 156~260px이다. 하단 액션은 높이 48px의 캡슐형, 너비 1:1, 사이 8px이며 직접 입력은 48px·5px이다. [휠 CSS](../../src/components/NumberWheel.module.css) · [사용자 조작](ui-ux.md#312-공통-숫자-입력)
+- 유산소 목표 시간·거리의 기본 정보 행은 각각 전체 너비와 수정 아이콘을 사용한다. 추가 목표는 선택 표기와 균등 2열을 쓴다. 레이블·수치·단위를 가운데에 두고 숫자 영역에 테두리·별도 배경·진입 아이콘을 추가하지 않는다. [유산소 조작과 증감](ui-ux.md#front18-cardio-goals)

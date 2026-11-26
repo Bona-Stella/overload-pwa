@@ -1132,7 +1132,28 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 **검수 자료 관리.** 검수 중에는 재현 근거를 확보하고 승인 후에는 공식 문서·자동 회귀·fixture, 대표 화면과 재현하기 어려운 문제의 계측을 남긴다. 반복 스크린샷, 중간 계측과 임시 로그를 정리하기 전에 보고서와 테스트의 참조를 대조하고 로컬 백업은 Git에서 제외한다. 4단계 검수 경로의 자료는 246개에서 66개, 16.72MB에서 11.11MB로 줄었다. [유형별 정리 내역](../tasks/front-18-stage-4-evidence-cleanup.md#정리-전후)
 
-**5단계 시작 기준.** 일반 캡슐형, 운동 푸터와 권고 높이, 소형 보조 버튼의 조작 영역·정렬, 메시지형 Dialog의 가로 액션 균등 너비, 설정·날짜·일정 조작의 승인값을 유지한다. 앱 셸과 페이지 시작 위치, Toast·새로고침, ConnectedDropdown, 숫자 휠·초기값, 저장·동기화·복구 및 오프라인 보호에는 기존 계약을 적용한다. [버튼 기준](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual-actions) · [메시지형 Dialog](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-feedback-visual)
+**5단계 착수 당시 기준.** 일반 캡슐형, 운동 푸터와 권고 높이, 소형 보조 버튼의 조작 영역·정렬, 메시지형 Dialog의 가로 액션 균등 너비, 설정·날짜·일정 조작의 승인값을 유지한다. 앱 셸과 페이지 시작 위치, Toast·새로고침, ConnectedDropdown, 숫자 휠·초기값, 저장·동기화·복구 및 오프라인 보호에는 기존 계약을 적용한다. [버튼 기준](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual-actions) · [메시지형 Dialog](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-feedback-visual)
+
+<a id="front18-stage5"></a>
+
+#### FRONT 18 · 5단계 버튼·입력 마감 — 2026-11-26
+
+**UI 구현 A·사용자 승인 B 완료.** 5-1의 401개 위치에서 402개 위치를 추적했고 5-4에서 56개 위치의 공통 규격을 새로 적용하거나 확대했다. 남은 웨이트 숫자 휠 5개를 적용했고 구현은 `2145d1c`에 반영했다. 실제 연동 C·통합 검증 D는 아래의 격리 Spring 시나리오까지 확인했다. [승인 기록](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage5-decision) · [402개 적용 현황표](../tasks/evidence/front-18-5-4/control-inventory.json) · [5-4 검증](../tasks/front-18-5-4-control-rollout.md#검증-결과)
+
+| 수정 항목 | 확인한 원인과 처리 |
+| --- | --- |
+| 운동 종료·중량 변경 | 320px에서 종료 열의 폭을 확보해 문구를 한 줄로 유지한다. 기존 일반 버튼과 수동 캡슐을 한 소형 버튼으로 통합하고 원판 카드 끝 열에 너비를 확보했다. 중량 변경의 선택 제한을 유지한다. [수정 전후 계측](../tasks/front-18-5-3-user-refinement.md#chrome-계측) |
+| 유산소 목표 거리 | 최솟값 `0.001`km에서 출발한 휠이 `0.101`km처럼 이동했다. 0부터 0.1km 격자로 이동하고 직접 입력은 `0.001`km부터 유효하다. [수정 근거](../tasks/front-18-5-3-user-refinement.md#디자인-수정) |
+| 홈 루틴 조회·START | 검수 브라우저에서 상세 조회 503을 재현했다. 확인할 수 없는 루틴은 잠그고 오류·새로고침을 표시한다. 새 START는 확인된 루틴 버전과 `training.canWrite`를 모두 사용한다. [재현과 처리](../tasks/front-18-5-3-user-refinement.md#홈-루틴-선택시작-오류) |
+| 디로딩 조회 실패 | 조회 실패의 `undefined`가 보호 상태로 해석되던 조건을 변경했다. 확인된 `ACTIVE`·`COMPLETED`만 디로딩 선택 잠금을 적용한다. 조회 실패 안내를 표시하고 최신 쓰기 상태가 확인될 때까지 START는 제한한다. [503 시나리오](../tasks/front-18-5-3-user-refinement.md#홈-루틴-선택시작-오류) |
+| 4174 LAN HTTP START | 검수 빌드의 IndexedDB 편집 잠금 허용 출처가 4173 전용이었다. 4174 검수 빌드에도 지정한 사설 LAN 출처를 반영했고 해당 출처의 START·저장·종료를 실제 Spring에서 확인했다. [Mac 4174 재검수](../tasks/front-18-5-3-final-refinement.md#mac-4174-재검수) |
+| LAN HTTP 종료 후 재승인 | `crypto.randomUUID()`를 직접 호출하던 재승인 경로가 LAN HTTP에서 실패했다. 공통 `newId()`의 `crypto.getRandomValues()` 기반 UUID v4 경로를 재사용한다. 세션·루틴 버전, 승인 요청 ID, 전송 전 고정 요청의 로컬 저장, 중복 요청 제한·409 재확인을 유지한다. [UUID 구현](../../src/id.ts) · [종료 제어](../../src/features/workout-online/closed-controller.ts) · [회귀](../../tests/workout-finish.test.mjs) |
+
+**5-4 실행 결과.** 전체 FRONT 735/735, 집중 회귀 182/182, Chrome 320·375·393·430·1280px, TypeScript·ESLint·운영 및 검수 빌드를 통과했다. 운영 32개·검수 41개 사전 캐시 항목의 SHA-256 일치와 운영 빌드·양쪽 Service Worker 목록의 Preview 제외를 확인했다. 격리 Spring에서는 START·snapshot·FINISH, 정밀값 정정·재승인, 평균 심박수 및 일반 휴식 180초·테스트 12초를 확인했다. [최종 검증 기록](../tasks/evidence/front-18-5-4/test-results.json)
+
+휴식일 전체 목록 잠금과 START 활성화가 함께 나타난 간헐 오류의 직접 원인, 이전 운동 저장 상태 실패의 직접 원인은 미확정이다. iPhone Safari 및 설치형 PWA 실기기 검증은 남아 있다. 휴식 4구간과 목표 심박수·케이던스 범위는 승인된 Preview이며 후속 서버 계약은 전체 UI·UX 확정 이후 검토한다. [후속 요구사항과 승인](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage5-decision)
+
+5-5B/C는 문서와 근거를 정리했다. 6단계는 홈에 적용된 `ConnectedDropdown`을 다른 선택 UI로 확대할 범위를 조사하고, 각 화면의 선택값·필터·취소·포커스와 기능성 예외를 보존하는 작업이다. [홈 최초 적용](#ui-18-홈-루틴-선택-최종-승인과-1차-마감) · [자료 정리 내역](../tasks/front-18-5-5-bc-closure.md)
 
 #### 현황 갱신
 
@@ -1266,6 +1287,12 @@ Overload의 핵심 기능은 운동 기록 입력입니다.
 - 0과 값이 없는 상태를 구분합니다.
 - 사용자의 입력 중에는 불필요한 자동 포맷을 피합니다.
 - 최종 제출 시 정규화 및 유효성 검증을 수행합니다.
+
+일반 버튼과 폼은 공통 `Button`·`Field`, 메시지는 공통 Dialog 표면과 동작을 재사용합니다. 분할 선택·필터·검색은 역할별 기존 구조와 접근성 이름을 유지합니다. `ConnectedDropdown`, 기간·일정, 설정, OTP, 압축 세트 표는 화면에 필요한 기존 조작을 적용합니다. [공통 폼](../../src/components/ui.tsx) · [Dialog](../../src/components/Dialog.tsx) · [현행 치수와 예외](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-controls-visual)
+
+숫자 Dialog는 `NumberWheel`과 `DurationWheel`을 재사용합니다. 연속 탐색 시 최대 61개 옵션의 DOM과 스크롤 위치 보정을 유지합니다. 중앙 스냅, 방향키 선택·실제 포커스 동기화, 선택 항목 중심의 Tab, 입력 오류 안내, 닫은 뒤 진입점 포커스 복귀를 확인합니다. 필드별 배경 클릭·취소 정책을 보존합니다. [숫자 휠](../../src/components/NumberWheel.tsx) · [시간 휠](../../src/components/DurationWheel.tsx) · [옵션 범위](../../src/components/wheel-options.ts)
+
+`WeightWheelFields`는 기존 부하 방식과 값의 출처를 사용합니다. `CardioPlanFields`는 루틴과 세션 계획, `CardioActualFields`는 완료 검토와 기록 정정에 재사용합니다. 표시용 반올림·공란의 0 표시와 실제 데이터는 분리합니다. 열기·취소에서 정밀값을 보존하고 변경 확인은 부모 초안에만 반영합니다. 버전·충돌 보호, 미확정 반복, 기존 저장·승인, 타이머와 로컬 보호는 각 도메인 경로에서 처리합니다. [웨이트 입력](../../src/features/workout-flow/WeightWheelFields.tsx) · [유산소 계획](../../src/features/workout-online/CardioPlanFields.tsx) · [유산소 실측](../../src/features/workout-online/CardioActualFields.tsx)
 - 음수 및 허용 범위는 도메인 규칙에 따라 처리합니다.
 - 사용자 로케일에 따른 소수점 입력 차이를 고려합니다.
 
@@ -1913,6 +1940,14 @@ Mock은 검토 환경임을 화면에 표시하고 현실적인 합성 데이터
 - 검수할 때 같은 LAN 주소에서 **운동 시작 → 준비운동 완료 → 운동 시작하기 → 세트 입력·완료 → 홈 복귀 → 운동 이어가기 → 새로고침 후 복원**을 실행합니다. 실제 `POST /api/v1/workout-sessions`의 `201`과 세트 완료 시 `PUT /api/v1/workout-sessions/{id}/snapshot`의 `200`을 확인합니다. 두 번째 같은 출처 탭에서는 읽기 전용이 되고, 편집 탭을 닫은 뒤 다시 열면 저장한 세트를 이어서 편집할 수 있어야 합니다. PC 루프백 결과와 LAN 결과는 각각 기록하고, iPhone Safari와 홈 화면 앱은 직접 실행한 결과만 기록합니다.
 - 일반 출처와 PC 루프백은 Web Locks를 사용합니다. **4173 빌드에서 지정한 사설 LAN HTTP 주소**는 Web Locks가 없는 경우 계정·데이터 세대·운동별 IndexedDB 편집 잠금을 획득한 뒤 START를 보내고 같은 잠금으로 이어하기를 보호합니다. 잠금 실패 화면에서는 편집 탭과 IndexedDB 사용 가능 여부를 먼저 확인합니다. 이 주소의 운동 START·저장은 실제 OTP·CSRF·Spring API를 사용합니다. HTTP에서의 운동 검수와 HTTPS Service Worker·오프라인 설치 검증은 각각의 조건에서 확인합니다. [검수용 편집 잠금](../../src/features/workout-local/review-lock.ts)
 - 검증이 끝나면 이번에 만든 운동 ID에 한해 정상 종료하고, 검증 후 표시할 필요가 없는 기록은 앱의 기록 삭제 절차를 사용합니다. 새로 만든 검증용 루틴도 같은 범위로 정리합니다. 새 ACTIVE가 남지 않았는지 확인하고 검증 브라우저와 탭을 닫습니다. 공용 검수 계정의 기존 루틴·기록·로그인과 사용자의 브라우저 저장소는 보존합니다. 복구가 필요하면 [Backend 검수 환경 안내](../../../overload-server/docs/engineering/test-environment.md#review-4173-backend)를 따릅니다.
+
+<a id="review-4174-mac"></a>
+
+#### Mac 4174 PWA 검수
+
+FRONT 18 5단계의 Mac 검수에는 기존 4174 게이트웨이와 전용 Spring 환경을 사용했습니다. Mac에서는 `http://127.0.0.1:4174/`, 같은 Wi-Fi의 iPhone에서는 Mac의 현재 사설 IPv4와 4174 포트로 실제 앱에 접근합니다. `/common-ui-preview.html?controls=1`은 같은 게이트웨이의 합성 UI 경로입니다. 기기별 START·저장과 Safari·설치형 PWA 검증은 직접 실행한 결과를 각각 기록합니다. [Mac 검수 기록](../tasks/front-18-5-3-final-refinement.md#mac-4174-재검수)
+
+기존 실행을 재사용합니다. UI 빌드 갱신이 필요한 작업에서는 `logs/workout-api-review/validation-current.json`으로 4174 검수 실행을 확인하고, `OVERLOAD_REVIEW_LAN_IP`에 Mac의 현재 사설 IPv4를 지정해 `node scripts/recovered-data-review-server.mjs 4174 build-only`를 사용합니다. 보안 출처는 Web Locks를 쓰며 빌드에 지정한 사설 HTTP 출처에서는 기존 IndexedDB 편집 잠금을 사용합니다. [검수 게이트웨이](../../scripts/recovered-data-review-server.mjs) · [검수용 편집 잠금](../../src/features/workout-local/review-lock.ts)
 
 #### 실제 API 연동과 통합 검증
 

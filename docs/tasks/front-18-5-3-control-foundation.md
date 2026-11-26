@@ -55,7 +55,7 @@
 
 - [공통 Preview](http://127.0.0.1:4173/common-ui-preview.html)에서 `FRONT 18 버튼·입력 검수`를 선택한다. [PC 5-3 바로 열기](http://127.0.0.1:4173/common-ui-preview.html?controls=1), [LAN 5-3 바로 열기](http://192.168.0.3:4173/common-ui-preview.html?controls=1), [기존 FRONT 18](http://127.0.0.1:4173/common-ui-preview.html?front18=1)
 - Chrome 320·375·393·430·1280px에서 대표 조작 영역, 입력 테두리, 휠 강조와 하단 액션, 가로 넘침을 검증했다. 393px 터치 진입, 반복 키보드 이동과 포커스 복귀, 마우스 스크롤로 최초 창을 넘는 이동, 직접 입력 오류와 공란 반환, 2.5/1kg와 0.1km/h·km 이동을 확인했다. 격리 Preview에서 API 호출 수는 0이다. [Chrome 계측](evidence/front-18-5-3/chrome-controls.json)
-- 비교 근거는 기존 [5-1 루틴 입력 393px](evidence/front-18-5-1/routine-inputs-393.png)과 [5-1 반복 휠 393px](evidence/front-18-5-1/reps-wheel-393.png), 이번 [5-3 대표 입력 393px](evidence/front-18-5-3/5-3-controls-393.png), [5-3 휠 393px](evidence/front-18-5-3/5-3-wheel-393.png), [휴식 네 열 320px](evidence/front-18-5-3/5-3-rest-four-320.png)에 남겼다.
+- 비교 근거는 기존 [5-1 루틴 입력 393px](evidence/front-18-5-1/routine-inputs-393.png)과 [5-1 반복 휠 393px](evidence/front-18-5-1/reps-wheel-393.png), 이번 [5-3 대표 입력 393px](evidence/front-18-5-3/5-3-controls-393.png), [휴식 네 열 320px](evidence/front-18-5-3/5-3-rest-four-320.png)에 남겼다.
 - iPhone Safari와 설치형 PWA의 실기기 검수는 대기 중이다. 공통 휠의 빠른 연속 스와이프, 화면 키보드와 포커스, 320px 세 열과 휴식 네 열의 가독성이 사용자 확인 대상이다.
 
 ### 타입 검사·ESLint·집중 회귀
