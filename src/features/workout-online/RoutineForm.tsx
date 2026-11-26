@@ -295,7 +295,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
           data-edit-picker={picking || undefined} ref={addedCardId === c.id ? addedCard : picking ? cardioSearchRegion : undefined}>
           <ExerciseEditHeading index={index} name={c.name || '유산소 종목 선택'} description={editing ? undefined : cardioDescription(c, activities)}
             picking={picking} onChange={() => openCardioPicker(picking ? null : c.id)} />
-          {picking ? search : <CardioPlanFields routineEditor value={c} onChange={v => changeCardio(c.id, v)} />}
+          {picking ? search : <CardioPlanFields value={c} onChange={v => changeCardio(c.id, v)} />}
           <ExerciseActions index={index} count={chosenCardio.length} onMove={delta => setCardio(v => move(v, index, delta))} onRemove={() => {
             setCardio(values => values.filter(x => x.id !== c.id))
             if (picking) setCardioPicker(null)
@@ -306,9 +306,9 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       {editing && <details className={editStyles.restore}>
         <summary>제거한 종목 복원</summary>
         <div className="stack">
-          <button type="button" className="outline action-pill" onClick={lookupRemoved}>복원 후보 조회</button>
-          {removed?.weightPlacements.filter(p => !weights.some(w => w.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setWeights(values => [...values, { ...p, restore: true, setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), approve: false, nextWeightKg: p.approvedWeightKg }])}>{p.exerciseName} 배치 복원</button>)}
-          {removed?.cardioPlacements.filter(p => !cardio.some(c => c.id === p.id)).map(p => <button type="button" className="outline" key={p.id} onClick={() => setCardio(values => [...values, {id:p.id,existing:true,restore:true,...draftCardio(p.plan)}])}>{p.plan.name} 배치 복원</button>)}
+          <Button onClick={lookupRemoved}>복원 후보 조회</Button>
+          {removed?.weightPlacements.filter(p => !weights.some(w => w.id === p.id)).map(p => <Button key={p.id} onClick={() => setWeights(values => [...values, { ...p, restore: true, setCount: String(p.setCount), minReps: String(p.minReps), maxReps: String(p.maxReps), approve: false, nextWeightKg: p.approvedWeightKg }])}>{p.exerciseName} 배치 복원</Button>)}
+          {removed?.cardioPlacements.filter(p => !cardio.some(c => c.id === p.id)).map(p => <Button key={p.id} onClick={() => setCardio(values => [...values, {id:p.id,existing:true,restore:true,...draftCardio(p.plan)}])}>{p.plan.name} 배치 복원</Button>)}
         </div>
       </details>}
     </fieldset>

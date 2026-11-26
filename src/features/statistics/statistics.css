@@ -16,9 +16,9 @@
 .record-menu strong { font-size: 16px; }
 .record-menu button > span:last-child { text-align: right; color: var(--accent); }
 .record-menu .small { font-size: 9px; letter-spacing: .08em; }
-.record-tabs { display: flex; gap: 6px; margin-top: 8px; }
-.record-tabs > button { flex: 1; min-width: 0; }
-.record-tabs [aria-pressed='true'] { background: var(--accent-soft); color: var(--accent); }
+.record-tabs:not([data-period-tabs]) { display: flex; gap: 6px; margin-top: 8px; }
+.record-tabs:not([data-period-tabs]) > button { flex: 1; min-width: 0; }
+.record-tabs:not([data-period-tabs]) [aria-pressed='true'] { background: var(--accent-soft); color: var(--accent); }
 .record-period-row { display: grid; grid-template-columns: 36px minmax(0,1fr) 36px; align-items: center; gap: 4px; text-align: center; }
 .record-period-row button { padding-inline: 0; font-size: 23px; }
 .record-period-row b { font-size: 12px; }
@@ -71,10 +71,10 @@
 .statistics-summary strong {font-size:17px;line-height:1.3;}
 .record-menu {gap:7px;}
 .record-menu button {display:block;min-height:46px;padding:15px 4px;font-size:12px;font-weight:650;text-align:center;}
-.record-tabs {margin:0;gap:6px;}
-.record-tabs > button {min-height:34px;padding:7px 5px;font-size:12px;}
-.record-period-row {grid-template-columns:34px minmax(0,1fr) 34px 38px;gap:5px;margin:0;}
-.record-period-row > button {min-height:32px;height:32px;font-size:18px;padding:3px;}
+.record-tabs:not([data-period-tabs]) {margin:0;gap:6px;}
+.record-tabs:not([data-period-tabs]) > button {min-height:34px;padding:7px 5px;font-size:12px;}
+.record-period-row {grid-template-columns:44px minmax(0,1fr) 44px 44px;gap:5px;margin:0;}
+.record-period-row > button {min-width:44px;min-height:44px;height:44px;border-radius:5px;font-size:18px;padding:0;}
 .record-period-row b {font-size:12px;}
 .record-calendar {display:block;padding:10px;border:1px solid var(--border-subtle);}
 .record-calendar-grid {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-top:9px;text-align:center;}
@@ -131,9 +131,8 @@
 
 .record-back {display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .record-screen .record-back button {width:auto;min-height:30px;height:30px;padding:4px 8px;font-size:11px;border:1px solid var(--border-subtle);border-radius:2px;}
-.record-screen .record-tabs > button {min-height:35px;height:35px;padding:7px 2px;border-radius:2px;font-size:11px;font-weight:400;}
-.record-screen .record-tabs > button[aria-pressed='true'] {font-weight:700;}
-.record-screen .record-period-row > button {min-height:30px;height:30px;border-radius:2px;}
+.record-screen .record-tabs:not([data-period-tabs]) > button {min-height:35px;height:35px;padding:7px 2px;border-radius:2px;font-size:11px;font-weight:400;}
+.record-screen .record-tabs:not([data-period-tabs]) > button[aria-pressed='true'] {font-weight:700;}
 .record-screen .record-pair:has(+ .record-trend) {padding-block:5px;border-bottom:1px solid var(--border-subtle);}
 .record-screen .record-note {font-size:11px;line-height:1.5;font-weight:400;}
 .record-screen .analysis-group {margin:20px 0 10px;}
@@ -149,7 +148,7 @@
 .record-screen h2,.muscle-analysis h2 {font-size:14px;}
 .record-screen h1,.muscle-analysis h1 {font-size:22px;}
 .record-screen .record-menu button {background:var(--surface-input);border-radius:var(--radius-control);font-size:13px;}
-.record-screen .record-tabs > button[aria-pressed='true'] {background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
+.record-screen .record-tabs:not([data-period-tabs]) > button[aria-pressed='true'] {background:var(--accent);color:var(--on-accent);border-color:var(--accent);}
 .record-period-row > button {display:grid;place-items:center;line-height:1;}
 .record-period-row svg {display:block;}
 .search-input-wrap {position:relative;min-width:0;}
@@ -193,7 +192,7 @@
 .growth-event .growth-after[data-approval-direction='decrease'] {color:var(--status-warning);}
 .growth-event .growth-detail {color:var(--accent);font-size:22px;text-align:right;}
 
-.muscle-analysis .record-tabs > button[aria-pressed='true'] {background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+.muscle-analysis .record-tabs:not([data-period-tabs]) > button[aria-pressed='true'] {background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
 
 .record-period .record-period-row .record-calendar-trigger[aria-expanded='true'] {background:var(--accent);color:var(--on-accent);}
 .record-calendar-grid [data-state='complete'] {color:var(--status-done);}

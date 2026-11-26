@@ -1,3 +1,5 @@
+import filterTags from '../../components/common-ui/FilterTags.module.css'
+import { Button } from '../../components/ui.tsx'
 import { presetNumber } from '../workout-online/preset-schedule.ts'
 import type { PresetSchedule } from '../workout-online/preset-schedule.ts'
 import type { ReactNode } from 'react'
@@ -50,14 +52,14 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, readRe
     {preset?.controls(leave)}
     <fieldset ref={filters} className={styles.candidateFilters} aria-label="루틴 후보 필터" disabled={busy || readOnly} onKeyDown={e=>{if(popup&&e.key==='Escape'){setPopup(null);(popup==='assignment'?first:tagButton).current?.focus()}}}>
       <div className={styles.candidateTags}>
-        <button type="button" className={styles.chip} ref={first} aria-expanded={popup==='assignment'} aria-pressed={filter==='assigned'||filter==='unassigned'} aria-controls="schedule-candidate-assignment" onClick={()=>setPopup(value=>value==='assignment'?null:'assignment')}>{filter==='assigned'?'배정 완료':filter==='unassigned'?'배정 미완료':'배정 유무'} <span aria-hidden="true">▾</span></button>
-        {popup==='assignment'&&<div id="schedule-candidate-assignment" className={styles.candidateTagOptions} aria-label="배정 유무 후보">{([['assigned','배정 완료'],['unassigned','배정 미완료']] as const).map(([value,label])=><button type="button" className={styles.chip} key={value} aria-pressed={filter===value} onClick={()=>{chooseFilter(value);first.current?.focus()}}>{label}</button>)}</div>}
+        <button type="button" className={filterTags.chip} ref={first} aria-expanded={popup==='assignment'} aria-pressed={filter==='assigned'||filter==='unassigned'} aria-controls="schedule-candidate-assignment" onClick={()=>setPopup(value=>value==='assignment'?null:'assignment')}><span>{filter==='assigned'?'배정 완료':filter==='unassigned'?'배정 미완료':'배정 유무'} <span aria-hidden="true">▾</span></span></button>
+        {popup==='assignment'&&<div id="schedule-candidate-assignment" className={styles.candidateTagOptions} aria-label="배정 유무 후보">{([['assigned','배정 완료'],['unassigned','배정 미완료']] as const).map(([value,label])=><button type="button" className={filterTags.chip} key={value} aria-pressed={filter===value} onClick={()=>{chooseFilter(value);first.current?.focus()}}><span>{label}</span></button>)}</div>}
       </div>
       <div className={styles.candidateTags}>
-        <button type="button" className={styles.chip} ref={tagButton} aria-label={filter.startsWith('tag:') ? filter.slice(4) : '태그'} aria-expanded={popup==='tag'} aria-pressed={filter.startsWith('tag:')} aria-controls="schedule-candidate-tags" disabled={!tags.length} onClick={() => setPopup(value=>value==='tag'?null:'tag')}>{filter.startsWith('tag:') ? filter.slice(4) : '태그'} <span aria-hidden="true">▾</span></button>
-        {popup==='tag' && <div id="schedule-candidate-tags" className={styles.candidateTagOptions} aria-label="후보 태그">{tags.map(tag => <button type="button" className={styles.chip} key={tag} aria-pressed={filter === `tag:${tag}`} onClick={() => { chooseFilter(`tag:${tag}`); tagButton.current?.focus() }}>{tag}</button>)}</div>}
+        <button type="button" className={filterTags.chip} ref={tagButton} aria-label={filter.startsWith('tag:') ? filter.slice(4) : '태그'} aria-expanded={popup==='tag'} aria-pressed={filter.startsWith('tag:')} aria-controls="schedule-candidate-tags" disabled={!tags.length} onClick={() => setPopup(value=>value==='tag'?null:'tag')}><span>{filter.startsWith('tag:') ? filter.slice(4) : '태그'} <span aria-hidden="true">▾</span></span></button>
+        {popup==='tag' && <div id="schedule-candidate-tags" className={styles.candidateTagOptions} aria-label="후보 태그">{tags.map(tag => <button type="button" className={filterTags.chip} key={tag} aria-pressed={filter === `tag:${tag}`} onClick={() => { chooseFilter(`tag:${tag}`); tagButton.current?.focus() }}><span>{tag}</span></button>)}</div>}
       </div>
-      <button type="button" className={styles.chip} aria-pressed={filter === 'all'} onClick={() => chooseFilter('all')}>전체 보기</button>
+      <button type="button" className={filterTags.chip} aria-pressed={filter === 'all'} onClick={() => chooseFilter('all')}><span>전체 보기</span></button>
     </fieldset>
     <fieldset className={styles.scheduleDays} disabled={busy || readOnly}>{weekdays.map((name, index) => {
       const assigned = draft.find(a => a.dayOfWeek === index + 1)?.routineId ?? ''
@@ -72,18 +74,18 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, readRe
       }}>
         {priority && <option value={priority.id}>✦ 새 루틴 · {priority.name}</option>}<option value="">휴식</option>{assigned && assigned !== priority?.id && !candidates.some(r => r.id === assigned) && <option value={assigned}>{routines.find(r => r.id === assigned)?.name ?? '사용할 수 없는 루틴 · 변경 필요'}</option>}{candidates.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select></label>
     })}</fieldset>{readRetry || (preset?.onReload
-      ? <button type="button" className="primary" disabled={busy} onClick={() => { if (preset.onReload) void leave(preset.onReload) }}>최신 일정 확인</button>
-      : <button className="primary" disabled={!canSubmit}>일정 저장</button>)}
+      ? <Button type="button" variant="primary" disabled={busy} onClick={() => { if (preset.onReload) void leave(preset.onReload) }}>최신 일정 확인</Button>
+      : <Button type="submit" variant="primary" disabled={!canSubmit}>일정 저장</Button>)}
     {confirm && canSubmit && <Dialog title="주간 일정 변경 확인" tone="info" onClose={() => setConfirm(false)}>
       {!dirty && <p>모든 요일을 휴식으로 적용해요.</p>}<ul>{weekdays.map((name, index) => {
       const before = state.assignments.find(a => a.dayOfWeek === index + 1)?.routineId
       const after = draft.find(a => a.dayOfWeek === index + 1)?.routineId
       const nameFor = (id?: string) => id ? routines.find(r => r.id === id)?.name ?? '사용할 수 없는 루틴' : '휴식'
       return before === after ? null : <li key={name}>{name}요일 · {nameFor(before)} → {nameFor(after)}</li>
-    })}</ul><div className="row"><button type="button" className="action-pill modal-neutral" data-modal-neutral onClick={() => setConfirm(false)}>취소</button><button type="button" className="primary" onClick={async () => {
+    })}</ul><div className="row"><Button type="button" variant="neutral" onClick={() => setConfirm(false)}>취소</Button><Button type="button" variant="primary" onClick={async () => {
       setConfirm(false)
       if (await onSave(draft) && navigationKey) { saved.current = true; navigateBack(onCancel) }
-    }}>저장</button></div></Dialog>}
+    }}>저장</Button></div></Dialog>}
     {confirmation}
   </form>
 }

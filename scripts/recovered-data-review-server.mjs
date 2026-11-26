@@ -40,13 +40,13 @@ if (action !== 'serve-built') await build({
   mode: 'ui-review',
   define: {
     'import.meta.env.VITE_APPROVED_HIGH_ROW_GIF': JSON.stringify(port === 4173 ? 'true' : 'false'),
-    'import.meta.env.VITE_HTTP_WORKOUT_REVIEW_ORIGIN': JSON.stringify(port === 4173 ? origins[2] : ''),
+    'import.meta.env.VITE_HTTP_WORKOUT_REVIEW_ORIGIN': JSON.stringify(origins[2]),
   },
   build: { outDir, emptyOutDir: false },
   plugins: [reviewFixtureEntry('/scripts/review/account-entry.tsx')],
 })
 
-if (port === 4173 && action !== 'serve-built') await build({
+if (action !== 'serve-built') await build({
   configFile: false,
   envDir: false,
   root: resolve('scripts/review'),

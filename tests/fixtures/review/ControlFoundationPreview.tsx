@@ -10,6 +10,7 @@ import { PeriodControls } from '../../../src/features/statistics/PeriodControls.
 import type { PeriodSelection } from '../../../src/features/statistics/period-selection.ts'
 import activity from '../../../src/features/statistics/Activity.module.css'
 import { KgWheel } from '../../../src/features/workout-flow/WeightFocus.tsx'
+import { RecordedRepsField, WeightWheelField } from '../../../src/features/workout-flow/WeightWheelFields.tsx'
 import { CardioNumberField } from '../../../src/features/workout-online/CardioNumberField.tsx'
 import { CardioPlanFields } from '../../../src/features/workout-online/CardioPlanFields.tsx'
 import { CardioActualFields } from '../../../src/features/workout-online/CardioActualFields.tsx'
@@ -55,11 +56,28 @@ function FutureGoalsPreview() {
     <label>예시 운동<select value={plan.kind} onChange={event => setBike(event.target.value === 'BIKE')}>
       <option value="TREADMILL">러닝머신</option><option value="BIKE">실내 사이클</option>
     </select></label>
-    <CardioPlanFields key={plan.kind} routineEditor value={plan} onChange={value => bike
+    <CardioPlanFields key={plan.kind} value={plan} onChange={value => bike
       ? setCycling({ ...value, kind: 'BIKE' }) : setRunning({ ...value, kind: 'TREADMILL' })}
       previewGoals={<><ExampleRange label="심박수" unit="BPM" initial={['130', '150']} />
         <ExampleRange label="케이던스" unit={bike ? 'RPM' : 'SPM'} initial={bike ? ['70', '90'] : ['160', '180']} /></>} />
   </>
+}
+
+function WeightRolloutPreview() {
+  const [weight, setWeight] = useState('52.3')
+  const [reps, setReps] = useState('10')
+  const [additional, setAdditional] = useState('')
+  const [activeApproval, setActiveApproval] = useState('57.123456')
+  const [closedApproval, setClosedApproval] = useState('')
+  return <Card data-control-example="weight-rollout">
+    <h2>기록 정정과 재승인</h2>
+    <p className="muted small">합성 예시 · 휠에서 고른 값은 화면의 초안에만 반영돼요.</p>
+    <WeightWheelField label="실제 중량" value={weight} onChange={setWeight} loadType="PLATE" />
+    <RecordedRepsField value={reps} onChange={setReps} />
+    <WeightWheelField label="추가 중량" value={additional} onChange={setAdditional} loadType="BODYWEIGHT" optional />
+    <WeightWheelField label="지금 다시 승인할 중량" value={activeApproval} onChange={setActiveApproval} loadType="STACK" />
+    <WeightWheelField label="지금 재승인할 중량" value={closedApproval} onChange={setClosedApproval} loadType="DUMBBELL" />
+  </Card>
 }
 
 export default function ControlFoundationPreview() {
@@ -107,9 +125,10 @@ export default function ControlFoundationPreview() {
         <KgWheel label="원판식 중량" value={plate} step={2.5} onChange={setPlate} />
         <KgWheel label="덤벨 중량" value={dumbbell} step={1} compact onChange={setDumbbell} />
       </Card>
+      <WeightRolloutPreview />
       <Card data-control-example="cardio">
         <h2>유산소 목표</h2>
-        <CardioPlanFields routineEditor value={plan} onChange={next => setPlan({ ...next, kind: 'TREADMILL' })} />
+        <CardioPlanFields value={plan} onChange={next => setPlan({ ...next, kind: 'TREADMILL' })} />
       </Card>
       <Card data-control-example="cardio-actual">
         <h2>실제 유산소 기록</h2>

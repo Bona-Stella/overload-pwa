@@ -69,7 +69,7 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
           : contact ? <><p className="notice">대표 이메일 등록 필요</p><p className="muted small">재인증에 사용할 이메일을 확인해 주세요.</p>
             {contact.status === 'REQUIRED' && contact.candidate ? <><AccountItem icon="email" title={contact.candidate.maskedEmail} description="등록할 이메일" />
               <p className="muted small">이 이메일로 받은 인증코드를 입력하면 등록돼요.</p>
-              <button className="primary full" disabled={locked || wait > 0} onClick={() => { clear(); void controller?.requestEmailProof() }}>{state.pending === 'proof-request' ? '인증코드를 보내는 중…' : wait > 0 ? `${wait}초 후 요청 가능` : '후보 이메일로 등록 코드 요청'}</button></>
+              <Button variant="primary" className="full" disabled={locked || wait > 0} onClick={() => { clear(); void controller?.requestEmailProof() }}>{state.pending === 'proof-request' ? '인증코드를 보내는 중…' : wait > 0 ? `${wait}초 후 요청 가능` : '후보 이메일로 등록 코드 요청'}</Button></>
               : account.identities.filter(value => value.provider === 'google').length > 1 ? <p className="muted small">연결된 Google 계정이 여러 개라 지금은 등록할 이메일을 확인할 수 없어요.</p>
               : account.identities.some(value => value.provider === 'google') ? <>
                 <p className="muted small">연결된 Google 계정에서 이메일을 확인한 뒤 인증코드를 받아요.</p>
@@ -77,11 +77,11 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
                   <input type="hidden" name="identityId" value={account.form.identityId} />
                   <input type="hidden" name="_csrf" value={account.form.csrf} />
                   <p className="muted small">연결된 Google 계정을 선택해 주세요.</p>
-                  <button type="submit" className="primary full" disabled={busy}>Google에서 이메일 확인 계속</button>
-                </form> : <button className="primary full" disabled={locked} onClick={() => { clear(); void controller?.prepareGoogleContact() }}>Google로 등록 이메일 확인</button>}
+                  <Button type="submit" variant="primary" className="full" disabled={busy}>Google에서 이메일 확인 계속</Button>
+                </form> : <Button variant="primary" className="full" disabled={locked} onClick={() => { clear(); void controller?.prepareGoogleContact() }}>Google로 등록 이메일 확인</Button>}
               </> : account.identities.some(value => value.provider === 'email') ? <p className="muted small">로그아웃한 뒤 같은 이메일로 다시 로그인해 주세요.</p>
                 : <p className="muted small">로그인 수단을 확인할 수 없어 등록을 시작할 수 없습니다. 계정 정보를 다시 조회해 주세요.</p>}
-            {(account.form || (contact.status === 'REQUIRED' && contact.candidate)) && <button className="outline full action-pill" disabled={locked} onClick={() => { clear(); void controller?.cancelRegistration() }}>대표 이메일 등록 취소</button>}
+            {(account.form || (contact.status === 'REQUIRED' && contact.candidate)) && <Button className="full" disabled={locked} onClick={() => { clear(); void controller?.cancelRegistration() }}>대표 이메일 등록 취소</Button>}
           </> : <AccountNote>대표 이메일 정보를 확인할 수 없습니다. 계정 정보를 새로 확인해 주세요.</AccountNote>}
         {challenge && controller && <form className={`stack ${styles.divider}`} onSubmit={event => { event.preventDefault(); const value = code; clear(); void controller.verifyEmailProof(value) }}>
           <h2>{challenge.candidateId ? '대표 이메일 등록 코드' : '이메일 재인증 코드'}</h2>
@@ -89,8 +89,8 @@ export function AccountSettings({ state, controller, now, headingRef, onBack, De
           <p className="muted small" id="account-code-hint">{remaining ? `남은 시간 ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : '코드가 만료됐어요'} · 최대 5회 입력 · 60초 후 재요청</p>
           {state.issue && <p className="notice error" id="auth-feedback" role="alert">{state.issue.message}</p>}
           {!state.issue && state.notice && <p className="muted small" id="auth-feedback" role="status">{state.notice}</p>}
-          <button type="submit" className="primary full" disabled={busy || code.length !== 6 || !remaining || verifyWait > 0}>{state.pending === 'proof-verify' ? '코드를 확인하는 중…' : verifyWait > 0 ? `${verifyWait}초 후 코드 확인` : '코드 확인'}</button>
-          <button data-close-text type="button" className="quiet" disabled={busy} onClick={() => { clear(); controller.clearAccountCode() }}>코드 입력 닫기</button>
+          <Button type="submit" variant="primary" className="full" disabled={busy || code.length !== 6 || !remaining || verifyWait > 0}>{state.pending === 'proof-verify' ? '코드를 확인하는 중…' : verifyWait > 0 ? `${verifyWait}초 후 코드 확인` : '코드 확인'}</Button>
+          <Button data-close-text type="button" variant="quiet" disabled={busy} onClick={() => { clear(); controller.clearAccountCode() }}>코드 입력 닫기</Button>
         </form>}
       </Card>
       <Card className={styles.card}>

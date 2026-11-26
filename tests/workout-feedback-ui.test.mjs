@@ -1044,11 +1044,14 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await click('종료 후 현재 중량 유지')
     await auditMessageDialog({ send, evaluate }, '종료 후 현재 루틴 중량 유지', 'info')
     await click('취소')
+    await evaluate(`document.querySelector('button[aria-label="지금 재승인할 중량"]').click()`)
+    await click('직접 입력')
     await evaluate(`(() => {
-      const input = document.querySelector('label > input[inputmode="decimal"]');
+      const input = document.querySelector('dialog[open] input[inputmode="decimal"]');
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '42.5');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     })()`)
+    await click('확인')
     await click('종료 후 명시 재승인')
     await auditMessageDialog({ send, evaluate }, '종료 후 루틴 중량 재승인', 'info')
     await click('취소')

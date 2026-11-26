@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Card } from '../../components/ui.tsx'
+import { Button, Card } from '../../components/ui.tsx'
 import { dayNames } from './routine-schedule.ts'
 import { canDeletePreset, presetLimit, presetNumber, routinePresetEntries } from './preset-schedule.ts'
 import type { PresetSchedule, SchedulePreset } from './preset-schedule.ts'
@@ -51,8 +51,8 @@ export function RoutineCreatedNotice({ name, onLater, onAssign, blocked = false 
   return <Card aria-label="새 루틴 일정 배정">
     <h2>주간 일정에 배정할까요?</h2>
     <p className={styles.createdMessage}>“{name}”</p>
-    <div className={styles.createdActions}><button type="button" className="outline action-pill" onClick={onLater}>나중에</button>
-      <button type="button" className="primary" disabled={blocked} onClick={onAssign}>배정하기</button></div>
+    <div className={styles.createdActions}><Button type="button" onClick={onLater}>나중에</Button>
+      <Button type="button" variant="primary" disabled={blocked} onClick={onAssign}>배정하기</Button></div>
   </Card>
 }
 

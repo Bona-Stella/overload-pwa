@@ -26,11 +26,11 @@ function adjustReps(value: string, direction: -1 | 1) {
   const next = adjustRepsDraft(value, direction)
   return next !== null && Number(next) <= 2147483647 ? next : null
 }
-export function KgWheel({ label, value, onChange, step = 2.5, compact = false, preview }: {
-  label: string; value: string; onChange: (value: string) => void; step?: 1 | 2.5; compact?: boolean; preview?: boolean
+export function KgWheel({ label, value, onChange, step = 2.5, compact = false, preview, disabled, required = false }: {
+  label: string; value: string; onChange: (value: string) => void; step?: 1 | 2.5; compact?: boolean; preview?: boolean; disabled?: boolean; required?: boolean
 }) {
-  return <NumberWheel preview={preview} label={label} value={value} onChange={onChange} unit="kg" start="0"
-    adjust={(value, direction) => adjustKg(value, direction, step)} validate={value => value.trim() ? decimalDraft(value) : ''}
+  return <NumberWheel preview={preview} disabled={disabled} label={label} value={value} onChange={onChange} unit="kg" start="0"
+    adjust={(value, direction) => adjustKg(value, direction, step)} validate={value => required || value.trim() ? decimalDraft(value) : ''}
     stepLabel={compact ? '' : String(step)} compactStepper={compact} />
 }
 

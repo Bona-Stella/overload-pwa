@@ -29,8 +29,8 @@ export function IdentityManagement({ state, controller }: { state: AuthState; co
           : <>{unlink}{account.linkForm && controller ? <form action="/oauth2/link/google" method="post" className="stack" onSubmit={event => { if (!controller.beginLinkNavigation()) event.preventDefault() }}>
             <input type="hidden" name="_csrf" value={account.linkForm.csrf} />
             <p className="muted small">추가할 Google 계정을 선택해 주세요.</p>
-            <button type="submit" className="primary full" disabled={busy}>Google에서 연결 계속</button>
-            <button type="button" className="quiet" disabled={busy} onClick={() => controller.cancelIdentityChange()}>Google 연결 준비 취소</button>
+            <Button type="submit" variant="primary" className="full" disabled={busy}>Google에서 연결 계속</Button>
+            <Button type="button" variant="quiet" disabled={busy} onClick={() => controller.cancelIdentityChange()}>Google 연결 준비 취소</Button>
           </form> : <Button variant={identities.length ? 'quiet' : 'secondary'} className={styles.action}
             data-connect={!identities.length || undefined} disabled={locked}
             onClick={() => void controller?.prepareGoogleLink()}><AccountIcon name="link" />{identities.length ? 'Google 로그인 추가 연결' : 'Google 계정 연결'}</Button>}</>}
@@ -45,8 +45,8 @@ export function IdentityManagement({ state, controller }: { state: AuthState; co
         <p>이 수단으로 다시 로그인하면 새 계정이 생성될 수 있어요.<br />새 계정에서는 기존 운동 기록을 볼 수 없어요.</p>
         <p>대표 재인증 이메일과 운동 기록은 유지돼요.<br />다른 기기는 모두 즉시 로그아웃되지는 않아요.</p>
         <p>로그인 수단은 하나 이상 남아 있어야 해요.</p>
-        <button className="action-pill warning-action full" disabled={busy} onClick={() => void controller.confirmUnlink()}>연결 해제</button>
-        <button className="action-pill modal-neutral full" data-modal-neutral disabled={busy} onClick={() => controller.cancelIdentityChange()}>취소</button>
+        <Button variant="warning" className="full" disabled={busy} onClick={() => void controller.confirmUnlink()}>연결 해제</Button>
+        <Button variant="neutral" className="full" disabled={busy} onClick={() => controller.cancelIdentityChange()}>취소</Button>
       </div>
     </Dialog>}
   </Card>

@@ -658,7 +658,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
       })()`), ['5px', '12px', '0px', '12px'])
       const buttons = await evaluate(`[...document.querySelectorAll('[aria-label="새 루틴 일정 배정"] button')].map(b=>({ text:b.textContent, height:b.offsetHeight, width:b.offsetWidth, fits:b.scrollWidth <= b.clientWidth }))`)
       assert.deepEqual(buttons.map(b => b.text), ['나중에', '배정하기'])
-      assert.ok(buttons.every(b => b.fits && b.height === 44))
+      assert.ok(buttons.every(b => b.fits && b.height === 48))
       assert.ok(Math.abs(buttons[0].width - buttons[1].width) <= 1)
     }
     await click('배정하기')

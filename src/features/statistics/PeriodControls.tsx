@@ -8,6 +8,7 @@ import { selectedPeriod } from './period-selection.ts'
 import type { PeriodSelection } from './period-selection.ts'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { Card } from '../../components/ui.tsx'
+import segmented from '../../components/common-ui/SegmentedControl.module.css'
 
 export function PeriodControls({ value, onChange, monthOnly = false, compact = false, days = [], variant, pendingMode, pendingValue }: { value: PeriodSelection; onChange: (value: PeriodSelection) => void; monthOnly?: boolean; compact?: boolean; days?:PlannedDay[]; variant?:'activity'; pendingMode?: PeriodSelection['mode']; pendingValue?: PeriodSelection }) {
   const preview=useRecordPreview()
@@ -30,7 +31,7 @@ export function PeriodControls({ value, onChange, monthOnly = false, compact = f
   const count = calendar ? new Date(Date.UTC(Number(calendar.slice(0,4)),Number(calendar.slice(5,7)),0)).getUTCDate() : 0
   const Container = compact ? 'section' : Card
   return <Container className="record-period" data-layout={variant} aria-label={monthOnly ? '조회 월' : '조회 기간'}>
-    {!monthOnly && <>{variant!=='activity'&&<h2>조회 기간</h2>}<div className="record-tabs">
+    {!monthOnly && <>{variant!=='activity'&&<h2>조회 기간</h2>}<div className={`record-tabs ${segmented.segment}`} data-period-tabs>
       {(['week', 'month'] as const).map(mode => <button key={mode} type="button" className="outline" aria-pressed={value.mode === mode}
         aria-busy={pendingMode === mode || undefined} aria-disabled={pendingMode === mode || undefined}
         data-wait={showPending && pendingMode === mode || undefined}

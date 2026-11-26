@@ -210,6 +210,29 @@ test('closed version conflict keeps original expectedVersion and requires explic
   await e.c.retry();assert.equal(e.calls.length,1);assert.equal(await e.c.edit(e.body()),false)
   await e.c.reviewed();assert.equal(await e.c.edit(e.body()),true);assert.deepEqual(e.calls.map(c=>c.expectedVersion),['1','2']);e.c.stop()
 })
+test('closed reapproval can prepare a durable request on LAN HTTP without crypto.randomUUID', async () => {
+  const browserMethod = Object.getOwnPropertyDescriptor(crypto, 'randomUUID')
+  const e = await closed()
+  let sent
+  e.api.routine = async () => clone(routine)
+  e.api.resolveClosed = async (_scope, _id, body) => {
+    sent = body
+    throw { status: 409, code: 'RESOLUTION_CONFLICT' }
+  }
+  Object.defineProperty(crypto, 'randomUUID', { configurable: true, value: undefined })
+  try {
+    assert.equal(await e.c.resolve(E, 'REAPPROVE', '52.123456'), false)
+    assert.match(sent.newApprovalRequest.id, /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/)
+    assert.equal(sent.expectedVersion, '1')
+    assert.equal(sent.newApprovalRequest.expectedRoutineVersion, routine.version)
+    assert.equal(sent.newApprovalRequest.nextApprovedWeightKg, '52.123456')
+    assert.deepEqual(JSON.parse(e.read().requestJson), sent)
+  } finally {
+    if (browserMethod) Object.defineProperty(crypto, 'randomUUID', browserMethod)
+    else delete crypto.randomUUID
+    e.c.stop()
+  }
+})
 test('a pending correction blocks a repeated submit or different deletion, and navigation ignores the late response',async()=>{
   const hold=gate(),e=await closed({sendGate:hold}),body=e.body()
   const pending=e.c.edit(body)

@@ -34,6 +34,7 @@ import { CardioActualFields } from './CardioActualFields.tsx'
 import { supportsCardioMotion } from './cardio-draft.ts'
 import { additionalLoadInput, bodyweightLoadLabel } from './bodyweight-load.ts'
 import { WorkoutSummary } from '../workout-flow/WorkoutSummary.tsx'
+import { RecordedRepsField, WeightWheelField } from '../workout-flow/WeightWheelFields.tsx'
 import { summaryData } from './summary-data.ts'
 import type { StandardExercise } from './types.ts'
 
@@ -104,7 +105,7 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
     {issue && <p className="notice" role="alert">{issue}</p>}{busy && <p role="status">이력을 확인 중입니다.</p>}
     {page?.sessions.length === 0 && <p>종료한 운동이 없습니다.</p>}
     {page?.sessions.map(s => <button className="outline full" key={s.id} disabled={busy} onClick={() => onOpen(s.id)}>{s.routineName} · {s.workoutDate} · {s.deletedAt ? '삭제된 운동' : s.status === 'FINISHED' ? '명시 종료 ' + time(s.endedAt) : '서버 자동 종료 ' + time(s.closedAt)}</button>)}
-    {page?.next && <button className="outline action-pill" disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</button>}
+    {page?.next && <Button disabled={busy} onClick={() => void load(page.next)}>이전 운동 더 보기</Button>}
   </section>
 }
 type ClosedPersistence = { store: ConstructorParameters<typeof ClosedWorkoutController>[1]; acquire: ConstructorParameters<typeof ClosedWorkoutController>[6] }
@@ -281,6 +282,7 @@ function DeleteDialog({ server, controller, busy, issue, resultPending, onClose,
 }
 function ClosedApproval({ server, id, controller, disabled }: { server: Session; id: string; controller: ClosedWorkoutController; disabled: boolean }) {
   const [weight, setWeight] = useState('')
+  const loadType = server.initialPlan.weightExercises.find(exercise => exercise.sessionExerciseId === id)?.loadType ?? null
   const [confirm, confirmation] = useConfirmation()
   const decide = (keep: boolean) => void confirm({
     title: keep ? '현재 루틴 중량을 유지할까요?' : '새 중량을 승인할까요?',
@@ -289,9 +291,9 @@ function ClosedApproval({ server, id, controller, disabled }: { server: Session;
     onConfirm: async () => { await controller.resolve(id, keep ? 'KEEP_CURRENT' : 'REAPPROVE', keep ? '' : weight, server.version) },
   })
   return <Card className={`${styles.approvalConfirmation} stack`}><h3>승인 확인 필요</h3><p>수행은 보존되었습니다. 지금 해결해도 과거 수행의 승인 문맥과 최초 평가는 바뀌지 않습니다.</p>
-    <button className="outline action-pill" disabled={disabled} onClick={() => decide(true)}>종료 후 현재 중량 유지</button>
-    <label>지금 재승인할 중량 kg<input inputMode="decimal" value={weight} disabled={disabled} onChange={e => setWeight(e.target.value)} /></label>
-    <button className="outline action-pill" disabled={disabled} onClick={() => decide(false)}>종료 후 명시 재승인</button>{confirmation}
+    <Button disabled={disabled} onClick={() => decide(true)}>종료 후 현재 중량 유지</Button>
+    <WeightWheelField label="지금 재승인할 중량" value={weight} disabled={disabled} onChange={setWeight} loadType={loadType} />
+    <Button disabled={disabled} onClick={() => decide(false)}>종료 후 명시 재승인</Button>{confirmation}
   </Card>
 }
 function CorrectionDialog({ target, server, controller, busy, onClose, manufacturers, definitions }: { target: EditTarget; server: Session; controller: ClosedWorkoutController; busy: boolean; onClose: () => void; manufacturers: Manufacturer[]; definitions: StandardExercise[] }) {
@@ -348,7 +350,16 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
     <Card><h3>{recordName(initial,id,definitions)}{target.kind==='SET'&&' · '+String(target.record.ordinal).padStart(2,'0')+'세트'}</h3>
       <RecordFacts record={target.record} server={initial} manufacturers={manufacturers}/></Card>
     <fieldset disabled={busy || !!prepared} className="online-fieldset stack">
-    {target.kind === 'SET' ? <><label>실제 중량 kg<input inputMode="decimal" value={weight} onChange={e => { setWeight(e.target.value); setIssue('') }} /></label><label>실제 반복 횟수<input inputMode="numeric" value={reps} onChange={e => { setReps(e.target.value); setIssue('') }} /></label>{target.record.loadType === 'BODYWEIGHT' && <><label>추가 중량 kg · 선택<input inputMode="decimal" value={additionalWeight} placeholder="추가 중량 없음" onChange={e => { setAdditionalWeight(e.target.value); setAdditionalTouched(true); setIssue('') }} /></label><p className="muted small">총중량에는 명시적 추가 중량만 사용합니다. 비우면 추가 중량을 제거합니다. 체중과 기존 중량을 자동 합산하지 않습니다.</p></>}</>
+    {target.kind === 'SET' ? <>
+      <WeightWheelField label="실제 중량" value={weight} loadType={target.record.loadType} onChange={next => { setWeight(next); setIssue('') }} />
+      <RecordedRepsField value={reps} onChange={next => { setReps(next); setIssue('') }} />
+      {target.record.loadType === 'BODYWEIGHT' && <>
+        <WeightWheelField label="추가 중량" value={additionalWeight} loadType="BODYWEIGHT" optional onChange={next => {
+          setAdditionalWeight(next); setAdditionalTouched(true); setIssue('')
+        }} />
+        <p className="muted small">총중량에는 명시적 추가 중량만 사용합니다. 비우면 추가 중량을 제거합니다. 체중과 기존 중량을 자동 합산하지 않습니다.</p>
+      </>}
+    </>
       : target.kind === 'CARDIO' ? <>
         <p>원본 타이머 {durationLabel(target.record.result.timerMs)}</p>
         <label><input type="checkbox" checked={corrected} onChange={e => { setCorrected(e.target.checked); setIssue('') }} />활동 시간 정정</label>

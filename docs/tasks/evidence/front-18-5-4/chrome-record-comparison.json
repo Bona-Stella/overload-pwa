@@ -1,0 +1,70 @@
+{
+  "before": [
+    {
+      "label": "실제 중량 kg",
+      "tag": "INPUT",
+      "height": 48,
+      "radius": "10px",
+      "border": "1px",
+      "background": "rgb(37, 40, 46)"
+    },
+    {
+      "label": "실제 반복 횟수",
+      "tag": "INPUT",
+      "height": 48,
+      "radius": "10px",
+      "border": "1px",
+      "background": "rgb(37, 40, 46)"
+    }
+  ],
+  "after": [
+    {
+      "label": "실제 중량 감소",
+      "tag": "BUTTON",
+      "height": 48,
+      "radius": "10px",
+      "border": "0px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "label": "실제 중량",
+      "tag": "BUTTON",
+      "height": 48,
+      "radius": "10px",
+      "border": "0px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "label": "실제 중량 증가",
+      "tag": "BUTTON",
+      "height": 48,
+      "radius": "10px",
+      "border": "0px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "label": "실제 반복 횟수 감소",
+      "tag": "BUTTON",
+      "height": 48,
+      "radius": "10px",
+      "border": "0px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "label": "실제 반복 횟수",
+      "tag": "BUTTON",
+      "height": 48,
+      "radius": "10px",
+      "border": "0px",
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "label": "실제 반복 횟수 증가",
+      "tag": "BUTTON",
+      "height": 48,
+      "radius": "10px",
+      "border": "0px",
+      "background": "rgba(0, 0, 0, 0)"
+    }
+  ]
+}

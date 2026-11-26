@@ -74,14 +74,9 @@
 .schedulePanel { display:grid; gap:10px; min-width:0; width:100%; grid-template-columns:minmax(0,1fr); }
 .scheduleEditor { display:grid; gap:14px; min-width:0; width:100%; grid-template-columns:minmax(0,1fr); }
 .scheduleEditor fieldset { padding:0; margin:0; border:0; min-width:0; }
-.candidateFilters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; align-items:center; width:100%; }
-.candidateFilters button { min-height:36px; padding:6px 8px; font-size:12px; }
-.candidateFilters [aria-pressed='true'] { border-color:var(--accent); color:var(--accent); background:var(--accent-soft); }
+.candidateFilters { display:flex; flex-wrap:wrap; gap:6px; align-items:center; width:100%; }
 .candidateTags { position:relative; min-width:0; }
 .candidateTagOptions { position:absolute; top:calc(100% + 4px); right:0; z-index:3; display:grid; gap:4px; min-width:110px; max-height:260px; overflow:auto; padding:5px; border:1px solid var(--border-subtle); border-radius:5px; background:var(--surface-input); }
-button.chip { display:inline-flex; align-items:center; justify-content:center; gap:4px; width:auto; min-height:38px; padding:7px 11px; border:1px solid var(--border-subtle); border-radius:999px; background:var(--surface-card); color:var(--text-primary); font-size:12px; }
-button.chip[aria-pressed='true'] { border-color:var(--accent); background:var(--accent); color:var(--on-accent); }
-.candidateFilters > .chip,.candidateTags > .chip { width:100%; white-space:nowrap; min-width:0; padding:6px 3px; font-size:12px; gap:2px; }
 .tagField { position:relative; min-width:0; }
 .tagOptions { position:absolute; inset:calc(100% + 4px) 0 auto; z-index:6; max-height:min(360px,45dvh); overflow:auto; overscroll-behavior-y:contain; padding:5px; border:1px solid var(--border-subtle); border-radius:var(--radius-control); background:var(--surface-input); }
 .tagOptions button { display:grid; gap:4px; min-height:54px; width:100%; padding:10px; text-align:left; border-radius:4px; background:transparent; }
@@ -101,6 +96,5 @@ button.chip[aria-pressed='true'] { border-color:var(--accent); background:var(--
 .scheduleDays label { display:grid; grid-template-columns:44px minmax(0,1fr); align-items:center; gap:8px; font-size:14px; }
 .scheduleDays option { white-space:normal; }
 .scheduleDays select { width:100%; max-width:100%; min-width:0; box-sizing:border-box; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-@media(max-width:360px) { .candidateFilters > .chip,.candidateTags > .chip { font-size:11px; } }
 .listHeading[data-preset='true'] select,.scheduleEditor[data-preset='true'] .chip { min-height:44px; }
 .scheduleEditor[data-preset='true'] .candidateTags:first-child .candidateTagOptions { left:0; right:auto; }

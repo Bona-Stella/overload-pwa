@@ -1,3 +1,4 @@
+import ui from '../../components/ui.module.css'
 import {SearchExerciseDetails} from '../../components/SearchExerciseDetails.tsx'
 import type { ReferenceRecord } from './reference-reminder.ts'
 import { CombinationMemoProvider } from './CombinationMemo.tsx'
@@ -373,7 +374,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         }
         if (await training.write({ type: 'rename', id: renaming.id, name }, renaming.base)) setRenaming(null)
       }}>
-        <label>일정 이름<input name="name" type="text" value={renaming.value} autoComplete="off"
+        <label className={ui.field}>일정 이름<input className={ui.input} name="name" type="text" value={renaming.value} autoComplete="off"
           aria-invalid={!!renaming.issue} aria-describedby={renaming.issue ? 'preset-name-issue' : undefined} disabled={busy}
           onChange={event => setRenaming({ ...renaming, value: event.target.value, issue: undefined })} /></label>
         {(renaming.issue || training.writeIssue || training.issue) &&
@@ -388,7 +389,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           : <p role="status">이 일정이 삭제되었거나 더 이상 조회할 수 없습니다.</p>)}
         <div className="row">
           <button type="button" className="action-pill modal-neutral" data-modal-neutral disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setRenaming(null)}>취소</button>
-          <button className="primary" disabled={scheduleBlocked || !!renameStale} aria-busy={training.busy || undefined} data-button-pending={training.busy && !renameStale || undefined}>저장</button>
+          <Button type="submit" variant="primary" disabled={!!renameStale || scheduleBlocked && !training.busy} pending={training.busy && !renameStale} aria-busy={training.busy || undefined}>저장</Button>
         </div>
       </form>
     </Dialog>}

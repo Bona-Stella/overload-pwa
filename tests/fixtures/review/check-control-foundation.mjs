@@ -149,6 +149,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   assert.match(await evaluate('document.querySelector(\'button[aria-label="덤벨 중량"]\').textContent'), /13\.3/)
 
   const goalValue = label => evaluate(`document.querySelector('button[aria-label="${label} 수정"]').previousElementSibling.textContent`)
+  const directDraft = () => evaluate(`document.querySelector('dialog[open] input').value`)
   const direct = async value => {
     await click('직접 입력', dialog)
     await evaluate(`(() => {
@@ -165,13 +166,14 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   assert.equal(await selected(), '6.1 km')
   await press('Escape', 27)
   await modalClosed()
-  assert.equal(await goalValue('목표 거리'), '5.123 km')
+  assert.equal(await goalValue('목표 거리'), '5.1 km')
   await open('목표 거리 수정')
   await click('확인', dialog)
   await modalClosed()
-  assert.equal(await goalValue('목표 거리'), '5.123 km', 'an untouched rounded selection does not overwrite precise data')
+  assert.equal(await goalValue('목표 거리'), '5.1 km')
   await open('목표 거리 수정')
   await click('직접 입력', dialog)
+  assert.equal(await directDraft(), '5.123', 'an untouched rounded selection does not overwrite precise data')
   await evaluate(`(() => {
     const input = document.querySelector('dialog[open] input');
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
@@ -199,7 +201,12 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await open('목표 거리 수정')
   await direct('5.123456')
   await modalClosed()
-  assert.equal(await goalValue('목표 거리'), '5.123456 km')
+  assert.equal(await goalValue('목표 거리'), '5.1 km')
+  await open('목표 거리 수정')
+  await click('직접 입력', dialog)
+  assert.equal(await directDraft(), '5.123456')
+  await press('Escape', 27)
+  await modalClosed()
   await open('목표 거리 수정')
   await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`)
   await press('Home', 36)
@@ -260,7 +267,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
         time:buttons(['목표 시간 (시)','목표 시간 (분)','목표 시간 (초)']),
         distance:[r(base.querySelector('button[aria-label="목표 거리 수정"]').parentElement).width, r(base.querySelector('button[aria-label="목표 시간 수정"]').parentElement).width],
         extra:[present(speed),present(incline)],labels:[speed,incline].map(b=>b.parentElement.previousElementSibling.textContent),
-        tabs:[...group.children].map(e=>({label:e.textContent,...present(e)})),
+        tabs:[...group.children].map(e=>({label:e.textContent,pressed:e.ariaPressed,...present(e)})),
         trackRadius:getComputedStyle(group).borderRadius,highlight:r(group).height-parseFloat(getComputedStyle(group,'::before').top)-parseFloat(getComputedStyle(group,'::before').bottom)};
     })()`)
     assert.equal(layout.width, width)
@@ -271,7 +278,9 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
     assert.ok(Math.abs(layout.extra[0].box[2]-layout.extra[1].box[2])<.1)
     assert.deepEqual(layout.labels,['목표 속도 · 선택','목표 경사도 · 선택'])
     assert.deepEqual(layout.tabs.map(x=>x.label),['속도 (km/h)','페이스 (분/km)'])
+    assert.deepEqual(layout.tabs.map(x=>x.pressed),['true','false'])
     assert.ok(layout.tabs.every(x=>x.box[3]===48 && !x.wraps && x.centered && x.radius==='999px' && x.text[1]<24))
+    assert.ok(Math.abs(layout.tabs[0].box[2]-layout.tabs[1].box[2])<.1)
     assert.equal(layout.trackRadius,'999px')
     assert.equal(layout.highlight,40)
     geometry.push(layout)
@@ -282,6 +291,9 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await click('페이스 (분/km)', goalCard+' button')
   assert.equal(await evaluate(`!!document.querySelector('${goalButton('목표 속도 (km/h)')}')`),false)
   assert.equal(await valueOf('목표 페이스 (분/km)'), '7:19 분/km', '8.2 km/h converts using the existing policy')
+  await click('속도 (km/h)', goalCard+' button')
+  assert.equal(await valueOf('목표 속도 (km/h)'), '8.2 km/h')
+  await click('페이스 (분/km)', goalCard+' button')
   await startPace(); await direct('6:45'); await modalClosed()
   await capture('pace-layout-393',goalCard)
   await startPace()
@@ -299,7 +311,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await startPace(); await direct('6.512345'); await modalClosed()
   await startPace(); await click('확인',dialog); await modalClosed()
   await startPace(); await click('직접 입력',dialog)
-  assert.equal(await evaluate(`document.querySelector('dialog[open] input').value`),'6.512345')
+  assert.equal(await directDraft(),'6.512345')
   await press('Escape',27); await modalClosed()
   await startPace(); await direct(''); await modalClosed()
   assert.equal(await valueOf('목표 페이스 (분/km)'),'0:00 분/km')
@@ -325,7 +337,11 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   assert.equal(await selected(),'3.6 %'); await press('ArrowUp',38); assert.equal(await selected(),'3.5 %')
   await capture('incline-wheel-393','dialog[open]')
   await press('Escape',27); await modalClosed()
-  assert.equal(await valueOf(incline),'3.512345 %')
+  assert.equal(await valueOf(incline),'3.5 %')
+  await open(incline); await click('확인',dialog); await modalClosed()
+  await open(incline); await click('직접 입력',dialog)
+  assert.equal(await directDraft(),'3.512345')
+  await press('Escape',27); await modalClosed()
   await open(incline); await direct(''); await modalClosed()
   assert.equal(await evaluate(`document.querySelector('${goalButton(incline)}').dataset.wheelEmpty`),'true')
 
@@ -346,6 +362,13 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   assert.deepEqual(running.map(x=>x.value),['130 BPM','150 BPM','160 SPM','180 SPM'])
   assert.equal(running[0].y,running[1].y);assert.equal(running[2].y,running[3].y)
   await capture('future-goals-393',future)
+  await open('최소 심박수'); await focusSelection(); await press('ArrowDown',40)
+  assert.equal(await selected(),'131 BPM')
+  await click('확인',dialog); await modalClosed()
+  assert.equal(await valueOf('최소 심박수'),'131 BPM')
+  await open('최대 심박수'); await direct('130')
+  assert.match(await evaluate(`document.querySelector('dialog[open] [role="alert"]').textContent`),/최소값은 최대값 이하여야/)
+  await press('Escape',27); await modalClosed()
   await evaluate(`(() => {const input=document.querySelector('${future} select'); input.value='BIKE'; input.dispatchEvent(new Event('change',{bubbles:true}));})()`)
   await waitFor(()=>evaluate(`!!document.querySelector('${future} ${goalButton('목표 저항')}')`),'bike resistance')
   const cycling = await range()
@@ -354,8 +377,42 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await open('목표 저항'); await focusSelection(); assert.equal(await selected(),'8')
   await press('ArrowDown',40); assert.equal(await selected(),'9')
   await press('ArrowUp',38); assert.equal(await selected(),'8')
-  await press('Escape',27); await modalClosed(); assert.equal(await valueOf('목표 저항'),'7.5')
-  await open('목표 저항'); await direct('7.123456'); await modalClosed(); assert.equal(await valueOf('목표 저항'),'7.123456')
+  await press('Escape',27); await modalClosed(); assert.equal(await valueOf('목표 저항'),'8')
+  await open('목표 저항'); await click('직접 입력',dialog)
+  assert.equal(await directDraft(),'7.5')
+  await press('Escape',27); await modalClosed()
+  await open('목표 저항'); await direct('7.123456'); await modalClosed(); assert.equal(await valueOf('목표 저항'),'7')
+  await open('목표 저항'); await click('직접 입력',dialog)
+  assert.equal(await directDraft(),'7.123456')
+  await press('Escape',27); await modalClosed()
   await open('목표 저항'); await direct(''); await modalClosed(); assert.equal(await valueOf('목표 저항'),'0')
-  return { dimensions, geometry, pace: { forward, reverse, paceAfterScroll }, futureGoals: { running, cycling } }
+
+  const rollout = [
+    ['실제 중량', '52.3 kg', '54.8 kg'],
+    ['실제 반복 횟수', '10 회', '11 회'],
+    ['추가 중량', '0 kg', '1 kg'],
+    ['지금 다시 승인할 중량', '57.123456 kg', '59.623456 kg'],
+    ['지금 재승인할 중량', '0 kg', '1 kg'],
+  ]
+  for (const [label, initial, next] of rollout) {
+    await open(label); await focusSelection()
+    assert.equal(await selected(), initial)
+    await press('ArrowDown', 40)
+    assert.equal(await selected(), next)
+    await press('Escape', 27); await modalClosed()
+    assert.equal(await evaluate('document.activeElement.ariaLabel'), label)
+    await open(label); await focusSelection(); assert.equal(await selected(), initial)
+    if (label === '실제 중량') await capture('record-weight-wheel-393', 'dialog[open]')
+    await press('ArrowDown', 40); await click('확인', dialog); await modalClosed()
+    assert.equal(await valueOf(label), next)
+  }
+  await open('추가 중량'); await direct('0'); await modalClosed()
+  assert.equal(await valueOf('추가 중량'), '0 kg')
+  await open('추가 중량'); await direct(''); await modalClosed()
+  assert.equal(await valueOf('추가 중량'), '입력')
+  await open('실제 반복 횟수'); await direct('0')
+  assert.match(await evaluate(`document.querySelector('dialog[open] [role="alert"]').textContent`), /숫자/)
+  await press('Escape', 27); await modalClosed()
+  assert.equal(await valueOf('실제 반복 횟수'), '11 회')
+  return { dimensions, geometry, pace: { forward, reverse, paceAfterScroll }, futureGoals: { running, cycling }, weightRollout: rollout }
 }

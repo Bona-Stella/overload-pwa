@@ -194,7 +194,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
       })}</div>
       <p className={`muted small ${activityStyles.legend}`}><span>– 휴식</span><span>· 미수행</span><span>? 미확인</span></p>
     </Card>
-    <Card className={activityStyles.cardio} aria-busy={periodLoading}><div className={activityStyles.sectionHeading}><h2>유산소 현황</h2><Button variant="quiet" onClick={()=>setCardioDetail(!cardioDetail)} aria-expanded={cardioDetail}>{cardioDetail?'상세 닫기':'상세 보기 ›'}</Button></div>
+    <Card className={activityStyles.cardio} aria-busy={periodLoading}><div className={activityStyles.sectionHeading}><h2>유산소 현황</h2><Button variant="quiet" compact onClick={()=>setCardioDetail(!cardioDetail)} aria-expanded={cardioDetail}>{cardioDetail?'상세 닫기':'상세 보기 ›'}</Button></div>
       <div className={activityStyles.cardioMetrics}>
         <div><span><RecordMainIcon kind="clock" />누적 유산소 시간</span><strong>{activeCardioMs !== undefined && cardioTime(activeCardioMs)}</strong></div>
         <div><span><RecordMainIcon kind="plan" />누적 일수</span><strong>{data && (sampleCardio ? sampleCardio.days+'일':'미확인')}</strong></div>

@@ -93,5 +93,183 @@
     "tests/fixtures/workout-review-checks.mjs",
     "tests/preset-review.test.mjs",
     "tests/routine-ui.test.mjs"
-  ]
+  ],
+  "mac4174": {
+    "frontendHead": "806c6e6",
+    "backendHead": "beccaf4",
+    "full": {
+      "command": "OVERLOAD_CAPTURE_COMMON_UI=1 node --test --test-concurrency=2 tests/*.test.mjs",
+      "tests": 734,
+      "pass": 734,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "focused": {
+      "command": "node --test tests/control-foundation.test.mjs tests/cardio-measurement.test.mjs tests/cardio.test.mjs tests/home.test.mjs tests/workout-local.test.mjs tests/workout-online.test.mjs",
+      "tests": 125,
+      "pass": 125,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "chrome": {
+      "widths": [
+        320,
+        375,
+        393,
+        430,
+        1280
+      ],
+      "apiRequestsInPreview": 0
+    },
+    "typeScript": "passed",
+    "eslint": "passed",
+    "productionBuild": "passed",
+    "reviewBuild": "passed",
+    "cache": {
+      "production": {
+        "assets": 32,
+        "shellId": "7a5ba316f038bb649b58a46c",
+        "preview": false,
+        "allHashesMatch": true,
+        "previewPrecached": false
+      },
+      "mac4174": {
+        "assets": 34,
+        "shellId": "102e113d394b333fd8a7ef75",
+        "preview": true,
+        "allHashesMatch": true,
+        "previewPrecached": false
+      }
+    },
+    "live": {
+      "origin": "http://127.0.0.1:4174",
+      "health": 200,
+      "preview": {
+        "rendered": true,
+        "apiRequests": 0,
+        "width": 393
+      },
+      "stages": {
+        "activeBefore": "empty",
+        "catalog": {
+          "available": 2,
+          "treadmill": true
+        },
+        "routine": {
+          "create": 201,
+          "lookup": 200,
+          "targetSeconds": 120,
+          "distance": "5.123456",
+          "pace": "6.916667",
+          "incline": "3.512345"
+        },
+        "start": {
+          "status": 201,
+          "initialPlanMatches": true
+        },
+        "snapshot": {
+          "status": 200,
+          "bpm": 130
+        },
+        "finish": {
+          "status": 200,
+          "bpm": 130
+        },
+        "correction": {
+          "status": 200,
+          "bpm": 131,
+          "timesPreserved": true
+        }
+      },
+      "cleanup": {
+        "testSession": 200,
+        "testRoutine": 204,
+        "activeAfter": "empty",
+        "chromeStopped": true
+      }
+    },
+    "lan": {
+      "origin": "http://192.168.0.9:4174",
+      "app": 200,
+      "health": 200,
+      "preview": 200
+    },
+    "gitDiffCheck": "passed",
+    "stagedDiff": "empty",
+    "backendWorkingTree": "clean",
+    "changedFiles": [
+      "docs/tasks/evidence/front-18-5-3-final-refinement/chrome-controls.json",
+      "docs/tasks/evidence/front-18-5-3-final-refinement/future-goals-393.png",
+      "docs/tasks/evidence/front-18-5-3-final-refinement/incline-wheel-393.png",
+      "docs/tasks/evidence/front-18-5-3-final-refinement/pace-boundary-393.png",
+      "docs/tasks/evidence/front-18-5-3-final-refinement/pace-layout-393.png",
+      "docs/tasks/evidence/front-18-5-3-final-refinement/speed-layout-320.png",
+      "docs/tasks/evidence/front-18-5-3-final-refinement/speed-layout-393.png",
+      "docs/tasks/evidence/front-18-5-3-final-refinement/test-results.json",
+      "docs/tasks/front-18-5-3-final-refinement.md",
+      "scripts/recovered-data-review-server.mjs",
+      "src/features/workout-online/CardioPlanFields.tsx",
+      "tests/fixtures/review/check-control-foundation.mjs"
+    ],
+    "lanEditorLock": {
+      "regression": {
+        "passed": 20,
+        "failed": 0
+      },
+      "live": {
+        "origin": "http://192.168.0.9:4174",
+        "health": 200,
+        "preview": {
+          "rendered": true,
+          "apiRequests": 0,
+          "width": 393
+        },
+        "stages": {
+          "browserAccess": {
+            "secure": false,
+            "webLocks": false,
+            "indexedDB": true
+          },
+          "activeBefore": "empty",
+          "catalog": {
+            "available": 2,
+            "treadmill": true
+          },
+          "routine": {
+            "create": 201,
+            "lookup": 200,
+            "targetSeconds": 120,
+            "distance": "5.123456",
+            "pace": "6.916667",
+            "incline": "3.512345"
+          },
+          "start": {
+            "status": 201,
+            "initialPlanMatches": true
+          },
+          "snapshot": {
+            "status": 200,
+            "bpm": 130
+          },
+          "finish": {
+            "status": 200,
+            "bpm": 130
+          },
+          "correction": {
+            "status": 200,
+            "bpm": 131,
+            "timesPreserved": true
+          }
+        },
+        "cleanup": {
+          "testSession": 200,
+          "testRoutine": 204,
+          "activeAfter": "empty",
+          "chromeStopped": true
+        }
+      }
+    }
+  }
 }

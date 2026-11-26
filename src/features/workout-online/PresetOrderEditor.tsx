@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { navigateBack, useNavigationGuard } from '../../app/navigation.ts'
 import { useDragOrder } from '../../components/useDragOrder.ts'
-import { Card } from '../../components/ui.tsx'
+import { Button, Card } from '../../components/ui.tsx'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
 import { dayNames } from './routine-schedule.ts'
 import { presetLimit, presetNumber } from './preset-schedule.ts'
@@ -78,11 +78,11 @@ export function PresetOrderEditor({ schedule, busy, readOnly, locked = readOnly,
       </Card>
     })}
     {tooFew && <p role="status">자동 순환에는 포함 프리셋이 최소 2개 필요합니다.</p>}
-    <div className="row"><button data-close-text={readOnly||undefined} type="button" className="outline action-pill" disabled={busy} onClick={close}>{readOnly ? '닫기' : '취소'}</button>
-      {readRetry || (stale ? <button type="button" className="primary" disabled={busy} onClick={() => leave(onReload)}>최신 일정 확인</button>
-        : !readOnly && <button type="button" className="primary" disabled={busy || locked || !!drag || tooFew || !changed} onClick={async () => {
+    <div className="row"><Button data-close-text={readOnly||undefined} type="button" disabled={busy} onClick={close}>{readOnly ? '닫기' : '취소'}</Button>
+      {readRetry || (stale ? <Button type="button" variant="primary" disabled={busy} onClick={() => leave(onReload)}>최신 일정 확인</Button>
+        : !readOnly && <Button type="button" variant="primary" disabled={busy || locked || !!drag || tooFew || !changed} onClick={async () => {
         if (await onSave(ordered) && navigationKey) { saved.current = true; navigateBack(onClose) }
-      }}>변경사항 저장</button>)}</div>
+      }}>변경사항 저장</Button>)}</div>
     {confirmation}
   </section>
 }

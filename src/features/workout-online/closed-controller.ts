@@ -11,6 +11,7 @@ import { closedWriteFact, recoveryRows } from './closed-model.ts'
 import type { ClosedWrite } from './closed-model.ts'
 import { decimalDraft } from './validation.ts'
 import { increment } from '../workout-local/model.ts'
+import { newId } from '../../id.ts'
 
 type Store = Pick<WorkoutStore, 'localCopies' | 'closedWrite' | 'saveClosedWrite' | 'saveSession' | 'deviceId' | 'openLocal' | 'readLocal' | 'saveLocal' | 'saveSyncLocal'>
 type Api = Pick<WorkoutApi, 'detail' | 'assessment' | 'changes' | 'records' | 'recover' | 'deleteSession' | 'resolveClosed' | 'routine' | 'finish' | 'snapshot' | 'resolve'>
@@ -147,7 +148,7 @@ export class ClosedWorkoutController {
       const placement = r.weightPlacements.find(p => p.id === server.initialPlan.weightExercises.find(e => e.sessionExerciseId === exerciseId)?.sourcePlacementId && !p.deletedAt)
       if (!placement) this.conflict('원래 루틴 배치를 확인할 수 없습니다. 현재 중량 유지를 선택해 주세요.')
       const sequence = server.snapshot.state.approvalRequests.filter(r => r.sessionExerciseId === exerciseId).reduce((n, r) => BigInt(n) > BigInt(r.sequence) ? n : r.sequence, '0')
-      return this.submit({ kind: 'approval', body: { ...common, decision, newApprovalRequest: { id: crypto.randomUUID(), sequence: increment(sequence), expectedRoutineVersion: r.version, previousApprovedWeightKg: placement.approvedWeightKg, nextApprovedWeightKg: decimalDraft(weight) } } })
+      return this.submit({ kind: 'approval', body: { ...common, decision, newApprovalRequest: { id: newId(), sequence: increment(sequence), expectedRoutineVersion: r.version, previousApprovedWeightKg: placement.approvedWeightKg, nextApprovedWeightKg: decimalDraft(weight) } } })
     } catch (error) { this.failure(error); return false }
   }
   retry = async () => {

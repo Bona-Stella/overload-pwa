@@ -5,7 +5,7 @@ import type { SchedulePreset } from './preset-schedule.ts'
 import { activeWeights, activeCardio } from '../home/model.ts'
 import { scheduleRoutineLabel } from '../home/tags.ts'
 import { AchievementIcon } from '../../components/AchievementIcon.tsx'
-import { Card } from '../../components/ui.tsx'
+import { Button, Card } from '../../components/ui.tsx'
 import { EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
 import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
 import home from '../home/Home.module.css'
@@ -76,7 +76,7 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
       <div className={styles.eyebrow}>YOUR TRAINING PLAN</div>
       <div className={styles.title}>
         <div><h2>나의 루틴</h2><p className="muted small">다음 운동을 위한 준비. 나에게 맞는 순서로.</p></div>
-        <button type="button" className="action-pill" disabled={busy || managementBlocked} onClick={onNew}>+ 새 루틴</button>
+        <Button type="button" disabled={busy || managementBlocked} onClick={onNew}>+ 새 루틴</Button>
       </div>
     </header>
     <Card className={`${home.home} ${styles.weekSection}`} aria-label="루틴 주간 일정">

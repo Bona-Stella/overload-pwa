@@ -1,5 +1,4 @@
 import { useId, useRef, useState } from 'react'
-import { CardioNumberField } from './CardioNumberField.tsx'
 import { DurationWheel } from '../../components/DurationWheel.tsx'
 import { NumberWheel } from '../../components/NumberWheel.tsx'
 import numeric from '../../components/NumberWheel.module.css'
@@ -11,8 +10,6 @@ import { adjustCardioWheel, adjustPaceWheel, cardioSecondsFromMinutes, cardioWhe
 import type { CardioDraft } from './cardio-draft.ts'
 import { decimalDraft } from './validation.ts'
 import styles from './CardioFields.module.css'
-
-const tenthsLabel = (value: string) => value.includes('.') ? value : `${value || '0'}.0`
 
 function TargetTime({ seconds, onChange }: { seconds: string; onChange: (seconds: string) => void }) {
   const [draft, setDraft] = useState<string | null>(null)
@@ -33,14 +30,13 @@ function TargetTime({ seconds, onChange }: { seconds: string; onChange: (seconds
   </div>
 }
 
-export function CardioPlanFields({ value, onChange, routineEditor = false, previewGoals }: {
-  value: CardioDraft; onChange: (value: CardioDraft) => void; routineEditor?: boolean; previewGoals?: React.ReactNode
+export function CardioPlanFields({ value, onChange, previewGoals }: {
+  value: CardioDraft; onChange: (value: CardioDraft) => void; previewGoals?: React.ReactNode
 }) {
   const [expanded, setExpanded] = useState(Boolean(value.intensity || value.incline || value.resistance))
   const [unitError, setUnitError] = useState('')
   const patch = (changes: Partial<CardioDraft>) => onChange({ ...value, ...changes })
   const motion = supportsCardioMotion(value.kind)
-  const minutes = value.minutes ?? (value.seconds ? String(Math.round(Number(value.seconds) / 60 * 1e6) / 1e6) : '')
   let seconds = value.seconds
   if (value.minutes !== undefined) {
     try { seconds = cardioSecondsFromMinutes(value.minutes) }
@@ -49,16 +45,17 @@ export function CardioPlanFields({ value, onChange, routineEditor = false, previ
   if (Number(seconds) > 86400) seconds = ''
   const motionGoal = (field: 'distance' | 'speed', label: string, unit: string) => {
     const stored = field === 'distance' ? value.distance : value.intensity
+    const wheelSeed = Number(stored || 0).toFixed(1)
     const validate = (next: string) => cardioWheelValue(next, field)
-    const row = routineEditor && field === 'distance'
-    return <div className={row ? styles.goalRow : routineEditor ? numeric.field : styles.field}>
-      {!row && <span className={routineEditor ? undefined : styles.label}>{label}{routineEditor ? ' · 선택' : ` (${unit})`}</span>}
+    const row = field === 'distance'
+    return <div className={row ? styles.goalRow : numeric.field}>
+      {!row && <span>{label} · 선택</span>}
       <NumberWheel label={`${label} (${unit})`} unit={unit} hideSteps inputMode="decimal" start="0.0"
-        value={stored} wheelSeed={Number(stored || 0).toFixed(1)} validate={validate}
-        displayValue={routineEditor ? tenthsLabel(stored) : undefined} describeBlank={routineEditor}
+        value={stored} wheelSeed={wheelSeed} validate={validate}
+        displayValue={wheelSeed} describeBlank
         validateSelection={next => next === '0.0' ? '' : validate(next)}
         renderTrigger={row ? (open, disabled) => <CardioValueRow label={`${label} · 선택`}
-          value={`${tenthsLabel(stored)} ${unit}`} editLabel={`${label} 수정`} onEdit={open} disabled={disabled} /> : undefined}
+          value={`${wheelSeed} ${unit}`} editLabel={`${label} 수정`} onEdit={open} disabled={disabled} /> : undefined}
         adjust={(current, direction) => adjustCardioWheel(current, direction, field)}
         onChange={next => {
           if (field === 'distance') patch({ distance: next })
@@ -77,33 +74,21 @@ export function CardioPlanFields({ value, onChange, routineEditor = false, previ
   }
 
   return <div className={`${styles.fields} ${styles.planFields}`}>
-    {routineEditor ? <TargetTime seconds={seconds} onChange={seconds => patch({ seconds, minutes: undefined })} /> : <div className={styles.goalTime}>
-      <span>목표 시간</span>
-      <DurationWheel label="목표 시간" seconds={seconds} onChange={seconds => patch({ seconds, minutes: undefined })} />
-      <details className={styles.extra}>
-        <summary>분으로 직접 입력</summary>
-        <CardioNumberField label="목표 시간 (분)" value={minutes} onChange={minutes => patch({ minutes })} />
-      </details>
-    </div>}
+    <TargetTime seconds={seconds} onChange={seconds => patch({ seconds, minutes: undefined })} />
     {motion && motionGoal('distance', '목표 거리', 'km')}
-    {!minutes.trim() && <small className={styles.note}>{missingCardioTime}</small>}
+    {!Number(seconds) && <small className={styles.note}>{missingCardioTime}</small>}
     {motion && <details className={styles.extra} open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
       <summary>추가 목표 설정</summary>
       {expanded && <div className={styles.fields}>
-        {routineEditor ? <div className={`${segmented.segment} ${styles.intensity}`} role="group" aria-label="강도 단위">
+        <div className={`${segmented.segment} ${styles.intensity}`} role="group" aria-label="강도 단위">
           <Button aria-pressed={value.intensityMode === 'SPEED'} onClick={() => { if (value.intensityMode !== 'SPEED') changeUnit('SPEED') }}>속도 (km/h)</Button>
           <Button aria-pressed={value.intensityMode === 'PACE'} onClick={() => { if (value.intensityMode !== 'PACE') changeUnit('PACE') }}>페이스 (분/km)</Button>
-        </div> : <label>강도 단위<select value={value.intensityMode} onChange={e => changeUnit(e.target.value as CardioDraft['intensityMode'])}>
-          <option value="SPEED">속도 (km/h)</option><option value="PACE">페이스 (분/km)</option>
-        </select></label>}
+        </div>
         {value.intensityMode === 'PACE'
-          ? routineEditor ? <PaceGoal value={value.intensity} onChange={intensity => { setUnitError(''); patch({ intensity }) }} />
-            : <CardioNumberField label="목표 페이스 (분/km)" value={value.intensity} onChange={intensity => { setUnitError(''); patch({ intensity }) }} />
+          ? <PaceGoal value={value.intensity} onChange={intensity => { setUnitError(''); patch({ intensity }) }} />
           : motionGoal('speed', '목표 속도', 'km/h')}
-        {value.kind === 'TREADMILL' && (routineEditor ? <AdditionalGoal field="incline" value={value.incline} onChange={incline => patch({ incline })} />
-          : <CardioNumberField label="목표 경사도 (%)" value={value.incline} onChange={incline => patch({ incline })} />)}
-        {value.kind === 'BIKE' && (routineEditor ? <AdditionalGoal field="resistance" value={value.resistance} onChange={resistance => patch({ resistance })} />
-          : <CardioNumberField label="목표 저항" value={value.resistance} onChange={resistance => patch({ resistance })} />)}
+        {value.kind === 'TREADMILL' && <AdditionalGoal field="incline" value={value.incline} onChange={incline => patch({ incline })} />}
+        {value.kind === 'BIKE' && <AdditionalGoal field="resistance" value={value.resistance} onChange={resistance => patch({ resistance })} />}
         {unitError && <small className={styles.note} role="status">{unitError}</small>}
         {previewGoals}
       </div>}
@@ -132,7 +117,7 @@ function AdditionalGoal({ field, value, onChange }: { field: 'incline' | 'resist
   return <div className={numeric.field}>
     <span>{label} · 선택</span>
     <NumberWheel label={incline ? `${label} (%)` : label} value={value} unit={incline ? '%' : ''} hideSteps describeBlank
-      displayValue={incline ? tenthsLabel(value) : value || '0'}
+      displayValue={seed}
       start={incline ? '0.0' : '0'} wheelSeed={seed} inputMode="decimal" validate={validate}
       validateSelection={incline ? undefined : next => next === '0' ? '' : validate(next)}
       adjust={(current, direction) => adjustCardioWheel(current, direction, field)} onChange={onChange} />

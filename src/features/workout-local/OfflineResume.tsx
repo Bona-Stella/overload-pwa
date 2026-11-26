@@ -8,13 +8,13 @@ import { OFFLINE_FENCE } from './offline-access.ts'
 import { offlineAccess } from './offline.ts'
 import { LocalWorkoutScreen } from './LocalWorkoutScreen.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
-import { StatusNotice } from '../../components/ui.tsx'
+import { Button, StatusNotice } from '../../components/ui.tsx'
 
 export function OfflineResumeOffer({ status, disabled, onContinue }: { status: 'loading' | 'failed' | 'unavailable' | 'ready'; disabled: boolean; onContinue: () => void }) {
   if (status === 'failed') return <StatusNotice error>이 기기의 운동을 확인하지 못했습니다. 다시 연결해 로그인 상태를 확인해 주세요.</StatusNotice>
   if (status === 'loading') return <LoadingSkeleton layout="workout" label="이 기기에 저장된 운동을 확인하는 중입니다." />
   if (status === 'unavailable') return <p className="muted small">이 환경에서 이어갈 수 있는 로컬 운동을 확인하지 못했습니다. 온라인에서 로그인하고 운동을 연 기기에서만 이어갈 수 있습니다.</p>
-  return <div className="card stack"><h2>이 기기의 운동 이어가기</h2><p>인터넷에 연결되면 로그인 상태와 저장 결과를 확인할 수 있어요.</p><p className="muted small">공용 기기에서는 인터넷에 연결한 뒤 로그아웃해 주세요.</p><button className="primary" disabled={disabled} onClick={onContinue}>이 기기의 운동 이어가기</button></div>
+  return <div className="card stack"><h2>이 기기의 운동 이어가기</h2><p>인터넷에 연결되면 로그인 상태와 저장 결과를 확인할 수 있어요.</p><p className="muted small">공용 기기에서는 인터넷에 연결한 뒤 로그아웃해 주세요.</p><Button variant="primary" disabled={disabled} onClick={onContinue}>이 기기의 운동 이어가기</Button></div>
 }
 
 export function OfflineResume({ onExitGuard, onActiveChange, onReconnect }: { onExitGuard: ExitGuardRegistration; onActiveChange: (active: boolean) => void; onReconnect: () => void }) {
