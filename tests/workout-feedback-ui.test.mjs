@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
+import { chromeExecutable } from './fixtures/chrome-executable.mjs'
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { resolve, relative, isAbsolute } from 'node:path'
 import { createServer } from 'vite'
@@ -12,7 +13,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
   await mkdir(profile, { recursive: true })
   const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'workout-feedback-only', enforce: 'pre',
     configureServer(vite) { vite.middlewares.use('/boundary', async (_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(await vite.transformIndexHtml('/boundary', '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module" src="/tests/fixtures/workout-feedback-ui.jsx"></script></body></html>')) }) },
-  }, react()], server: { host: '127.0.0.1', port: 0, watch: { ignored: ['**/logs/**'] } }, clearScreen: false })
+  }, react()], server: { host: '127.0.0.1', port: 0, hmr: false, ws: false, watch: { ignored: ['**/logs/**', '**/.local-backups/**'] } }, clearScreen: false })
   let browser, ws, next = 0
   const pending = new Map()
   const wait = async fn => { const until = Date.now() + 12000; while (Date.now() < until) { const r = await fn(); if (r) return r; await new Promise(r => setTimeout(r, 30)) } throw Error('Component DOM transition timeout') }
@@ -21,7 +22,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
   try {
     await server.listen()
     const origin = `http://127.0.0.1:${server.httpServer.address().port}`
-    browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless', '--enable-smooth-scrolling', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
+    browser = spawn(chromeExecutable(), ['--headless', '--enable-smooth-scrolling', '--remote-debugging-port=0', '--remote-debugging-address=127.0.0.1', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
     const port = await wait(async () => { try { return Number((await readFile(resolve(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]) } catch { return false } })
     const target = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(t => t.type === 'page')
     ws = new WebSocket(target.webSocketDebuggerUrl); await new Promise((r, j) => { ws.onopen = r; ws.onerror = j })
@@ -148,7 +149,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         const button=document.querySelector('#pending-primary'),peer=document.querySelector('#pending-peer'),unavailable=document.querySelector('#pending-unavailable')
         const sample=()=>{
           const style=getComputedStyle(button), {x,y,width,height}=button.getBoundingClientRect()
-          return {position:[x,y,width,height],background:style.backgroundColor,opacity:style.opacity,
+          const parent=button.parentElement.getBoundingClientRect()
+          return {position:[x-parent.x,y-parent.y,width,height],background:style.backgroundColor,opacity:style.opacity,
             spinner:!!button.querySelector('[data-button-spinner]'),color:style.color,label:button.textContent,
             peerOpacity:getComputedStyle(peer).opacity,unavailableOpacity:getComputedStyle(unavailable).opacity,
             busy:button.getAttribute('aria-busy'),disabled:button.disabled}
@@ -249,6 +251,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           field.focus({preventScroll:true})
           // Emulate the native reveal, leaving the field fully visible with only 4px to spare.
           original.call(window,0,end)
+          const nativePosition=scrollY
           const height=innerHeight-300
           Object.defineProperty(vv,'height',{configurable:true,value:height})
           Object.defineProperty(vv,'offsetTop',{configurable:true,value:field.getBoundingClientRect().bottom+4-height})
@@ -257,10 +260,12 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           const opened=scrollY
           field.blur();delete vv.height;delete vv.offsetTop;delete vv.pageTop;vv.dispatchEvent(new Event('resize'))
           await settle()
-          return {calls,opened,closed:scrollY,end}
+          return {calls,opened,closed:scrollY,nativePosition}
         } finally { window.scrollTo=original }
       })()`)
-      assert.deepEqual(result, {calls:[],opened:result.end,closed:result.end,end:result.end}, 'the app keeps a visible memo in place through dismissal')
+      assert.deepEqual(result.calls, [], 'the app does not scroll an already visible memo')
+      assert.ok(Math.abs(result.opened - result.nativePosition) <= 1, 'the browser may round the maximum scroll position')
+      assert.equal(result.closed, result.opened, 'keyboard dismissal keeps the memo in place')
     }
     const memoRunway = []
     for (const width of [320, 375, 393, 430]) {
@@ -745,7 +750,11 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         assert.ok(box.centerOffset < 0.5, 'the title and the visible capsule share a vertical center')
         assert.deepEqual([box.faceHeight,box.button[3]],[30,48])
         if(name==='벤치프레스'){button=box.button;assert(box.font>=22)}
-        else {assert.deepEqual(box.button,button,'title fit preserves button bounds');if(box.font>16)assert(box.textWidth<=box.width+1);else assert.equal(box.ellipsis,'ellipsis')}
+        else {
+          assert.deepEqual(box.button,button,'title fit preserves button bounds')
+          if(box.font>16) assert.ok(box.textWidth<=box.width+1, `Title at ${width}px: ${box.textWidth}px in ${box.width}px at font size ${box.font}px`)
+          else assert.equal(box.ellipsis,'ellipsis')
+        }
         fonts.push({width,name,font:box.font,available:box.width,rendered:box.textWidth})
       }
       await writeFile(resolve(directory,'workout-feedback-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'))
@@ -1200,11 +1209,12 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await click('선택 승인'); await click('승인 확인')
     await wait(()=>evaluate('!!window.feedback.approvalNetwork.resumePost'))
     assert.deepEqual(await approveButton(),['선택 승인',true])
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('${reviewCard} .approval-toolbar button')).backgroundColor`),'rgba(0, 0, 0, 0)')
     assert.deepEqual(await evaluate(`(() => {
       const button = document.querySelector('dialog[open] button[aria-busy="true"]')
       return [button.textContent,button.disabled,getComputedStyle(button).opacity,!!button.querySelector('[data-button-spinner]')]
     })()`), ['승인 확인',true,'1',false])
+    await evaluate(`Promise.all(document.querySelector('${reviewCard} .approval-toolbar button').getAnimations().map(animation => animation.finished)).then(() => true)`)
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('${reviewCard} .approval-toolbar button')).backgroundColor`),'rgba(0, 0, 0, 0)')
     await evaluate('document.querySelector(\'dialog[open] button[aria-busy="true"]\').click()')
     await wait(()=>evaluate('!!document.querySelector("dialog[open] [data-button-spinner]")'))
     const lockedLayer = await evaluate(`(() => {
@@ -1592,12 +1602,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       }
     })
     await t.test('locally stored unsent work keeps the same header and footer through reconnection', async () => {
-      await send('Page.navigate',{url:origin+'/boundary?input=final-footer'})
-      await wait(()=>evaluate(`!!document.querySelector('[data-workout-frame] footer button:enabled')`))
       const status = () => evaluate(`document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus`)
-      const screen = async width => {
-        await send('Emulation.setDeviceMetricsOverride',{width,height:568,deviceScaleFactor:1,mobile:width<500})
-        return evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const screen = () => evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
           const frame=document.querySelector('[data-workout-frame]')
           const label=frame.querySelector('[data-workout-save-status]')
           const box=el=>{const {x,y,width,height}=el.getBoundingClientRect();return [x,y,width,height]}
@@ -1605,23 +1611,25 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
             card:box(frame.querySelector('[role=table]').parentElement),footer:box(frame.querySelector('footer')),scroll:scrollY,
             overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth})
         })))`)
-      }
-      await evaluate(`window.restSafety.offline();document.querySelector('[data-workout-frame] footer button').click()`)
-      await wait(async()=>(await status())==='waiting')
-      assert.equal(await evaluate('window.restSafety.server().snapshot.state.performedSets.length'),0)
-      assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets.length'),1)
-      const waiting = new Map()
-      for(const width of [320,375,393,430,1280])waiting.set(width,await screen(width))
-      await evaluate(`document.querySelector('button[aria-label="전송 대기 · 데이터 상태 확인"]').click()`)
-      await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
-      await evaluate(`window.restSafety.online();[...document.querySelectorAll('dialog[open] button')].find(b=>b.textContent==='저장 결과 확인').click()`)
-      await wait(async()=>(await status())==='saved')
-      await evaluate(`document.querySelector('dialog[open] button[aria-label="닫기"]').click()`)
-      for(const [width,before] of waiting){
+      for(const width of [320,375,393,430,1280]){
+        await send('Emulation.setDeviceMetricsOverride',{width,height:568,deviceScaleFactor:1,mobile:width<500})
+        await send('Page.navigate',{url:origin+'/boundary?input=final-footer&width='+width})
+        await wait(()=>evaluate(`location.search.endsWith('width=${width}') && !!document.querySelector('[data-workout-frame] footer button:enabled')`))
+        await evaluate(`window.restSafety.offline();document.querySelector('[data-workout-frame] footer button').click()`)
+        await wait(async()=>(await status())==='waiting')
+        assert.equal(await evaluate('window.restSafety.server().snapshot.state.performedSets.length'),0)
+        assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets.length'),1)
+        const before = await screen()
+        await evaluate(`document.querySelector('button[aria-label="전송 대기 · 데이터 상태 확인"]').click()`)
+        await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
+        await evaluate(`window.restSafety.online();[...document.querySelectorAll('dialog[open] button')].find(b=>b.textContent==='저장 결과 확인').click()`)
+        await wait(async()=>(await status())==='saved')
+        await evaluate(`document.querySelector('dialog[open] button[aria-label="닫기"]').click()`)
+        await wait(()=>evaluate(`!document.querySelector('dialog[open]')`))
         assert.equal(before.overflow,false)
-        assert.deepEqual(await screen(width),before,`server ACK at ${width}px`)
+        assert.deepEqual(await screen(),before,`server ACK at ${width}px`)
+        assert.equal(await evaluate('window.restSafety.requests.length'),1)
       }
-      assert.equal(await evaluate('window.restSafety.requests.length'),1)
     })
     await t.test('unconfirmed finish keeps its footer slot and offers a single retry', async () => {
       await send('Emulation.setDeviceMetricsOverride',{width:393,height:568,deviceScaleFactor:1,mobile:true})

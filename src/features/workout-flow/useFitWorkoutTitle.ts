@@ -8,16 +8,30 @@ export function useFitWorkoutTitle(title: string, observe = true) {
     if (!node || !row) return
     let frame = 0, disposed = false, lastWidth = -1
     const fit = () => {
-      if (disposed || !node.isConnected || !node.clientWidth) return
+      if (disposed || !node.isConnected) return
+      const width = node.getBoundingClientRect().width
+      if (!width) return
       node.style.removeProperty('--workout-title-size')
-      const base = parseFloat(getComputedStyle(node).fontSize)
       const range = document.createRange()
       range.selectNodeContents(node)
-      const textWidth = range.getBoundingClientRect().width
-      if (textWidth > node.clientWidth) {
-        const size = Math.max(16, Math.floor(base * node.clientWidth / textWidth * 100) / 100)
-        node.style.setProperty('--workout-title-size', size + 'px')
+      const fits = () => range.getBoundingClientRect().width <= width
+      if (fits()) return
+
+      // Font hinting and fallback glyphs can change the width non-proportionally.
+      // Measure each candidate and let CSS truncate a title that still overflows at 16px.
+      const minimum = 160
+      let best = minimum, low = minimum + 1, high = Math.floor(parseFloat(getComputedStyle(node).fontSize) * 10)
+      while (low <= high) {
+        const size = Math.floor((low + high) / 2)
+        node.style.setProperty('--workout-title-size', size / 10 + 'px')
+        if (fits()) {
+          best = size
+          low = size + 1
+        } else {
+          high = size - 1
+        }
       }
+      node.style.setProperty('--workout-title-size', best / 10 + 'px')
     }
     fit()
     if (!observe) return

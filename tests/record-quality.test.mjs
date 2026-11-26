@@ -7,6 +7,7 @@ import {verifyFourthUi} from './fixtures/fourth-ui-checks.mjs'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
+import { chromeExecutable } from './fixtures/chrome-executable.mjs'
 import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import { resolve, dirname } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -66,7 +67,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
  let origin
  try{
   await vite.listen();origin='http://127.0.0.1:'+vite.httpServer.address().port
-  browser=spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',['--headless','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--no-first-run','--disable-background-networking','--no-proxy-server','--disable-extensions','--no-default-browser-check','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:'ignore'})
+  browser=spawn(chromeExecutable(),['--headless','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--no-first-run','--disable-background-networking','--no-proxy-server','--disable-extensions','--no-default-browser-check','--user-data-dir='+profile,'about:blank'],{windowsHide:true,stdio:'ignore'})
   const port=await wait(async()=>{try{return Number((await readFile(resolve(profile,'DevToolsActivePort'),'utf8')).split('\n')[0])}catch{return false}},'Chrome')
   const pages=await(await fetch('http://127.0.0.1:'+port+'/json/list')).json();socket=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl)
   await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject})
@@ -347,7 +348,12 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   report.dialogs.push(await auditMessageDialog({send,evaluate}, '운동 요약 중량 승인 시연', 'info'))
   await click('시연 확인');assert.doesNotMatch(await body(),/실제 승인/)
   await evaluate('[...document.querySelectorAll(".approval-item input:checked")].forEach(e=>e.click())')
-  assert.ok(await evaluate('[...document.querySelectorAll(".approval-toolbar button")].some(e=>/선택 승인/.test(e.textContent)&&e.disabled&&getComputedStyle(e).backgroundColor==="rgba(0, 0, 0, 0)"&&getComputedStyle(e).opacity==="0.42")'))
+  await evaluate(`Promise.all(document.querySelector('.approval-toolbar button').getAnimations().map(animation => animation.finished)).then(() => true)`)
+  assert.deepEqual(await evaluate(`(() => {
+    const button = document.querySelector('.approval-toolbar button')
+    const style = getComputedStyle(button)
+    return { label: button.textContent, disabled: button.disabled, background: style.backgroundColor, opacity: style.opacity }
+  })()`), { label: '선택 승인', disabled: true, background: 'rgba(0, 0, 0, 0)', opacity: '0.42' })
   await evaluate('[...document.querySelectorAll(".approval-item input:not(:checked)")].forEach(e=>e.click())')
   assert.equal(await evaluate('document.querySelector(".approval-toolbar button").textContent'),'전체 승인')
   await evaluate('window.__beforeSeventhReload=true');await send('Page.reload');await wait(()=>evaluate('!window.__beforeSeventhReload'),'new document');await title('운동 기록 요약');assert.ok(await evaluate('[...document.querySelectorAll(".approval-toolbar button")].some(e=>e.textContent==="전체 승인"&&!e.disabled)'));assert.equal(await evaluate('!!document.querySelector(\'[aria-label="중량 검토 카드"]\')'),true);assert.match(await body(),/WEIGHT/)

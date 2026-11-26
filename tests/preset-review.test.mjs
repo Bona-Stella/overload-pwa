@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { spawn } from 'node:child_process'
+import { chromeExecutable } from './fixtures/chrome-executable.mjs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -64,20 +65,33 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   const rowIds = () => evaluate('[...document.querySelectorAll("[data-preset-row]")].map(row => row.dataset.presetRow)')
   const rowTops = () => evaluate('[...document.querySelectorAll("[data-preset-row]")].map(row => row.getBoundingClientRect().top)')
   const drag = async (from, to, { touch = false, cancel = false, during, rows = '[data-preset-row]', handle = '[aria-describedby="preset-order-help"]' } = {}) => {
-    const [start, end] = await evaluate(`[${from}, ${to}].map(index => {
-      const handle = document.querySelectorAll(${JSON.stringify(rows + ' ' + handle)})[index]
-      const box = handle.getBoundingClientRect()
-      return { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) }
-    })`)
+    const { start, end } = await wait(() => evaluate(`(() => {
+      const rows = document.querySelectorAll(${JSON.stringify(rows)})
+      const from = rows[${from}], to = rows[${to}]
+      const grip = from?.querySelector(${JSON.stringify(handle)})
+      if (!grip || grip.disabled || !to) return false
+      const box = grip.getBoundingClientRect()
+      const start = { x: Math.round(box.x + box.width / 2), y: Math.round(box.y + box.height / 2) }
+      // An exercise dialog is mounted before showModal makes its controls hit-testable.
+      if (!grip.contains(document.elementFromPoint(start.x, start.y))) return false
+      const source = from.getBoundingClientRect()
+      const target = to.getBoundingClientRect()
+      const distance = (target.y + target.height / 2) - (source.y + source.height / 2)
+      // Cross the row midpoint so pointer rounding cannot turn the intended drop into a no-op.
+      return { start, end: { x: start.x, y: Math.round(start.y + distance + 4 * Math.sign(distance)) } }
+    })()`), 'drag handle is ready')
+    const dragStarted = () => wait(() => evaluate(`document.querySelectorAll(${JSON.stringify(rows)})[${from}]?.dataset.dragging === 'true'`), 'drag starts on the source row')
     if (touch) {
       await send('Emulation.setTouchEmulationEnabled', { enabled: true })
       await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [start] })
+      await dragStarted()
       await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [end] })
       await during?.()
       await send('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] })
       await send('Emulation.setTouchEmulationEnabled', { enabled: false })
     } else {
       await send('Input.dispatchMouseEvent', { type: 'mousePressed', ...start, button: 'left', buttons: 1, clickCount: 1 })
+      await dragStarted()
       await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...end, button: 'left', buttons: 1 })
       await during?.()
       if (cancel) {
@@ -98,7 +112,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   try {
     await vite?.listen()
     const origin = 'http://127.0.0.1:' + vite.httpServer.address().port
-    browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe',
+    browser = spawn(chromeExecutable(),
       ['--headless', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0', '--no-first-run',
         '--disable-background-networking', '--no-proxy-server', '--disable-extensions', '--no-default-browser-check', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
     const port = await wait(async () => {

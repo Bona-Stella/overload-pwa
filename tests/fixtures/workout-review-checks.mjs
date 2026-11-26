@@ -45,12 +45,12 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     await evaluate(`[...document.querySelectorAll('dialog[open] summary')].find(e=>e.textContent==='분으로 직접 입력').parentElement.open=true`)
     await labelInput('목표 시간', value)
   }
+  const outputDirectory = 'logs/workout-review'
   const screenshot = async label => {
     if (!process.env.OVERLOAD_WORKOUT_SCREENSHOTS) return
-    const directory = 'logs/workout-review'
-    await mkdir(directory, { recursive: true })
+    await mkdir(outputDirectory, { recursive: true })
     const { data } = await send('Page.captureScreenshot', { format: 'png' })
-    await writeFile(directory + '/' + label + '.png', Buffer.from(data, 'base64'))
+    await writeFile(outputDirectory + '/' + label + '.png', Buffer.from(data, 'base64'))
   }
   const layoutMeasurements = []
   const verifyFrameClearance = async label => {
@@ -201,7 +201,8 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
             const requestedScroll = await evaluate('window.scrollY')
             await delay(260)
             const afterPan = await evaluate(`({ padding: getComputedStyle(document.querySelector('[data-workout-frame]')).paddingBottom, height: document.documentElement.scrollHeight, scroll: window.scrollY })`)
-            await writeFile('logs/workout-review/memo-scroll-pan-diagnostic-' + width + '.json', JSON.stringify({ beforePan, requestedScroll, afterPan }, null, 2))
+            await mkdir(outputDirectory, { recursive: true })
+            await writeFile(outputDirectory + '/memo-scroll-pan-diagnostic-' + width + '.json', JSON.stringify({ beforePan, requestedScroll, afterPan }, null, 2))
             assert.equal(afterPan.padding, beforePan.padding, 'viewport panning must not mutate memo scroll space')
             assert.equal(afterPan.scroll, requestedScroll, 'manual scroll with viewport resize must not snap back')
             assert.equal(await evaluate('window.memoViewportTest.scrollCalls.length'), scrollCalls, 'no application correction after manual pan')
@@ -694,7 +695,15 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await has('중량과 반복 횟수를 확인해 주세요.')
   await openList()
   const longName = await title()
-  await dragExercise(1, 0)
+  assert.equal(await currentRowNumber(), '2')
+  // The pointer reorder is covered above. Exercise the keyboard path for the current long-name row.
+  await evaluate(`(() => {
+    const row = document.querySelector('dialog[open] [aria-current="step"]').closest('[data-workout-row]')
+    row.querySelector('button[aria-describedby]').focus({ preventScroll: true })
+  })()`)
+  await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', key: 'ArrowUp', code: 'ArrowUp', windowsVirtualKeyCode: 38 })
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowUp', code: 'ArrowUp', windowsVirtualKeyCode: 38 })
+  await wait(async () => await currentRowNumber() === '1', 'keyboard moved the current exercise up')
   await dialogClick('변경하기')
   assert.equal(await evaluate('document.querySelectorAll("[data-filled=true]").length'), 1)
   await click('운동·세트 편집')

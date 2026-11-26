@@ -525,6 +525,8 @@ npm test
 
 빌드 명령에도 strict TypeScript 검사(`tsc -b`)가 포함됩니다. `npm test`는 Node.js 24 내장 테스트 러너로 `tests/*.test.mjs`를 실행하며, 테스트 개수와 성공 여부는 해당 실행 결과로 확인합니다. 렌더링 테스트는 기존 TypeScript 컴파일러와 `react-dom/server`를 사용합니다. DOM 클릭·키보드 상호작용이나 브라우저 E2E 검증을 대체하지 않습니다. 별도 `typecheck` 스크립트와 E2E 도구는 도입하지 않았습니다.
 
+Chrome 브라우저 검사는 macOS와 Windows의 기본 설치 경로에서 Chrome을 찾습니다. 다른 위치에 설치했다면 `OVERLOAD_CHROME_PATH`에 실행 파일 경로를 지정합니다.
+
 ### Preview Build
 
 ```bash

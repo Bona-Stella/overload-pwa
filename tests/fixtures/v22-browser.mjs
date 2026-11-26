@@ -1,5 +1,6 @@
 // Uses the existing Node/CDP approach against real production bytes and a verified disposable backend.
 import { spawn } from 'node:child_process'
+import { chromeExecutable } from './chrome-executable.mjs'
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { resolve, relative, isAbsolute } from 'node:path'
 import { preview } from 'vite'
@@ -97,7 +98,7 @@ export async function launchV22Browser(runId, frontendRoot = '.', options = {}) 
   }
   async function startBrowser() {
     await rm(resolve(profile, 'DevToolsActivePort'), { force: true })
-    browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--window-size=1280,1000', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
+    browser = spawn(chromeExecutable(), ['--headless', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--window-size=1280,1000', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' })
     browserPids.push(browser.pid)
     devtoolsPort = await waitFor(async () => { try { return Number((await readFile(resolve(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]) } catch { return false } }, 'CDP readiness')
     await attach(); if (offline) await network()

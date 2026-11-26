@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { chromeExecutable } from './fixtures/chrome-executable.mjs'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, resolve } from 'node:path'
 import { test } from 'node:test'
@@ -107,7 +108,7 @@ test('independent common UI preview renders reusable controls and handles intera
     const published = process.env.OVERLOAD_COMMON_UI_REVIEW_URL
     if (!published) { vite = await createReviewFixtureServer(); await vite.listen() }
     const url = published ?? ('http://127.0.0.1:' + vite.httpServer.address().port + '/common-ui-preview')
-    chrome = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', [
+    chrome = spawn(chromeExecutable(), [
       '--headless', '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
       '--no-first-run', '--no-default-browser-check', '--disable-background-networking',
       '--disable-extensions', '--user-data-dir=' + profile, 'about:blank',
@@ -140,6 +141,7 @@ test('independent common UI preview renders reusable controls and handles intera
 
     await send('Emulation.setDeviceMetricsOverride', { width:393,height:852,deviceScaleFactor:1,mobile:true })
     await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:1})
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
     const tabBar='nav[aria-label="기본 탐색"]'
     const tabPoint = selector => evaluate(`(() => {
       const r=document.querySelector(${JSON.stringify(tabBar+' '+selector)}).getBoundingClientRect()
@@ -151,7 +153,6 @@ test('independent common UI preview renders reusable controls and handles intera
     }
     await evaluate('scrollTo({top:document.scrollingElement.scrollHeight,behavior:"instant"})')
     await waitFor(()=>evaluate(`document.querySelector(${JSON.stringify(tabBar)}).dataset.collapsed==='true'`),'tabs collapse on scroll')
-    await delay(385)
     const compact=await tabPoint('[aria-current="page"]')
     const point={x:compact.x+10,y:compact.y-5}
     await touchTab(point.x,point.y)
@@ -165,6 +166,7 @@ test('independent common UI preview renders reusable controls and handles intera
     await click('설정',tabBar+' button')
     await evaluate('scrollTo({top:0,behavior:"instant"})')
     await send('Emulation.setTouchEmulationEnabled',{enabled:false})
+    await send('Emulation.setEmulatedMedia', { features: [] })
 
     for (const width of [320, 375, 393, 430, 1280]) {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: width < 500 })
@@ -216,11 +218,13 @@ test('independent common UI preview renders reusable controls and handles intera
           document.activeElement.matches(':focus-visible'),
           getComputedStyle(document.activeElement).outlineColor,
         ]`), ['danger-primary', true, 'rgb(240, 183, 191)'])
+        await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: false })
         const target = await evaluate(`(() => {
           const { x, y, width, height } = document.activeElement.getBoundingClientRect()
           return { x: x + width / 2, y: y + height / 2 }
         })()`)
-        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...target })
+        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 3, y: 3, pointerType: 'mouse' })
+        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...target, pointerType: 'mouse' })
         await waitFor(() => evaluate(`(() => {
           const button = document.querySelector('dialog [data-appearance=danger-primary]')
           return button?.matches(':hover') && getComputedStyle(button).backgroundColor === 'rgb(180, 55, 74)'
@@ -234,6 +238,7 @@ test('independent common UI preview renders reusable controls and handles intera
         await send('Emulation.setEmulatedMedia', { features: [] })
         await click('닫기', 'dialog button')
         await modalClosed()
+        await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: true })
       }
     }
 
@@ -342,11 +347,13 @@ test('independent common UI preview renders reusable controls and handles intera
     assert.equal(await evaluate('document.querySelector(\'[role="alert"]\').textContent'), '저장하지 못했어요.')
     assert.equal(await evaluate("getComputedStyle(document.querySelector('[data-tone=error] [data-feedback-icon=error]')).color"), 'rgb(240, 183, 191)')
     assert.equal(await evaluate("document.querySelectorAll('[data-tone]').length"), 1)
-    assert.equal(await evaluate(`(() => {
+    await evaluate(`Promise.all(document.querySelector('[data-tone]').getAnimations().map(animation => animation.finished)).then(() => true)`)
+    const toastGap = await evaluate(`(() => {
       const toast = document.querySelector('[data-tone]')
       const nav = document.querySelector('nav[aria-label="기본 탐색"]')
-      return toast.getBoundingClientRect().bottom <= nav.getBoundingClientRect().top - 7
-    })()`), true)
+      return nav.getBoundingClientRect().top - toast.getBoundingClientRect().bottom
+    })()`)
+    assert.ok(toastGap >= 7, 'Toast gap above navigation: ' + toastGap + 'px')
     await capture('393-toast')
     await click('성공')
     await status('변경 사항이 저장됐어요.')

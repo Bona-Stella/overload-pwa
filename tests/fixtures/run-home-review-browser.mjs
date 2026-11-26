@@ -2,6 +2,7 @@ import { runRoutineReview } from './routine-review-checks.mjs'
 // Real API browser checks. --design uses the opt-in Vite review app; no response fixture for its data.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
+import { chromeExecutable } from './chrome-executable.mjs'
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises'
 import { resolve, relative, isAbsolute } from 'node:path'
 import { verifyV22Ownership, withV22Connection } from './v22-environment.mjs'
@@ -72,7 +73,7 @@ async function login(email) {
 }
 try {
   await rm(resolve(profile, 'DevToolsActivePort'), { force: true })
-  browser = spawn('C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--no-first-run','--no-default-browser-check','--disable-background-networking','--user-data-dir=' + profile,'about:blank'], { windowsHide: true, stdio: 'ignore' })
+  browser = spawn(chromeExecutable(), ['--headless','--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--no-first-run','--no-default-browser-check','--disable-background-networking','--user-data-dir=' + profile,'about:blank'], { windowsHide: true, stdio: 'ignore' })
   const port = await wait(async () => { try { return Number((await readFile(resolve(profile, 'DevToolsActivePort'), 'utf8')).split('\n')[0]) } catch { return false } }, 'Chrome')
   const target = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find(t => t.type === 'page')
   ws = new WebSocket(target.webSocketDebuggerUrl); await new Promise((r,j) => { ws.onopen = r; ws.onerror = j })
