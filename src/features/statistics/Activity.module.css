@@ -1,20 +1,17 @@
 .page:global(.stack), .page :global(.record-statistics-body) { gap: var(--card-gap-independent); }
 .page :global(.app-card) { padding: var(--card-padding-statistics); }
 .page :global(.record-period[data-layout='activity']) { display: grid; margin: 0; }
-.page :global(.record-period[data-layout='activity'] > .record-tabs), .page .segment { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-page); }
-.page .segment::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 12px) / 2); border-radius: 7px; background: var(--accent); pointer-events: none; transform: translateX(0); transition: transform 200ms ease; }
-.page .segment:has(> button:nth-child(2)[aria-pressed='true'])::before { transform: translateX(calc(100% + 4px)); }
-.page :global(.record-period[data-layout='activity'] > .record-tabs > button), .page .segment > button { position: relative; min-width: 0; min-height: 40px; height: auto; padding: 8px 4px; border: 0; border-radius: 7px; background: transparent; color: var(--text-primary); font-size: 14px; font-weight: 600; }
-.page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-pressed='true']) { background: var(--accent); color: var(--on-accent); }
-.page .segment > button[aria-pressed='true'] { background: transparent; color: var(--on-accent); }
+.segment { composes: segment from '../../components/common-ui/SegmentedControl.module.css'; }
+.page :global(.record-period[data-layout='activity'] > .record-tabs) { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px; padding-inline: 4px; border-radius: 999px; background: var(--surface-page); }
+.page :global(.record-period[data-layout='activity'] > .record-tabs > button) { position: relative; min-width: 0; min-height: 48px; height: auto; padding: 8px 4px; border: 0; border-radius: 999px; background: transparent; color: var(--text-primary); font-size: 14px; font-weight: 600; }
+.page :global(.record-period[data-layout='activity'] > .record-tabs > button[aria-pressed='true']) { color: var(--on-accent); background: transparent; box-shadow: inset 0 4px var(--surface-page), inset 0 -4px var(--surface-page); background-image: linear-gradient(transparent 4px, var(--accent) 4px, var(--accent) calc(100% - 4px), transparent calc(100% - 4px)); }
 .page :global(.record-period[data-layout='activity'] > .record-tabs > button[data-wait='true'])::after { content: ''; position: absolute; inset-inline-end: 14px; inset-block: 0; margin-block: auto; width: 10px; height: 10px; border: 1px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; pointer-events: none; animation: period-spin .8s linear infinite; }
 @keyframes period-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) {
-  .page .segment::before { transition: none; }
   .page :global(.record-period[data-layout='activity'] > .record-tabs > button[data-wait='true'])::after { animation: none; }
 }
-.page :global(.record-period-row) { grid-template-columns: 36px minmax(0,1fr) 36px 36px; gap: 4px; }
-.page :global(.record-period[data-layout='activity'] .record-period-row > button) { position: relative; min-width: 36px; min-height: 44px; height: auto; border: 0; border-radius: 5px; background: transparent; color: var(--text-primary); }
+.page :global(.record-period-row) { grid-template-columns: 44px minmax(0,1fr) 44px 44px; gap: 4px; }
+.page :global(.record-period[data-layout='activity'] .record-period-row > button) { position: relative; min-width: 44px; min-height: 44px; height: auto; border: 0; border-radius: 5px; background: transparent; color: var(--text-primary); }
 .page :global(.record-period[data-layout='activity'] .record-period-row > button)::before { content: ''; position: absolute; inset: 0; margin: auto; width: 36px; height: 36px; box-sizing: border-box; border: 1px solid var(--border-subtle); border-radius: inherit; pointer-events: none; }
 .page :global(.record-period[data-layout='activity'] .record-period-row > button > svg) { position: relative; }
 .page :global(.record-period[data-layout='activity'] .record-period-row .record-calendar-trigger[aria-expanded='true']) { background: transparent; color: var(--on-accent); }
@@ -52,7 +49,7 @@
 .page .trend :global(.record-search [role='group']) { scrollbar-width: none; }
 .page .trend :global(.record-search [role='group']::-webkit-scrollbar) { display: none; }
 .page .trend :global(.record-search [role='group'] > button) { flex: none; }
-.page .trend :global(.record-search [role='group'] > button > span) { min-height: 32px; padding-inline: 12px; border-radius: 999px; white-space: nowrap; }
+.page .trend :global(.record-search [role='group'] > button > span) { min-height: 36px; padding-inline: 12px; border-radius: 999px; white-space: nowrap; }
 .page .trend :global(.record-search li > button:first-child) { min-height: 56px; padding-block: 8px; }
 .page .chartHeading { padding-top: 12px; border-top: 1px solid var(--border-subtle); }
 .chartHeading > span { min-width: 0; }

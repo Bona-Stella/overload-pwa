@@ -26,11 +26,12 @@ function adjustReps(value: string, direction: -1 | 1) {
   const next = adjustRepsDraft(value, direction)
   return next !== null && Number(next) <= 2147483647 ? next : null
 }
-export function KgWheel({ label, value, onChange, editorStep, preview }: { label: string; value: string; onChange: (value: string) => void; editorStep?: 1 | 2.5; preview?: boolean }) {
+export function KgWheel({ label, value, onChange, step = 2.5, compact = false, preview }: {
+  label: string; value: string; onChange: (value: string) => void; step?: 1 | 2.5; compact?: boolean; preview?: boolean
+}) {
   return <NumberWheel preview={preview} label={label} value={value} onChange={onChange} unit="kg" start="0"
-    adjust={adjustKg} validate={value => value.trim() ? decimalDraft(value) : ''}
-    stepLabel={editorStep === undefined ? '2.5' : ''} compactStepper={editorStep !== undefined}
-    stepAdjust={editorStep === undefined ? undefined : (value, direction) => adjustKg(value, direction, editorStep)} />
+    adjust={(value, direction) => adjustKg(value, direction, step)} validate={value => value.trim() ? decimalDraft(value) : ''}
+    stepLabel={compact ? '' : String(step)} compactStepper={compact} />
 }
 
 export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, completionProtected, editing, editTools, referenceNoteBelowControls = false,
@@ -73,7 +74,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       <div className={styles.workingHead}>
         <span className={styles.workingLabel}>진행 중량 · 잠금</span>
         {plateWeight !== null && <span className={`${styles.workingLabel} ${styles.plateLabel}`}>한쪽 원판</span>}
-        <Button variant="quiet" className={styles.weightChange} onClick={preview ? undefined : onWeight}><span>중량 변경</span></Button>
+        <Button compact variant="quiet" className={styles.weightChange} onClick={preview ? undefined : onWeight}>중량 변경</Button>
       </div>
       <div className={styles.workingValues}>
         <strong>{weight.working || '—'} <small>kg</small></strong>
@@ -108,7 +109,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
             }
               {additionalInput && weight.loadType === 'BODYWEIGHT' && (result
                 ? <small>{result.additionalKg === null ? '추가 부하 미기록' : `추가 ${result.additionalKg}kg`}</small>
-                : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} value={set.draft.additional} onChange={additional => onDraft(set.id, { additional })} />
+                : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} step={1} value={set.draft.additional} onChange={additional => onDraft(set.id, { additional })} />
                   <small className="muted">선택 입력 · 체중은 포함하지 않습니다.</small></>)}
             </div>
             <div role="cell" className={styles.checkCell} data-completion-protected={!result && completionProtected || undefined}>

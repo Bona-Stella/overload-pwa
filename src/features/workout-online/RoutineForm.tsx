@@ -4,6 +4,9 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { EditorViewportOccluded } from '../../components/useEditorKeyboard.ts'
 import { editorViewport } from '../../components/editorViewport.ts'
 import { Button, Card } from '../../components/ui.tsx'
+import { NumberWheel } from '../../components/NumberWheel.tsx'
+import numeric from '../../components/NumberWheel.module.css'
+import ui from '../../components/ui.module.css'
 import { boundaryError } from '../home/load.ts'
 import { newId } from '../../id.ts'
 import { TagPicker } from './TagPicker.tsx'
@@ -17,7 +20,7 @@ import type { RoutineTag } from '../home/tags.ts'
 import styles from './Routine.module.css'
 import editStyles from './RoutineEdit.module.css'
 import type { CardioActivity, CreateRoutine, Manufacturer, StandardExercise, Routine, UpdateRoutine } from './types.ts'
-import { decimalDraft, name as validName } from './validation.ts'
+import { count, countDraft, decimalDraft, name as validName } from './validation.ts'
 import type { WorkoutOnlineController } from './controller.ts'
 import { ExerciseSearch } from './ExerciseSearch.tsx'
 import { EquipmentFields } from './EquipmentFields.tsx'
@@ -29,6 +32,17 @@ import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
 
 import { newWeights, updatedWeights } from './routine-weights.ts'
 import type { WeightDraft } from './routine-weights.ts'
+
+type Targets = Pick<WeightDraft, 'setCount' | 'minReps' | 'maxReps'>
+
+export function RoutineTargetFields({ value, onChange }: { value: Targets; onChange: (changes: Partial<Targets>) => void }) {
+  return <div className={styles.targets}>
+    {([['setCount', '본세트', '세트'], ['minReps', '최소 반복', '회'], ['maxReps', '최대 반복', '회']] as const).map(([key, label, unit]) =>
+      <div className={numeric.field} key={key}><span>{label}</span><NumberWheel label={label} value={value[key]} unit={unit} start="1" hideSteps
+        adjust={(current, direction) => { const next = Number(current) + direction; return count(next) ? String(next) : null }}
+        validate={next => next.trim() ? String(countDraft(next)) : ''} onChange={next => onChange({ [key]: next })} /></div>)}
+  </div>
+}
 type CardioDraft = PlanDraft & {id:string;existing:boolean;restore?:boolean}
 
 function ExerciseActions({ index, count, onMove, onRemove }: {
@@ -224,7 +238,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     <fieldset disabled={locked || managementBlocked || submitted !== null} className="stack online-fieldset">
       <h2 className={editStyles.group}>기본 정보</h2>
       <section className={styles.formbox}>
-        <label className={styles.identityField}>루틴 이름<input placeholder="나의 루틴" value={name} onChange={e => setName(e.target.value)} /></label>
+        <label className={styles.identityField}>루틴 이름<input className={ui.input} placeholder="나의 루틴" value={name} onChange={e => setName(e.target.value)} /></label>
         <TagPicker value={tag} onChange={setTag} />
       </section>
       <h3 className={editStyles.group}>WEIGHT <small>총 {weights.length}종목</small></h3>
@@ -239,10 +253,10 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
             if (value.manufacturerId === w.manufacturerId && value.loadType === w.loadType) return
             changeWeight(w.id, { ...value, ...(w.approvedWeightKg !== null ? { id:newId(), approvedWeightKg:null, initialWeightKg:'', approve:false, nextWeightKg:'', restore:false } : {}) })
           }} />
-          <div className={styles.targets}>{([['setCount', '본세트'], ['minReps', '최소 반복'], ['maxReps', '최대 반복']] as const).map(([key, label]) => <label key={key}>{label}<input inputMode="numeric" value={w[key]} onChange={e => changeWeight(w.id, { [key]: e.target.value })} /></label>)}</div>
+          <RoutineTargetFields value={w} onChange={changes => changeWeight(w.id, changes)} />
           <div className={editStyles.weight}>
             <div><span>설정 중량</span><small>{step}kg 단위</small></div>
-            <KgWheel label="설정 중량" editorStep={step} value={w.approvedWeightKg === null ? w.initialWeightKg : w.nextWeightKg} onChange={value => {
+            <KgWheel label="설정 중량" step={step} compact value={w.approvedWeightKg === null ? w.initialWeightKg : w.nextWeightKg} onChange={value => {
               if (w.approvedWeightKg === null) changeWeight(w.id, { initialWeightKg: value })
               else {
                 const approve = value !== decimalDraft(w.approvedWeightKg)
@@ -281,7 +295,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
           data-edit-picker={picking || undefined} ref={addedCardId === c.id ? addedCard : picking ? cardioSearchRegion : undefined}>
           <ExerciseEditHeading index={index} name={c.name || '유산소 종목 선택'} description={editing ? undefined : cardioDescription(c, activities)}
             picking={picking} onChange={() => openCardioPicker(picking ? null : c.id)} />
-          {picking ? search : <CardioPlanFields value={c} onChange={v => changeCardio(c.id, v)} />}
+          {picking ? search : <CardioPlanFields routineEditor value={c} onChange={v => changeCardio(c.id, v)} />}
           <ExerciseActions index={index} count={chosenCardio.length} onMove={delta => setCardio(v => move(v, index, delta))} onRemove={() => {
             setCardio(values => values.filter(x => x.id !== c.id))
             if (picking) setCardioPicker(null)
@@ -299,7 +313,7 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       </details>}
     </fieldset>
     <footer className={editStyles.footer}>
-      <button type="button" className="outline action-pill" disabled={locked} data-button-pending={saving || undefined} onClick={close}>취소</button>
+      <Button disabled={locked && !saving} pending={saving} onClick={close}>취소</Button>
       <Button type="submit" variant="primary" className="full" disabled={!saving && (locked || managementBlocked)} loading={saving}>{saveLabel}</Button>
     </footer>
     {confirmation}

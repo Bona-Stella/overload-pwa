@@ -82,3 +82,12 @@ export function distanceLabel(result: { distanceKm: string | null; measurement?:
   const source = result.measurement?.distanceSource
   return `${source === 'CALCULATED' ? '계산 거리' : source === 'MANUAL' ? '직접 입력 거리' : '거리 · 출처 미확인'} ${result.distanceKm} km`
 }
+export const averageBpmBounds = { min: 20, max: 300 } as const
+export const averageBpmMessage = '평균 심박수는 20~300 BPM을 입력해 주세요.'
+
+export function actualAverageBpm(value: string) {
+  if (!value.trim()) return null
+  const bpm = Number(value)
+  if (!/^\d+$/.test(value.trim()) || bpm < averageBpmBounds.min || bpm > averageBpmBounds.max) throw Error(averageBpmMessage)
+  return bpm
+}

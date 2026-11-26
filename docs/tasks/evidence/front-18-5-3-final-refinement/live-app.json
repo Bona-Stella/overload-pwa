@@ -1,0 +1,22 @@
+{
+  "origin": "http://192.168.0.3:4173",
+  "health": true,
+  "activeBefore": false,
+  "create": 201,
+  "read": 200,
+  "plan": {
+    "seconds": 120,
+    "paceMinutes": "6.916667",
+    "incline": "3.512345"
+  },
+  "start": 201,
+  "startedWithPlan": true,
+  "snapshot": 200,
+  "actualBpm": 130,
+  "finish": 200,
+  "correction": 200,
+  "correctedBpm": 131,
+  "testSessionCleanup": 200,
+  "testRoutineCleanup": 204,
+  "activeAfter": false
+}

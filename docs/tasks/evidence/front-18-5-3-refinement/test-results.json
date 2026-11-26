@@ -1,0 +1,84 @@
+{
+  "date": "2026-11-26",
+  "frontendHead": "87b585a",
+  "backendHead": "8304b2a",
+  "full": {
+    "command": "node --test --test-concurrency=2 tests/*.test.mjs",
+    "tests": 732,
+    "passed": 732,
+    "failed": 0,
+    "skipped": 0
+  },
+  "focused": {
+    "command": "node --test tests/home.test.mjs tests/control-foundation.test.mjs tests/cardio-measurement.test.mjs tests/routine-contract.test.mjs tests/pwa-offline.test.mjs tests/workout-local.test.mjs",
+    "tests": 103,
+    "passed": 103,
+    "failed": 0,
+    "skipped": 0
+  },
+  "addedTests": 1,
+  "extendedBrowserTests": true,
+  "chrome": {
+    "widths": [
+      320,
+      375,
+      393,
+      430,
+      1280
+    ],
+    "apiRequestsInPreview": 0
+  },
+  "typeScript": "passed",
+  "eslint": {
+    "status": "passed",
+    "excluded": [
+      ".local-backups/**"
+    ]
+  },
+  "productionBuild": "passed",
+  "reviewBuild": "passed",
+  "gitDiffCheck": "passed",
+  "stagedDiff": "empty",
+  "backendWorkingTree": "clean",
+  "changedFiles": [
+    "docs/tasks/evidence/front-18-5-3-refinement/chrome-before.json",
+    "docs/tasks/evidence/front-18-5-3-refinement/chrome-controls.json",
+    "docs/tasks/evidence/front-18-5-3-refinement/goal-editor-393.png",
+    "docs/tasks/evidence/front-18-5-3-refinement/home-detail-failure-after-393.png",
+    "docs/tasks/evidence/front-18-5-3-refinement/production-cache.json",
+    "docs/tasks/evidence/front-18-5-3-refinement/spring-after.json",
+    "docs/tasks/evidence/front-18-5-3-refinement/spring-before.json",
+    "docs/tasks/evidence/front-18-5-3-refinement/spring-home.json",
+    "docs/tasks/evidence/front-18-5-3-refinement/test-results.json",
+    "docs/tasks/evidence/front-18-5-3-refinement/workout-end-320.png",
+    "docs/tasks/evidence/front-18-5-3-refinement/workout-end-before-320.png",
+    "docs/tasks/evidence/front-18-5-3-refinement/workout-weight-320.png",
+    "docs/tasks/evidence/front-18-5-3-refinement/workout-weight-before-320.png",
+    "docs/tasks/front-18-5-3-user-refinement.md",
+    "src/components/DurationWheel.tsx",
+    "src/components/NumberWheel.module.css",
+    "src/components/NumberWheel.tsx",
+    "src/features/home/HomePanel.tsx",
+    "src/features/home/load.ts",
+    "src/features/workout-flow/CardioFocus.module.css",
+    "src/features/workout-flow/CardioFocus.tsx",
+    "src/features/workout-flow/CardioValueRow.tsx",
+    "src/features/workout-flow/WeightFocus.tsx",
+    "src/features/workout-flow/WorkoutFlow.module.css",
+    "src/features/workout-flow/WorkoutFrame.tsx",
+    "src/features/workout-online/CardioFields.module.css",
+    "src/features/workout-online/CardioNumberField.tsx",
+    "src/features/workout-online/CardioPlanFields.tsx",
+    "src/features/workout-online/RoutineForm.tsx",
+    "src/features/workout-online/WorkoutWorkspace.tsx",
+    "src/features/workout-online/cardio-draft.ts",
+    "tests/control-foundation.test.mjs",
+    "tests/fixtures/review/ControlFoundationPreview.tsx",
+    "tests/fixtures/review/check-control-foundation.mjs",
+    "tests/fixtures/workout-review-checks.mjs",
+    "tests/fixtures/workspace-boundary.jsx",
+    "tests/home.test.mjs",
+    "tests/preset-review.test.mjs",
+    "tests/routine-ui.test.mjs"
+  ]
+}

@@ -125,7 +125,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const candidates = options.filter(o => (search.scope!=='exercise'||tag==='ALL'||matchingNames.has(o.name))&&o.name.toLocaleLowerCase().includes(search.query.trim().toLocaleLowerCase()))
   const retry = <RefreshButton disabled={!enabled} loading={busy} failure={!page ? issue : null} onRefresh={() => void load(retryCursor)} />
   return <section className={`stack record-feed ${recent?'':activityStyles.page}`} aria-label={recent ? '최근 7일 운동 기록' : '전체 운동 이력'}>
-    {recent && <div className={styles.recentHeading}><h2>최근 운동</h2><span className={styles.recentRange}>{range.fromDate.slice(2)} ~ {today.slice(2)}</span>{onViewAll&&<Button variant="quiet" onClick={onViewAll}>전체 보기 ›</Button>}</div>}
+    {recent && <div className={styles.recentHeading}><h2>최근 운동</h2><span className={styles.recentRange}>{range.fromDate.slice(2)} ~ {today.slice(2)}</span>{onViewAll&&<Button compact variant="quiet" onClick={onViewAll}>전체 보기 ›</Button>}</div>}
     {!recent && <><Card className={activityStyles.trend}><PeriodControls variant="activity" value={period} onChange={value => setPeriod(value, true)} monthOnly compact />
       <SearchList scopes={[{ id: 'routine', name: '루틴별' }, { id: 'exercise', name: '운동별' }]} scope={search.scope}
         renderScope={control=><SearchScopePopover {...control} />}

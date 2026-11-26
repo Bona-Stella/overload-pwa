@@ -1,0 +1,97 @@
+{
+  "date": "2026-11-26",
+  "frontendHead": "87b585a",
+  "backendHead": "8304b2a",
+  "full": {
+    "command": "node --test --test-concurrency=2 tests/*.test.mjs",
+    "tests": 734,
+    "passed": 734,
+    "failed": 0,
+    "skipped": 0
+  },
+  "focused": {
+    "command": "node --test tests/control-foundation.test.mjs tests/home.test.mjs tests/cardio-measurement.test.mjs tests/routine-contract.test.mjs tests/pwa-offline.test.mjs tests/workout-local.test.mjs",
+    "tests": 105,
+    "passed": 105,
+    "failed": 0,
+    "skipped": 0
+  },
+  "browserWorkflows": {
+    "tests": 28,
+    "passed": 28,
+    "failed": 0,
+    "skipped": 0
+  },
+  "addedTests": 2,
+  "chrome": {
+    "widths": [
+      320,
+      375,
+      393,
+      430,
+      1280
+    ],
+    "apiRequestsInPreview": 0
+  },
+  "typeScript": "passed",
+  "eslint": {
+    "status": "passed",
+    "excluded": [
+      ".local-backups/**"
+    ]
+  },
+  "productionBuild": "passed",
+  "reviewBuild": "passed",
+  "cache": [
+    {
+      "build": "production",
+      "appShellAssets": 32,
+      "hashesMatch": true,
+      "previewInAppShell": false,
+      "previewInBuild": false
+    },
+    {
+      "build": "review",
+      "appShellAssets": 273,
+      "hashesMatch": true,
+      "previewInAppShell": false,
+      "previewInBuild": true
+    }
+  ],
+  "gitDiffCheck": "passed",
+  "stagedDiff": "empty",
+  "backendWorkingTree": "clean",
+  "changedFiles": [
+    "docs/tasks/evidence/front-18-5-3-final-refinement/chrome-controls.json",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/future-goals-393.png",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/incline-wheel-393.png",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/live-app.json",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/pace-boundary-393.png",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/pace-layout-393.png",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/speed-layout-320.png",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/speed-layout-393.png",
+    "docs/tasks/evidence/front-18-5-3-final-refinement/test-results.json",
+    "docs/tasks/front-18-5-3-final-refinement.md",
+    "src/components/DurationWheel.tsx",
+    "src/components/NumberWheel.module.css",
+    "src/components/NumberWheel.tsx",
+    "src/components/common-ui/SegmentedControl.module.css",
+    "src/features/statistics/Activity.module.css",
+    "src/features/workout-local/completion-input.ts",
+    "src/features/workout-online/CardioActualFields.tsx",
+    "src/features/workout-online/CardioFields.module.css",
+    "src/features/workout-online/CardioNumberField.tsx",
+    "src/features/workout-online/CardioPlanFields.tsx",
+    "src/features/workout-online/ClosedWorkout.tsx",
+    "src/features/workout-online/Routine.module.css",
+    "src/features/workout-online/RoutineForm.tsx",
+    "src/features/workout-online/cardio-draft.ts",
+    "src/features/workout-online/cardio-measurement.ts",
+    "tests/control-foundation.test.mjs",
+    "tests/fixtures/review/ControlFoundationPreview.tsx",
+    "tests/fixtures/review/check-control-foundation.mjs",
+    "tests/fixtures/workout-review-checks.mjs",
+    "tests/preset-review.test.mjs",
+    "tests/routine-ui.test.mjs"
+  ]
+}

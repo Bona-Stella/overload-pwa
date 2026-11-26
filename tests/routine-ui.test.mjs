@@ -30,7 +30,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await send('Page.enable'); await send('Page.navigate', { url: origin + '/boundary' })
 
     await wait(()=>evaluate('!!window.ui'),'fixture loaded')
-    const click=async text=>{await evaluate(`[...(Array.from(document.querySelectorAll('dialog[open]')).at(-1)??document).querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled).click()`);await new Promise(r=>setTimeout(r,80))}
+    const click=async text=>{await evaluate(`[...(Array.from(document.querySelectorAll('dialog[open]')).at(-1)??document).querySelectorAll('button,summary')].find(b=>b.textContent.trim()===${JSON.stringify(text)}&&!b.disabled).click()`);await new Promise(r=>setTimeout(r,80))}
     const dialogText = () => evaluate('document.querySelector("dialog[open]")?.textContent')
     const input=async(selector,value)=>{
       if(selector==='[aria-label="루틴 태그"]'){
@@ -60,7 +60,9 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       const value=await evaluate(`(()=>{const controls=[document.querySelector('input[placeholder="나의 루틴"]'),document.querySelector('[aria-label="루틴 태그"]')];return controls.map(e=>{const s=getComputedStyle(e),l=getComputedStyle(e.closest('label'));return ['height','padding','fontSize','color','backgroundColor','borderColor','borderWidth','borderRadius'].map(k=>s[k]).concat(['fontSize','color','gap'].map(k=>l[k]))})})()`)
       assert.equal(value[0][2],'16px','the editable name avoids Safari focus zoom')
       assert.equal(value[1][2],'14px','the tag button keeps its typography')
-      assert.deepEqual(value[0].filter((_,i)=>i!==2),value[1].filter((_,i)=>i!==2),'name and tag retain matching field geometry and colors')
+      assert.deepEqual([value[0][0], value[0][1], value[0][7], value[0][10]], ['48px', '8px 12px', '5px', '4px'])
+      assert.deepEqual([value[1][0], value[1][7]], ['44px', '10px'], 'the existing tag selector retains its own geometry')
+      assert.deepEqual(value[0].slice(3,7), value[1].slice(3,7), 'name and tag retain the same colors and field border width')
     }
 
     const viewport = width => send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true})
@@ -202,7 +204,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
         assert.equal(typing.calls,0,'typing and caret movement do not scroll the page from app code')
 
         await evaluate(`(()=>{const {memo,visible,resize,touch,scroll}=routineMemoTest;
-          const other=memo.closest('section').querySelector('input[inputmode=numeric]');
+          const other=memo.form.querySelector('input[placeholder="나의 루틴"]');
           other.focus({preventScroll:true});touch('pointerdown');touch('pointerup');memo.focus({preventScroll:true});
           resize(innerHeight);resize(visible);
           window.dispatchEvent(new WheelEvent('wheel'));scroll(0,Math.max(0,scrollY-26));
@@ -291,7 +293,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.match(await evaluate(`document.querySelector('[aria-label="웨이트 1"] h3').textContent`),/바벨 스쿼트/)
     assert.equal(await evaluate('window.addedCardScrolls.length'),0,'changing an exercise does not align a card')
     assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] button[aria-label="설정 중량"]').textContent.trim()`),'입력','new exercise does not inherit an approved weight')
-    assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] input[inputmode="numeric"]').value`),'3')
+    assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] button[aria-label="본세트"]').textContent.trim()`),'3 세트')
     const wheel = async (section,value) => { await evaluate(`document.querySelector('${section} button[aria-label="설정 중량"]').click()`);await click('직접 입력');await input('dialog[open] input',value);await click('확인') }
     await viewport(320)
     await tap(setting(1)+'[aria-label="설정 중량"]')
@@ -331,7 +333,12 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await click('+ 유산소 종목 추가');await click('달리기');await tap('[aria-label="표준 유산소 목록"] li > button')
     await assertAligned('유산소 2','러닝머신','smooth')
     await tap('[aria-label="유산소 2"] button.danger')
-    await evaluate(`(()=>{const e=[...document.querySelectorAll('[aria-label="유산소 1"] label')].find(l=>l.textContent.includes('목표 시간')).querySelector('input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'2.5');e.dispatchEvent(new Event('input',{bubbles:true}))})()`);await new Promise(r=>setTimeout(r,80))
+    await tap('[aria-label="유산소 1"] button[aria-label="목표 시간 수정"]')
+    for (const [unit,value] of [['분','2'],['초','30']]) {
+      await tap(`button[aria-label="목표 시간 (${unit})"]`)
+      await click('직접 입력','dialog[open] button'); await input('dialog[open] input',value); await click('확인','dialog[open] button')
+    }
+    await click('시간 적용')
     for (const width of [320,375,393,430]) {
       await shot('routine-edit-'+width,width)
       const layout = await evaluate(`(()=>{const form=document.querySelector('form[aria-label="루틴 편집"]'),cards=['웨이트 1','유산소 1'].map(label=>form.querySelector('section[aria-label="'+label+'"]'))
@@ -348,18 +355,23 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     const desktop = await evaluate(`(()=>{const footer=document.querySelector('form footer'),r=footer.getBoundingClientRect(),b=footer.querySelector('button').getBoundingClientRect();return {position:getComputedStyle(footer).position,width:r.width,bottom:r.bottom,height:b.height}})()`)
     assert.deepEqual(desktop,{position:'fixed',width:520,bottom:900,height:48})
     await send('Emulation.setDeviceMetricsOverride',{width:393,height:852,deviceScaleFactor:1,mobile:true})
-    const keyboard = await evaluate(`(()=>{const input=document.querySelector('[aria-label="유산소 1"] input'),footer=input.form.querySelector('footer'),viewport=window.visualViewport;
+    const keyboard = await evaluate(`(()=>{const input=document.querySelector('form[aria-label="루틴 편집"] input[placeholder="나의 루틴"]'),footer=input.form.querySelector('footer'),viewport=window.visualViewport;
       input.focus();Object.defineProperty(viewport,'height',{configurable:true,value:innerHeight-280});viewport.dispatchEvent(new Event('resize'));
       const result={focused:document.activeElement===input,scale:viewport.scale,inset:innerHeight-viewport.height,hidden:getComputedStyle(footer).visibility==='hidden'};
       delete viewport.height;input.blur();viewport.dispatchEvent(new Event('resize'));return result
     })()`)
     assert.ok(keyboard.focused && keyboard.hidden,JSON.stringify(keyboard))
     await wait(() => evaluate(`getComputedStyle(document.querySelector('form footer')).visibility==='visible'`))
-    const maxReps = '[aria-label="웨이트 1"] input[inputmode="numeric"]'
-    await evaluate(`(()=>{const e=[...document.querySelectorAll('${maxReps}')].at(-1);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'2');e.dispatchEvent(new Event('input',{bubbles:true}))})()`)
+    const maxReps = async value => {
+      await tap('[aria-label="웨이트 1"] button[aria-label="최대 반복"]')
+      await click('직접 입력')
+      await input('dialog[open] input', value)
+      await click('확인')
+    }
+    await maxReps('2')
     await click('변경 사항 저장')
     assert.match(await evaluate(`document.querySelector('form [role="alert"]').textContent`),/최소 반복 수는 최대 반복 수를 넘을 수 없습니다/)
-    await evaluate(`(()=>{const e=[...document.querySelectorAll('${maxReps}')].at(-1);Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(e,'10');e.dispatchEvent(new Event('input',{bubbles:true}))})()`)
+    await maxReps('10')
     await tap(setting(1)+'[aria-label$=" 증가"]')
     await click('변경 사항 저장');assert.equal(await evaluate('window.ui.saved.length'),0)
     assert.match(await dialogText(),/새 중량을 승인/)
@@ -493,7 +505,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await tap('[aria-label="표준 운동 목록"] li > button:first-child')
     await assertAligned('웨이트 1','벤치프레스','smooth')
     assert.equal(await empty('웨이트'),null)
-    assert.equal(await evaluate(`document.querySelectorAll('[aria-label="웨이트 1"] button').length`),7,'one change, three wheel controls and three bottom actions')
+    assert.equal(await evaluate(`document.querySelectorAll('[aria-label="웨이트 1"] button').length`),10,'one change, three targets, three weight controls and three bottom actions')
     const weightCard = '[aria-label="웨이트 1"]'
     const actions = await evaluate(`[...document.querySelectorAll('${weightCard} button[aria-expanded],${weightCard} button.danger')].map(b=>[b.offsetWidth,b.offsetHeight])`)
     assert.deepEqual(actions,[[78,32],[78,32]])
@@ -530,11 +542,13 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       await assertAligned('유산소 1','러닝머신','smooth')
       assert.equal(await empty('유산소'),null)
       assert.match(await evaluate(`document.querySelector('${cardioCard} h3').nextElementSibling.textContent`),/달리기 · 러닝머신/)
-      assert.equal(await evaluate(`[...document.querySelectorAll('${cardioCard} input[inputmode="decimal"]')].filter(e=>e.getClientRects().length).length`),2)
-      assert.equal(await evaluate(`document.querySelector('${cardioCard} input[aria-label="목표 시간 (분)"]').value`),'')
-      await tap(cardioCard+' summary')
-      assert.equal(await evaluate(`[...document.querySelectorAll('${cardioCard} input[inputmode="decimal"]')].filter(e=>e.getClientRects().length).length`),4)
-      await tap(cardioCard+' summary')
+      assert.equal(await evaluate(`document.querySelectorAll('${cardioCard} button[aria-label^="목표"]').length`),2)
+      assert.match(await evaluate(`document.querySelector('${cardioCard}').textContent`),/목표 시간 · 필수00:00:00/)
+      assert.doesNotMatch(await evaluate(`document.querySelector('${cardioCard}').textContent`),/분으로 직접 입력/)
+      await click('추가 목표 설정')
+      assert.equal(await evaluate(`document.querySelectorAll('${cardioCard} button[aria-label^="목표"]').length`),4)
+      assert.equal(await evaluate(`document.querySelector('${cardioCard} button[aria-label="목표 경사도 (%)"]').getClientRects().length`),1)
+      await click('추가 목표 설정')
       if (width === 393) await writeFile(resolve(directory,'routine-create-cardio-393.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false})).data,'base64'))
       await tap(cardioCard+' button.danger')
       assert.match(await empty('유산소'),/없어요/)

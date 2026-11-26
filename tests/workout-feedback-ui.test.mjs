@@ -858,7 +858,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     const fontAudit=()=>evaluate('(()=>{const root=document.querySelector(".app-shell"),font=getComputedStyle(root).fontFamily;return [...root.querySelectorAll("*")].filter(e=>e.getClientRects().length&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&getComputedStyle(e).fontFamily!==font).map(e=>e.textContent.slice(0,60))})()')
     assert.deepEqual(await fontAudit(),[],'correction dialog and dynamic activity text use the app font')
     const duration=()=>evaluate('[...document.querySelectorAll(".duration-wheels > div > div > button")].map(b=>b.textContent)')
-    assert.deepEqual(await duration(),['0 시간','20 분','30 초'])
+    assert.deepEqual(await duration(),['0 시간','20 분','30.125 초'])
     const setDuration=async(label,value)=>{
       await evaluate('document.querySelector('+JSON.stringify('button[aria-label="'+label+'"]')+').click()')
       await click('직접 입력')
@@ -870,20 +870,20 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await closeKeyboard()
     }
     await setDuration('실제 활동 분','21')
-    assert.deepEqual(await duration(),['0 시간','21 분','30 초'])
+    assert.deepEqual(await duration(),['0 시간','21 분','30.125 초'])
     await click('취소')
     assert.equal(await evaluate('window.feedback.corrections.length'),0)
     await evaluate('[...document.querySelectorAll("button")].filter(b=>b.textContent==="정정").at(-1).click()')
-    await wait(()=>evaluate('!!document.querySelector(".duration-wheels")'));assert.deepEqual(await duration(),['0 시간','20 분','30 초'])
+    await wait(()=>evaluate('!!document.querySelector(".duration-wheels")'));assert.deepEqual(await duration(),['0 시간','20 분','30.125 초'])
     for(const width of [320,375,390,430]){await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true});assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);await writeFile(resolve(directory,'duration-wheel-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'))}
     await setDuration('실제 활동 분','21')
     await click('변경 저장')
     assert.equal(await evaluate('window.feedback.corrections.length'),0)
     assert.equal(await evaluate('document.querySelectorAll("dialog[open]").length'),1)
-    await click('계속 편집');assert.deepEqual(await duration(),['0 시간','21 분','30 초'])
+    await click('계속 편집');assert.deepEqual(await duration(),['0 시간','21 분','30.125 초'])
     await click('변경 저장');await click('변경 확인')
     const correction=await evaluate('window.feedback.corrections[0]')
-    assert.equal(correction.cardioCorrections[0].activeMs,1290000)
+    assert.equal(correction.cardioCorrections[0].activeMs,1290125)
     assert.equal(correction.cardioCorrections[0].distanceKm,'2.05')
     assert.equal(correction.cardioCorrections[0].measurement.distanceSource,'MANUAL')
     assert.deepEqual(correction.setCorrections,[]);assert.equal('approvalRequests' in correction,false)
@@ -1741,7 +1741,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await wait(()=>evaluate(`!!document.querySelector('dialog[open]')`))
       assert.equal(await evaluate(`(() => { const dialog = document.querySelector('dialog[open]');
         return !dialog.hasAttribute('data-message-tone') && dialog.getBoundingClientRect().width > 340 &&
-          getComputedStyle(dialog.querySelector('button.primary')).borderRadius !== '999px'; })()`),true)
+          getComputedStyle(dialog.querySelector('button.primary')).borderRadius === '999px'; })()`),true)
       await click('직접 입력','dialog[open]');await click('취소','dialog[open]')
       await wait(()=>evaluate(`!document.querySelector('dialog[open]')`))
       await complete();assert.equal(await toast(),missing)

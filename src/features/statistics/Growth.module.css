@@ -9,7 +9,7 @@
 .screen .searchCard :global(.record-search[data-search-state='IDLE'] .search-disclosure) { border-color: var(--border-subtle); background: var(--surface-input); color: var(--text-muted); }
 .screen .searchCard :global(.record-search [role='group']) { scrollbar-width: none; }
 .screen .searchCard :global(.record-search [role='group'] > button) { flex: none; }
-.screen .searchCard :global(.record-search [role='group'] > button > span) { min-height: 32px; padding-inline: 12px; border-radius: 999px; white-space: nowrap; }
+.screen .searchCard :global(.record-search [role='group'] > button > span) { min-height: 36px; padding-inline: 12px; border-radius: 999px; white-space: nowrap; }
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .heading > span { flex: none; color: var(--text-muted); font-size: 11px; }
 

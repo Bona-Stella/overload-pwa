@@ -20,6 +20,7 @@ import { TagPickerExamples } from './TagPickerExamples.tsx'
 import styles from './CommonUiPreview.module.css'
 
 const Front18Review = lazy(() => import('./Front18Review.tsx'))
+const ControlFoundationPreview = lazy(() => import('./ControlFoundationPreview.tsx'))
 const refreshExamples = { success: '조회 성공', failure: '조회 실패', timeout: '응답 시간 초과' } as const
 type RefreshExample = keyof typeof refreshExamples
 
@@ -141,9 +142,9 @@ const emptyExamples = {
 }
 
 export default function CommonUiPreview() {
-  return new URLSearchParams(location.search).has('front18')
-    ? <Suspense fallback={<p role="status">검수 항목을 준비하는 중입니다.</p>}><Front18Review /></Suspense>
-    : <ComponentExamples />
+  const query = new URLSearchParams(location.search)
+  const Review = query.has('controls') ? ControlFoundationPreview : query.has('front18') ? Front18Review : null
+  return Review ? <Suspense fallback={<p role="status">검수 항목을 준비하는 중입니다.</p>}><Review /></Suspense> : <ComponentExamples />
 }
 
 function ComponentExamples() {
@@ -208,6 +209,7 @@ function ComponentExamples() {
       <h1>공통 UI Preview</h1>
       <p>검토용 예시 데이터</p>
       <a href="?front18=1">FRONT 18 안내·오류·복구 검수</a>
+      <a href="?controls=1">FRONT 18 버튼·입력 검수</a>
     </div>
 
     <section className={styles.section}>

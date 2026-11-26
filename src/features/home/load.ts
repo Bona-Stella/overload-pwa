@@ -42,7 +42,7 @@ export function loadHome(scope: Scope, api: WorkoutApi, summaries: RoutineList['
         return value
       }
     } catch (error) {
-      if (boundaryError(error) || signal.aborted) throw error
+      if (boundaryError(error) || readAccessDenied(error) || signal.aborted) throw error
       unavailable.push(summary.id)
     }
   }

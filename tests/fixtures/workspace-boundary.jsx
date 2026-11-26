@@ -85,7 +85,7 @@ window.startBoundary = () => {
   const selected = {...routine,...scope}
   window.boundaryAuth = {status:'authenticated',pending:null,userId:USER,accountOpen:false,localWorkoutUserId:null}
   window.boundaryState = {userId:USER,scope,data:{...bootstrap,scope},selected,active:null,detail:null,
-    deviceId:DEVICE,attempt:null,status:'ready',busy:false,localReady:true,copySaved:false,issue:null,notice:''}
+    deviceId:DEVICE,attempt:null,status:'ready',busy:false,localReady:true,copySaved:false,issue:null,notice:'',routineRefreshes:new Map()}
   window.startScenario = {listeners:new Set(),routine:selected,session:session({...scope,editorDeviceId:DEVICE}),posts:0}
   root.render(<AuthContext value={{state:window.boundaryAuth,controller:authentication}}>
     <WorkoutWorkspace tab="home" renderShell={(content,focused)=><AppShell authenticated tab="home" focused={focused} onNavigate={()=>{}}>{content}</AppShell>} />

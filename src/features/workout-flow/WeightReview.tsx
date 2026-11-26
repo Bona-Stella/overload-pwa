@@ -66,7 +66,7 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
   return <Card className={readOnly ? styles.reviewCard : `${styles.reviewCard} ${detailStyles.pendingReview}`} aria-label={readOnly?"당시 중량 검토":"중량 검토 카드"}>
     <div className="section-heading approval-toolbar">
       <h2 className={detailStyles.reviewTitle}>{readOnly?'당시 중량 검토':'중량 변경 검토 사항'}</h2>
-      {!readOnly && <Button className={styles.approveButton} disabled={!targets.length||!onApprove&&!preview||disabled&&!saving} pending={saving}
+      {!readOnly && <Button shape="control" className={styles.approveButton} disabled={!targets.length||!onApprove&&!preview||disabled&&!saving} pending={saving}
         title={preview?'서버에 저장하지 않는 합성 승인 시연':undefined}
         onClick={event => { closePointerGuard.arm(event); setConfirmationIssue(''); setConfirming(targets.map(w => w.id)) }}>
         {approvalLabel}
@@ -96,7 +96,7 @@ export function WeightReview({ weights, preview = false, readOnly = false, onApp
           <CircleCheck label={weight.name + ' 승인 선택'} disabled={disabled||saving} checked={!excluded.includes(weight.id)}
             onCheckedChange={checked => setExcluded(ids => checked ? ids.filter(id => id !== weight.id) : [...ids, weight.id])} />
           <h3 title={weight.name}>{weight.name}</h3>
-          <Button className={styles.reviewButton} disabled={disabled&&!saving} pending={saving} onClick={event => { closePointerGuard.arm(event); setModal(weight.id) }}>무게 수정</Button>
+          <Button shape="control" className={styles.reviewButton} disabled={disabled&&!saving} pending={saving} onClick={event => { closePointerGuard.arm(event); setModal(weight.id) }}>무게 수정</Button>
           <div className={styles.reviewValues}>{change}<div className={styles.reviewEvidence}>{sets}{' · '}{reps}</div></div>
         </div>}
       </section>

@@ -41,6 +41,10 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     })()`)
     await set('[data-workout-test-input]', value)
   }
+  const editPlanMinutes = async value => {
+    await evaluate(`[...document.querySelectorAll('dialog[open] summary')].find(e=>e.textContent==='분으로 직접 입력').parentElement.open=true`)
+    await labelInput('목표 시간', value)
+  }
   const screenshot = async label => {
     if (!process.env.OVERLOAD_WORKOUT_SCREENSHOTS) return
     const directory = 'logs/workout-review'
@@ -598,7 +602,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await has('승인 중량 30 kg · 진행 중량 변경 시연')
   await click('중량 변경')
   assert.deepEqual(await evaluate(`[...document.querySelectorAll('dialog[open] [aria-label="변경 중량"] > button')].map(b => b.textContent)`), ['−2.5', '30 kg', '+2.5'])
-  assert.deepEqual(await evaluate(`[...document.querySelectorAll('dialog[open] [aria-label="변경 중량"] > button')].map(b => getComputedStyle(b).borderTopWidth)`), ['1px', '1px', '1px'])
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('dialog[open] [aria-label="변경 중량"] > button')].map(b => getComputedStyle(b).borderTopWidth)`), ['0px', '0px', '0px'])
   await press('변경 중량')
   await verifyWidth(320)
   const selectionTop = await evaluate('document.querySelector("[data-wheel-selection]").getBoundingClientRect().top')
@@ -750,8 +754,16 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('야외 걷기', 'textContent', dialog + ' [aria-label="표준 유산소 목록"] strong')
   const widthBeforeCardio = await evaluate('innerWidth')
   await verifyWidth(393)
+  await evaluate(`(() => {
+    const summaries = [...document.querySelectorAll('dialog[open] .app-card summary')];
+    for (const label of ['분으로 직접 입력', '추가 목표 설정']) {
+      summaries.find(summary => summary.textContent === label).parentElement.open = true;
+    }
+  })()`)
+  await wait(() => evaluate(`!!document.querySelector('dialog[open] .app-card select')`), 'cardio goal unit ready')
+  await set('dialog[open] .app-card select', 'PACE')
   const cardioKeyboard = await evaluate(`(async()=>{
-    const dialog=document.querySelector('dialog[open]'),field=dialog.querySelector('.app-card input'), vv=visualViewport;
+    const dialog=document.querySelector('dialog[open]'),field=dialog.querySelector('input[aria-label="목표 시간 (분)"]'), vv=visualViewport;
     const page=scrollY;
     let pan=0;
     Object.defineProperty(vv,'offsetTop',{configurable:true,get:()=>pan+70});
@@ -766,7 +778,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     const first=field.getBoundingClientRect().bottom;
     resize(first-34);await settle();
     const result={originalTop,pannedTop,first,floor:vv.height,bottom:field.getBoundingClientRect().bottom,before:page,after:scrollY,modalScroll:dialog.scrollTop};
-    const next=dialog.querySelectorAll('.app-card input')[1];
+    const next=dialog.querySelector('input[aria-label="목표 페이스 (분/km)"]');
     result.switches=[];
     for (const input of [next,field,next,field]) {
       input.focus({preventScroll:true});await settle();
@@ -783,6 +795,8 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   assert.ok(cardioKeyboard.modalScroll>0 && cardioKeyboard.reopened)
   assert.equal(cardioKeyboard.after,cardioKeyboard.before)
   assert.ok(cardioKeyboard.switches.every(step=>step.visible&&step.y===cardioKeyboard.before), 'switching cardio fields keeps both visible without moving the page')
+  await set('dialog[open] .app-card select', 'SPEED')
+  await evaluate(`[...document.querySelectorAll('dialog[open] .app-card summary')].find(summary => summary.textContent === '추가 목표 설정').parentElement.open = false`)
   for (const width of [320, 375, 393, 430]) {
     await verifyWidth(width)
     const layout = await evaluate(`(() => {
@@ -796,7 +810,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
       const bounds = change.getBoundingClientRect(), title = name.getBoundingClientRect(), ordinal = number.getBoundingClientRect()
       const input = card.querySelector('input')
       const css = getComputedStyle(input)
-      const fields = input.parentElement.parentElement
+      const fields = input.closest('details').parentElement.parentElement
       const result = {
         change: [change.textContent, bounds.width, bounds.height, getComputedStyle(change).borderRadius],
         number: [number.textContent, getComputedStyle(number).fontSize],
@@ -814,17 +828,21 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     assert.deepEqual(layout.change, ['변경', 78, 32, '999px'])
     assert.deepEqual(layout.number, ['02', '13px'])
     assert.ok(layout.aligned && layout.ellipsis && layout.fits, 'cardio modal layout at ' + width)
-    assert.deepEqual(layout.input, ['decimal', '16px', '44px', '8px'])
+    assert.deepEqual(layout.input, ['decimal', '16px', '48px', '5px'])
     assert.equal(layout.divider, '1px')
     assert.equal(layout.routineActions, 0)
   }
   await verifyWidth(widthBeforeCardio)
-  await labelInput('목표 시간', '2.5')
-  await labelInput('목표 거리', '0.2')
+  await editPlanMinutes('2.5')
+  await click('목표 거리 (km)', 'ariaLabel', dialog + ' button')
+  await dialogClick('직접 입력')
+  await set(dialog + ' input', '0.2')
+  await dialogClick('확인')
   await dialogClick('변경')
   await dialogClick('걷기')
   await click('야외 걷기', 'textContent', dialog + ' [aria-label="표준 유산소 목록"] strong')
-  assert.deepEqual(await evaluate(`[...document.querySelectorAll('dialog[open] .app-card input')].map(input => input.value)`), ['2.5', '0.2'])
+  assert.equal(await evaluate(`document.querySelector('dialog[open] input[aria-label="목표 시간 (분)"]').value`), '2.5')
+  assert.match(await evaluate(`document.querySelector('dialog[open] button[aria-label="목표 거리 (km)"]').textContent`), /0\.2/)
   await dialogClick('유산소 추가')
   await notOpen()
 
@@ -845,14 +863,14 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('유산소 완료')
   await verifyFrameLayouts('cardio-review')
   assert.deepEqual(await evaluate('(()=>{const root=document.querySelector(".app-shell"),font=getComputedStyle(root).fontFamily;return [...root.querySelectorAll("*")].filter(e=>e.getClientRects().length&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&getComputedStyle(e).fontFamily!==font).map(e=>e.textContent.slice(0,60))})()'),[],'cardio plan, goals, timer, pause and completion review fonts')
-  await labelInput('평균 심박수', '301')
-  await click('유산소 기록 확정')
+  await press('평균 심박수 (BPM)')
+  await dialogClick('직접 입력'); await set('dialog[open] input', '301'); await dialogClick('확인')
   await has('평균 심박수는 20~300 BPM')
-  await labelInput('평균 심박수', '120')
+  await set('dialog[open] input', '120'); await dialogClick('확인'); await notOpen()
   await labelInput('실제 거리', '0.012')
   await click('완료 취소 · 일시정지로 돌아가기')
   await click('유산소 완료')
-  assert.equal(await evaluate(`[...document.querySelectorAll('label')].find(e => e.textContent.startsWith('평균 심박수')).querySelector('input').value`), '120')
+  assert.equal(await evaluate(`document.querySelector('button[aria-label="평균 심박수 (BPM)"]').textContent.trim()`), '120 BPM')
   await press('실제 활동 시간 수정')
   assert.equal(await evaluate(`!!document.querySelector('[data-modified]')`), false)
   await press('실제 활동 초');await dialogClick('직접 입력');await set('dialog[open] input','35');await dialogClick('확인')
@@ -978,7 +996,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   await click('‹ 홈')
   await click('검토 초기화')
   await set(scenario, 'workout-rest-day')
-  assert.equal(await evaluate(`!!document.querySelector('[aria-label="홈"] [data-click-action="start"]')`), false)
+  assert.equal(await evaluate(`document.querySelector('[aria-label="홈"] [data-click-action="start"]').disabled`), true)
   await has('정해진 휴식일입니다. 다른 루틴을 선택할 수 있습니다.')
   await set(scenario, 'active')
   await click('운동 시작')
@@ -1004,7 +1022,7 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
     assert.equal(await evaluate("document.querySelector('dialog[open] .app-card b').textContent"), number)
   }
   const saveCardio = async () => {
-    await labelInput('목표 시간', '2')
+    await editPlanMinutes('2')
     await dialogClick('유산소 추가')
     await notOpen()
   }

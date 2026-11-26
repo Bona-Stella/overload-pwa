@@ -161,6 +161,35 @@ test('individual detail failures do not fabricate plans or zero performed counts
   assert.equal(data.routines.size, 0); assert.deepEqual(data.unavailable, [routine.id]); assert.equal(data.evidence.size, 0)
   assert.equal(f.cache.size, 0)
 })
+test('rest day, unavailable routine details and recovered home plans expose consistent start controls', async () => {
+  const f = fixture()
+  const rest = { version: '1', assignments: [] }
+  const render = (data, extra = {}) => renderToStaticMarkup(React.createElement(HomeView, {
+    today: '2026-11-02', localReady: true, canStart: true, data, ...extra,
+  }))
+  const start = html => html.match(/<button[^>]+data-click-action="start"[^>]*>/)?.[0] ?? ''
+  f.api.routine = async () => { throw Error('detail unavailable') }
+  const failed = await f.read()
+  const unavailable = render({ ...failed, schedule: rest })
+  assert.match(unavailable, /루틴 구성을 불러오지 못했어요/)
+  assert.match(unavailable, /새로고침/)
+  assert.match(start(unavailable), / disabled=/)
+  f.api.routine = async () => routine
+  const recovered = await f.read()
+  const unselected = render({ ...recovered, schedule: rest })
+  assert.match(unselected, /오늘은 쉬어가는 날/)
+  assert.match(start(unselected), / disabled=/)
+  assert.doesNotMatch(unselected, /루틴 구성을 불러오지 못했어요/)
+  const today = { ...recovered, schedule: { ...rest, assignments: [{ dayOfWeek: 1, routineId: routine.id }] } }
+  assert.match(start(render(today)), /data-click-action/)
+  assert.doesNotMatch(start(render(today)), / disabled=/)
+  assert.match(start(render(today, { verifiedRoutines: null, startChecking: true })), / disabled=/)
+  assert.match(start(render(today, { canStart: false, startReadIssue: '일정을 불러오지 못했어요.' })), / disabled=/)
+  const emptyRoutine = { ...routine, weightPlacements: [], cardioPlacements: [] }
+  const empty = render({ ...today, routines: new Map([[routine.id, emptyRoutine]]) })
+  assert.match(start(empty), / disabled=/)
+  assert.match(empty, /이 루틴에 등록된 운동이 없어요/)
+})
 test('owner and generation failures abort the home result instead of rendering a partial account', async () => {
   for (const code of ['OWNER_MISMATCH','DATA_GENERATION_MISMATCH']) {
     const f = fixture(); f.api.routine = async () => { throw Object.assign(Error('boundary'), { code }) }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import type { CSSProperties } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
@@ -11,6 +12,7 @@ import { useConfirmation } from '../../components/useConfirmation.tsx'
 import type { RestPolicy } from '../workout-local/types.ts'
 import { countDraft } from '../workout-online/validation.ts'
 import styles from './RestSettings.module.css'
+import workoutStyles from '../workout-flow/WorkoutFlow.module.css'
 
 type Band = keyof RestPolicy
 type Draft = Record<Band, string>
@@ -23,9 +25,13 @@ const bands = [
   { field: 'restHighSeconds', start: 13, end: '이상', label: '13회 이상' },
 ] as const
 
-function minutes(seconds: number) {
-  const remaining = seconds % 60
-  return `${Math.floor(seconds / 60)}분${remaining ? ` ${remaining}초` : ''}`
+export function RestTimeColumns({ entries }: { entries: readonly { label: string; seconds: number }[] }) {
+  return <dl className={`${workoutStyles.recordColumns} ${styles.times}`} aria-label="반복 구간별 휴식"
+    style={{ '--record-columns': entries.length } as CSSProperties}>
+    {entries.map(({ label, seconds }) => <div key={label} className={styles.readRow}>
+      <dt>{label}</dt><dd><strong aria-label={`${seconds}초`}>{String(Math.floor(seconds / 60)).padStart(2, '0')}:{String(seconds % 60).padStart(2, '0')}</strong></dd>
+    </div>)}
+  </dl>
 }
 
 export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = false, hidden = false, review = false, loadIssue, onRetry }: {
@@ -150,11 +156,7 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
             </svg>
             <span>반복 구간은 1회부터 이어지며, 마지막은 ‘이상’으로 표시돼요. 각 구간의 휴식 시간만 수정할 수 있어요.</span>
           </p>
-        </> : <dl className={styles.times}>
-          {bands.map(({ field, label }) => <div key={field} className={styles.readRow}>
-            <dt>{label}</dt><dd><strong>{settings[field]}초</strong>{settings[field] >= 60 && <small>({minutes(settings[field])})</small>}</dd>
-          </div>)}
-        </dl>}
+        </> : <RestTimeColumns entries={bands.map(({ field, label }) => ({ label, seconds: settings[field] }))} />}
       </Card>
       {draft && <>
         <Button type="submit" className={styles.save} disabled={busy && !saving} loading={saving}>

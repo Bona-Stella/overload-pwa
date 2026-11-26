@@ -28,7 +28,7 @@
 .analysisText small { font-size: 12px; font-weight: 400; line-height: 1.4; color: var(--text-muted); }
 .recentHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
 .recentRange { font-size: var(--font-metadata); color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.main .recentHeading > button { min-height: 44px; margin-block: -7px; padding: 7px 0 7px 10px; font-size: 12px; color: var(--accent); }
+.main .recentHeading > button { font-size: 12px; color: var(--accent); }
 .main .recent :global(.record-feed) { gap: var(--card-gap-dense); }
 .recentCard { composes: cardSurface from '../../components/ui.module.css'; }
 .recentCard:global(.session-record-card) {

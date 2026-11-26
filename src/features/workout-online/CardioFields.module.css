@@ -7,10 +7,19 @@
 
 .planFields { padding-top: 12px; border-top: 1px solid var(--border-subtle); }
 .planFields label { gap: 4px; min-width: 0; margin: 0; font-size: 12px; }
-.planFields :is(input, select) { min-height: 44px; padding: 8px; border-radius: 8px; font-size: 16px; }
+.planFields select { min-height: 44px; padding: 8px; border-radius: 8px; font-size: 16px; }
+.goalTime { grid-column: 1 / -1; display: grid; gap: 4px; min-width: 0; color: var(--text-muted); font-size: 12px; }
+.goalRow { grid-column: 1 / -1; min-width: 0; }
+.intensity { grid-column: 1 / -1; }
+.intensity > button { white-space: nowrap; }
+.timeActions { display: flex; gap: 8px; }
+.timeActions > button { flex: 1 1 0; min-width: 0; font-size: 13px; }
 
 .field { display: grid; align-content: start; gap: 4px; min-width: 0; }
 .field input { width: 100%; min-width: 0; font-size: 16px; }
+.value { position: relative; min-width: 0; display: block; }
+.field .value[data-unit] > input { padding-inline-end: 49px; }
+.value > small { position: absolute; inset-inline-end: 12px; inset-block-start: 50%; translate: 0 -50%; pointer-events: none; font-size: 11px; }
 .label { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 22px; }
 .tag {
   flex: none;

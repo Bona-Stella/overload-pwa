@@ -6,6 +6,7 @@ import { test } from 'node:test'
 import { setTimeout as delay } from 'node:timers/promises'
 import { createReviewFixtureServer } from './fixtures/review-server.mjs'
 import { checkFront18Preview } from './fixtures/review/check-front18-preview.mjs'
+import { checkControlFoundation } from './fixtures/review/check-control-foundation.mjs'
 import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 import { auditRefreshMotion } from './fixtures/review/refresh-audit.mjs'
 
@@ -192,7 +193,7 @@ test('independent common UI preview renders reusable controls and handles intera
           modal.querySelector('[data-appearance="warning"]').innerText === '운동 종료' &&
           neutral.borderWidth === '2px' && neutral.borderColor === 'rgb(240, 241, 244)' &&
           neutral.borderRadius === '999px' && warning.backgroundColor === 'rgb(214, 188, 101)' &&
-          actions.length === 2 && actions[0].height === 44 && actions[0].width === actions[1].width
+          actions.length === 2 && actions.every(a => a.height === 48) && actions[0].width === actions[1].width
       })()`), true, 'modal geometry at ' + width)
       if (width === 393) await capture('393-confirm')
       await click('취소', 'dialog button')
@@ -557,6 +558,10 @@ test('independent common UI preview renders reusable controls and handles intera
       await writeFile(resolve(directory, 'front18-measurements.json'), JSON.stringify(front18, null, 2))
       await writeFile(resolve(directory, 'front18-modal-audit.json'), JSON.stringify(dialogs, null, 2))
     }
+    await send('Page.navigate', { url: url + '?controls=1' })
+    await waitFor(() => evaluate('!!document.querySelector("[data-control-example=weights]")'), 'control foundation mounted')
+    const controlFoundation = await checkControlFoundation({ click, evaluate, send, waitFor, modalClosed, capture })
+    if (process.env.OVERLOAD_CAPTURE_COMMON_UI) await writeFile(resolve(directory, 'control-foundation.json'), JSON.stringify(controlFoundation, null, 2))
     assert.deepEqual(requests, [])
     assert.deepEqual(exceptions, [])
     assert.equal(await evaluate('indexedDB.databases().then(dbs => dbs.length)'), 0)

@@ -37,7 +37,7 @@
 }
 .form [data-edit-wide] { grid-column: 1 / -1; }
 .form .exercise label { display: grid; gap: 4px; min-width: 0; margin: 0; }
-.form .exercise :is(input, select, textarea) { min-width: 0; width: 100%; padding: 8px; border-radius: 8px; }
+.form .exercise select { min-width: 0; width: 100%; padding: 8px; border-radius: 8px; }
 .form label :is(input, select, textarea) { scroll-margin-bottom: calc(var(--save-height) + 2 * var(--save-padding) + 12px); }
 .form .exercise textarea { resize: vertical; }
 .weight { display: grid; gap: 10px; padding-block: 12px; border-block: 1px solid var(--border-subtle); }
@@ -76,6 +76,6 @@
   padding: var(--save-padding) 12px calc(var(--save-padding) + env(safe-area-inset-bottom));
   background: var(--surface-card); border-top: 1px solid var(--border-subtle);
 }
-.form .footer button { min-width: 0; height: var(--save-height); min-height: var(--save-height); padding: 5px 6px; line-height: 1.25; }
+.form .footer button { min-width: 0; min-height: var(--save-height); }
 .form[data-edit-keyboard] .footer { visibility: hidden; }
 .form:has(dialog[open][data-edit-keyboard]) .footer { visibility: hidden; }

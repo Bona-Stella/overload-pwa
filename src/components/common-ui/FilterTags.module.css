@@ -8,6 +8,7 @@
   align-items: center;
   flex: 0 0 auto;
   min-width: 53px;
+  min-height: 44px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -18,7 +19,7 @@
 .strip span {
   display: grid;
   place-items: center;
-  min-height: 27px;
+  min-height: 36px;
   padding-inline: 12px;
   border: 1px solid var(--border-subtle);
   border-radius: 999px;

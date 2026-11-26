@@ -1,5 +1,7 @@
 import { CardioNumberField } from './CardioNumberField.tsx'
-import { calculatedSpeed, editCardioSpeed } from './cardio-measurement.ts'
+import { NumberWheel } from '../../components/NumberWheel.tsx'
+import numeric from '../../components/NumberWheel.module.css'
+import { actualAverageBpm, averageBpmBounds, calculatedSpeed, editCardioSpeed } from './cardio-measurement.ts'
 import type { CardioMeasurementDraft } from './cardio-measurement.ts'
 import styles from './CardioFields.module.css'
 
@@ -17,7 +19,15 @@ export function CardioActualFields({ draft, bpm, activeMs, motion, incline, onCh
       <CardioNumberField label="실제 평균 속도 (km/h)" value={draft.speed || calculated}
         onChange={onChange && (speed => onChange(editCardioSpeed(draft, speed, activeMs)))} />
     </>}
-    <CardioNumberField label="평균 심박수 (BPM)" inputMode="numeric" value={bpm} onChange={onBpm} />
+    <div className={numeric.field}>
+      <span>평균 심박수</span>
+      <NumberWheel label="평균 심박수 (BPM)" value={bpm} unit="BPM" start={String(averageBpmBounds.min)} hideSteps describeBlank
+        displayValue={bpm || '0'} preview={!onBpm} wheelSeed={String(Math.min(averageBpmBounds.max, Math.max(averageBpmBounds.min, Number(bpm) || 0)))}
+        adjust={(current, direction) => {
+          const next = Number(current) + direction
+          return next >= averageBpmBounds.min && next <= averageBpmBounds.max ? String(next) : null
+        }} validate={next => String(actualAverageBpm(next) ?? '')} onChange={next => onBpm?.(next)} />
+    </div>
     {incline && <small className={styles.note}>실제 경사도는 현재 저장할 수 없습니다.</small>}
     {motion && draft.distanceSource === 'estimated' && <small className={styles.note}>목표 거리에서 가져온 추정값입니다. 거리를 직접 입력하면 기록에 저장할 수 있습니다.</small>}
     {calculated && <small className={styles.note}>자동 계산한 평균 속도는 확인용으로 표시됩니다.</small>}

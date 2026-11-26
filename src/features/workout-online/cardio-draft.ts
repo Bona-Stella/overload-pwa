@@ -17,6 +17,59 @@ export const emptyCardio = (): CardioDraft => ({ kind: 'OTHER', name: '', second
 export const draftCardio = (p: CardioPlan): CardioDraft => ({ ...emptyCardio(), ...(p.activityId ? { activityId: p.activityId } : {}), ...(p.standardExerciseId ? { standardExerciseId: p.standardExerciseId } : {}), kind: p.kind, name: p.name, seconds: String(p.targetSeconds), distance: p.targetDistanceKm ?? '', intensityMode: p.intensity?.mode ?? 'SPEED', intensity: p.intensity?.value ?? '', incline: p.inclinePercent ?? '', resistance: p.resistance ?? '' });
 export const supportsCardioMotion = (kind: CardioPlan['kind']) => kind === 'TREADMILL' || kind === 'BIKE' || kind === 'OUTDOOR'
 
+export const cardioWheelBounds = {
+    distance: { min: '0.001', max: '1000' },
+    speed: { min: '0.1', max: '100' },
+    pace: { min: '0.1', max: '120' },
+    incline: { min: '0', max: '50' },
+    resistance: { min: '1', max: '100' },
+} as const
+
+export function cardioWheelValue(value: string, field: keyof typeof cardioWheelBounds) {
+    if (!value.trim()) return ''
+    const number = decimalDraft(value)
+    const { min, max } = cardioWheelBounds[field]
+    if (Number(number) < Number(min) || Number(number) > Number(max)) {
+        throw Error(`${min}~${max} 범위로 입력해 주세요.`)
+    }
+    return number
+}
+
+export function adjustCardioWheel(value: string, direction: -1 | 1, field: 'distance' | 'speed' | 'incline' | 'resistance') {
+    const scale = field === 'resistance' ? 1 : 10
+    const next = Math.round(Number(value) * scale) + direction
+    return next >= 0 && next <= Number(cardioWheelBounds[field].max) * scale ? (next / scale).toFixed(scale === 1 ? 0 : 1) : null
+}
+
+export function paceLabel(seconds: number) {
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+// The API stores decimal minutes with up to six fractional digits.
+export function paceFromSeconds(seconds: string) {
+    return seconds === '0' ? '' : cardioWheelValue((Number(seconds) / 60).toFixed(6), 'pace')
+}
+
+export function paceDirectValue(value: string) {
+    const input = value.trim()
+    if (!input.includes(':')) return cardioWheelValue(input, 'pace')
+    const clock = /^(\d+):([0-5]\d)$/.exec(input)
+    if (!clock) throw Error('분:초 형식으로 입력해 주세요.')
+    const seconds = Number(clock[1]) * 60 + Number(clock[2])
+    if (seconds < 6 || seconds > 7200) throw Error('0:06~120:00 범위로 입력해 주세요.')
+    return paceFromSeconds(String(seconds))
+}
+
+export function adjustPaceWheel(value: string, direction: -1 | 1) {
+    const seconds = Number(value)
+    const next = seconds === 0 && direction === 1 ? 10 : seconds === 10 && direction === -1 ? 0 : seconds + direction * 5
+    return next >= 0 && next <= 7200 ? String(next) : null
+}
+
+export function cardioSecondsFromMinutes(minutes: string) {
+    return minutes.trim() ? String(Math.round(Number(decimalDraft(minutes)) * 60)) : ''
+}
+
 export function selectCardio(value: CardioDraft, activity: CardioActivity): CardioDraft {
     if (value.standardExerciseId === activity.id && value.activityId === activity.activityId) return value
     const motion = supportsCardioMotion(activity.kind)
@@ -29,7 +82,7 @@ export function selectCardio(value: CardioDraft, activity: CardioActivity): Card
 export function parseCardioPlan(d: CardioDraft): Omit<CardioPlan, 'targetSeconds'> & { targetSeconds: number | null } {
     let seconds = d.seconds;
     if (d.minutes !== undefined) {
-        seconds = d.minutes.trim() ? String(Math.round(Number(decimalDraft(d.minutes)) * 60)) : '';
+        seconds = cardioSecondsFromMinutes(d.minutes);
     }
     const targetSeconds = seconds ? countDraft(seconds) : null, opt = (s: string) => s.trim() ? decimalDraft(s) : null;
     const range = (s: string | null, min: number, max: number) => s === null || Number(s) >= min && Number(s) <= max;

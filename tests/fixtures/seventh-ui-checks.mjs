@@ -14,8 +14,8 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
  await set('.record-search select','exercise');await settle()
  for(const w of [320,375,390,430]){
   await width(w,'react')
-  const g=await evaluate('(()=>{const g=document.querySelector(".record-search [role=group]"),r=g.getBoundingClientRect(),s=g.querySelector("span");return{w:g.clientWidth,scroll:g.scrollWidth,x:r.x+r.width/2,y:r.y+r.height/2,height:s.getBoundingClientRect().height,radius:getComputedStyle(s).borderRadius,wrap:getComputedStyle(g).flexWrap,overflow:getComputedStyle(g).overflowX}})()')
-  assert(g.scroll>g.w);assert.equal(g.height,32);assert.equal(g.radius,'999px');assert.equal(g.wrap,'nowrap');assert.equal(g.overflow,'auto')
+  const g=await evaluate('(()=>{const g=document.querySelector(".record-search [role=group]"),r=g.getBoundingClientRect(),b=g.querySelector("button"),s=b.querySelector("span");return{w:g.clientWidth,scroll:g.scrollWidth,x:r.x+r.width/2,y:r.y+r.height/2,height:s.getBoundingClientRect().height,hitHeight:b.getBoundingClientRect().height,radius:getComputedStyle(s).borderRadius,wrap:getComputedStyle(g).flexWrap,overflow:getComputedStyle(g).overflowX}})()')
+  assert(g.scroll>g.w);assert.equal(g.height,36);assert.ok(g.hitHeight>=44);assert.equal(g.radius,'999px');assert.equal(g.wrap,'nowrap');assert.equal(g.overflow,'auto')
   await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:g.x,y:g.y,deltaX:500,deltaY:0});await wait(()=>evaluate('document.querySelector(".record-search [role=group]").scrollLeft>0'),'horizontal tag scroll')
   await send('Input.dispatchMouseEvent',{type:'mouseWheel',x:g.x,y:g.y,deltaX:-1000,deltaY:0})
   await capture('seventh-tags','react',w)
@@ -40,5 +40,5 @@ export async function verifySeventhUi({go,title,click,set,evaluate,send,wait,wid
  await evaluate('document.querySelector(".exercise-search input").click()');await settle()
  for(const w of [320,375,390,430]){await width(w,'react');await capture('seventh-catalog-tags','react',w)}
  await evaluate('document.querySelector(".exercise-search li > button:first-child").click()');await title('운동 상세');assert.equal(await evaluate('!!document.querySelector("dialog[open]")'),false)
- report.interactions.push('seventh: original 27px pill tags and real horizontal wheel scrolling, independent exercise/muscle scope filters, row/detail separation, completed/initial exercise counts, right-edge status, same-row compact header time, catalog search without selector; four widths')
+ report.interactions.push('seventh: 36px pill tags with at least 44px targets and real horizontal wheel scrolling, independent exercise/muscle scope filters, row/detail separation, completed/initial exercise counts, right-edge status, same-row compact header time, catalog search without selector; four widths')
 }

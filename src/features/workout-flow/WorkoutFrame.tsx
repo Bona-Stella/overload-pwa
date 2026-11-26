@@ -99,7 +99,7 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
       <strong title={routine} aria-label={routine}>{deload && <small className={styles.eyebrow}>DELOAD</small>}<span>{routine}</span></strong>
       {navigation ? <Button shape="control" variant="quiet" aria-label={navigation.next ? '다음 운동 · ' + navigation.next.name : '다음 운동'} disabled={!navigation.next} onClick={() => navigation.next && navigation.onGo(navigation.next.id)}>
         다음 ›<small title={navigation.next?.name}>{navigation.next?.name ?? '마지막 종목'}</small>
-      </Button> : <Button variant="quiet" onClick={onEnd}>종료</Button>}
+      </Button> : <Button shape="control" variant="quiet" onClick={onEnd}>종료</Button>}
     </header>
     {reviewNote}
     {swipe ? <ExerciseSwipe options={swipe} cardio={cardioFocus}>{children}</ExerciseSwipe> : children}

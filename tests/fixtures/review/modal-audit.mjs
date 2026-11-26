@@ -27,6 +27,7 @@ export async function auditMessageDialog({ send, evaluate }, use, expectedTone) 
         const cardOuter = ['none', 'none', 'none', 'none'], dialogOuter = outer(css);
         function expectedRadius() {
           if (dialog.hasAttribute('data-message-tone')) return themeStyle.getPropertyValue('--radius-card-compact').trim();
+          if (dialog.querySelector('[data-wheel-selection]')) return '5px';
           return getComputedStyle(dialog.parentElement).getPropertyValue('--radius-card').trim();
         }
         const title = dialog.querySelector('[data-dialog-heading]'), icon = dialog.querySelector('[data-feedback-icon]');

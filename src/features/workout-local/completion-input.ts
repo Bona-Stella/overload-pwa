@@ -1,5 +1,5 @@
 import type { CardioDraft } from '../workout-flow/types.ts'
-import { actualCardioMeasurement } from '../workout-online/cardio-measurement.ts'
+import { actualAverageBpm, actualCardioMeasurement } from '../workout-online/cardio-measurement.ts'
 import { supportsCardioMotion } from '../workout-online/cardio-draft.ts'
 import type { CardioPlan, Equipment } from '../workout-online/types.ts'
 import { countDraft, decimalDraft } from '../workout-online/validation.ts'
@@ -32,8 +32,6 @@ export function cardioCompletionInput(draft: CardioDraft, kind: CardioPlan['kind
   if ((distanceKm !== null || measurement.actualSpeedKmh !== null) && !supportsCardioMotion(kind)) {
     throw new WorkoutActionError('거리와 속도는 러닝머신·자전거·야외 운동에만 입력할 수 있습니다.')
   }
-  const bpmMessage = '평균 심박수는 20~300 BPM을 입력해 주세요.'
-  const averageBpm = draft.bpm.trim() ? inputValue(() => countDraft(draft.bpm), bpmMessage) : null
-  if (averageBpm !== null && (averageBpm < 20 || averageBpm > 300)) throw new WorkoutActionError(bpmMessage)
+  const averageBpm = inputValue(() => actualAverageBpm(draft.bpm))
   return { activeMs, corrected, distanceKm, measurement, averageBpm }
 }

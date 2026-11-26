@@ -1,0 +1,17 @@
+{
+  "origin": "http://192.168.0.3:4173",
+  "route": "home",
+  "routine": "Test",
+  "activeBeforeStart": false,
+  "start": 201,
+  "snapshot": 200,
+  "finish": 200,
+  "cleanedUp": true,
+  "measurements": [
+    { "width": 320, "contentWidth": 320, "hit": 48, "face": 30, "padding": "12px", "footer": [50, 50] },
+    { "width": 375, "contentWidth": 375, "hit": 48, "face": 30, "padding": "12px", "footer": [50, 50] },
+    { "width": 393, "contentWidth": 393, "hit": 48, "face": 30, "padding": "12px", "footer": [50, 50] },
+    { "width": 430, "contentWidth": 430, "hit": 48, "face": 30, "padding": "12px", "footer": [50, 50] },
+    { "width": 1280, "contentWidth": 1265, "hit": 48, "face": 30, "padding": "12px", "footer": [50, 50] }
+  ]
+}

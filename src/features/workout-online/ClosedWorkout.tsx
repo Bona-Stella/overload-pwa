@@ -29,7 +29,7 @@ import { equipment, cardioMeasurement } from './validation.ts'
 import { countDraft, decimalDraft } from './validation.ts'
 import { recoveryRows, RECOVERY_LABEL } from './closed-model.ts'
 import { onlineIssue } from './controller.ts'
-import { actualCardioMeasurement, cardioMeasurementDraft, distanceLabel } from './cardio-measurement.ts'
+import { actualAverageBpm, actualCardioMeasurement, cardioMeasurementDraft, distanceLabel } from './cardio-measurement.ts'
 import { CardioActualFields } from './CardioActualFields.tsx'
 import { supportsCardioMotion } from './cardio-draft.ts'
 import { additionalLoadInput, bodyweightLoadLabel } from './bodyweight-load.ts'
@@ -321,8 +321,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
         if (!/^\d{1,5}(\.\d{1,3})?$/.test(seconds)) throw Error('활동 시간을 소수 세 자리 이내의 초로 입력해 주세요.')
         const [whole, fraction = ''] = seconds.split('.'), activeMs = corrected ? Number(BigInt(whole) * 1000n + BigInt(fraction.padEnd(3, '0'))) : target.record.result.timerMs
         if (activeMs < 1 || activeMs > 86400000) throw Error('활동 시간은 0.001초~24시간이어야 합니다.')
-        const averageBpm = bpm.trim() ? countDraft(bpm) : null
-        if (averageBpm !== null && (averageBpm < 20 || averageBpm > 300)) throw Error('심박수는 20~300 BPM입니다.')
+        const averageBpm = actualAverageBpm(bpm)
         const measured = actualCardioMeasurement(measurements, activeMs)
         body.cardioCorrections.push({ id: target.record.id, activeMs, corrected, distanceKm: measured.distanceKm, averageBpm,
           ...(cardio?.measurement !== undefined || measurements.speedSource !== undefined || measurements.distanceSource === 'manual' ? { measurement: measured.measurement } : {}) })
@@ -353,7 +352,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
       : target.kind === 'CARDIO' ? <>
         <p>원본 타이머 {durationLabel(target.record.result.timerMs)}</p>
         <label><input type="checkbox" checked={corrected} onChange={e => { setCorrected(e.target.checked); setIssue('') }} />활동 시간 정정</label>
-        <DurationWheel seconds={seconds} disabled={!corrected} onChange={value => { setSeconds(value); setIssue('') }} />
+        <DurationWheel seconds={seconds} disabled={!corrected} fractionalSeconds onChange={value => { setSeconds(value); setIssue('') }} />
         <CardioActualFields draft={measurements} bpm={bpm} activeMs={corrected ? Math.round(Number(seconds) * 1000) : target.record.result.timerMs}
           motion={supportsDistance} incline={kind === 'TREADMILL'} onChange={patch => { setMeasurements(value => ({ ...value, ...patch })); setIssue('') }}
           onBpm={value => { setBpm(value); setIssue('') }} />

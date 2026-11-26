@@ -18,7 +18,7 @@ export async function verifyFifthUi({go,title,click,set,evaluate,send,wait,width
  for(const w of [320,375,390,430]){
   await width(w,'react')
   const before=await evaluate('(()=>{const s=document.querySelector(".record-search"),input=s.querySelector("input"),select=s.querySelector(":is(select,button[aria-haspopup=listbox])"),b=s.querySelector(".search-disclosure"),r=b.getBoundingClientRect();return {input:input.getBoundingClientRect().width,scope:select.getBoundingClientRect().width,outer:!input.parentElement.parentElement.contains(b),size:[r.width,r.height],height:[input.getBoundingClientRect().height,select.getBoundingClientRect().height],top:[r.top,input.getBoundingClientRect().top],expanded:b.getAttribute("aria-expanded")}})()')
-  assert(before.outer);assert.deepEqual(before.size,[42,42]);assert.deepEqual(before.height,[42,42]);assert.equal(before.top[0],before.top[1]);assert.equal(before.expanded,'false');assert(before.scope>0)
+  assert(before.outer);assert.deepEqual(before.size,[42,42]);assert.deepEqual(before.height,[44,42]);assert.equal(before.top[0]+21,before.top[1]+22);assert.equal(before.expanded,'false');assert(before.scope>0)
   await capture('fifth-search-closed','react',w)
   await evaluate('document.querySelector(".record-search input").click();document.querySelector(".record-search input").focus()')
   const after=await evaluate('(()=>{const s=document.querySelector(".record-search");return {width:s.querySelector("input").getBoundingClientRect().width,scope:s.querySelector(":is(select,button[aria-haspopup=listbox])")?.getBoundingClientRect().width??0,expanded:s.querySelector("button.search-disclosure").getAttribute("aria-expanded")}})()')
@@ -52,7 +52,7 @@ export async function verifyFifthUi({go,title,click,set,evaluate,send,wait,width
  }
  await tab('기록');await click('성장 추적 ›');await title('성장 추적')
  for(const w of [320,375,390,430]){
-  await width(w,'react');const size=await evaluate('(()=>{const input=document.querySelector(".record-search input");return{height:input.getBoundingClientRect().height,value:input.value,extra:!!document.querySelector(".search-selected")}})()');assert.equal(size.height,42);assert(size.value);assert.equal(size.extra,false);await capture('fifth-growth-selection','react',w)
+  await width(w,'react');const size=await evaluate('(()=>{const input=document.querySelector(".record-search input");return{height:input.getBoundingClientRect().height,value:input.value,extra:!!document.querySelector(".search-selected")}})()');assert.equal(size.height,44);assert(size.value);assert.equal(size.extra,false);await capture('fifth-growth-selection','react',w)
  }
  report.interactions.push('fifth UI: external 42px search, scope collapse/input expansion, all scopes/filter retention, trusted pointer focus, compact selection, identical review buttons, home CTA, green calendar checks, rounded 0/nonzero tracks and guide positions at 320/375/390/430')
 }

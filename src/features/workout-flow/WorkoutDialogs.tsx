@@ -41,7 +41,7 @@ export function WeightChange({ weight, progressionAllowed, onSave, onClose, prog
     <div className="stack">
       {saveIssue}
       <p>현재 승인 중량 {weight.approved === null ? '없음' : weight.approved + ' kg'}</p>
-      <KgWheel label="변경 중량" value={value} onChange={next => { setValue(next); setIssue('') }} />
+      <KgWheel label="변경 중량" step={weight.loadType === 'PLATE' || weight.loadType === 'STACK' ? 2.5 : 1} value={value} onChange={next => { setValue(next); setIssue('') }} />
       <fieldset className="stack online-fieldset">
         <legend>변경 방식</legend>
         <label className="radio-option"><input type="radio" name="weight-mode" checked={mode === 'today'} onChange={() => setMode('today')} />

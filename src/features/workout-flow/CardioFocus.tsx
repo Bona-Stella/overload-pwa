@@ -2,6 +2,7 @@
 import { useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { DurationWheel } from '../../components/DurationWheel.tsx'
+import { CardioValueRow } from './CardioValueRow.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { roundedDurationMs } from '../../components/duration.ts'
 import { formatDuration } from '../workout/model.ts'
@@ -43,19 +44,10 @@ function CardioReview({ draft, activeMs, plan, estimate, issue, onDraft, onCance
         <rect x="7" y="2.5" width="6" height="4" rx="1" />
       </svg>
     </div>
-    <div className={cardioStyles.recordedTime}>
-      <span>실제 활동 시간</span>
-      <strong data-modified={modified || undefined}>
-        {formatDuration(recordMs)}{modified && <small>수정됨</small>}
-      </strong>
-      <button ref={editButton} type="button" className={`quiet ${cardioStyles.editTime}`} aria-label="실제 활동 시간 수정"
-        aria-expanded={seconds !== null} aria-controls={seconds !== null ? editorId : undefined}
-        onClick={preview ? undefined : () => setSeconds(seconds === null ? draft.correctedSeconds ?? measuredSeconds : null)}>
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="m5 11.5-1 4.5 4.5-1L16 7.5 12.5 4zM11 5.5 14.5 9" />
-        </svg>
-      </button>
-    </div>
+    <CardioValueRow label="실제 활동 시간" value={<>{formatDuration(recordMs)}{modified && <small>수정됨</small>}</>}
+      editLabel="실제 활동 시간 수정" buttonRef={editButton} modified={modified} expanded={seconds !== null}
+      controls={seconds !== null ? editorId : undefined}
+      onEdit={preview ? undefined : () => setSeconds(seconds === null ? draft.correctedSeconds ?? measuredSeconds : null)} />
     {seconds !== null && <div id={editorId} className={cardioStyles.timeEditor}>
       <DurationWheel seconds={seconds} onChange={setSeconds} />
       <div className={styles.actions}>
@@ -126,7 +118,7 @@ export function CardioFocus({ cardio, activeMs, estimate = false, navigation, is
       issue={issue} onDraft={onDraft} onCancel={onCancelReview} preview={preview} />}
     {result && <Card className={cardioStyles.card}><h2>실제 완료 기록</h2><CardioActual result={result} />
       <Button onClick={preview ? undefined : onUndo}>유산소 완료 취소</Button></Card>}
-    <Button className={`${cardioStyles.editSession} ${styles.editClose}`} aria-expanded={editing} onClick={preview ? undefined : onEdit}>
+    <Button className={styles.editClose} aria-expanded={editing} onClick={preview ? undefined : onEdit}>
       {editing ? '편집 닫기' : '운동·세트 편집'}
     </Button>
     {editing && <section aria-label="운동·세트 편집" className="stack">{editTools}</section>}

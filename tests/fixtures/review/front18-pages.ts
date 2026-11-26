@@ -37,9 +37,12 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
   let nextRecordRefresh: RecordRefresh | null = null
   const read = <T,>(key: string, signal: AbortSignal | undefined, result: (mode: ReadExample) => T, keepFailure = false) => {
     const mode = modes[key]
-    if (mode === 'failed' && !keepFailure) modes[key] = 'normal'
     return reviewRead(signal, () => {
-      if (mode === 'failed') throw netError()
+      if (mode === 'failed') {
+        // A canceled read must not consume the fault configured for its retry scenario.
+        if (!keepFailure && modes[key] === mode) modes[key] = 'normal'
+        throw netError()
+      }
       return result(mode)
     }, { slow: mode === 'delayed' })
   }

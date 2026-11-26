@@ -1,5 +1,15 @@
 .button { min-height: 44px; padding: 11px 16px; transition: background-color .15s, border-color .15s; }
 .button[data-modal-neutral] { border-width: 2px; padding: 10px 15px; }
+.button[data-action-shape='pill']:where(:not([data-button-size])) {
+  min-height: 48px;
+  padding: 8px 16px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.button[data-modal-neutral]:where([data-action-shape='pill']) { padding: 8px 16px; }
+:global(.row):has(> .button[data-action-shape='pill'] + .button[data-action-shape='pill']) { gap: 8px; }
 .button[data-button-size='compact'][data-action-shape] {
   display: inline-grid;
   place-items: center;
@@ -45,7 +55,9 @@
 .heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; }
 .heading h1 { font-size: 24px; margin: 4px 0 0; }
 .eyebrow { font-size: 10px; color: var(--text-muted); letter-spacing: .14em; }
-.field { display: grid; gap: 8px; color: var(--text-muted); }
+.field { display: grid; gap: 4px; color: var(--text-muted); }
+.input.input { min-height: 48px; height: auto; min-width: 0; padding: 8px 12px; border-radius: 5px; font-size: 16px; text-align: start; }
+textarea.input.input { height: auto; }
 .metadata { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
 .help { position: relative; display: inline-flex; flex: 0 0 auto; }
 .help .helpTrigger { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; background: transparent; }

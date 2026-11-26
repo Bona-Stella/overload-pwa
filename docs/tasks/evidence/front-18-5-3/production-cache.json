@@ -1,0 +1,16 @@
+[
+  {
+    "name": "production",
+    "appShellAssets": 32,
+    "hashesMatch": true,
+    "previewInAppShell": false,
+    "previewHtmlInBuild": false
+  },
+  {
+    "name": "review",
+    "appShellAssets": 266,
+    "hashesMatch": true,
+    "previewInAppShell": false,
+    "previewHtmlInBuild": true
+  }
+]

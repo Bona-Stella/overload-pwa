@@ -161,7 +161,7 @@ test('other editor is read only; AUTO_CLOSED does not claim a user finish or off
 test('routine editor shows a single weight stepper and leaves approval to explicit save confirmation',()=>{
   const html=render(RoutineForm,{routine,generation:scope.dataGeneration,exercises:bootstrap.exercises,busy:false,controller:{},onClose(){}})
   assert.match(html,/aria-label="설정 중량".*99999999999999\.999999/)
-  assert.match(html,/<footer[^>]*><button type="button"[^>]*>취소<\/button><button[^>]*>변경 사항 저장<\/button>/)
+  assert.match(html,/<footer[^>]*><button[^>]*type="button"[^>]*>취소<\/button><button[^>]*>변경 사항 저장<\/button>/)
   assert.doesNotMatch(html,/structureModified|자동 증량|최초 0 kg|현재 승인|type="checkbox"|새 승인 중량 \(kg\)/)
 })
 test('server strings are escaped, and the local-save warning never claims workout recording is ready',()=>{

@@ -4,22 +4,20 @@
 .page .card { gap: 0; }
 .cardHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--card-gap-dense); padding-bottom: var(--card-gap); border-bottom: 1px solid var(--border-subtle); }
 .cardTitle { display: grid; gap: var(--card-gap-title); }
-.cardHeading h2, .cardHeading p, .times, .readRow dd, .page > p { margin: 0; }
+.cardHeading h2, .cardHeading p, .readRow dd, .page > p { margin: 0; }
+.times { margin-block: 12px 0; }
 .cardHeading h2 { font-size: 15px; }
-.cardHeading p, .labels, .hint, .readRow small { color: var(--text-muted); font-size: 12px; }
-.readRow {
-  display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  min-height: 52px; padding-block: 8px; font-size: 14px;
-}
-.readRow + .readRow, .editRow + .editRow { border-top: 1px solid var(--border-subtle); }
-.readRow dd { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 2px 8px; text-align: end; }
-.readRow strong { color: var(--accent); font-size: 16px; font-variant-numeric: tabular-nums; }
+.cardHeading p, .labels, .hint { color: var(--text-muted); font-size: 12px; }
+.editRow + .editRow { border-top: 1px solid var(--border-subtle); }
+.readRow { justify-content: center; min-height: 52px; font-size: 12px; text-align: center; }
+.times .readRow strong { color: var(--accent); font-variant-numeric: tabular-nums; white-space: normal; overflow-wrap: anywhere; }
+.readRow dd { max-width: 100%; }
 .columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) 32px; align-items: center; gap: 8px; }
 .labels { padding-top: 10px; text-align: center; }
 .editRow { padding-block: 10px; }
 .page .editRow input, .page .unbounded {
   appearance: none; min-height: 36px; height: 36px; margin: 0; padding: 0 4px;
-  border: 1px solid var(--border-subtle); border-radius: 999px; background: var(--surface-card);
+  border: 1px solid transparent; border-radius: 5px; background: var(--surface-card);
   text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; scroll-margin: 24px;
 }
 .page .unbounded {
@@ -27,7 +25,7 @@
   cursor: default; user-select: none;
 }
 .page .editRow input[aria-invalid='true'] { border-color: var(--status-missed); }
-.page .remove { display: grid; place-items: center; width: 32px; min-height: 36px; padding: 0; }
+.page .remove { display: grid; place-items: center; justify-self: start; width: 44px; min-height: 44px; margin: -4px 0 -4px -8px; padding: 0; }
 .page .add { width: 100%; min-height: 36px; margin-top: 6px; padding: 4px 8px; border-radius: 999px; font-size: 13px; }
 .hint { display: flex; align-items: flex-start; gap: 6px; margin: 10px 0 0; line-height: 1.5; }
 .hint svg { flex: none; margin-top: 2px; }

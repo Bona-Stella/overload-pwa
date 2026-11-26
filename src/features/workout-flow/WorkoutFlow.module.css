@@ -103,7 +103,7 @@
 .exerciseNav button:last-child { text-align: right; }
 .exerciseNav small { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-muted); margin-top: 3px; font-size: 10px; }
 .flow .working { grid-template-columns: minmax(0, 1fr) minmax(64px, .48fr); gap: 4px 10px; padding-block: 12px; }
-.working:has(.plateSide) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(64px, .7fr); }
+.working:has(.plateSide) { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(74px, .7fr); }
 .working:has(.plateSide) .workingHead { display: grid; grid-template-columns: subgrid; column-gap: normal; }
 .working:has(.plateSide) .weightChange { justify-self: end; }
 .working:has(.plateSide) .workingValues { display: contents; }
@@ -117,8 +117,8 @@
 .plateSide > strong { font-size: clamp(24px, 6.5vw, 30px); }
 .workingHead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 5px; min-height: 28px; }
 .workingLabel { font-size: 10px; color: var(--text-muted); }
-.workingHead .weightChange { flex-shrink: 0; min-height: 44px; padding: 8px 0; margin-block: -8px; }
-.weightChange > span { display: block; font-size: 11px; padding: 3px 7px; border: 1px solid var(--line); border-radius: var(--radius-action); }
+.workingHead .weightChange[data-button-size='compact'] { flex: none; width: max-content; margin-block: -10px; font-size: 11px; }
+.weightChange > [data-compact-surface] { border-color: var(--line); }
 .headingRow { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .headingRow > span, .headingRow > b { font-size: 12px; }
 .headingRow button { padding-inline: 10px; }
@@ -148,11 +148,11 @@
 @media (prefers-reduced-motion: reduce) {
   .memoToggle svg { transition: none; }
 }
-.flow :global(button.outline).endWorkout { color: var(--status-danger-text); border-color: var(--status-danger-text); border-width: 2px; padding-block: 10px; }
+.flow :global(button.outline).endWorkout { color: var(--status-danger-text); border-color: var(--status-danger-text); border-width: 2px; padding-block: 8px; }
 .setActions { grid-column: 1 / -1; display: flex; gap: 8px; padding-block: 3px; }
 .setActions > button { flex: 1; min-width: 0; min-height: 44px; padding: 7px 6px; font-size: 12px; }
 .footer { --workout-action-height: 50px; position: fixed; z-index: 8; bottom: 0; left: 50%; transform: translateX(-50%); width: min(100%, 520px); display: grid; gap: 6px; padding: 9px var(--space-page) calc(9px + env(safe-area-inset-bottom)); background: var(--surface-page); border-top: 1px solid var(--line); }
-.footer > button, .footer > .actions > button {
+.footer > button[data-action-shape], .footer > .actions > button {
   display: flex; align-items: center; justify-content: center; text-align: center;
   height: var(--workout-action-height); min-height: var(--workout-action-height); padding: 0 12px;
 }
@@ -266,7 +266,7 @@
 .summary :global(.approval-toolbar) h2 {flex:1 1 auto;min-width:0;white-space:normal;word-break:keep-all;}
 .summary .approveButton {flex:none;min-width:72px;height:36px;min-height:36px;padding:4px 6px;white-space:nowrap;font-size:12px;}
 .summary .approveButton:enabled {background:var(--status-done);color:var(--on-accent);border-color:var(--status-done);}
-.summary :is(.approveButton, .reviewButton) {border-radius:9999px;}
+.summary :is(.approveButton, .reviewButton) {border-radius:var(--radius-action);}
 .approvalRow { --circle-check-size: 17px; --circle-check-glyph-size: 11px; display: grid; grid-template-columns: var(--circle-check-size) minmax(0, 1fr) max-content; gap: 4px 6px; align-items: center; }
 /* Reserve the visible circle column. The full hit area extends over the noninteractive name. */
 .summary .approvalRow > label { justify-self: start; justify-items: start; z-index: 1; }
@@ -300,9 +300,9 @@
 .achievementTag[data-state='complete'] {color:var(--status-done);}
 .achievementTag[data-state='partial'] {color:var(--status-warning);}
 .achievementTag[data-state='missed'] {color:var(--status-missed);}
-.recordColumns {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-block:8px;}
-.recordColumns section {display:flex;flex-direction:column;align-items:center;min-width:0;padding-inline:5px;gap:3px;}
-.recordColumns section+section {border-left:1px solid var(--line);}
+.recordColumns {display:grid;grid-template-columns:repeat(var(--record-columns,3),minmax(0,1fr));margin-block:8px;}
+.recordColumns > :is(section,div) {display:flex;flex-direction:column;align-items:center;min-width:0;padding-inline:5px;gap:3px;}
+.recordColumns > * + * {border-inline-start:1px solid var(--line);}
 .recordColumns h3 {font-size:12px;margin:0 0 5px;}
 .recordColumns strong {font-size:clamp(14px,4vw,18px);white-space:nowrap;}
 .recordColumns strong:nth-of-type(2) {margin-top:12px;}

@@ -427,7 +427,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     const activeFilter = () => evaluate('document.querySelector("[aria-label=\'루틴 일정 필터\'] [aria-pressed=true]").textContent')
     const homeTitle = () => evaluate('document.querySelector(\'[aria-label="오늘의 루틴"] h2\').textContent')
     const todayCardHeight = () => evaluate(`document.querySelector('[aria-label="오늘의 루틴"]').getBoundingClientRect().height`)
-    const hasStart = () => evaluate('!!document.querySelector(\'[aria-label="홈"] [data-click-action="start"]\')')
+    const hasStart = () => evaluate('!!document.querySelector(\'[aria-label="홈"] [data-click-action="start"]:not(:disabled)\')')
     const chooserOpen = () => evaluate(`document.querySelector(${JSON.stringify(chooserTrigger)}).ariaExpanded === 'true'`)
     const weekText = () => evaluate('document.querySelector(\'[aria-label="이번 주 일정"]\').textContent')
     const openChooser = () => click('오늘만 다른 루틴 선택', 'textContent', chooserTrigger)
@@ -448,7 +448,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert(await evaluate(`[...document.querySelectorAll(${JSON.stringify(filterButtons)})].every(button => {
       const rect = button.getBoundingClientRect()
       const pill = button.firstElementChild.getBoundingClientRect()
-      return rect.width === 50 && rect.height === 44 && pill.width === 50 && pill.height === 27
+      return rect.width === 50 && rect.height === 44 && pill.width === 50 && pill.height === 36
     })`))
     const homeTagAppearance = await tagAppearance(filterGroup)
     assert.equal(await evaluate(`!!document.querySelector(${JSON.stringify(chooserPanel + ' input[type=search]')})`), false)
@@ -615,9 +615,19 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('설정 중량', 'ariaLabel'); await click('직접 입력'); await set('dialog[open] input', '20'); await click('확인', 'textContent', 'dialog[open] button')
     await click('+ 유산소 종목 추가'); await click('달리기')
     await click('러닝머신', 'textContent', '[aria-label="표준 유산소 목록"] strong')
+    await click('목표 시간 수정', 'ariaLabel', '[aria-label="유산소 1"] button')
+    await click('목표 시간 (분)', 'ariaLabel', '[aria-label="유산소 1"] button')
+    await click('직접 입력', 'textContent', 'dialog[open] button')
+    await set('dialog[open] input', '20')
+    await click('확인', 'textContent', 'dialog[open] button')
+    await click('시간 적용')
     await click('추가 목표 설정', 'textContent', '[aria-label="유산소 1"] summary')
-    const cardioFields = '[aria-label="유산소 1"] input'
-    for (const [label,value] of [['목표 시간 (분)','20'],['목표 거리 (km)','2.5'],['목표 속도 (km/h)','8'],['목표 경사도 (%)','0']]) await set(`${cardioFields}[aria-label="${label}"]`,value)
+    for (const [label,value] of [['목표 거리 수정','2.5'],['목표 속도 (km/h)','8'],['목표 경사도 (%)','0']]) {
+      await click(label, 'ariaLabel', '[aria-label="유산소 1"] button')
+      await click('직접 입력', 'textContent', 'dialog[open] button')
+      await set('dialog[open] input', value)
+      await click('확인', 'textContent', 'dialog[open] button')
+    }
     await click('추가 목표 설정', 'textContent', '[aria-label="유산소 1"] summary')
     await set(fault, 'network'); await click('루틴 생성')
     await wait(async () => (await body()).includes('연결이 끊겼습니다'), 'routine creation failure')
@@ -834,7 +844,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     const restPage = 'section[aria-label="세트 사이 휴식"]'
     const restSeconds = restPage + ' [name="restLowSeconds"]'
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${restPage} dt, ${restPage} dd strong')].map(e => e.textContent)`),
-      ['1~10회', '180초', '11~12회', '120초', '13회 이상', '90초'])
+      ['1~10회', '03:00', '11~12회', '02:00', '13회 이상', '01:30'])
     const cardAction = restPage + ' form .app-card > div:first-child > button'
     assert.equal(await evaluate(`document.querySelectorAll('${restPage} header img[alt="OVERLOAD"]').length`), 0)
     assert.equal(await evaluate(`document.querySelectorAll('${restPage} header button').length`), 1)
@@ -912,14 +922,14 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
     await click('취소', 'textContent', cardAction)
     await click('버리기', 'textContent', 'dialog[open] button')
-    await wait(async () => (await body()).includes('180초'), 'discarded rest time draft')
-    assert.match(await body(), /180초/)
+    await wait(async () => (await body()).includes('03:00'), 'discarded rest time draft')
+    assert.match(await body(), /03:00/)
     await click('편집', 'textContent', cardAction); await set(restSeconds, '185')
     await click('변경 사항 저장', 'textContent', restPage + ' button')
     assert.match(await body(), /연결을 확인하지 못했습니다. 입력을 유지/)
     assert.equal(await evaluate(`document.querySelector(${JSON.stringify(restSeconds)}).value`), '185')
     await click('변경 사항 저장', 'textContent', restPage + ' button')
-    assert.match(await body(), /185초\s*\(3분 5초\)/)
+    assert.match(await body(), /03:05/)
     await click('설정으로', 'ariaLabel', restPage + ' button')
     await click('운동 종목 보기', 'textContent', settingsItem + ' strong')
     assert.equal(await evaluate('document.activeElement.textContent'), '운동 종목 보기')

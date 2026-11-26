@@ -438,6 +438,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
     routines: visit.routines || tab === 'routines', history: visit.history || tab === 'history' })
   const dataRevision = [state.recordsRevision, state.data?.routines.map(r => r.id + ':' + r.version).join(',')].join('|')
   const training = useTrainingSchedule(authentication, cardioScope, dataRevision, controller.invalidateScope, accountReady)
+  const canStartFromHome = useRef(training.canWrite)
+  useLayoutEffect(() => { canStartFromHome.current = training.canWrite }, [training.canWrite])
   const [permissionIssue, setPermissionIssue] = useState(false)
   const [workoutRoute, setWorkoutRoute] = useScreenHistory<string | null>('workout-view:' + state.scope?.userId + ':' + state.scope?.dataGeneration, null)
   const routineRoutes = useRoutineEditorRoutes(state.scope)
@@ -685,13 +687,14 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       onInvalid={controller.invalidateScope} onHistory={()=>{void navigate('history').then(ok=>{if(ok)setRecordsScreen('history',true)})}} onNavigate={next => void navigate(next)} onOpen={id => void openRecord(id)} onResume={() => void runHomeAction('resume', resume)} onRetry={() => void runHomeAction('retry', startWorkout)}
       onStart={routine => runHomeAction('start', async () => {
           const before = controller.getSnapshot(), origin = window.history.state?.overloadNavigation
-          if (!training.canWrite || before.busy || before.active || before.attempt || !await flush()) return
+          if (!canStartFromHome.current || before.busy || before.active || before.attempt || before.routineRefreshes.has(routine.id) || !await flush()) return
           setHomeStartIssue(null)
           await controller.select(routine.id)
           const latest = controller.getSnapshot(), account = authentication.getSnapshot()
           if (latest.scope?.userId !== routine.userId || latest.scope.dataGeneration !== routine.dataGeneration || account.status !== 'authenticated' || account.pending !== null || account.userId !== routine.userId || latest.active || latest.attempt) return
           if (latest.selected?.id !== routine.id || window.history.state?.overloadNavigation !== origin) return
           if (latest.selected.version !== routine.version) { setHomeStartIssue('루틴이 변경됐어요. 다시 확인해 주세요.'); return }
+          if (!canStartFromHome.current || latest.routineRefreshes.has(routine.id)) return
           await startWorkout()
       })} /> : state.issue ? <ContentError title="홈을 불러오지 못했어요." action={<RefreshButton loading={state.status === 'loading'} failure={state.issue} onRefresh={() => void controller.refresh()} />} /> : <HomeStartup />)}</div>
     {(!localOnly || preserveDrafts) && <div hidden={!visible || localOnly || focused || workoutLoading || recordFocused || tab !== 'routines'}>
