@@ -624,6 +624,8 @@ iPhone의 화면 구조를 고려합니다.
 
 **기초 코드 조사** 2026-11-16 (KST). Frontend `56993a0`·Backend `732e0c3`를 기준으로 1차 개발의 기능·호출 경로·저장 모델과 테스트 내용을 조사했다. 과거 커밋·자동 테스트 수·승인 기록은 각각 당시 근거로 보존한다.
 
+**FRONT 18 최종 점검(2026-11-28).** [6단계 공통 UI·상태 전환 현황](#front18-stage6)에 최신 확정 정책, 구현·검증 범위 및 후속 과제를 기록한다.
+
 **FRONT 후속 대조** 2026-11-23 (KST). 문서 갱신을 시작할 때 FRONT는 깨끗한 `main`의 `e88c90c`였으며 로컬의 `origin/main` 추적 참조보다 1개 커밋 앞서 있었다. 소스, 커밋과 보존 검증 로그를 [후속 UI와 안정성 현황](#front-후속-ui와-안정성-현황)에 대조했다. 이번 갱신에서는 테스트·빌드·실기기 검증을 재실행하지 않았다.
 
 **기록 메인 UI 현황 갱신(2026-11-17):** 사용자 최종 디자인 승인 및 `594cf25` 커밋 완료. [최종 UI 결정 10.26절](../product/Overload_UI_Decision_Log_v0.9.md#1026--기록-메인-최종-ui-승인과-문서-동기화--2026-11-17)과 [아래 마감 기록](#기록-메인-최종-ui-보정마감--2026-11-17)을 적용한다. 이 갱신은 기록 메인의 배치·표현에 한정하며 아래 기능 정책별 미완성 구현과 Backend 상태를 완료 처리하지 않는다.
@@ -1103,14 +1105,14 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 | 작업 | 상태와 근거 |
 | --- | --- |
-| 4-1 전체 카드 조사 | 완료. [기존 78개 사용처 조사](../tasks/front-18-4-1-card-audit.md) |
+| 4-1 전체 카드 조사 | 완료. |
 | 4-2 디자인 규격 결정 | 완료. [카드 유형별 현행 기준](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual) |
-| 4-3 공통 카드 적용 및 보완 | 완료. [공통 카드](../tasks/front-18-4-3-card-foundation.md) · [버튼](../tasks/front-18-4-3-button-refinement.md) · [푸터와 정렬](../tasks/front-18-4-3-final-refinement.md) |
-| 4-4 전체 적용 및 예외 | 완료. [78개 사용처 적용표](../tasks/front-18-4-4-card-coverage.md#78개-사용처-적용표) |
+| 4-3 공통 카드 적용 및 보완 | 완료. |
+| 4-4 전체 적용 및 예외 | 완료. |
 | 4-5 최종 검수 및 사용자 승인 | 완료. [최종 80개 적용표와 실측 범위](../tasks/front-18-4-5-card-final-review.md#최종-사용처-적용표) |
-| 검수 자료 정리 | 완료. [보존 자료와 원본 백업 대조](../tasks/front-18-stage-4-evidence-cleanup.md) |
+| 검수 자료 정리 | 완료. |
 | 4-5C 공식 문서 최신화 | 완료. 이 기록과 UI/UX, Decision Log, Visual Theme Spec에 반영했다. |
-| 5단계 버튼·입력 규격 통일 | 후속 작업. 4단계에서 승인된 공통 카드·조작 기준 위에서 아직 확정되지 않은 항목을 다룬다. |
+| 5단계 버튼·입력 규격 통일 | 당시 후속 작업. 4단계에서 승인된 공통 카드·조작 기준 위에서 아직 확정되지 않은 항목을 다룬다. |
 
 **표면과 간격의 구현.** [`Card`와 `Button`](../../src/components/ui.tsx), [공통 CSS Module](../../src/components/ui.module.css), [Onyx 토큰](../../src/app/theme.module.css)을 기준으로 한다. `Card`는 `cardSurface`와 `card`를 적용하고 `hero`가 강조 표면을 선택한다. 입력·목록·통계의 압축과 패딩은 기존 역할 토큰과 호출부의 배치에서 지정한다. 루틴 검색·압축 목록과 설치 카드처럼 별도 마크업이 필요한 표면도 `cardSurface`를 합성해 공통 외곽을 사용한다. 외부 간격은 가능한 한 부모의 `gap`이 담당한다. 기존 margin과 공통 간격이 겹치거나 전역 `.card`의 18px 반경·레거시 패딩이 기능별 CSS에 섞이면 해당 호출부의 스타일을 정리한다. `--card-padding-override`와 `--card-radius-override`를 사용하는 기능형 표면은 적용 범위와 좁은 폭을 따로 확인한다. [루틴 표면](../../src/features/workout-online/Routine.module.css) · [설치 카드 표면](../../src/pwa/PwaStatus.module.css) · [승인 예외](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual-exceptions)
 
@@ -1126,11 +1128,11 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 | 휴식 흐름 | 격리 운동 회귀에서 테스트 ON 12초, OFF 일반 휴식 180초 기준 및 효과음 경로 확인 |
 | 기존 빌드 경고 | PostCSS `from` 옵션 및 Vite 500kB 초과 청크 경고 유지 |
 
-이 표는 4-5에서 실행한 결과를 인용한다. [최종 실행 요약](../tasks/evidence/front-18-4-5/test-results.json) · [운영 사전 캐시 검사](../tasks/evidence/front-18-4-5/production-cache.json) · [최종 검수 보고서](../tasks/front-18-4-5-card-final-review.md#자동-검사와-빌드)
+이 표는 4-5에서 실행한 결과를 인용한다. · [최종 검수 보고서](../tasks/front-18-4-5-card-final-review.md#자동-검사와-빌드)
 
 **간헐 실패와 9단계 재확인.** 수동 새로고침에서 요청 시작과 `loading` 상태 커밋 사이의 경합이 Toast 누락에 관련된 것으로 관측됐다. [`RecordFeed`](../../src/features/history/RecordFeed.tsx)는 수동 클릭 업데이트에서 `busy`를 발행한다. 독립 반복에서 보완 전 4/10회 실패했고 보완 후 10/10회 통과했다. 운동 저장 상태 독립 검사도 10/10회 통과했지만 과거 `saving` 타이밍 실패의 원인은 미확정이다. 9단계 전체 통합 검증에서 이 상태 전환, 서버 커서 페이지 추가와 남은 실기기 경계를 다시 확인한다. 삭제 Dialog 색상 회귀는 실제 브라우저 상태와 화면에 적용된 색상을 기다리고, 키보드 종료 회귀는 이벤트 전송과 즉시 푸터 관측을 같은 브라우저 호출에서 실행한다. [간헐 실패 조사](../tasks/front-18-4-5-card-final-review.md#간헐적-실패-조사)
 
-**검수 자료 관리.** 검수 중에는 재현 근거를 확보하고 승인 후에는 공식 문서·자동 회귀·fixture, 대표 화면과 재현하기 어려운 문제의 계측을 남긴다. 반복 스크린샷, 중간 계측과 임시 로그를 정리하기 전에 보고서와 테스트의 참조를 대조하고 로컬 백업은 Git에서 제외한다. 4단계 검수 경로의 자료는 246개에서 66개, 16.72MB에서 11.11MB로 줄었다. [유형별 정리 내역](../tasks/front-18-stage-4-evidence-cleanup.md#정리-전후)
+**검수 자료 관리.** 검수 중에는 재현 근거를 확보하고 승인 후에는 공식 문서·자동 회귀·fixture, 대표 화면과 재현하기 어려운 문제의 계측을 남긴다. 반복 스크린샷, 중간 계측과 임시 로그를 정리하기 전에 보고서와 테스트의 참조를 대조하고 로컬 백업은 Git에서 제외한다. 4단계 검수 경로의 자료는 246개에서 66개, 16.72MB에서 11.11MB로 줄었다. [4단계 확정 규격](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual)
 
 **5단계 착수 당시 기준.** 일반 캡슐형, 운동 푸터와 권고 높이, 소형 보조 버튼의 조작 영역·정렬, 메시지형 Dialog의 가로 액션 균등 너비, 설정·날짜·일정 조작의 승인값을 유지한다. 앱 셸과 페이지 시작 위치, Toast·새로고침, ConnectedDropdown, 숫자 휠·초기값, 저장·동기화·복구 및 오프라인 보호에는 기존 계약을 적용한다. [버튼 기준](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-card-visual-actions) · [메시지형 Dialog](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-feedback-visual)
 
@@ -1142,22 +1144,43 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 | 수정 항목 | 확인한 원인과 처리 |
 | --- | --- |
-| 운동 종료·중량 변경 | 320px에서 종료 열의 폭을 확보해 문구를 한 줄로 유지한다. 기존 일반 버튼과 수동 캡슐을 한 소형 버튼으로 통합하고 원판 카드 끝 열에 너비를 확보했다. 중량 변경의 선택 제한을 유지한다. [수정 전후 계측](../tasks/front-18-5-3-user-refinement.md#chrome-계측) |
-| 유산소 목표 거리 | 최솟값 `0.001`km에서 출발한 휠이 `0.101`km처럼 이동했다. 0부터 0.1km 격자로 이동하고 직접 입력은 `0.001`km부터 유효하다. [수정 근거](../tasks/front-18-5-3-user-refinement.md#디자인-수정) |
-| 홈 루틴 조회·START | 검수 브라우저에서 상세 조회 503을 재현했다. 확인할 수 없는 루틴은 잠그고 오류·새로고침을 표시한다. 새 START는 확인된 루틴 버전과 `training.canWrite`를 모두 사용한다. [재현과 처리](../tasks/front-18-5-3-user-refinement.md#홈-루틴-선택시작-오류) |
-| 디로딩 조회 실패 | 조회 실패의 `undefined`가 보호 상태로 해석되던 조건을 변경했다. 확인된 `ACTIVE`·`COMPLETED`만 디로딩 선택 잠금을 적용한다. 조회 실패 안내를 표시하고 최신 쓰기 상태가 확인될 때까지 START는 제한한다. [503 시나리오](../tasks/front-18-5-3-user-refinement.md#홈-루틴-선택시작-오류) |
+| 운동 종료·중량 변경 | 320px에서 종료 열의 폭을 확보해 문구를 한 줄로 유지한다. 기존 일반 버튼과 수동 캡슐을 한 소형 버튼으로 통합하고 원판 카드 끝 열에 너비를 확보했다. 중량 변경의 선택 제한을 유지한다.  |
+| 유산소 목표 거리 | 최솟값 `0.001`km에서 출발한 휠이 `0.101`km처럼 이동했다. 0부터 0.1km 격자로 이동하고 직접 입력은 `0.001`km부터 유효하다.  |
+| 홈 루틴 조회·START | 검수 브라우저에서 상세 조회 503을 재현했다. 확인할 수 없는 루틴은 잠그고 오류·새로고침을 표시한다. 새 START는 확인된 루틴 버전과 `training.canWrite`를 모두 사용한다.  |
+| 디로딩 조회 실패 | 조회 실패의 `undefined`가 보호 상태로 해석되던 조건을 변경했다. 확인된 `ACTIVE`·`COMPLETED`만 디로딩 선택 잠금을 적용한다. 조회 실패 안내를 표시하고 최신 쓰기 상태가 확인될 때까지 START는 제한한다.  |
 | 4174 LAN HTTP START | 검수 빌드의 IndexedDB 편집 잠금 허용 출처가 4173 전용이었다. 4174 검수 빌드에도 지정한 사설 LAN 출처를 반영했고 해당 출처의 START·저장·종료를 실제 Spring에서 확인했다. [Mac 4174 재검수](../tasks/front-18-5-3-final-refinement.md#mac-4174-재검수) |
 | LAN HTTP 종료 후 재승인 | `crypto.randomUUID()`를 직접 호출하던 재승인 경로가 LAN HTTP에서 실패했다. 공통 `newId()`의 `crypto.getRandomValues()` 기반 UUID v4 경로를 재사용한다. 세션·루틴 버전, 승인 요청 ID, 전송 전 고정 요청의 로컬 저장, 중복 요청 제한·409 재확인을 유지한다. [UUID 구현](../../src/id.ts) · [종료 제어](../../src/features/workout-online/closed-controller.ts) · [회귀](../../tests/workout-finish.test.mjs) |
 
-**5-4 실행 결과.** 전체 FRONT 735/735, 집중 회귀 182/182, Chrome 320·375·393·430·1280px, TypeScript·ESLint·운영 및 검수 빌드를 통과했다. 운영 32개·검수 41개 사전 캐시 항목의 SHA-256 일치와 운영 빌드·양쪽 Service Worker 목록의 Preview 제외를 확인했다. 격리 Spring에서는 START·snapshot·FINISH, 정밀값 정정·재승인, 평균 심박수 및 일반 휴식 180초·테스트 12초를 확인했다. [최종 검증 기록](../tasks/evidence/front-18-5-4/test-results.json)
+**5-4 실행 결과.** 전체 FRONT 735/735, 집중 회귀 182/182, Chrome 320·375·393·430·1280px, TypeScript·ESLint·운영 및 검수 빌드를 통과했다. 운영 32개·검수 41개 사전 캐시 항목의 SHA-256 일치와 운영 빌드·양쪽 Service Worker 목록의 Preview 제외를 확인했다. 격리 Spring에서는 START·snapshot·FINISH, 정밀값 정정·재승인, 평균 심박수 및 일반 휴식 180초·테스트 12초를 확인했다.
 
 휴식일 전체 목록 잠금과 START 활성화가 함께 나타난 간헐 오류의 직접 원인, 이전 운동 저장 상태 실패의 직접 원인은 미확정이다. iPhone Safari 및 설치형 PWA 실기기 검증은 남아 있다. 휴식 4구간과 목표 심박수·케이던스 범위는 승인된 Preview이며 후속 서버 계약은 전체 UI·UX 확정 이후 검토한다. [후속 요구사항과 승인](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage5-decision)
 
-5-5B/C는 문서와 근거를 정리했다. 6단계는 홈에 적용된 `ConnectedDropdown`을 다른 선택 UI로 확대할 범위를 조사하고, 각 화면의 선택값·필터·취소·포커스와 기능성 예외를 보존하는 작업이다. [홈 최초 적용](#ui-18-홈-루틴-선택-최종-승인과-1차-마감) · [자료 정리 내역](../tasks/front-18-5-5-bc-closure.md)
+5-5B/C는 문서와 근거를 정리했다. 6단계는 홈에 적용된 `ConnectedDropdown`을 다른 선택 UI로 확대할 범위를 조사하고, 각 화면의 선택값·필터·취소·포커스와 기능성 예외를 보존하는 작업이다. [홈 최초 적용](#ui-18-홈-루틴-선택-최종-승인과-1차-마감)
 
 #### FRONT 18 · 6-A 드롭다운·검색·필터·액션 메뉴 — 2026-11-27
 
-6-1 기준 92곳 중 47곳에 연결형 선택, 소형 필터·검색 범위, 홈 콘텐츠, 검색·탐색, 액션 메뉴 또는 공용 가로 필터를 적용했다. 첫 사용자 검수 이후 일반 선택·홈 목록과 태그·루틴 편집의 운동 목록을 보정했다. Mac 4174에서 재검수 및 최종 승인 대기다. 전체 확대 및 누락 대조는 6-4에서 이어간다. 유산소 종목 검색은 이번 범위이며 운동 중 계획·완료 기록 디자인은 후속 과제다. [6-A 구현 범위](../tasks/front-18-6-a-dropdown-menu-foundation.md)
+6-1 기준 92곳 중 47곳에 연결형 선택, 소형 필터·검색 범위, 홈 콘텐츠, 검색·탐색, 액션 메뉴 또는 공용 가로 필터를 적용했다. 첫 사용자 검수 이후 일반 선택·홈 목록과 태그·루틴 편집의 운동 목록을 보정했다. [적용 위치와 예외](../tasks/evidence/front-18-6-a/rollout-inventory.md)
+
+<a id="front18-stage6"></a>
+
+#### FRONT 18 · 6단계 공통 UI 적용 및 최종 검증 — 2026-11-28
+
+현행 동작은 [공통 선택·모달·전환](../product/ui-ux.md#front18-common-ux), 치수와 예외는 [Visual Theme 18~21절](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-selection-dialog-visual), 확정 및 후속 범위는 [Decision Log 10.46절](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage6-decision)이 관리한다. 앞선 승인 대기 표시는 각 단계 당시의 기록이며 현행 사용자 정책과 실기기 검증 이력은 구분한다.
+
+| 적용 경로 | 구현 및 보호 경계 |
+| --- | --- |
+| 선택·모달·유산소 | 6-A `5191a78`에서 선택 변형과 업무 메뉴를 적용했다. 6-C `545b711`에서 공통 기능형 Dialog 및 운동 중 검색 첫 화면, 실제값 입력과 읽기용 표현을 정리했다. [선택 구현](../../src/components/common-ui/ConnectedDropdown.tsx) · [모달](../../src/components/Dialog.tsx) · [유산소 측정 입력](../../src/features/workout-online/CardioActualFields.tsx) |
+| 6-E 전환과 긴급 회귀 | `e60039b`에서 조회 준비·취소와 출처 복원, 일정·기록의 로딩과 정보 공개, 고정 운동 액션·모달 재시도를 정리했다. 홈 상세 행의 인라인 링크 치수, 터치 중 메뉴 항목 보존, 루틴 수정 즉시 진입을 지킨다. [목적지 조회](../../src/app/usePageRead.ts) · [홈 스타일](../../src/features/home/Home.module.css) · [루틴 작업 영역](../../src/features/workout-online/WorkoutWorkspace.tsx) |
+| 6-E 저장과 이전 반복 | 로컬 저장·전송·확정과 안전한 재확인을 구분한다. 종료의 고정 원본·편집권·ACK를 보호한다. 이전 반복은 최신 종료 기록부터 순서대로 확인하고, 동일 계정·세대·기록 버전의 조회를 공유한다. [저장 상태](../../src/features/workout-local/save-status.ts) · [이전 운동 조회](../../src/features/workout-online/workout-history.ts) · [종료·복구 회귀](../../tests/workout-finish.test.mjs) |
+| 6-4 공통 헤더와 복귀 | `45ce324`에서 설정과 검색의 상세 및 조회 대체 화면을 공통 헤더에 연결했다. 검색 상세에서 실제 진입 버튼과 스크롤로 복귀한다. [카탈로그](../../src/features/workout-online/PublicCatalog.tsx) · [검색 상세](../../src/components/SearchExerciseDetails.tsx) · [브라우저 회귀](../../tests/preset-review.test.mjs) |
+
+선택 UI 92개, 공통 UI 사용처 177개, 상태 전환 84개는 후속 단계에서 재현 경로와 예외를 찾는 기준으로 재사용한다. [6-1 선택 현황](../tasks/evidence/front-18-6-1/selection-inventory.md) · [6-B UI 현황](../tasks/front-18-6-b-ui-inventory.md) · [6-D 전환 현황](../tasks/front-18-6-d-ui-transition-inventory.md)
+
+**6-5 최종 검증.** FRONT `45ce324`에서 TypeScript, ESLint, 전체 자동 회귀 758/758건, 운영 빌드와 Mac 4174 검수 빌드를 통과했다. 기존 4174에 반영한 뒤 LAN 앱·Preview 및 격리 Spring 상태를 확인했다. 실제 격리 계정으로 홈 주간 일정의 44px 상세 행과 24px 기록 링크의 상세 이동, 오늘만 루틴 선택과 START 활성화, 메뉴 수정 진입·취소, 종목 상세에서 원래 검색 버튼으로의 복귀를 확인했다. Chrome 320·374·375·393·1280px에서 셸 여백과 검색·모달·헤더를 검증했다. 실제 START·진행 세션 재진입·스냅샷 저장·FINISH와 종료 요약은 6-E의 격리 Spring 쓰기 검증 및 6-5 자동 회귀를 근거로 삼았다. 최종 확인에서 제품 코드의 추가 회귀 수정은 발생하지 않았다.
+
+**BACKEND 일괄 개선 보류.** 유산소 배치 두 개 중 마지막 배치를 삭제하는 루틴 수정 요청은 Spring에 직접 보내도 `409 WRITE_CONFLICT`를 반환했다. PostgreSQL 고유 제약 `routine_cardio_active_position`과 삭제 표시 및 임시 순번 변경을 같은 flush에 처리하는 경로가 충돌한다. 서버의 배치 삭제·재정렬 순서가 후속 수정 범위다. 프론트는 기존 오류 표시와 요청 계약을 사용한다. [루틴 수정과 배치 순번](../../../overload-server/src/main/java/com/overload/overload_server/routine/RoutineService.java#L144) · [제약](../../../overload-server/src/main/resources/db/migration/V11__create_routine_management.sql#L65)
+
+**후속 검증.** 기본값·추천·미확정 조작은 7단계, 일반 하위 제목 20px과 승인된 공통 헤더 22px의 통합 여부 및 글자·아이콘·세부 간격은 8단계, 실제 iPhone Safari·설치형 PWA를 포함한 전체 통합은 9단계에서 확인한다.
 
 #### 현황 갱신
 

@@ -26,13 +26,12 @@
 
 ## Chrome 검수
 
-- 320·375·393·430·1280px에서 숫자 그룹의 가운데 정렬, chevron 제거, 목표 시간·거리 너비, 추가 목표 두 열, 분할 선택의 동일 너비·48px 조작·40px 강조 면을 확인했다. 단위 잘림과 가로 넘침은 없었다. Preview의 API 호출은 0건이다. [Mac Chrome 브라우저 계측](evidence/front-18-5-3-final-refinement/chrome-controls.json)
+- 320·375·393·430·1280px에서 숫자 그룹의 가운데 정렬, chevron 제거, 목표 시간·거리 너비, 추가 목표 두 열, 분할 선택의 동일 너비·48px 조작·40px 강조 면을 확인했다. 단위 잘림과 가로 넘침은 없었다. Preview의 API 호출은 0건이다.
 - 페이스 양방향 분 경계와 빠른 연속 스크롤, 직접 입력 정밀도 보존, 경사도 0.1%p와 실제 0 처리, 저항의 정수 휠과 직접 소수 입력, 평균 심박수 1 BPM·범위 오류·공란을 검증했다. 기존 무테두리/포커스 복귀/최대 61개 DOM 및 운동 시작 보호 회귀를 이어서 실행했다.
-- [320px 속도 배치](evidence/front-18-5-3-final-refinement/speed-layout-320.png) · [393px 속도 배치](evidence/front-18-5-3-final-refinement/speed-layout-393.png) · [393px 페이스 배치](evidence/front-18-5-3-final-refinement/pace-layout-393.png) · [페이스 분 경계](evidence/front-18-5-3-final-refinement/pace-boundary-393.png) · [경사도 휠](evidence/front-18-5-3-final-refinement/incline-wheel-393.png) · [신규 목표 범위 Preview](evidence/front-18-5-3-final-refinement/future-goals-393.png)
 
 ## 기존 4173 실제 Spring 연동 기록
 
-4173의 전용 검수 계정에서 새 시험 루틴을 생성하고 재조회했다. 120초·`6:55`·`3.512345%`를 설정했고 서버의 `120`·`6.916667`·`3.512345`가 START 원계획에 일치했다. 실제 평균 심박수를 130 BPM으로 완료 저장하고 기록 정정에서 131 BPM으로 변경했다. 원본 타이머와 기존 실제 활동 시간은 두 번의 저장 사이에 같았다. 루틴 생성 201·조회 200·START 201·스냅샷 200·FINISH 200·정정 200을 확인했다. 시험 운동과 시험 루틴을 정리했으며 마지막 ACTIVE 조회가 비어 있었다. [실서버 검증](evidence/front-18-5-3-final-refinement/live-app.json)
+4173의 전용 검수 계정에서 새 시험 루틴을 생성하고 재조회했다. 120초·`6:55`·`3.512345%`를 설정했고 서버의 `120`·`6.916667`·`3.512345`가 START 원계획에 일치했다. 실제 평균 심박수를 130 BPM으로 완료 저장하고 기록 정정에서 131 BPM으로 변경했다. 원본 타이머와 기존 실제 활동 시간은 두 번의 저장 사이에 같았다. 루틴 생성 201·조회 200·START 201·스냅샷 200·FINISH 200·정정 200을 확인했다. 시험 운동과 시험 루틴을 정리했으며 마지막 ACTIVE 조회가 비어 있었다.
 
 ## 기존 4173 집중 회귀 및 빌드 기록
 
@@ -42,7 +41,7 @@
 
 ## 기존 4173 전체 FRONT 회귀 및 Git 기록
 
-- 최종 소스트리의 전체 FRONT 회귀 734건을 통과했다. 실패·건너뜀은 0건이다. 홈의 조회 실패·복구·시작 가드, 운동 상단 종료·중량 변경, 오프라인·중복 START 보호를 포함한다. [검증 결과와 변경 파일](evidence/front-18-5-3-final-refinement/test-results.json)
+- 최종 소스트리의 전체 FRONT 회귀 734건을 통과했다. 실패·건너뜀은 0건이다. 홈의 조회 실패·복구·시작 가드, 운동 상단 종료·중량 변경, 오프라인·중복 START 보호를 포함한다.
 - 당시 프런트엔드 `87b585a`와 백엔드 `8304b2a`에서 `git diff --check`와 빈 staged diff를 확인했다. 백엔드 작업 트리는 깨끗했다. 검증용 Chrome과 서버 프로세스를 종료했고 4173 게이트웨이의 PC·LAN 응답을 확인했다.
 
 ## Mac 4174 재검수
@@ -51,6 +50,6 @@
 - 실제 앱에서 루틴 → 새 루틴 또는 편집 → 유산소 → 추가 목표 설정으로 접근한다. [Mac 앱](http://127.0.0.1:4174/) · [LAN 앱](http://192.168.0.9:4174/)
 - 공통 Preview에서 유산소 목표, 실제 평균 심박수와 `미지원 목표 범위 · Preview`를 펼칠 수 있다. [Mac Preview](http://127.0.0.1:4174/common-ui-preview.html?controls=1) · [LAN Preview](http://192.168.0.9:4174/common-ui-preview.html?controls=1)
 - LAN HTTP에서 `운동 시작`이 비활성화된 원인은 검수 빌드가 4173에만 IndexedDB 편집 잠금을 지정한 조건이었다. 4174에도 실제 검수 LAN 주소를 지정했다. Web Locks가 없는 LAN HTTP Chrome에서 START 201과 스냅샷·FINISH·심박수 정정 200을 확인했다. 홈·편집 잠금 회귀 20건이 통과했고 시험 루틴·운동 정리 후 ACTIVE가 비어 있었다.
-- Mac Chrome 393px에서 실제 OTP로 로그인해 시험 루틴을 생성하고 재조회했다. 루틴의 거리 `5.123456`km와 경사도 `3.512345%`는 일반 표시를 반올림해도 저장·START 원계획에 그대로 남았다. 페이스 `6:55`는 API에서 `6.916667`분/km였다. 루틴 생성 201, 조회 200, START 201, 스냅샷·FINISH·기록 정정 200을 확인했다. 실제 평균 심박수는 완료에서 130 BPM, 정정 후 131 BPM이었고 원본 타이머와 활동 시간이 보존됐다. 이번 시험 루틴과 기록을 정리한 후 ACTIVE가 비어 있음을 확인했고, 검증용 Chrome을 종료했다. [Mac 실서버 검증](evidence/front-18-5-3-final-refinement/test-results.json)
-- 프런트엔드 `806c6e6` 위의 작업 트리에서 전체 FRONT 734/734건, 집중 125/125건, TypeScript, ESLint, 운영·검수 빌드를 통과했다. 운영 32개·검수 34개 Service Worker 자산의 SHA-256이 일치했고 양쪽 사전 캐시와 운영 빌드에서 Preview 제외를 확인했다. 기존 PostCSS와 Vite 청크 경고는 빌드 로그에 남아 있다. 백엔드 `beccaf4`의 작업 트리와 프런트엔드 staged diff는 비어 있다. [검증 결과와 Git 변경 파일](evidence/front-18-5-3-final-refinement/test-results.json)
+- Mac Chrome 393px에서 실제 OTP로 로그인해 시험 루틴을 생성하고 재조회했다. 루틴의 거리 `5.123456`km와 경사도 `3.512345%`는 일반 표시를 반올림해도 저장·START 원계획에 그대로 남았다. 페이스 `6:55`는 API에서 `6.916667`분/km였다. 루틴 생성 201, 조회 200, START 201, 스냅샷·FINISH·기록 정정 200을 확인했다. 실제 평균 심박수는 완료에서 130 BPM, 정정 후 131 BPM이었고 원본 타이머와 활동 시간이 보존됐다. 이번 시험 루틴과 기록을 정리한 후 ACTIVE가 비어 있음을 확인했고, 검증용 Chrome을 종료했다.
+- 프런트엔드 `806c6e6` 위의 작업 트리에서 전체 FRONT 734/734건, 집중 125/125건, TypeScript, ESLint, 운영·검수 빌드를 통과했다. 운영 32개·검수 34개 Service Worker 자산의 SHA-256이 일치했고 양쪽 사전 캐시와 운영 빌드에서 Preview 제외를 확인했다. 기존 PostCSS와 Vite 청크 경고는 빌드 로그에 남아 있다. 백엔드 `beccaf4`의 작업 트리와 프런트엔드 staged diff는 비어 있다.
 - iPhone Safari와 설치형 PWA 실기기 확인은 남아 있다. 이전 휴식일의 간헐 시작 오류와 운동 저장 상태 간헐 실패의 직접 원인은 미확정이다. 5-3C와 5-4의 최종 승인은 [Decision Log 10.45절](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage5-decision)에 기록했다.

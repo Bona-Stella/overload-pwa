@@ -2,7 +2,7 @@
 
 **기준일:** 2026-11-07 · v0.9 T02-B 개정 (기존 컬러/토큰 유지)
 
-FRONT 18의 현행 시각 규격은 [19절 카드](#front18-card-visual), [20절 버튼·입력](#front18-controls-visual), [18절 메시지](#front18-feedback-visual)를 적용한다.
+FRONT 18의 현행 시각 규격은 [18절 메시지](#front18-feedback-visual), [19절 카드](#front18-card-visual), [20절 버튼·입력](#front18-controls-visual), [21절 선택·기능형 모달](#front18-selection-dialog-visual)을 적용한다.
 
 **범위:** React PWA 실제 구현용 시각 스타일 명세. [HTML 베이스라인](Overload_UI_Baseline_Wireframe_v0.9.html)은 밝은 무채색의 저충실도 자료다. 간단한 색조·아이콘과 기본 화면·상태 전환으로 현재 UI의 정보 위계를 검토한다.
 
@@ -305,7 +305,7 @@ Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warni
 
 ## 19. FRONT 18 카드와 조작 표면 — 2026-11-26
 
-일반 카드 외곽은 **5px**, `#1B1D22` 배경, `1px solid #353941` 테두리다. 기본 패딩은 **12px**이며 너비는 부모 콘텐츠 영역, 높이는 콘텐츠에 따른 자연 높이다. 기본 그림자는 없다. `--radius-card-compact`와 `--card-padding`이 이 값을 제공한다. `--radius-card` 18px과 `--space-card` 18/14px은 기능형 Dialog와 기존 전용 표면의 값이다. 구형 `.card`의 18px 모서리·21px 패딩은 그 클래스를 쓰는 기존 마크업 범위에 한정한다. 공통 강조형에는 저채도 그라데이션, 의미별 색상, 선택 표시와 디로딩 토큰을 각 역할에 적용한다. [테마 토큰](../../src/app/theme.module.css) · [공통 표면 CSS](../../src/components/ui.module.css) · [구형 표면 CSS](../../src/App.css) · [결정 이력](Overload_UI_Decision_Log_v0.9.md#front18-stage4-decision)
+일반 카드 외곽은 **5px**, `#1B1D22` 배경, `1px solid #353941` 테두리다. 기본 패딩은 **12px**이며 너비는 부모 콘텐츠 영역, 높이는 콘텐츠에 따른 자연 높이다. 기본 그림자는 없다. `--radius-card-compact`와 `--card-padding`이 이 값을 제공한다. `--radius-card` 18px과 `--space-card` 18/14px은 해당 토큰을 쓰는 전용 표면의 값이다. 공통 기능형 모달은 [21절](#front18-selection-dialog-visual)을 따른다. 구형 `.card`의 18px 모서리·21px 패딩은 그 클래스를 쓰는 기존 마크업 범위에 한정한다. 공통 강조형에는 저채도 그라데이션, 의미별 색상, 선택 표시와 디로딩 토큰을 각 역할에 적용한다. [테마 토큰](../../src/app/theme.module.css) · [공통 표면 CSS](../../src/components/ui.module.css) · [구형 표면 CSS](../../src/App.css) · [결정 이력](Overload_UI_Decision_Log_v0.9.md#front18-stage4-decision)
 
 | 유형 | 모서리 | 내부 패딩 | 기본 외부 간격 |
 | --- | ---: | --- | --- |
@@ -399,3 +399,20 @@ Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warni
 - 숫자와 단위를 한 그룹으로 가운데 정렬한다. 숫자 영역은 기본 48px, 별도 테두리와 배경 없이 숫자를 눌러 휠을 연다. 설정 중량을 포함한 숫자 휠 진입 chevron은 제거했다. 일반 드롭다운과 접기·펼치기의 화살표는 유지한다. 외부 증감은 기본 48×48px이며 압축형 운동 세트 표는 좌우 폭 44px를 사용한다.
 - 휠 Dialog의 모서리는 5px, 기존 가용 너비를 유지한다. 52px 행과 배경이 강조된 52px 중앙 선택 띠를 둔다. 표시 높이는 화면에 맞춰 156~260px이다. 하단 액션은 높이 48px의 캡슐형, 너비 1:1, 사이 8px이며 직접 입력은 48px·5px이다. [휠 CSS](../../src/components/NumberWheel.module.css) · [사용자 조작](ui-ux.md#312-공통-숫자-입력)
 - 유산소 목표 시간·거리의 기본 정보 행은 각각 전체 너비와 수정 아이콘을 사용한다. 추가 목표는 선택 표기와 균등 2열을 쓴다. 레이블·수치·단위를 가운데에 두고 숫자 영역에 테두리·별도 배경·진입 아이콘을 추가하지 않는다. [유산소 조작과 증감](ui-ux.md#front18-cardio-goals)
+
+<a id="front18-selection-dialog-visual"></a>
+
+## 21. FRONT 18 선택·기능형 모달과 상세 화면
+
+| 용도 | 시각·조작 규격 |
+| --- | --- |
+| 앱 셸·페이지 시작 | 최대 너비 520px, 좌우 20px. 374px 이하에서는 좌우 14px. Safe Area에 더하는 상단 시작 간격은 메인 탭 18px, 일반 하위 화면 20px이다. 여기의 시작 간격은 제목 글자 크기와 별개다. |
+| 공통 하위 헤더 | 22px 제목, 44×44px 뒤로가기, 24px 아이콘. 기존 적용 화면과 설정·검색에서 여는 운동 종목 상세에 사용한다. 일반 하위 제목 20px과의 통합은 후속 검토 범위다. |
+| 드롭다운 | 일반 값 48px, 소형 필터 36px, 홈 콘텐츠 56px. 검색 범위는 검색 행의 전용 규격을 적용한다. 옵션은 기본 48px, 두 줄 설명은 60px을 기준으로 내용이 길면 확장한다. |
+| 펼친 선택 목록 | 최대 340px 및 실제 화면에서 쓸 수 있는 높이 중 작은 값. 내부 스크롤과 기존 상·하 열림, 연결형 모서리·chevron을 유지한다. 홈 항목은 카드 외곽을 추가하지 않는다. 업무 메뉴는 독립 표면, 기존 선택·위험·포커스 색을 사용한다. |
+| 검색 닫기·지우기 | 기존 44px 검색 입력과 원형 42×42px 버튼을 함께 사용한다. |
+| 홈 일정 상세·기록 링크 | 기록 링크가 있는 대표 행 44px, 링크 최소 높이 24px 및 상하 2px·좌우 4px. 일반 캡슐 버튼 규격은 이 인라인 링크에 적용하지 않는다. 긴 내용은 필요한 만큼 줄바꿈한다. |
+| 기능형 모달 | 기본 모서리 5px, 패딩 16px, 제목 아래 16px, 액션 간격 8px 및 높이 48px. 내부 일반 카드는 [19절](#front18-card-visual)의 외곽을 적용한다. 숫자 휠·정정 원본·승인 재확인·전체 화면 타이머의 전용 표면은 각 규격을 따른다. 메시지형의 340px 상한은 [18절](#front18-feedback-visual)에 속한다. |
+| 유산소 실제 완료 정보 | 활동 시간·거리·평균 속도·평균 심박수의 2×2 배치. 명시적으로 정정된 값은 기존 노란색 표시만 사용하고 원본 시각·측정 단위와 표시 정밀도를 보존한다. |
+
+[선택과 뒤로가기 동작](ui-ux.md#front18-common-ux) · [공통 헤더 CSS](../../src/components/RecordSubpageHeader.module.css) · [선택 CSS](../../src/components/common-ui/ConnectedDropdown.module.css) · [모달 CSS](../../src/components/Dialog.module.css)

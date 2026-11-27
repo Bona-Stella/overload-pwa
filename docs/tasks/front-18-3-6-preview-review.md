@@ -53,4 +53,4 @@ Toast는 중복 공지를 줄이고 자동 종료와 `알림 닫기`를 지원�
 | 실제 4173 운동 | 전용 계정의 START·스냅샷·FINISH, 휴식 테스트 OFF에서 구성된 일반 휴식 180초, ON에서 12초를 확인했다. 재진입 후 토글 복원과 기존 계정 설정 보존, 검수 운동 정리 이후 활성 운동 0건을 확인했다. |
 | 격리·미검증 | 당시 앱과 두 Preview의 PC·LAN 경로는 HTTP 200, Spring 상태는 UP이었다. 운영 산출물 및 사전 캐시의 Preview 제외를 확인했다. iPhone Safari, 설치형 PWA와 실기기 효과음 재생은 미검증이며 기존 효과음 문제는 별도 범위다. |
 
-로컬 보존 보고서는 `logs/front18-3-6b-v3-review.md`와 실제 조회 28개 경로의 목록을 담은 `logs/front18-3-6b-refresh-review.md`다. 자동 검사 근거는 `logs/workout-api-review/front18-v3-gap-balanced.tap`, `front18-v3-gap-focused-final.tap`이며 실제 휴식은 같은 디렉터리의 `front18-v3-gap-rest.log`에 있다. 모달 전체 계측은 `logs/common-ui-preview/front18-modal-audit.json`에 있다. 이 표는 보존된 소스 검증 범위를 기록한다. 문서 최신화의 검사는 문서 차이·링크·기준 일치에 한정했다. [진행과 최종 사용자 승인 상태](../engineering/frontend.md#front18-stage3)
+표에 당시 소스 검증 범위를 보존했다. 현행 공통 안내·새로고침·복구 정책과 최신 검증은 [3단계 현황](../engineering/frontend.md#front18-stage3)과 [6단계 최종 점검](../engineering/frontend.md#front18-stage6)을 따른다.

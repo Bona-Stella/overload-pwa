@@ -1,6 +1,6 @@
 # FRONT 18 — 6-1 전체 드롭다운 및 선택 UI 현황 조사
 
-2026-11-26~27 · PWA `4f92880` · [전체 사용처 현황표](evidence/front-18-6-1/selection-inventory.md) · [Chrome 계측 JSON](evidence/front-18-6-1/browser-measurements.json)
+2026-11-26~27 · PWA `4f92880` · [전체 사용처 현황표](evidence/front-18-6-1/selection-inventory.md)
 
 ## 결과
 
@@ -21,7 +21,7 @@
 
 텍스트 검색 14곳, 네이티브 select 18곳(소스 선언 8개), 자체 값 드롭다운 4곳(구현 3개)이다. 루틴 태그 목록을 생성·편집에서 공유하며, 일정 후보의 배정·태그 팝오버는 개별 코드다. 운동 현황과 전체 이력에는 별도 공용 `SearchScopePopover` 1개를 공유한다. 업무용 메뉴·검색 목록·특수 조작은 각각의 분류에 있다.
 
-5-4의 402개 고유 조작 위치 중 **135개**가 이번 표와 대응한다. B/I의 `sameLocationAs` 중복을 한 번 세고, N 번호는 참고 색인으로 사용했다. 이번 표는 고정 요일 슬롯과 흐름별 재사용을 개별로 기록한다. 같은 화면에서 데이터 개수로 늘어나는 카드·세트·배치마다 번호를 부여하는 방식은 사용하지 않았다. [5-1 조사](front-18-5-1-control-audit.md) · [5-4 현황](front-18-5-4-control-rollout.md) · [5단계 마감](front-18-5-5-bc-closure.md)
+5-4의 402개 고유 조작 위치 중 **135개**가 이번 표와 대응한다. B/I의 `sameLocationAs` 중복을 한 번 세고, N 번호는 참고 색인으로 사용했다. 이번 표는 고정 요일 슬롯과 흐름별 재사용을 개별로 기록한다. 같은 화면에서 데이터 개수로 늘어나는 카드·세트·배치마다 번호를 부여하는 방식은 사용하지 않았다. [5-1 조사](front-18-5-1-control-audit.md) · [5-4 현황](front-18-5-4-control-rollout.md) · [5단계 적용 현황](../engineering/frontend.md#front18-stage5)
 
 ## 범위와 근거
 
@@ -89,7 +89,7 @@
 | 카탈로그 검색 | 검색 결과가 페이지의 흐름을 차지한다. 일반 높이에서는 393×852에서 합성 터치로 목록 scrollTop 0→198, 문서 scrollY 0→0을 확인했다. 320×560에서는 709px 전체 결과가 인라인으로 놓이고 overflow가 visible로 바뀌었다. 검색어로 결과가 사라지면 빈 상태로 바뀌고 결과를 지우면 목록이 복귀한다. |
 | Dialog 내 선택 | 복구 사본은 native select, 수행 항목은 행 체크다. 모달과 내부 스크롤이 별도로 있고, Escape로 닫혔다. 별도 웨이트 추가 Dialog는 검색 입력 44px, 3개 결과 173px, Dialog 359×535.8px였다. 결과에서 Escape를 누르면 검색 결과가 닫히고 X에 초점이 돌아오며 Dialog는 유지됐다. |
 
-팝오버의 위아래 공간 계산과 고정 요소의 겹침은 서로 다른 문제다. 홈의 y 보정은 목록을 사용할 공간을 확보하지만 버튼을 가릴 수 있다. 루틴 태그는 주변 콘텐츠를 움직이지 않지만 푸터 뒤로 열린다. 범위 팝오버는 아래 공간이 부족할 때 상향으로 바뀐다. 인라인 검색은 결과가 길어질수록 화면을 차지하지만 다중 상태와 오류를 같은 흐름으로 제공한다. 서비스 선택 코드에 React Portal을 사용하는 경로는 확인되지 않았다. 기능 Dialog는 네이티브 top layer를 사용한다. [통합 계측 JSON](evidence/front-18-6-1/browser-measurements.json)
+팝오버의 위아래 공간 계산과 고정 요소의 겹침은 서로 다른 문제다. 홈의 y 보정은 목록을 사용할 공간을 확보하지만 버튼을 가릴 수 있다. 루틴 태그는 주변 콘텐츠를 움직이지 않지만 푸터 뒤로 열린다. 범위 팝오버는 아래 공간이 부족할 때 상향으로 바뀐다. 인라인 검색은 결과가 길어질수록 화면을 차지하지만 다중 상태와 오류를 같은 흐름으로 제공한다. 서비스 선택 코드에 React Portal을 사용하는 경로는 확인되지 않았다. 기능 Dialog는 네이티브 top layer를 사용한다.
 
 ### 검색과 상태
 
@@ -108,7 +108,7 @@
 | 실제 값 전달 | 후보를 누르면 `{date, routineId}`, 휴식은 `routineId: null`을 해당 날짜 화면 상태에 둔다. 원래 일정 복귀는 override를 지운다. 임시 선택이 사라진 후보를 가리키면 유효한 일정 값으로 돌아간다. |
 | 편집 잠금 확인 범위 | 과거 4174 LAN 허용 출처 결함과 그 수정은 5단계 근거다. 이번에는 LAN HTTP 응답과 Mac 루프백에서의 읽기/선택을 확인했다. 운동 시작, 잠금 획득, 쓰기 재시도 및 디로딩 ACTIVE 조합은 실행 범위 밖이다. |
 
-[HomePanel 조건](../../src/features/home/HomePanel.tsx#L252) · [워크스페이스 상태 연결](../../src/features/workout-online/WorkoutWorkspace.tsx#L680) · [5-3B 조회 실패 이력](front-18-5-3-user-refinement.md#홈-루틴-선택시작-오류) · [LAN 이력](front-18-5-3-final-refinement.md#mac-4174-재검수)
+[HomePanel 조건](../../src/features/home/HomePanel.tsx#L252) · [워크스페이스 상태 연결](../../src/features/workout-online/WorkoutWorkspace.tsx#L680) · [5단계 적용 현황](../engineering/frontend.md#front18-stage5) · [LAN 이력](front-18-5-3-final-refinement.md#mac-4174-재검수)
 
 ## 접근성 및 조작
 
@@ -134,19 +134,19 @@
 
 공용 확대의 위험은 운동 선택 하나가 계획 조합, 기록 승인, 저장과 연결되는 경우에 크다. 짧고 반복되는 단일 목록은 트리거·포커스·위치 계산을 비교하기 적합하다. 검색형과 업무형의 선택은 기존 `SearchList`/Dialog의 부모 상태 계약을 보존하는 쪽이 변경 범위를 줄인다. 여기의 방향은 6-2 논의 후보이며 제품 규격 승인은 남아 있다.
 
-## 대표 이미지와 검증 범위
+## 대표 표본과 검증 범위
 
-| 근거 | 상태 |
+| 표본 | 상태 |
 | --- | --- |
-| [홈 연결형 393](evidence/front-18-6-1/live-home-open-393.png) · [전체 13개 393](evidence/front-18-6-1/live-home-long-393.png) | 전용 검수 계정 |
-| [홈 짧은 화면 320](evidence/front-18-6-1/live-home-short-320.png) | 285px 높이에서 트리거 일부 가림 |
-| [태그 393](evidence/front-18-6-1/preview-routine-tag-393.png) · [태그 하단 320](evidence/front-18-6-1/preview-tag-bottom-320.png) | 합성 옵션, 정상/푸터 겹침 |
-| [운동 현황 범위 393](evidence/front-18-6-1/live-activity-scope-393.png) · [전체 이력 범위 상향 393](evidence/front-18-6-1/preview-record-scope-short-393.png) | 실제 4옵션/합성 2옵션 |
-| [카탈로그 검색 393](evidence/front-18-6-1/preview-catalog-393.png) · [성장 검색 오류 393](evidence/front-18-6-1/preview-growth-error-393.png) | 합성 검색 목록/재조회 |
-| [일정 후보 393](evidence/front-18-6-1/preview-schedule-filters-393.png) · [일정 비활성 393](evidence/front-18-6-1/preview-schedule-disabled-393.png) | 합성 네이티브/필터/쓰기 보호 |
-| [복구 Dialog 393](evidence/front-18-6-1/preview-recovery-dialog-393.png) · [운동 추가 Dialog 검색 393](evidence/front-18-6-1/preview-dialog-search-393.png) | 합성 사본 1개와 체크 선택 / 웨이트 검색 결과 3개 |
-| [홈 휴식 선택 393](evidence/front-18-6-1/live-home-rest-393.png) | 실제 검수 계정에서 임시 휴식 및 비활성 START |
+| 홈 연결형 및 전체 13개 | 전용 검수 계정 |
+| 홈 320px 짧은 화면 | 285px 높이에서 트리거 일부 가림 |
+| 루틴 태그와 하단 목록 | 합성 옵션, 정상/푸터 겹침 |
+| 운동 현황 및 전체 이력의 검색 범위 | 실제 4옵션/합성 2옵션 |
+| 카탈로그 검색과 성장 검색 오류 | 합성 검색 목록/재조회 |
+| 일정 후보와 비활성 상태 | 합성 네이티브/필터/쓰기 보호 |
+| 복구 사본과 운동 추가 검색 | 합성 사본 1개와 체크 선택 / 웨이트 검색 결과 3개 |
+| 홈 휴식 선택 | 실제 검수 계정에서 임시 휴식 및 비활성 START |
 
-Chrome DevTools Protocol을 통한 DOM·computed style·스크린샷 검증이다. 폭 5종은 대표 사용처 비교 범위이며 화면별 상태는 JSON에 있다. 실제 iPhone Safari·설치형 PWA, VoiceOver, OS 네이티브 메뉴, 가상 키보드 표시·닫기, 기기 회전, 고속 연속 터치와 모든 비활성 조합은 미확인이다. 실제 앱의 카탈로그 화면 진입은 자동 조작의 라벨 탐색 단계에서 완료되지 않아 소스와 기존 카탈로그 Preview를 근거로 삼았다. 홈의 외부 클릭은 스크롤과 겹친 좌표에서 실측이 성립하지 않아 소스로 확인했다. 4174에서는 인증 요청·검수용 OTP와 조회 요청을 허용했고 운동·루틴·설정의 변경 요청은 차단했다. 시험 운동을 새로 만들거나 종료하지 않았다. 현행 UI에서 데이터 변경 없이 도달하기 어려운 상태는 기존 Preview를 사용했다.
+Chrome DevTools Protocol을 통한 DOM·computed style·스크린샷 검증이다. 폭 5종은 대표 사용처 비교 범위다. 실제 iPhone Safari·설치형 PWA, VoiceOver, OS 네이티브 메뉴, 가상 키보드 표시·닫기, 기기 회전, 고속 연속 터치와 모든 비활성 조합은 미확인이다. 실제 앱의 카탈로그 화면 진입은 자동 조작의 라벨 탐색 단계에서 완료되지 않아 소스와 기존 카탈로그 Preview를 근거로 삼았다. 홈의 외부 클릭은 스크롤과 겹친 좌표에서 실측이 성립하지 않아 소스로 확인했다. 4174에서는 인증 요청·검수용 OTP와 조회 요청을 허용했고 운동·루틴·설정의 변경 요청은 차단했다. 시험 운동을 새로 만들거나 종료하지 않았다. 현행 UI에서 데이터 변경 없이 도달하기 어려운 상태는 기존 Preview를 사용했다.
 
-이번 차수에는 HTTP 응답, 소스 경로, 44개 브라우저 표본, PNG 14개, Markdown 표 번호와 링크, 작업 전후 Git diff를 검증했다. 스플래시 해제 전 터치·초점 표본은 해제 후 재검증 결과로 대체했고, 초기 수집 오류 및 대체 근거는 JSON의 runs에 남겼다. 5단계의 전체 735/735, 집중 회귀 182/182와 빌드는 이전 결과다. 이번 조사에서는 전수 테스트와 빌드를 반복하지 않았다. 계측용 Chrome 세션을 종료했고, 기존 4174는 유지했다. 작업 결과는 이 보고서와 새 증빙 폴더에 있다. [5단계 검증 기록](evidence/front-18-5-4/test-results.json)
+이번 차수에는 HTTP 응답, 소스 경로, 44개 브라우저 표본, PNG 14개, Markdown 표 번호와 링크, 작업 전후 Git diff를 검증했다. 스플래시 해제 전 터치·초점 표본은 해제 후 재검증 결과로 대체했다. 5단계의 전체 735/735, 집중 회귀 182/182와 빌드는 이전 결과다. 이번 조사에서는 전수 테스트와 빌드를 반복하지 않았다. 계측용 Chrome 세션을 종료했고, 기존 4174는 유지했다.

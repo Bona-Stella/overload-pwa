@@ -97,6 +97,7 @@ README에 작성된 예정 기능을
 |---|---|
 | 최신 기능 정책·구현 경계 | [2026-11-16 확정 정책 10.25절](docs/product/Overload_UI_Decision_Log_v0.9.md#1025--2026-11-16-최신-정책-확정과-구현-경계)의 정책 3-1~3-8을 확인합니다. 달성 판정의 [ST-19](../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md#31-하루-종목-완료-기준)와 [양쪽 구현 상태·후속 과제](docs/engineering/frontend.md#2026-11-16-확정-정책별-구현-점검)를 함께 읽고, 확정 정책과 미완성 구현을 구분합니다. 세부 제품 규칙은 이 문서에 복제하지 않습니다. |
 | 화면 구조·조작 | [UI/UX 적용 지점](docs/product/ui-ux.md)에서 화면별 구성과 동작을, 연결된 [Decision Log](docs/product/Overload_UI_Decision_Log_v0.9.md)에서 확정 결정과 변경 근거를 확인합니다. 다중 프리셋 UI는 [10.16절](docs/product/Overload_UI_Decision_Log_v0.9.md#1016--다중-주간-루틴-일정과-자동-순환)을 적용합니다. |
+| 공통 UI·상태 전환 | [공통 UI·상태 전환 동작](docs/product/ui-ux.md#front18-common-ux)과 [현행 시각 규격](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-selection-dialog-visual)을 확인합니다. 공통 부품 변경 전 실제 사용처와 승인 예외를 대조하고, 기존 조작·입력·저장 보호를 검증합니다. 자동 검사, 격리 서버 검증, 실기기 결과를 각각 기록합니다. |
 | 시각 디자인·자산 | [Visual Theme Spec](docs/product/Overload_UI_Visual_Theme_Spec_v0.9.md)이 실제 Onyx 색상과 토큰을 소유합니다. [HTML](docs/product/Overload_UI_Baseline_Wireframe_v0.9.html)은 무채색 시연입니다. 검색·선택은 [원본 6종](docs/product/assets/exercise-icons/README.md)을 32 CSS px로 표시합니다. |
 | 주간 일정·자동 순환 | [주간 일정 계약](../overload-server/docs/api/weekly-schedule.md)이 적용·순환·복구·G3 날짜 근거와 API의 기준입니다. 현행 V30·V31 계정 경로와 과거 PWA 단일 일정 기록을 구분합니다. |
 | 휴식 타이머 알림 | [결정 10.17절](docs/product/Overload_UI_Decision_Log_v0.9.md#1017--휴식-타이머-시각효과음-알림)과 [T03.5 구현 지침](docs/engineering/frontend.md#t035-휴식-타이머-시각효과음-알림)을 적용합니다. |
