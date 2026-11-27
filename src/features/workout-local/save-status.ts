@@ -13,8 +13,9 @@ export function workoutSaveStatus(state: EditorState, finishing: boolean): Worko
   if (issue || (unsavedDrafts && pending === 0)) return 'failed'
   // A durable FINISH acknowledgement also survives a failed follow-up detail read.
   if (workout?.finish?.ack) return 'saved'
+  if (syncStatus === 'SENDING') return 'saving'
   if (syncIssue && syncStatus !== 'READ' || syncStatus === 'CHECK' || syncStatus === 'OTHER' || workout?.pendingSnapshot?.rejected || workout?.pendingResolution?.rejected) return 'failed'
-  if (finishing || pending > 0 || syncStatus === 'SENDING') return 'saving'
+  if (finishing || pending > 0) return 'saving'
   if (hasPendingWorkoutSave(workout)) return 'waiting'
   return 'saved'
 }

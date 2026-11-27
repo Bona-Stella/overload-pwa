@@ -1,3 +1,4 @@
+import { rememberClosedRecord } from '../workout-online/closed-record-read.ts'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { ClosedPage, Scope, Session } from '../workout-online/types.ts'
 import { hasActualPerformance } from './achievement.ts'
@@ -13,7 +14,11 @@ export async function loadRecent(api: WorkoutApi, scope: Scope, signal: AbortSig
     for (let i = 0; i < candidates.length && rows.length < 3; i += 4) {
       const batch = await Promise.all(candidates.slice(i,i+4).map(async row => {
         seen.add(row.id)
-        try { return { row, detail: await api.detail(scope,row.id,signal) } }
+        try {
+          const detail = await api.detail(scope,row.id,signal)
+          if (!signal.aborted) rememberClosedRecord(api, scope, row, detail)
+          return { row, detail }
+        }
         catch (error) {
           if (signal.aborted || error instanceof Error && 'code' in error && ['OWNER_MISMATCH','DATA_GENERATION_MISMATCH','AUTHENTICATION_REQUIRED'].includes(String(error.code))) throw error
           failed = true; return { row, detail: null }

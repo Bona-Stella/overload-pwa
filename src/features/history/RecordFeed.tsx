@@ -1,14 +1,14 @@
+import { clearClosedRecords, readClosedRecord } from '../workout-online/closed-record-read.ts'
 import {recordSummary,recordDuration} from '../workout-online/record-summary.ts'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
 import {recordTime} from '../../components/record-time.ts'
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
 import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
 import { ContentError, EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
 import { FeedbackIcon } from '../../components/common-ui/FeedbackIcon.tsx'
-import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { Toast } from '../../components/common-ui/Toast.tsx'
 import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import { SearchList } from '../../components/SearchList.tsx'
@@ -35,13 +35,22 @@ function recentDuration(milliseconds: number | null) {
  return [hours?hours+'시간':'',minutes||!hours?minutes+'분':''].filter(Boolean).join(' ')
 }
 
-export function SessionRecordCard({row,session,onOpen,timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone}:{row:RecordRow;session?:Session;timeZone?:string;onOpen:(id:string)=>void}) {
+function RecordCardPlaceholder() {
+  return <article className={`session-record-card ${styles.recentCard}`} aria-busy="true" aria-label="운동 기록을 확인하는 중입니다.">
+   <div className={styles.recentCardHeading} aria-hidden="true"><time className={styles.recordPlaceholder}>00.00 · 월 · 00:00</time><span className={styles.recentStatus}><span className={styles.recordPlaceholder}>전체 완료</span></span><span>›</span></div>
+   <h4 aria-hidden="true"><span className={styles.recordPlaceholder}>운동 루틴</span></h4>
+   <div className={styles.recentFacts} aria-hidden="true"><span className={styles.recordPlaceholder}>웨이트 0/0종목 · 총 0분</span></div>
+  </article>
+}
+
+export function SessionRecordCard({row,session,pending=false,onOpen,timeZone=Intl.DateTimeFormat().resolvedOptions().timeZone}:{row:RecordRow;session?:Session;pending?:boolean;timeZone?:string;onOpen:(id:string)=>void}) {
  const summary=session?recordSummary(session):null,status=summary?.status
  const elapsed=summary?.totalMs??(row.endedAt?Date.parse(row.endedAt)-Date.parse(row.startedAt):null)
  const stamp=recordTime(summary?.startedAt??row.startedAt,session?.startedTimeZone??timeZone,row.workoutDate)
  const date=stamp.replace(/^\d{4}-(\d{2})-(\d{2}) · ([월화수목금토일])요일 · /,'$1.$2 · $3 · ')
  const counts=summary?[summary.hasWeight?'웨이트 '+summary.achievement.weight.completed+'/'+summary.achievement.weight.planned+'종목':null,summary.hasCardio?'유산소 '+summary.achievement.cardio.completed+'/'+summary.achievement.cardio.planned+'종목'+(summary.achievement.cardio.unknown?' · 일부 확인 불가':''):null].filter(Boolean).join(' · '):''
  const label=status?.kind==='complete'?'전체 완료':status?.kind==='partial'?'부분 완료':status?.label
+  if (pending) return <RecordCardPlaceholder />
   return <button type="button" className={`session-record-card ${styles.recentCard}`} data-session-id={row.id} data-session-version={summary?.version} onClick={()=>onOpen(row.id)}>
    <div className={styles.recentCardHeading}><time>{session ? date : row.workoutDate.slice(5).replace('-', '.')}</time><span className={`record-card-status ${styles.recentStatus}`} data-state={status?.kind}>{status&&<b aria-hidden="true">{status.mark}</b>}{label}</span><span aria-hidden="true">›</span></div>
    <h4>{row.routineName}</h4>
@@ -76,7 +85,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
     } catch (error) {
       if (abort.signal.aborted) return
       if (boundaryError(error) || readAccessDenied(error)) {
-        pageRef.current = null; setPage(null); cacheRef.current?.set(null); cacheRef.current?.details?.clear()
+        pageRef.current = null; setPage(null); cacheRef.current?.set(null); cacheRef.current?.details?.clear(); clearClosedRecords(api)
         setRetryCursor(null)
       } else {
         setRetryCursor(cursor)
@@ -95,30 +104,55 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const rows = recent?recentRecordRows(source,today,zone):exerciseSearch && !preview ? [] : recordRows(source, searching ? '0000-01-01' : range.fromDate, searching ? '9999-12-31' : range.toDateExclusive, searching && !exerciseSearch ? appliedTerm : '').filter(row=>!exerciseSearch || !!preview?.sessions.find(s=>s.id===row.id && [...s.initialPlan.weightExercises.map(e=>e.exerciseName),...s.initialPlan.cardioActivities.map(c=>c.plan.name)].some(name=>name.toLocaleLowerCase().includes(appliedTerm.toLocaleLowerCase()))))
   const options = search.scope === 'exercise' ? (preview ? [...new Set(preview.sessions.flatMap(s=>[...s.initialPlan.weightExercises.map(e=>e.exerciseName),...s.initialPlan.cardioActivities.map(c=>c.plan.name)]))].map(name=>({id:name,exerciseId:preview.definitions.find(e=>e.name===name)?.id,name,description:'실제 세션 포함 운동 · 합성 기록'})) : definitions.map(e => ({ id: e.id, exerciseId:e.id, name: e.name, description: '실제 포함 운동 검색 · 서버 연결 대기' })))
     : [...new Set(source.map(s => s.routineName))].map(name => ({ id: name, name, description: '루틴명 · 불러온 종료 기록' }))
-  const [details,setDetails]=useState(() => new Map<string, Session>())
+  const [details, setDetails] = useState(() => new Map<string, Session>())
+  const [unavailable, setUnavailable] = useState(() => new Set<string>())
   const savedDetails = cache?.details ?? details
-  const detailKey=JSON.stringify(rows.filter(row => {
+  const matchingDetail = (row: Pick<ClosedPage['sessions'][number], 'id' | 'version'>) => {
     const detail = savedDetails.get(row.id)
-    return detail?.userId !== userId || detail.dataGeneration !== dataGeneration || detail.version !== row.version
-  }).map(r=>[r.id,r.version]))
-  useEffect(()=>{
-    if(preview||!enabled||detailKey==='[]')return
-    const abort=new AbortController(),ids:[string,string][]=JSON.parse(detailKey),loaded=new Map<string,Session>()
-    let at=0
-    void Promise.all(Array.from({length:Math.min(4,ids.length)},async()=>{
-      while(at<ids.length&&!abort.signal.aborted){
-        const [id,version]=ids[at++]
-        try{const detail=await api.detail(scope,id,abort.signal);if(detail.version===version)loaded.set(id,detail)}
-        catch(error){if(!abort.signal.aborted&&boundaryError(error))failure.current(error)}
+    return detail?.userId === userId && detail.dataGeneration === dataGeneration && detail.version === row.version ? detail : undefined
+  }
+  const existingDetail = useEffectEvent(matchingDetail)
+  const detailKey = JSON.stringify(rows.map(({ id, version, status }) => [id, version, status]))
+  useEffect(() => {
+    if (preview || !enabled || detailKey === '[]') return
+    const abort = new AbortController()
+    const ids: [string, string, ClosedPage['sessions'][number]['status']][] = JSON.parse(detailKey)
+    const missing = ids.filter(([id, version]) => !existingDetail({ id, version }))
+    let at = 0
+    void Promise.all(Array.from({ length: Math.min(4, missing.length) }, async () => {
+      while (at < missing.length && !abort.signal.aborted) {
+        const [id, version, status] = missing[at++]
+        const key = [userId, dataGeneration, id, version].join(':')
+        try {
+          const detail = await readWithDeadline(abort.signal, signal => readClosedRecord(api, { userId, dataGeneration }, { id, version, status }, signal))
+          if (abort.signal.aborted) return
+          if (!detail) { setUnavailable(previous => new Set([...previous, key])); continue }
+          cacheRef.current?.details?.set(id, detail)
+          setDetails(previous => new Map(previous).set(id, detail))
+        } catch (error) {
+          if (abort.signal.aborted) return
+          if (boundaryError(error)) {
+            clearClosedRecords(api)
+            cacheRef.current?.details?.clear()
+            setDetails(new Map())
+            failure.current(error)
+            abort.abort()
+            return
+          }
+          if (readAccessDenied(error)) {
+            cacheRef.current?.details?.delete(id)
+            setDetails(previous => {
+              const visible = new Map(previous)
+              visible.delete(id)
+              return visible
+            })
+          }
+          setUnavailable(previous => new Set([...previous, key]))
+        }
       }
-    })).then(()=>{
-      if(abort.signal.aborted||!loaded.size)return
-      const shared=cacheRef.current?.details
-      if(shared) for(const [id,detail] of loaded)shared.set(id,detail)
-      setDetails(previous=>new Map([...previous,...loaded]))
-    })
-    return()=>abort.abort()
-  },[api,scope,detailKey,refreshKey,preview,enabled])
+    }))
+    return () => abort.abort()
+  }, [api, userId, dataGeneration, detailKey, refreshKey, preview, enabled])
   const tag=search.tag??'ALL'
   const matchingNames=new Set(browseExercises(preview?.definitions??definitions,'',tag as CatalogGroup|'ALL').map(e=>e.name))
   if(tag==='CARDIO')for(const session of preview?.sessions??[])for(const c of session.initialPlan.cardioActivities)matchingNames.add(c.plan.name)
@@ -137,16 +171,16 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
     {exerciseSearch && !preview && <EmptyState icon={<FeedbackIcon name="search" size={24} />} title="운동별 검색은 아직 사용할 수 없어요" description="루틴 이름으로 검색해 보세요." />}
     {page?.next && <p className="muted small" role="status">불러온 기록에서 찾고 있어요. 이전 기록을 더 불러올 수 있어요.</p>}
     <div className="stack" aria-busy={!preview && (!page && !issue || busy) || undefined}>
-      {!page && !preview && (issue ? <ContentError title={readIssue} action={retry} /> : <LoadingSkeleton layout="row" label="운동 기록을 확인하는 중입니다." />)}
+      {!page && !preview && (issue ? <ContentError title={readIssue} action={retry} /> : <RecordCardPlaceholder />)}
       {(!exerciseSearch || !!preview) && (page || preview) && !rows.length && <EmptyState icon={<FeedbackIcon name={searching ? 'search' : 'record'} size={24} />}
         title={searching ? '검색 결과가 없어요' : recent ? '최근 7일간 운동 기록이 없어요' : source.length ? '선택한 기간에 운동 기록이 없어요' : '아직 운동 기록이 없어요'} />}
       {rows.map((row, index) => {
       const week = recordWeek(row.workoutDate), header = !recent && (index === 0 || week.key !== recordWeek(rows[index - 1].workoutDate).key)
-      const cached=savedDetails.get(row.id)
-      const detail=preview?.sessions.find(s=>s.id===row.id)??(cached?.userId===userId&&cached.dataGeneration===dataGeneration&&cached.version===row.version?cached:undefined)
-      return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={detail} onOpen={onOpen} timeZone={zone}/></Fragment>
+      const detail = preview?.sessions.find(s => s.id === row.id) ?? matchingDetail(row)
+      const pending = !preview && !detail && !unavailable.has([userId, dataGeneration, row.id, row.version].join(':'))
+      return <Fragment key={row.id}>{header && <div className="record-week"><b>{week.title}</b><hr /><span>{week.range}</span></div>}<SessionRecordCard row={recent?{...row,workoutDate:completionDate(row,zone)}:row} session={detail} pending={pending} onOpen={onOpen} timeZone={zone}/></Fragment>
     })}</div>
-    {page?.next && (issue && retryCursor ? retry : <Button loading={loadingMore} disabled={!enabled || busy && !loadingMore} onClick={() => void load(page.next)}>이전 기록 더 불러오기</Button>)}
+    {page?.next && <Button loading={loadingMore} disabled={!enabled || busy && !loadingMore} onClick={() => void load(retryCursor ?? page.next)}>이전 기록 더 불러오기</Button>}
     {issue && page && !retryCursor && retry}
     <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </section>

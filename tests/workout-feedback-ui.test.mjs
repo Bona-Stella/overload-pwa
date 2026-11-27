@@ -810,7 +810,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await writeFile(resolve(directory,'integrated-record-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
     }
     assert.deepEqual(await evaluate('(()=>{const root=document.querySelector(".app-shell"),font=getComputedStyle(root).fontFamily;return [...root.querySelectorAll("*")].filter(e=>e.getClientRects().length&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&getComputedStyle(e).fontFamily!==font).map(e=>e.textContent.slice(0,60))})()'),[],'WEIGHT/CARDIO summary fonts')
-    assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"] [class*="cardioTime"]\').textContent'),/수정00:20:30$/,'summary displays the correction badge and rounded seconds')
+    assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"] [aria-label="실제 완료 기록"] [data-modified]\').textContent'),/00:20:30$/,'summary displays the correction badge and rounded seconds')
     assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"]\').textContent'),/자동 기록 00:20:00/)
     await evaluate("window.feedback.record('detail')")
     const recordMenu = 'button[aria-label="운동 기록 메뉴"]'
@@ -1422,7 +1422,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         if (width===393) await evaluate('window.restSafety.hold()')
         await tap(firstPress)
         if (width===393) {
-          await wait(()=>evaluate('window.restEntryFrames.some(frame=>frame.label==="1세트 완료"&&frame.spinner)'))
+          await wait(()=>evaluate('window.restEntryFrames.some(frame=>frame.label==="1세트 완료"&&frame.disabled)'))
+          assert.equal(await evaluate('window.restEntryFrames.some(frame=>frame.label==="1세트 완료"&&frame.spinner)'),false)
           assert.equal(await action('휴식 종료'),null,'a pending local write keeps the original action')
           await evaluate('window.restSafety.release()')
         }

@@ -76,11 +76,17 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
 
   // Returning to the app can cross a server-side rotation or deload boundary.
   useEffect(() => {
-    const visible = () => { if (document.visibilityState === 'visible') refresh() }
-    window.addEventListener('pageshow', refresh)
+    let frame = 0
+    const resume = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => { frame = 0; refresh() })
+    }
+    const visible = () => { if (document.visibilityState === 'visible') resume() }
+    window.addEventListener('pageshow', resume)
     document.addEventListener('visibilitychange', visible)
     return () => {
-      window.removeEventListener('pageshow', refresh)
+      cancelAnimationFrame(frame)
+      window.removeEventListener('pageshow', resume)
       document.removeEventListener('visibilitychange', visible)
     }
   }, [refresh])
@@ -92,10 +98,10 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     writeFlight.current = abort
     readFlight.current?.abort()
     setSaving({ owner, abort })
-    setWriteIssue(null)
     try {
       const saved = await api.write(scope, base, command, abort.signal)
       if (abort.signal.aborted) return null
+      setWriteIssue(null)
       setSnapshot(previous => previous?.owner === owner ? { ...previous, schedule: saved } : previous)
       return saved
     } catch (error) {

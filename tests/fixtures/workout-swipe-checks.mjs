@@ -265,11 +265,14 @@ export async function verifyExerciseSwipe({ origin, send, evaluate, wait, click,
     await click('운동 시작하기', 'textContent', '[data-workout-frame] footer button')
     await delay(1100)
     await click('유산소 완료', 'textContent', '[data-workout-frame] footer button')
-    await wait(() => evaluate(`!!document.querySelector('${current} input[inputmode="decimal"]')`), 'cardio record review inputs')
-    await set(`${current} input[inputmode="decimal"]`, '2.1')
+    const distanceEdit = `${current} button[aria-label="실제 거리 수정"]`
+    await click('실제 거리 수정', 'ariaLabel', distanceEdit)
+    await click('직접 입력', 'textContent', 'dialog[open] button')
+    await set('dialog[open] input[inputmode="decimal"]', '2.1')
+    await click('확인', 'textContent', 'dialog[open] button')
     await transition(1, 3, '러닝머신')
     await transition(-1, 4, '실내 사이클')
-    assert.equal(await evaluate(`document.querySelector('${current} input[inputmode="decimal"]').value`), '2.1')
+    assert.equal(await evaluate(`document.querySelector('${distanceEdit}').previousElementSibling.textContent.trim()`), '2.1 km')
     await transition(1, 3, '러닝머신')
     await transition(1, 2, '바벨 스쿼트')
   } finally {

@@ -24,13 +24,13 @@ function composition(routine: Routine | undefined) {
   return routine ? { weight: exerciseSummary(activeWeights(routine).map(p => p.exerciseName)), cardio: exerciseSummary(activeCardio(routine).map(p => p.plan.name)) }
     : null
 }
-export function RoutineCards({ summaries, details, busy, managementBlocked = false, onSelect, onNew, onEdit, onDelete, schedule, scheduleEditing = false, week, presetHeader, presetNavigation, presetAssignments, scheduleState, listState, listRetry }: {
+export function RoutineCards({ summaries, details, busy, managementBlocked = false, onSelect, onNew, onEdit, onDelete, schedule, scheduleEditing = false, week, presetHeader, presetNavigation, presetAssignments, scheduleState, scheduleLoading = false, listState, listRetry }: {
   week?: Pick<SchedulePreset, 'assignments' | 'version'>;
   presetHeader?: (viewToggle: ReactNode) => ReactNode; presetNavigation?: ReactNode; presetAssignments?: (id: string) => ReactNode; schedule?: ReactNode; scheduleEditing?: boolean;
-  scheduleState?: ReactNode; listState?: ReactNode; listRetry?: ReactNode;
+  scheduleState?: ReactNode; scheduleLoading?: boolean; listState?: ReactNode; listRetry?: ReactNode;
   onEdit?: (id: string) => void; onDelete?: (id: string) => void;
   summaries: RoutineList['routines']; details: Map<string, Routine>; busy: boolean; managementBlocked?: boolean;
-  onSelect: (id: string) => void; onNew: () => void;
+  onSelect: (id: string, trigger: HTMLButtonElement) => void; onNew: (trigger: HTMLButtonElement) => void;
 }) {
   const [day, setDay] = useState<number | null>(null)
   const [vertical, setVertical] = useState(false)
@@ -61,10 +61,10 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
       <div className={styles.eyebrow}>YOUR TRAINING PLAN</div>
       <div className={styles.title}>
         <div><h2>나의 루틴</h2><p className="muted small">다음 운동을 위한 준비. 나에게 맞는 순서로.</p></div>
-        <Button type="button" disabled={busy || managementBlocked} onClick={onNew}>+ 새 루틴</Button>
+        <Button type="button" disabled={busy || managementBlocked} onClick={event => onNew(event.currentTarget)}>+ 새 루틴</Button>
       </div>
     </header>
-    <Card className={`${home.home} ${styles.weekSection}`} aria-label="루틴 주간 일정">
+    <Card className={`${home.home} ${styles.weekSection}`} aria-label="루틴 주간 일정" aria-busy={scheduleLoading || undefined}>
       <div className={styles.weekContent} hidden={scheduleEditing}>
         {presetHeader ? presetHeader(viewToggle) : <div className={styles.title}><strong>이번 주 일정</strong>{viewToggle}</div>}
         {scheduleState ?? (vertical ? <div className={`${styles.weekRows} ${home.dateSelection}`} aria-label="세로 주간 일정">{dayNames.map((name, i) => {
@@ -108,7 +108,7 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
           </div>
           <button type="button" className={styles.cardBody} aria-label={`${r.name} 상세`} data-routine-detail
             onPointerDown={detailPointerGuard.pointerDown} onPointerCancel={detailPointerGuard.pointerCancel}
-            onClick={event => { if (!detailPointerGuard.blocksClick(event)) onSelect(r.id) }}><span className={styles.cardName}>{r.name}</span><span className={styles.exerciseLine}><b>WEIGHT</b><span title={summary?.weight.text}>{summary?.weight.text}</span></span><span className={styles.exerciseLine}><b>CARDIO</b><span title={summary?.cardio.text}>{summary?.cardio.text}</span></span></button>
+            onClick={event => { if (!detailPointerGuard.blocksClick(event)) onSelect(r.id, event.currentTarget) }}><span className={styles.cardName}>{r.name}</span><span className={styles.exerciseLine}><b>WEIGHT</b><span title={summary?.weight.text}>{summary?.weight.text}</span></span><span className={styles.exerciseLine}><b>CARDIO</b><span title={summary?.cardio.text}>{summary?.cardio.text}</span></span></button>
           {presetAssignments?.(r.id)}
         </article>
       })}</div>

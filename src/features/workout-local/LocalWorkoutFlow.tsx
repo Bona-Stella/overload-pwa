@@ -11,7 +11,6 @@ import { Dialog } from '../../components/Dialog.tsx'
 import { ActionDialog } from '../../components/common-ui/ActionDialog.tsx'
 import { draftSaveFailure } from '../../components/common-ui/message-copy.ts'
 import { createRepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
-import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { WorkoutFrame, Warmup, RestActions, ExerciseNavigation, WeightRecommendation } from '../workout-flow/WorkoutFrame.tsx'
 import type { ExerciseScrollPosition } from '../workout-flow/WorkoutFrame.tsx'
 import { WeightFocus, EquipmentEditor } from '../workout-flow/WeightFocus.tsx'
@@ -44,9 +43,9 @@ type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'edit-ca
 const restKey = (rest: LocalWorkout['rest']) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
 const REST_TRANSITION_GUARD_MS = 275
 const FINAL_SET_REVIEW_WINDOW_MS = 750
-export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], visible = true, onHome = () => {}, backLabel, notices, progressAssessment, progressAssessmentPending = false, referenceRecords = [], referenceRoutine = null, createSetId, preparingSummary = false, confirmingFinish = false, navigationIssue, recheckIssue, localOnly = false, onReconnect, onRecheckSession, onReopenLocal, retryFinish, reopeningLocal = false }: {
+export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], historyPending, visible = true, onHome = () => {}, backLabel, notices, progressAssessment, progressAssessmentPending = false, referenceRecords = [], referenceRoutine = null, createSetId, preparingSummary = false, confirmingFinish = false, navigationIssue, recheckIssue, localOnly = false, onReconnect, onRecheckSession, onReopenLocal, retryFinish, reopeningLocal = false }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
-  activities?: CardioActivity[]; history?: Session[] | null; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
+  activities?: CardioActivity[]; history?: Session[] | null; historyPending?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
   progressAssessment?: ProgressAssessment; progressAssessmentPending?: boolean; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
   createSetId?: () => string; preparingSummary?: boolean; confirmingFinish?: boolean; navigationIssue?: string; recheckIssue?: string
   localOnly?: boolean; onReconnect?: () => void; onRecheckSession?: () => void; onReopenLocal?: () => void; reopeningLocal?: boolean
@@ -65,10 +64,10 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const [finishing, setFinishing] = useState(false)
   const [finishDialogDismissed, setFinishDialogDismissed] = useState(false)
   const [retryingFinish, setRetryingFinish] = useState(false)
+  const [retryDescription, setRetryDescription] = useState<string>()
   const [finishRetryIssue, setFinishRetryIssue] = useState<string>()
   const [finishAssessment, setFinishAssessment] = useState<ProgressAssessment>()
   const finishInFlight = finishing || preparingSummary || confirmingFinish || retryingFinish
-  const showFinishWait = useDelayedPending(finishInFlight)
   const [completion, setCompletion] = useState<{ exerciseId: string; ordinal?: number; saving: boolean } | null>(null)
   const [footerRepeatGuard] = useState(createRepeatPointerGuard)
   const [guardedSet, setGuardedSet] = useState<string | null>(null)
@@ -90,7 +89,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   useEffect(() => {
     if (visible && recheckIssue) showFeedback(recheckIssue, 'error')
   }, [visible, recheckIssue, showFeedback])
-  const weights = workout ? flowWeights(state, history, definitions) : []
+  const weights = workout ? flowWeights(state, history, definitions, historyPending) : []
   const weight = weights.find(weight => weight.id === workout?.currentExerciseId)
   const nextSet = weight?.sets.find(set => !set.result)
   const completeWeight = !!weight && isWeightDone(weight)
@@ -259,8 +258,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     setFinishing(true)
     try {
       if (await controller.finish(Date.now(), failure => showFailure(failure, modal === 'end'))) {
-        setModal(null)
         await controller.syncSettled()
+        setModal(null)
       }
     }
     finally { action.current = false; setFinishing(false) }
@@ -342,7 +341,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     if (localOnly) { onReconnect?.(); return }
     action.current = true
     setRetryingFinish(true)
-    setFinishRetryIssue(undefined)
+    setRetryDescription(finishDescription)
     try {
       if (retryFinish) setFinishRetryIssue(await retryFinish())
       else if (state.writable) await controller.retrySync()
@@ -351,6 +350,9 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   }
   const finishIssue = finishRetryIssue ?? state.issue ?? state.syncIssue ?? recheckIssue
   const finishConflict = state.syncStatus === 'OTHER' || state.syncStatus === 'CHECK' || !!state.issue || !!workout.pendingSnapshot?.rejected
+  const finishDescription = finishConflict && finishIssue ? finishIssue
+    : localOnly ? '운동 기록은 보존되어 있습니다. 같은 계정의 로그인 상태를 확인해 주세요.'
+      : '운동 기록은 보존되어 있습니다. 다시 시도해 주세요.'
   // Completion controls and final controls must not share a button's visual state.
   const finishAction = <Button key={id + ':finish'} variant={pending ? 'quiet' : 'primary'} data-click-action={id + ':finish'} pending={finishInFlight}
     loading={finishInFlight && modal !== 'end'} loadingLabel="운동 종료 중"
@@ -421,7 +423,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     : performingWeight ? observedWeightMs(workout, now) : activity && !preparing && !allDone && activity.phase !== 'skipped' ? activity.activeMs : undefined
   const issue = modal && modal === modalFailure?.target ? <StatusNotice error>{modalFailure.message}</StatusNotice> : null
   const dataStatus = workoutSaveStatus(state, finishInFlight)
-  const pendingLabel = showFinishWait && modal !== 'end' && !allDone ? (preparingSummary ? '운동 기록 요약을 불러오고 있습니다.' : '서버 종료 결과를 확인하고 있습니다.') : null
   const draftsNeedRetry = state.writable && state.unsavedDrafts
   const localIssue = (state.unsavedDrafts ? navigationIssue : undefined) ?? recheckIssue ?? state.issue
   const rejected = workout.pendingSnapshot?.rejected || workout.pendingResolution?.rejected
@@ -515,7 +516,6 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
       dataStatus={dataStatus} syncing={state.syncStatus === 'SENDING'} onDataStatusDetails={workout.finish
         ? finishRecovery ? () => setFinishDialogDismissed(false) : undefined
         : hasSaveDetails ? () => setSaveDetailsOpen(true) : undefined}>
-      {pendingLabel && <div className={styles.finishWait}><StatusNotice>{pendingLabel}</StatusNotice></div>}
       <fieldset inert={finishInFlight} disabled={blocked && !finishInFlight} className={styles.controls}>
         {warmup ? <Warmup next={weight ? { name: weight.name, target: `${weight.working || '중량 미지정'}kg · ${weight.min}–${weight.max}회 × ${weight.plannedCount ?? weight.sets.length}세트`,
           equipment: equipmentLabel(weight, manufacturers) } : { name: activity!.plan.name, target: '목표 ' + formatDuration(activity!.plan.targetSeconds * 1000) }} /> : renderExercise(index)}
@@ -524,9 +524,8 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     <ActionDialog kind="confirm" tone="critical"
       open={visible && !preparingSummary && !finishDialogDismissed && (finishRecovery || retryingFinish)}
       title="운동 종료를 확인하지 못했습니다"
-      description={<p>{finishConflict && finishIssue ? finishIssue : localOnly ? '운동 기록은 보존되어 있습니다. 같은 계정의 로그인 상태를 확인해 주세요.'
-        : '운동 기록은 보존되어 있습니다. 다시 시도해 주세요.'}</p>}
-      confirmLabel="다시 시도" pending={retryingFinish} pendingLabel="운동 종료 중"
+      description={<p>{retryingFinish && retryDescription ? retryDescription : finishDescription}</p>}
+      confirmLabel="다시 시도" pending={retryingFinish}
       onConfirm={() => void recoverFinish()} onDismiss={() => setFinishDialogDismissed(true)} />
     {saveDetailsOpen && !workout.finish && <Dialog title={draftRecovery ? draftSaveFailure.title : '데이터 저장 상태'}
       tone={detailsTone} onClose={() => setSaveDetailsOpen(false)}>

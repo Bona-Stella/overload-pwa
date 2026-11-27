@@ -79,7 +79,7 @@
   color: var(--text-muted);
 }
 .dayDetail { margin: var(--card-gap-dense) 0 0; padding: 10px; border-radius: var(--radius-card-compact); background: var(--surface-input); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
-.home .dayLink { display: inline; min-height: 24px; padding: 2px 4px; font-size: 11px; color: var(--accent); }
+.home button.dayLink { display: inline; min-height: 24px; padding: 2px 4px; font-size: 11px; color: var(--accent); }
 .recent { display: grid; gap: var(--card-gap-dense); }
 .home .record { display:grid; grid-template-columns:minmax(0,1fr) max-content 18px 6px; align-items:center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; text-align: left; padding: var(--card-padding-compact); background: var(--surface-card); color: var(--text-primary); border: var(--border-card); border-radius: var(--radius-card-compact); }
 .recordDate { grid-column:1 / -1; font-size:11px; white-space:nowrap; color: var(--accent); }

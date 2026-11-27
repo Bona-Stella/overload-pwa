@@ -14,7 +14,7 @@ export function RecentWorkout({ row, detail, onOpen }: { row: RecentRow; detail?
   const status=detail?sessionDisplayStatus(detail):{kind:'unknown',mark:'?',label:'달성 확인 불가'}
   const state = status.kind, mark = status.mark
   const title = [row.workoutDate,row.routineName,result ? [result.weight.planned && explanation('웨이트',result.weight),result.cardio.planned && explanation('유산소',result.cardio)].filter(Boolean).join(' · ') || '최초 계획 없음' : '수행 상세 확인 불가',status.label,row.status === 'AUTO_CLOSED' ? '자동 종료' : ''].filter(Boolean).join(' · ')
-  return <button type="button" className={styles.record} data-session-id={row.id} title={title} aria-label={title} onClick={() => onOpen(row.id)}>
+  return <button type="button" className={styles.record} data-session-id={row.id} data-session-version={detail?.version} title={title} aria-label={title} onClick={() => onOpen(row.id)}>
     <span className={styles.recordDate}>{homeRecordTime(row.startedAt,detail?.startedTimeZone??Intl.DateTimeFormat().resolvedOptions().timeZone,row.workoutDate)}</span><strong className={styles.recordName}>{row.routineName}</strong>
     <span className={styles.recordFacts}>{result ? <>{!!result.weight.planned && <span aria-label={explanation('웨이트',result.weight)}><AchievementIcon kind="weight" />{count(result.weight)}</span>}{!!result.cardio.planned && <span aria-label={explanation('유산소',result.cardio)}><AchievementIcon kind="cardio" />{count(result.cardio)}</span>}</> : <span aria-label="수행 상세 미확인">—</span>}</span>
     <span className={styles.recordState} data-state={state} aria-label={status.label}><span aria-hidden="true">{mark}</span></span><span aria-hidden="true">›</span>

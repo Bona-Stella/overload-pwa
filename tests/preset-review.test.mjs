@@ -42,13 +42,13 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
   const click = (text, by = 'textContent', selector = 'button') => wait(() => evaluate(
     '(() => { const e = [...document.querySelectorAll(' + JSON.stringify(selector) + ')].find(e => e.getClientRects().length && !e.disabled && (e[' + JSON.stringify(by) + '] ?? "").trim() === ' + JSON.stringify(text) + '); if (!e) return false; e.click(); return true })()'), text)
   const nav = 'nav[aria-label="기본 탐색"]'
-  const navTo = async label => {
-    const buttons = nav + ' button:not([inert])'
-    if (await evaluate(`document.querySelector('${nav}')?.dataset.collapsed === 'true'`)) {
-      await click('하단 메뉴 펼치기', 'ariaLabel', buttons)
-    }
-    await click(label, 'ariaLabel', buttons)
-  }
+  const navTo = label => wait(() => evaluate(`(() => {
+    const buttons = [...document.querySelectorAll('${nav} button:not([inert]):enabled')];
+    const target = buttons.find(button => button.ariaLabel === ${JSON.stringify(label)});
+    if (target?.getClientRects().length) { target.click(); return true }
+    buttons.find(button => button.ariaLabel === '하단 메뉴 펼치기')?.click();
+    return false;
+  })()`), label)
   const set = (selector, value) => selector.includes('data-dropdown-label') ? chooseDropdown(evaluate, selector, value) : evaluate(
     '(() => { const e = document.querySelector(' + JSON.stringify(selector) + '); Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), "value").set.call(e, ' + JSON.stringify(value) + '); e.dispatchEvent(new Event(e.tagName === "SELECT" ? "change" : "input", {bubbles:true})); })()')
   const body = () => evaluate("document.body?.innerText ?? ''")
@@ -696,7 +696,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /시연용 새 루틴/)
     await navTo('루틴'); await click(createdName + ' 상세', 'ariaLabel')
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="주간 일정 배정"] li')].map(row=>[...row.children].map(cell=>cell.textContent))`),[['01','기본 훈련 주간','수']])
-    assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="유산소 1"] dd')].map(cell=>cell.textContent.trim())`),['20 분','2.5 km','8 km/h','0 %'])
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="유산소 1"] dd')].map(cell=>cell.textContent.trim())`),['00:20:00','2.5 km','8.0 km/h','0 %'])
     await click('편집'); await set('input[placeholder="나의 루틴"]', '시연용 수정 루틴')
     await set(fault, 'network'); await click('변경 사항 저장')
     await wait(async () => (await body()).includes('연결이 끊겼습니다'), 'routine save failure')

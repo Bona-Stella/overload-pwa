@@ -281,8 +281,7 @@ export function HomeView(props: HomeViewProps) {
   const restDay = restSelected || !chosenId && !!data && data.schedule.version !== '0'
   const hideStartForRest = restDay || props.completeRest
   const showStart = props.attempt || props.action === 'start' || !hideStartForRest && (!!chosenId || !!data && !props.hideChooser)
-  const startLabel = props.action === 'retry' ? '확인 중' : hideStartForRest && props.attempt ? '기존 시작 요청 다시 확인'
-    : hideStartForRest && props.action === 'start' ? '시작 요청 확인 중' : '운동 시작'
+  const startLabel = hideStartForRest && props.attempt ? '기존 시작 요청 다시 확인' : '운동 시작'
   const chooserLocked = props.busy || !!props.action || !!props.active || props.attempt || props.protectedView
   const routineRefresh = chosenId && !props.active && !props.attempt ? props.routineRefreshes?.get(chosenId) : undefined
   const startable = (detail: Routine | null | undefined) => !!detail && (activeWeights(detail).length > 0 || activeCardio(detail).length > 0)

@@ -84,7 +84,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
     assert.equal(sample.search.radius, '999px')
     assert.equal(sample.searchButton.radius, '50%')
     assert.equal(searchOpen.closeRadius, '50%')
-    assert.equal(sample.fields.length, 2)
+    assert.equal(sample.fields.length, 1)
     assert.ok(sample.fields.every(({ height, radius, padding }) => height === 48 && radius === '5px' && padding[0] === '12px'))
     assert.ok(sample.period.every(({ width, height, radius }) => width === 44 && height === 44 && radius === '5px'))
     assert.ok(sample.back.height >= 44 && sample.back.width >= 44 && sample.back.border === '0px')

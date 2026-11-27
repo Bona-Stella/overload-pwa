@@ -12,7 +12,7 @@ const panelUrl = new URL('../src/features/statistics/StatisticsPanel.tsx', impor
 const growthUrl = new URL('../src/features/statistics/GrowthPanel.tsx', import.meta.url).href
 registerHooks({
   resolve(specifier, context, next) {
-    if (specifier.endsWith('/app/navigation.ts') || specifier === 'react' && ([panelUrl, growthUrl].includes(context.parentURL) || context.parentURL?.endsWith('/useReadErrorToast.ts'))) return { url: new URL('./fixtures/statistics-panel-hooks.mjs', import.meta.url).href, shortCircuit: true }
+    if (specifier.endsWith('/app/navigation.ts') || specifier === 'react' && ([panelUrl, growthUrl].includes(context.parentURL) || context.parentURL?.endsWith('/useReadErrorToast.ts') || context.parentURL?.endsWith('/useRecordDetailHistory.ts'))) return { url: new URL('./fixtures/statistics-panel-hooks.mjs', import.meta.url).href, shortCircuit: true }
     return next(specifier, context)
   },
   load(url, context, next) {
@@ -39,7 +39,13 @@ function nodes(tree) {
   return [tree, ...nodes(tree.props?.children), ...nodes(tree.props?.action)]
 }
 function setup(t, owner = scope, freezeTime = true) {
-  globalThis.window = { history:{state:null}, scrollTo() {} }
+  const events = new EventTarget()
+  if (!globalThis.window) {
+    globalThis.window = { history: { state: null }, scrollY: 0, scrollTo() {},
+      addEventListener: events.addEventListener.bind(events), removeEventListener: events.removeEventListener.bind(events) }
+    globalThis.document = { activeElement: null }
+    globalThis.HTMLElement = class {}
+  }
   if (freezeTime) t.mock.timers.enable({ apis: ['Date'], now: now.getTime() })
   const requests = [], invalid = []
   const api = new StatisticsApi({ workoutRequest: (userId, path, method, body, signal) => new Promise((resolve, reject) => {
@@ -50,7 +56,7 @@ function setup(t, owner = scope, freezeTime = true) {
   })
   const props = { api, scope: owner, refreshKey: 'home', onOpen() {}, onInvalid: error => invalid.push(error) }
   const panel = mountPanel(StatisticsPanel, props)
-  t.after(() => { panel.unmount(); delete globalThis.window })
+  t.after(() => panel.unmount())
   let tree = panel.render()
   const view = () => nodes(tree).find(node => node.type === StatisticsView)
   const control = () => nodes(tree).find(node => node.type?.name === 'PeriodControls')?.props

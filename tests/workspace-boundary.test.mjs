@@ -60,7 +60,7 @@ test('real React reconciliation respects workout, settings, account, generation 
       return createElement('section', {'data-boundary-summary': String(summary), style: {minHeight: '200vh'}}, loaded
         ? createElement(WorkoutSummary, {...summaryData(session ?? window.recordScenario, null), manufacturers: [], detail: !summary, onBack,
           reviewContent: createElement('div', {'data-boundary-review': true}, createElement(SavedWeightReview, {
-            key: reviewAttempt, api: reviewApi, session: session ?? window.recordScenario, readOnly: !summary, disabled: false, authorized: () => true, onReadSettled: onSettled}))},
+            key: reviewAttempt, api: reviewApi, session: session ?? window.recordScenario, readOnly: !summary, disabled: false, authorized: () => true, onReadSettled: () => onSettled?.(true)}))},
           createElement('button', {id: 'test-reopen-weight-review', onClick: () => setReviewAttempt(n => n + 1)}, '검토 다시 열기'))
         : createElement('button', {id: 'test-load-finished-record', onClick: () => setLoaded(true)}, '종료 기록 로드'));
     }
@@ -180,10 +180,11 @@ test('real React reconciliation respects workout, settings, account, generation 
     await evaluate('history.forward()')
     await wait(() => evaluate('!!document.querySelector("[data-boundary-summary=true]")'))
     await send('Emulation.setDeviceMetricsOverride', { width: 393, height: 540, deviceScaleFactor: 1, mobile: false })
-    for (const [tab, card] of [['home', '#test-home-record'], ['history', '.session-record-card']]) {
+    for (const [tab, card] of [['home', '#test-home-record'], ['history', 'button.session-record-card']]) {
       await evaluate(`window.openRecordBoundary(${JSON.stringify(tab)})`)
       await wait(() => evaluate(`!!document.querySelector('${card}')?.getClientRects().length`))
-      const sourceScroll = await evaluate(`(()=>{const card = document.querySelector('${card}'); window.scrollTo(0,180); const before=scrollY; card.click(); return before})()`)
+      const sourceScroll = await evaluate(`(()=>{const card = document.querySelector('${card}'); window.scrollTo(0,180); const before=scrollY;
+        card.focus({preventScroll:true}); window.recordTrigger=card; window.recordOrigin=history.state.overloadNavigation.index; card.click(); return before})()`)
       assert.ok(sourceScroll >= 100, 'the source view must be scrollable')
       await wait(() => evaluate('!!document.querySelector("#test-load-finished-record")'))
       await evaluate('document.querySelector("#test-load-finished-record").click()')
@@ -192,6 +193,7 @@ test('real React reconciliation respects workout, settings, account, generation 
       assert.equal(await visible(card), true)
       assert.equal(await evaluate('scrollY'), sourceScroll, 'scroll is preserved while waiting for review')
       assert.equal(await visible('[data-boundary-summary=false]'), false)
+      assert.equal(await evaluate('history.state.overloadNavigation.index === window.recordOrigin'), true)
       await finishReview('candidate')
       await wait(() => visible('[data-boundary-summary=false]'))
       assert.equal(await evaluate('scrollY'), 0)
@@ -199,6 +201,7 @@ test('real React reconciliation respects workout, settings, account, generation 
       await evaluate('history.back()')
       await wait(() => visible(card))
       assert.equal(await evaluate('scrollY'), sourceScroll, 'Back restores the originating scroll position')
+      assert.equal(await evaluate('document.activeElement === window.recordTrigger'), true, 'Back restores the selected record')
     }
     await evaluate('window.openGraphBoundary()')
     const graphMenu = '[aria-label="운동 분석 메뉴"]'
@@ -313,7 +316,18 @@ test('real React reconciliation respects workout, settings, account, generation 
     assert.equal(await evaluate(`window.workoutAccess.reads===1 && document.querySelector('${confirm}').disabled`),true)
     await evaluate('window.workoutAccess.failRead()')
     await wait(() => evaluate(`document.querySelector('${dialog}')?.textContent.includes('연결을 확인해 주세요.')`))
-    await evaluate(`document.querySelector('${confirm}').click()`)
+    await evaluate(`{
+      const node=document.querySelector('${dialog}');
+      window.workoutAccess.holdRetryRead=true;
+      window.previousOpenError = [node, node.offsetHeight, node.querySelector('[data-dialog-description]').textContent];
+      document.querySelector('${confirm}').click()
+    }`)
+    await wait(() => evaluate(`!!document.querySelector('${confirm}:disabled')`))
+    assert.equal(await evaluate(`(() => {
+      const node=document.querySelector('${dialog}'), [previous,height,message]=window.previousOpenError;
+      return node===previous && node.offsetHeight===height && node.querySelector('[data-dialog-description]').textContent===message;
+    })()`), true)
+    await evaluate('window.workoutAccess.completeRead()')
     await wait(() => evaluate(`!!document.querySelector('[data-workout-frame]') && !document.querySelector('${dialog}')`))
     assert.equal(await evaluate('window.workoutAccess.reads'),2)
     assert.deepEqual(await evaluate(`window.workoutAccess.read().then(w=>[w.serverRevision,w.snapshot.performedSets.length])`),['1',1])
@@ -533,8 +547,19 @@ test('real React reconciliation respects workout, settings, account, generation 
         await wait(() => evaluate(`!document.querySelector('${finishDialog}')`))
         await evaluate(`document.querySelector('${finishButton}').click()`)
         await wait(() => evaluate(`!!(${finishRetry})`))
-        await evaluate(`window.footerFrames=[];const retry=${finishRetry};retry.click();retry.click();`)
+        await evaluate(`{
+          window.footerFrames=[];
+          const node=document.querySelector('${finishDialog}');
+          window.previousFinishError=[node,node.offsetHeight,node.querySelector('[data-dialog-description]').textContent];
+          const retry=${finishRetry};retry.click();retry.click();
+        }`)
         await wait(() => evaluate('window.workoutAccess.requests.length===2'))
+        await evaluate('new Promise(resolve=>setTimeout(resolve,320))')
+        assert.equal(await evaluate(`(() => {
+          const node=document.querySelector('${finishDialog}'),[previous,height,message]=window.previousFinishError;
+          return node===previous && node.offsetHeight===height && node.querySelector('[data-dialog-description]').textContent===message &&
+            !!(${finishRetry}).querySelector('[data-button-spinner]') && (${finishRetry}).innerText.trim()==='다시 시도';
+        })()`), true)
       }
       await evaluate('window.workoutAccess.completeRequest()')
       await wait(() => evaluate('typeof window.workoutAccess.beginSummary==="function"'))

@@ -8,6 +8,7 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { WorkoutStore } from '../workout-online/storage.ts'
 import type { CardioActivity, Manufacturer, StandardExercise, Session } from '../workout-online/types.ts'
+import type { EditorState } from './controller.ts'
 import { LocalWorkoutController } from './controller.ts'
 import type { ExitGuardRegistration, LocalWorkout, RestPolicy } from './types.ts'
 import type { SyncOptions } from './sync.ts'
@@ -15,15 +16,14 @@ import { LocalWorkoutView } from './LocalWorkoutFlow.tsx'
 import { ApprovalControls } from './ApprovalControls.tsx'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import { useProgressAssessment } from './useProgressAssessment.ts'
-import { useDelayedPending } from '../../components/useDelayedPending.ts'
 export { LocalWorkoutView } from './LocalWorkoutFlow.tsx'
 
-export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, onOpened, onWorkoutChange, offlineRestart = false, visible = true, preparingSummary = false, onHome, backLabel, history = [], assessmentApi, referenceRecords = [], referenceRoutine = null, navigationIssue, permissionIssue, accountIssue, onReconnect, onRecheckSession, recheckBeforeOpen, editor }: {
+export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, onOpened, onWorkoutChange, offlineRestart = false, visible = true, preparingSummary = false, onHome, backLabel, history = [], historyPending, assessmentApi, referenceRecords = [], referenceRoutine = null, navigationIssue, permissionIssue, accountIssue, onReconnect, onRecheckSession, recheckBeforeOpen, editor }: {
   server: Session; policy: RestPolicy; definitions: StandardExercise[]; manufacturers?: Manufacturer[]; activities?: CardioActivity[]
   authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
   onReady?: (workout: LocalWorkout) => void; onWorkoutChange?: (workout: LocalWorkout) => void
   onOpened?: (session: Session) => void; preparingSummary?: boolean
-  offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[] | null
+  offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[] | null; historyPending?: boolean
   assessmentApi?: Pick<WorkoutApi, 'progressAssessment'>; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
   navigationIssue?: string; permissionIssue?: string; accountIssue?: string; onReconnect?: () => void; onRecheckSession?: () => void
   recheckBeforeOpen?: () => Promise<Session | null>
@@ -32,6 +32,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   const [initial] = useState(() => ({ server, policy, onReady, onOpened }))
   const [checking, setChecking] = useState(false)
   const [checkFailure, setCheckFailure] = useState<'read' | 'changed' | null>(null)
+  const [retryFailure, setRetryFailure] = useState<EditorState['openFailure']>()
   const [dismissed, setDismissed] = useState(false)
   const retrying = useRef(false)
   const mounted = useRef(false)
@@ -43,7 +44,8 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const progress = useProgressAssessment(state.workout, authenticated ? assessmentApi : undefined)
   const opening = state.loading || checking
-  const showOpening = useDelayedPending(opening && visible)
+  const openFailure = checking ? retryFailure ?? state.openFailure : state.openFailure
+  const showOpening = visible && !openFailure && !preparingSummary
   if (dismissed && (!visible || !state.openFailure)) setDismissed(false)
   useLayoutEffect(() => {
     // The outgoing editor stays visible while the summary loads, but no longer needs its lock.
@@ -69,8 +71,8 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   async function retryOpen() {
     if (retrying.current || controller.getSnapshot().loading) return
     retrying.current = true
+    setRetryFailure(controller.getSnapshot().openFailure)
     setChecking(true)
-    setCheckFailure(null)
     try {
       const latest = !localOnly && recheckBeforeOpen ? await recheckBeforeOpen() : server
       if (!mounted.current) return
@@ -82,6 +84,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
         return
       }
       await controller.open(latest, policy)
+      setCheckFailure(null)
       if (!mounted.current || controller.isStopped()) return
       const opened = controller.getSnapshot()
       if (opened.writable && opened.workout) onReady?.(opened.workout)
@@ -121,12 +124,12 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   }, [state.pending, state.unsavedDrafts])
   useEffect(() => { if (state.workout) onWorkoutChange?.(state.workout) }, [state.workout, onWorkoutChange])
   if (!state.workout) return <section hidden={!visible} className="stack" aria-label="실제 운동 로컬 기록">
-    {state.openFailure && !preparingSummary && <RecordSubpageHeader title="운동 진행" onBack={onHome} backLabel={backLabel ?? '홈으로'} backDisabled={opening} />}
+    {!preparingSummary && <RecordSubpageHeader title="운동 진행" onBack={onHome} backLabel={backLabel ?? '홈으로'} backDisabled={opening} />}
     {showOpening && <LoadingSkeleton layout="workout" label="로컬 운동과 편집 잠금을 확인하고 있습니다." />}
-    <ActionDialog kind="confirm" tone="critical" open={visible && !preparingSummary && !!state.openFailure && !dismissed} title="운동을 불러오지 못했습니다"
-      description={<p>{state.openFailure?.preserved && <>운동 데이터는 보존되어 있습니다.<br /></>}
+    <ActionDialog kind="confirm" tone="critical" open={visible && !preparingSummary && !!openFailure && !dismissed} title="운동을 불러오지 못했습니다"
+      description={<p>{openFailure?.preserved && <>운동 데이터는 보존되어 있습니다.<br /></>}
         {checkFailure === 'read' ? '현재 운동 상태를 확인하지 못했습니다. 연결을 확인해 주세요.' : checkFailure === 'changed'
-          ? '운동 상태가 바뀌었습니다. 이전 화면에서 현재 운동을 확인해 주세요.' : state.openFailure?.kind === 'lock'
+          ? '운동 상태가 바뀌었습니다. 이전 화면에서 현재 운동을 확인해 주세요.' : openFailure?.kind === 'lock'
           ? '다른 탭에서 운동을 편집 중인지 확인한 뒤 다시 확인해 주세요.' : '현재 운동 상태를 다시 확인해 주세요.'}</p>}
       confirmLabel="다시 확인" pending={opening} onConfirm={() => void retryOpen()} onDismiss={() => setDismissed(true)} />
     {permissionIssue && <StatusNotice>{permissionIssue}</StatusNotice>}
@@ -151,7 +154,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
       && <ApprovalControls key="approval" state={state} controller={controller} />,
   ].filter(Boolean)
   return <LocalWorkoutView state={state} controller={controller} definitions={definitions} manufacturers={manufacturers} activities={activities}
-    referenceRecords={referenceRecords} referenceRoutine={referenceRoutine} history={history} visible={visible} onHome={onHome} backLabel={backLabel} notices={notices} progressAssessment={progress.value}
+    referenceRecords={referenceRecords} referenceRoutine={referenceRoutine} history={history} historyPending={historyPending} visible={visible} onHome={onHome} backLabel={backLabel} notices={notices} progressAssessment={progress.value}
     progressAssessmentPending={progress.pending}
     preparingSummary={preparingSummary} confirmingFinish={confirmingFinish} navigationIssue={navigationIssue}
     recheckIssue={checkFailure === 'read' ? '현재 운동 상태를 확인하지 못했습니다. 연결을 확인해 주세요.' : checkFailure === 'changed'

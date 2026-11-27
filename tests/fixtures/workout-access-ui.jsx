@@ -204,6 +204,7 @@ function AccessFixture() {
       editor={controller} preparingSummary={preparingSummary} onHome={() => setEntered(false)} recheckBeforeOpen={async () => {
         fixture.reads++
         if (phase === 'retry' && fixture.reads === 1) return new Promise(resolve => { fixture.failRead = () => resolve(null) })
+        if (phase === 'retry' && fixture.holdRetryRead) return new Promise(resolve => { fixture.completeRead = () => resolve(latest) })
         return recoveringFinish ? remote : latest
       }} /> : <button onClick={() => setEntered(true)}>운동 이어가기</button>}
   </AppShell>

@@ -23,6 +23,7 @@ export function ConnectedDropdown({ label, value, selectedValue, variant = 'cont
   const root = useRef<HTMLDivElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
+  const pressingInside = useRef(false)
   const [requested, setOpen] = useState(false)
   if (disabled && requested) setOpen(false)
   const open = requested && !disabled
@@ -46,20 +47,26 @@ export function ConnectedDropdown({ label, value, selectedValue, variant = 'cont
     if (!open || !region || !button || !content) return
     const stop = placeDropdown(region, button, content, connected, variant === 'content', variant === 'action')
     const dismiss = (event: Event) => {
-      if (event.target instanceof Node && !region.contains(event.target)) setOpen(false)
+      const inside = event.target instanceof Node && region.contains(event.target)
+      if (event.type === 'pointerdown') pressingInside.current = inside
+      if (!inside) setOpen(false)
     }
+    const cancelPress = () => { pressingInside.current = false }
     const navigate = () => setOpen(false)
     const visibility = new ResizeObserver(() => {
       if (!button.getClientRects().length || button.matches(':disabled')) setOpen(false)
     })
     visibility.observe(region)
     document.addEventListener('pointerdown', dismiss, true)
+    document.addEventListener('pointercancel', cancelPress, true)
     document.addEventListener(openedEvent, dismiss)
     window.addEventListener('popstate', navigate)
     return () => {
       stop()
       visibility.disconnect()
+      cancelPress()
       document.removeEventListener('pointerdown', dismiss, true)
+      document.removeEventListener('pointercancel', cancelPress, true)
       document.removeEventListener(openedEvent, dismiss)
       window.removeEventListener('popstate', navigate)
       delete region.dataset.placement
@@ -68,8 +75,10 @@ export function ConnectedDropdown({ label, value, selectedValue, variant = 'cont
 
   return <div ref={root} className={[styles.root, className].filter(Boolean).join(' ')} data-dropdown={variant} data-open={open}
     onBlur={event => {
-      if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false)
-    }} onKeyDown={event => {
+      // A touch can move focus before its click reaches the option. Outside pointerdown already dismisses.
+      if (!pressingInside.current && event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+    }} onClickCapture={() => { pressingInside.current = false }} onKeyDown={event => {
+      pressingInside.current = false
       if (event.defaultPrevented || event.nativeEvent.isComposing) return
       if (open && event.key === 'Escape') {
         event.preventDefault()

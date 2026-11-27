@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
 import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
 import { ContentError, EmptyState } from '../../components/common-ui/ContentFeedback.tsx'
@@ -10,7 +11,7 @@ import { durationLabel, durationMinutesLabel } from '../../components/duration.t
 import { RecordChart } from './RecordChart.tsx'
 import { ActivityTrendChart } from './ActivityTrendChart.tsx'
 import { displayDecimal, sumDecimals } from './display-decimal.ts'
-import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Session, Scope, ClosedPage } from '../workout-online/types.ts'
 import type { Statistics, StatisticsApi, WeightStats, Overview } from './api.ts'
@@ -20,9 +21,9 @@ import type { StandardExercise } from '../workout-online/types.ts'
 import type { LiveSchedule } from './weekly-schedule.ts'
 import { SearchList } from '../../components/SearchList.tsx'
 import { Button, Card } from '../../components/ui.tsx'
-import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
+import { navigateBack, observeNavigation, useScreenHistory } from '../../app/navigation.ts'
 import { RecordFeed } from '../history/RecordFeed.tsx'
-import { restoreParentScroll } from '../history/useRecordDetailHistory.ts'
+import { useDetailReturn } from '../history/useRecordDetailHistory.ts'
 import { WeeklyMusclePlan, WeeklyMuscleStatistics } from './MuscleAnalysis.tsx'
 import { muscleGroups } from './muscle-analysis.ts'
 import { PeriodControls } from './PeriodControls.tsx'
@@ -238,13 +239,25 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   const identity = scope.userId + ':' + scope.dataGeneration
   const [screen, setScreen] = useScreenHistory<RecordScreen>('records:' + identity + (initialPreset ? ':preset:' + initialPreset : ''), initialPreset ? 'plan' : 'summary')
   const panel = useRef<HTMLElement>(null)
-  const [entry, setEntry] = useState<{screen: RecordScreen; scroll: number; presented?: boolean} | null>(null)
-  const [planReady, setPlanReady] = useState(false)
+  const [requestedScreen, setRequestedScreen] = useState<RecordScreen | null>(null)
+  const [openIssue, setOpenIssue] = useState<string | null>(null)
+  const openFeedback = useReadErrorToast(enabled && screen === 'summary' ? openIssue : null)
+  const rememberAnalysisReturn = useDetailReturn(screen === 'summary' ? undefined : screen, identity, undefined, true, panel)
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
+    const cancel = () => setRequestedScreen(null)
+    const unsubscribe = observeNavigation(cancel)
+    window.addEventListener('popstate', cancel)
+    return () => { unsubscribe(); window.removeEventListener('popstate', cancel) }
+  }, [])
+  if (!enabled && requestedScreen) setRequestedScreen(null)
+  const [planReady, setPlanReady] = useState<{ ready: boolean; failure?: string }>({ ready: false })
+  const settlePlan = useCallback((ready: boolean, failure?: string) => setPlanReady({ ready, failure }), [])
   const [retainPlan, setRetainPlan] = useState(screen === 'plan')
-  if (screen === 'plan' && !retainPlan) setRetainPlan(true)
+  if ((screen === 'plan' || requestedScreen === 'plan') && !retainPlan) setRetainPlan(true)
   const [activityPeriod, setActivityPeriod] = useScreenHistory<PeriodSelection>('activity-period:' + identity + (preview?.activity ? ':sample' : ''), { mode:'week', anchor:preview?.activity?.period.fromDate??preview?.today??localToday() })
   type Mode = PeriodSelection['mode']
-  const inActivity = screen === 'activity'
+  const inActivity = screen === 'activity' || requestedScreen === 'activity'
   const selectionKey = enabled && inActivity ? JSON.stringify([identity, activityPeriod]) : null
   const [queuedPeriod, setQueuedPeriod] = useState<{ origin: string; value: PeriodSelection } | null>(null)
   const pending = queuedPeriod && queuedPeriod.origin === selectionKey ? queuedPeriod.value : null
@@ -287,20 +300,17 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   const issue = failure?.request === failedRequest
   const refreshing = !!failure && !issue && failure.request.startsWith(failedRequest.slice(0, failedRequest.lastIndexOf(',') + 1))
   const activityState = inActivity && !current ? issue ? 'error' : 'loading' : undefined
-  const waitingForScreen = !preview && entry?.screen === screen && !entry.presented && (
-    (screen === 'activity' || screen === 'muscles') && !current && !issue ||
-    screen === 'plan' && !!workoutApi && (schedule ? !planReady : scheduleLoading)
-  )
-  if (entry?.screen === screen && !entry.presented && !waitingForScreen) setEntry({ ...entry, presented: true })
-  const shown = waitingForScreen ? 'summary' : screen
-  const previousScreen = useRef<RecordScreen | null>(null)
+  const screenFailure = requestedScreen === 'plan' ? (!schedule ? scheduleIssue : undefined) ?? planReady.failure
+    : requestedScreen && issue && !current ? failure.message : undefined
+  const screenReady = requestedScreen === 'plan' ? !!schedule && planReady.ready : !!current
+  if (requestedScreen && screenFailure) {
+    setRequestedScreen(null)
+    setOpenIssue(screenFailure)
+  }
   useLayoutEffect(() => {
-    const previous = previousScreen.current
-    previousScreen.current = shown
-    if (previous === shown || !panel.current?.getClientRects().length) return
-    if (shown === 'summary' && entry?.screen === previous) return restoreParentScroll(entry.scroll)
-    window.scrollTo({ top: 0, behavior: 'instant' })
-  }, [shown, entry])
+    if (requestedScreen && enabled && screenReady && !screenFailure) setScreen(requestedScreen)
+  }, [enabled, requestedScreen, screenFailure, screenReady, setScreen])
+  const shown = screen
   const flights = useRef<Partial<Record<Mode, AbortController>>>({})
 
   const settleOverview = useEffectEvent((mode: Mode, key: string, request: string, result: { data: Overview } | { error: unknown }) => {
@@ -380,13 +390,23 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   const achievement=preview || !workoutApi || evidenceIds==='[]' ? weekly : currentEvidence?.weekly ?? null
   const back = () => navigateBack(() => setScreen('summary', true))
   function openScreen(next: RecordScreen) {
-    if (waitingForScreen && next === screen) return
-    if (next !== 'history') setEntry({ screen: next, scroll: window.scrollY ?? 0 })
-    if (next === 'plan') setPlanReady(false)
-    setScreen(next, waitingForScreen)
+    if (requestedScreen === next) return
+    setOpenIssue(null)
+    rememberAnalysisReturn()
+    if (!preview && (next === 'plan' && workoutApi || (next === 'activity' || next === 'muscles') &&
+      !cachedPeriod(next === 'activity' ? activityPeriod : { mode: 'week', anchor: localToday() }))) {
+      if (next === 'plan') {
+        setPlanReady({ ready: false })
+        if (scheduleIssue) onRetrySchedule?.()
+      } else if (issue) retry(next === 'activity' ? activityPeriod.mode : 'week')
+      setRequestedScreen(next)
+    } else {
+      setRequestedScreen(null)
+      setScreen(next)
+    }
   }
   function openRecent(id: string) {
-    if (waitingForScreen) setScreen('summary', true)
+    setRequestedScreen(null)
     onOpen(id)
   }
   const displayed = shown === 'summary' ? summaryOverview : current
@@ -408,10 +428,10 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
         {(issue || refreshing) && (displayed ? retryOverview : <ContentError title={readIssue} action={retryOverview} />)}
         {shown === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={openRecent} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>openScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button compact variant="quiet" onClick={() => openScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
     {retainPlan && workoutApi && <div hidden={shown !== 'plan'} className="statistics-plan">
-      <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} active={enabled && screen === 'plan'} onReadSettled={setPlanReady} />
+      <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} active={enabled && (screen === 'plan' || requestedScreen === 'plan')} onReadSettled={settlePlan} />
     </div>}
-    <StatisticsWait pending={!!waitingForScreen || shown === 'plan' && !schedule && !!scheduleLoading} label="운동 통계를 불러오는 중입니다." />
-    <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
+    {shown === 'plan' && !schedule && !scheduleIssue && <LoadingSkeleton layout="detail" label="운동 통계를 불러오는 중입니다." />}
+    <Toast toast={openFeedback.toast ?? feedback.toast} onDismiss={openFeedback.toast ? openFeedback.dismiss : feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
     {preview&&shown!=='plan'&&shown!=='muscles'&&<p className="record-note muted small">합성 목록·통계·날짜 판정 시연입니다. 실제 API·DB 조회와 공식 G4 계산은 수행하지 않습니다.</p>}
   </section>
 }

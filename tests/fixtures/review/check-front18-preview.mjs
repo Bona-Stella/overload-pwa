@@ -194,25 +194,18 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
   await tools('완료한 운동 · 종료 및 요약')
   await tools('다음 종료 서버 거절')
   await click('운동 종료 및 요약', 'footer button')
-  await click('저장 실패 · 데이터 상태 확인')
-  await audit('서버 종료 거절', 'critical', '종료 결과 확인')
+  await shown('운동 종료를 확인하지 못했습니다')
+  await audit('서버 종료 거절', 'critical', '다시 시도')
   await dismiss()
 
   await tools('완료한 운동 · 종료 및 요약')
   await tools('다음 종료 결과 미확인')
   await click('운동 종료 및 요약', 'footer button')
-  await shown('종료 결과 확인')
+  await shown('운동 종료를 확인하지 못했습니다')
+  await dismiss()
   await click('저장 실패 · 데이터 상태 확인')
-  await shown('저장 여부를 아직 확인하지 못했어요.')
-  await audit('운동 종료 결과 미확인', 'recheck')
-  assert.deepEqual(await evaluate(`(() => {
-    const dialog = document.querySelector('dialog[open]'), description = dialog.querySelector('p');
-    const action = [...dialog.querySelectorAll('button')].find(button => button.textContent === '다시 확인');
-    return [dialog.dataset.messageTone, getComputedStyle(dialog.querySelector('[data-feedback-icon=syncing]')).color,
-      getComputedStyle(description).textAlign, getComputedStyle(description).wordBreak, getComputedStyle(action).backgroundColor];
-  })()`), ['recheck', 'rgb(108, 147, 198)', 'center', 'keep-all', 'rgb(108, 147, 198)'])
-  await click('닫기', 'dialog button[data-modal-neutral]')
-  await modalClosed()
+  await audit('운동 종료 결과 미확인', 'critical', '다시 시도')
+  await dismiss()
   await tools('재연결·복구 가능 상태로 전환')
   await shown('운동 기록 요약')
   await menu()
@@ -548,7 +541,7 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
     if (width === 393) await capture('front18-393-start-unconfirmed')
     layouts.find(sample => sample.width === width).home = before
     await click('운동 시작', '[data-click-action="retry-start"]')
-    await shown('확인 중')
+    await waitFor(() => evaluate(`!!document.querySelector('[data-action-shape][aria-busy=true][data-click-action="retry-start"]:disabled')`), 'start result pending')
     await waitFor(() => evaluate(`!!document.querySelector('[data-click-action="start"]:not(:disabled)')`), 'resolved start result')
   }
   await send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true })

@@ -6,9 +6,20 @@ export function useState(initial) {
   if (!(index in host.slots)) host.slots[index] = typeof initial === 'function' ? initial() : initial
   return [host.slots[index], value => {
     if (!host.mounted) { host.lateUpdates++; return }
-    host.slots[index] = typeof value === 'function' ? value(host.slots[index]) : value
+    const current = host.slots[index]
+    const next = typeof value === 'function' ? value(current) : value
+    if (!Object.is(current, next)) {
+      host.slots[index] = next
+      host.updated = true
+    }
   }]
 }
+export function useCallback(callback, deps) {
+  const ref = useRef({ callback, deps })
+  if (deps.some((item, index) => !Object.is(item, ref.current.deps[index]))) ref.current = { callback, deps }
+  return ref.current.callback
+}
+export const observeNavigation = () => () => {}
 export const useRef = initial => useState(() => ({ current: initial }))[0]
 export function useEffectEvent(callback) {
   const ref = useRef(callback)
@@ -29,11 +40,15 @@ export function mountPanel(Component, props) {
   const host = { slots: [], effects: [], index: 0, mounted: true, lateUpdates: 0 }
   return {
     render() {
-      host.index = 0; active = host
-      let tree
-      try { tree = Component(props) } finally { active = undefined }
-      for (const effect of host.effects.splice(0)) effect()
-      return tree
+      for (let render = 0; render < 25; render++) {
+        host.index = 0; host.updated = false; active = host
+        let tree
+        try { tree = Component(props) } finally { active = undefined }
+        if (host.updated) { host.effects.length = 0; continue }
+        for (const effect of host.effects.splice(0)) effect()
+        if (!host.updated) return tree
+      }
+      throw new Error('Statistics fixture did not settle')
     },
     unmount() {
       for (const slot of host.slots) slot?.cleanup?.()

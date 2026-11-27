@@ -40,6 +40,22 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
   </>
 }
 
+export function PresetLoadingHeader() {
+  return <>
+    <div className={styles.titleRow}>
+      <span className={styles.kicker}>주간 루틴 일정</span><span className={`${styles.status} ${styles.loadingSlot}`} aria-hidden="true" />
+    </div>
+    <div className={styles.header} aria-hidden="true">
+      <div className={styles.presetIdentity}><span className={styles.number} /><strong className={styles.loadingSlot}>주간 루틴 일정</strong></div>
+      <div className={styles.tools}>{[0, 1, 2].map(slot => <span className={styles.loadingSlot} key={slot} />)}</div>
+    </div>
+  </>
+}
+
+export function PresetLoadingNavigation() {
+  return <div className={styles.navigation} aria-hidden="true">{[0, 1, 2].map(slot => <span className={styles.loadingSlot} key={slot} />)}</div>
+}
+
 export function RoutineCreatedNotice({ name, onLater, onAssign, blocked = false }: {
   name: string; onLater: () => void; onAssign: () => void; blocked?: boolean
 }) {

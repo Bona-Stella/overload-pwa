@@ -46,7 +46,7 @@ export function plannedOrdinals(workout: LocalWorkout, id: string) {
   for (let ordinal = 1; ordinals.size < visible; ordinal++) if (!excluded.has(ordinal)) ordinals.add(ordinal)
   return [...ordinals].sort((a, b) => a - b)
 }
-export function flowWeights(state: EditorState, history: Session[] | null = [], definitions: StandardExercise[] = []): WeightFocusData[] {
+export function flowWeights(state: EditorState, history: Session[] | null = [], definitions: StandardExercise[] = [], historyPending = history === null): WeightFocusData[] {
   const w = state.workout!
   return w.snapshot.appliedPlan.weightExercises.map(plan => {
     const id = plan.sessionExerciseId, initial = w.initialPlan.weightExercises.find(p => p.sessionExerciseId === id)
@@ -69,7 +69,7 @@ export function flowWeights(state: EditorState, history: Session[] | null = [], 
         const value = existing ?? draftFromPrevious(w, id, ordinal, prior?.reps)
         const result = performed.find(s => s.ordinal === ordinal)
         return { id: ordinal, draft: { kg: value.weight, reps: value.reps, additional: value.additionalWeight ?? '' },
-          previous: prior, repsPending: history === null && !existing, ...(result ? { result: resultView(result) } : {}) }
+          previous: prior, repsPending: historyPending && previous.size === 0 && !existing, ...(result ? { result: resultView(result) } : {}) }
       }) }
   })
 }

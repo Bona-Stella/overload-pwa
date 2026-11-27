@@ -1,3 +1,4 @@
+import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import { RecordChart } from './RecordChart.tsx'
 import { sumDecimals, displayDecimal } from './display-decimal.ts'
@@ -6,7 +7,6 @@ import { Button, Card } from '../../components/ui.tsx'
 import type { WorkoutApi } from '../workout-online/api.ts'
 import type { Routine, Scope, StandardExercise, StandardExerciseDetail } from '../workout-online/types.ts'
 import type { LiveSchedule } from './weekly-schedule.ts'
-import { StatisticsWait } from './StatisticsWait.tsx'
 import { actualAnalysis, muscleGroups, plannedAnalysis, muscleSubtotal } from './muscle-analysis.ts'
 import type { AnalysisData, AnalysisRow } from './muscle-analysis.ts'
 import type { Statistics } from './api.ts'
@@ -106,7 +106,7 @@ export function MuscleAnalysisView({ data, plan, presets = [], selected, onSelec
 type SchedulePreset = LiveSchedule['presets'][number]
 type PlanSource = { key: string; identity: string; routines: Map<string, Routine>; catalog: StandardExerciseDetail[] }
 
-export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshKey, onInvalid, definitions = [], active = true, onReadSettled }: { api: WorkoutApi; scope: Scope; schedule: LiveSchedule | null | undefined; initialPreset?: string; refreshKey: string; onInvalid: (error: unknown) => void; definitions?: StandardExercise[]; active?: boolean; onReadSettled?: (ready: boolean) => void }) {
+export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshKey, onInvalid, definitions = [], active = true, onReadSettled }: { api: WorkoutApi; scope: Scope; schedule: LiveSchedule | null | undefined; initialPreset?: string; refreshKey: string; onInvalid: (error: unknown) => void; definitions?: StandardExercise[]; active?: boolean; onReadSettled?: (ready: boolean, failure?: string) => void }) {
   const preview = useRecordPreview()
   const { userId, dataGeneration } = scope
   const stateKey = userId + ':' + dataGeneration + ':plan:' + (initialPreset ?? 'records')
@@ -129,7 +129,7 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
   const ready = !!schedule && (!!preview || !preset || !!confirmed || failed)
   if ((preview || confirmed) && presetId !== shownId) setShownId(presetId)
 
-  useLayoutEffect(() => { if (active) onReadSettled?.(ready) }, [active, onReadSettled, ready])
+  useLayoutEffect(() => { if (active) onReadSettled?.(ready, !confirmed && failed ? issue.message : undefined) }, [active, onReadSettled, ready, confirmed, failed, issue])
   useEffect(() => {
     if (!active || preview || !presetId || confirmed) return
     const abort = new AbortController()
@@ -165,7 +165,7 @@ export function WeeklyMusclePlan({ api, scope, schedule, initialPreset, refreshK
   return <>
     {(data || hasFailure) && <MuscleAnalysisView stateKey={stateKey} data={data} plan presets={presets} selected={displayed.id} onSelect={id => setSelected(id,true)} />}
     {hasFailure && (data ? retry : <ContentError title={readIssue} action={retry} />)}
-    <StatisticsWait pending={active && !ready && !data && !hasFailure} label="주간 근육 계획을 불러오는 중입니다." />
+    {active && !ready && !data && !hasFailure && <LoadingSkeleton layout="detail" label="주간 근육 계획을 불러오는 중입니다." />}
     <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </>
 }

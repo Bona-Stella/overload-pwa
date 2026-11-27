@@ -140,7 +140,7 @@ export class WorkoutSynchronizer {
   }
   private async pump(check: boolean) {
     let server: Session | undefined
-    if (this.access.read()?.finish) this.access.status('SENDING')
+    if (hasPendingWorkoutSave(this.access.read())) this.access.status('SENDING')
     if (this.access.read()?.finish?.ack) { await this.publishFinished(); return }
     if (check) {
       server = await this.detail()

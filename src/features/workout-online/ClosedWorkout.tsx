@@ -118,7 +118,7 @@ export function WorkoutHistory({ api, scope, onOpen, refreshKey, onInvalid }: { 
 }
 type ClosedPersistence = { store: ConstructorParameters<typeof ClosedWorkoutController>[1]; acquire: ConstructorParameters<typeof ClosedWorkoutController>[6] }
 
-export function ClosedWorkout({ api, scope, recordId, session, cache, authorized, onServer, onRoutineApproved, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, onSettled, persistence }: { summary?: boolean; onSettled?: () => void; api: WorkoutApi; scope: Scope; recordId: string; session: Session | null; cache: Map<string, ClosedDisplay>; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session, changed: boolean) => void; onRoutineApproved: (scope: Scope, routineId: string, version: string) => void; onInvalid?: (error: unknown) => void; persistence?: ClosedPersistence }) {
+export function ClosedWorkout({ api, scope, recordId, session, cache, authorized, onServer, onRoutineApproved, onInvalid, manufacturers = [], definitions = [], onBack, backLabel, accountReady, summary = false, onSettled, persistence }: { summary?: boolean; onSettled?: (loaded: boolean) => void; api: WorkoutApi; scope: Scope; recordId: string; session: Session | null; cache: Map<string, ClosedDisplay>; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string; accountReady: boolean; authorized: () => boolean; onServer: (server: Session, changed: boolean) => void; onRoutineApproved: (scope: Scope, routineId: string, version: string) => void; onInvalid?: (error: unknown) => void; persistence?: ClosedPersistence }) {
   const latest = useRef({ session, authorized, onServer, onInvalid, accountReady, onSettled })
   useLayoutEffect(() => { latest.current = { session, authorized, onServer, onInvalid, accountReady, onSettled } }, [session, authorized, onServer, onInvalid, accountReady, onSettled])
   const [view, setView] = useState<{ controller: ClosedWorkoutController; state: ClosedState } | null>(null)
@@ -131,7 +131,7 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
   const issue = view?.state.busy ? lastIssue : view?.state.issue ?? lastIssue
   const showSummaryWait = useDelayedPending(summary && !showRecord && !issue)
   if (showRecord && !presented) setPresented(true)
-  useLayoutEffect(() => { if (ready && latest.current.authorized()) latest.current.onSettled?.() }, [ready])
+  useLayoutEffect(() => { if (ready && latest.current.authorized()) latest.current.onSettled?.(!!view?.state.server) }, [ready, view?.state.server])
   useLayoutEffect(() => {
     if (!accountReady) return
     const store = persistence ? null : new WorkoutStore()

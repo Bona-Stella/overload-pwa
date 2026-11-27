@@ -346,9 +346,17 @@ export class AuthController {
     this.running = true
     const expected = this.state.userId, generation = ++this.generation
     const cached = this.accountDetailsCache
-    this.set({ accountOpen: true, account: { ...emptyAccount(), ...cached, loaded: !!cached, resendAt: this.state.account.resendAt }, issue: entering ? null : this.state.issue, notice: '', pending: 'account' })
-    if (entering && updateRoute) this.route('/account')
-    try { await this.readAccount(expected, generation); this.set({ issue: null }) }
+    const show = () => {
+      this.set({ accountOpen: true })
+      if (entering && updateRoute) this.route('/account')
+    }
+    this.set({ account: { ...emptyAccount(), ...cached, loaded: !!cached, resendAt: this.state.account.resendAt }, issue: entering ? null : this.state.issue, notice: '', pending: 'account' })
+    if (entering && cached) show()
+    try {
+      await this.readAccount(expected, generation)
+      if (entering && !cached && this.state.userId === expected && this.state.status === 'authenticated') show()
+      this.set({ issue: null })
+    }
     catch (error) { this.accountFailure(error) }
     finally { await this.finish() }
   }

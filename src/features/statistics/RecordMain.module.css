@@ -56,3 +56,5 @@
   .recentCard .recentCardHeading { gap: 4px; }
   .recentCard .recentCardHeading time, .recentCardHeading .recentStatus { font-size: 10px; }
 }
+
+.recordPlaceholder { display: inline-block; border-radius: var(--radius-control); background: var(--surface-input); color: transparent; }

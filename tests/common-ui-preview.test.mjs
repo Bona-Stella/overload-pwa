@@ -219,10 +219,11 @@ test('independent common UI preview renders reusable controls and handles intera
           getComputedStyle(document.activeElement).outlineColor,
         ]`), ['danger-primary', true, 'rgb(240, 183, 191)'])
         await send('Emulation.setDeviceMetricsOverride', { width, height: 852, deviceScaleFactor: 1, mobile: false })
-        const target = await evaluate(`(() => {
-          const { x, y, width, height } = document.activeElement.getBoundingClientRect()
-          return { x: x + width / 2, y: y + height / 2 }
-        })()`)
+        const target = await waitFor(() => evaluate(`((button) => {
+          const { x, y, width, height } = button.getBoundingClientRect()
+          const center = { x: x + width / 2, y: y + height / 2 }
+          return matchMedia('(hover: hover)').matches && button.contains(document.elementFromPoint(center.x, center.y)) && center
+        })(document.activeElement)`), 'desktop destructive action hit area')
         await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 3, y: 3, pointerType: 'mouse' })
         await send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...target, pointerType: 'mouse' })
         await waitFor(() => evaluate(`(() => {

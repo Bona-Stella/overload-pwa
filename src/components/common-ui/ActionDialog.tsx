@@ -52,6 +52,7 @@ export function ActionDialog(props: ActionDialogProps) {
         onClick={props.kind === 'alert' ? props.onDismiss : props.onConfirm}
         loading={props.kind === 'alert' ? undefined : props.pending}
         loadingLabel={props.kind === 'alert' ? undefined : props.pendingLabel}
+        keepLabelDuringLoading={props.kind !== 'alert' && !props.pendingLabel}
       >{props.confirmLabel}</ActionButton>
     </div>
   </Dialog>

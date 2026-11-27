@@ -748,7 +748,14 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await new Promise(resolve=>setTimeout(resolve,360))
     const homeTab=await evaluate('document.querySelector("nav button[data-tab=home]").getBoundingClientRect().toJSON()')
     assert.equal(await evaluate(`(() => { const trigger=document.querySelector('article[aria-label^="상체 PUSH"] button[aria-haspopup=menu]'); const {x,y,width,height}=trigger.getBoundingClientRect(); return trigger.contains(document.elementFromPoint(x+width/2,y+height/2)) })()`),true,'edit menu starts within the visible list')
-    await tap('article[aria-label^="상체 PUSH"] button[aria-haspopup=menu]');await tap('article[aria-label^="상체 PUSH"] [role=menu] button')
+    await tap(routineSummary)
+    const routineEditAction = routineMenuCard + ' [role=menu] button:first-child'
+    await evaluate(`document.addEventListener('pointerdown', event => {
+      if (event.target.matches(${JSON.stringify(routineEditAction)})) {
+        document.querySelector('nav button[data-tab=home]').focus({preventScroll:true});
+      }
+    }, {once:true})`)
+    await tap(routineEditAction)
     await wait(()=>evaluate(`document.querySelector('form input[placeholder="나의 루틴"]')!==null`))
     await identityMatches()
     await evaluate(`document.querySelector('[data-dropdown-label="루틴 태그"]').click()`)

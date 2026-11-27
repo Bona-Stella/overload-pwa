@@ -8,10 +8,11 @@ type ActionButtonProps = ComponentPropsWithoutRef<'button'> & {
   size?: 'regular' | 'modal' | 'small'
   loading?: boolean
   loadingLabel?: string
+  keepLabelDuringLoading?: boolean
 }
 
 export function ActionButton({
-  appearance = 'secondary', size = 'regular', loading, loadingLabel,
+  appearance = 'secondary', size = 'regular', loading, loadingLabel, keepLabelDuringLoading = false,
   disabled, type = 'button', className, children, ...props
 }: ActionButtonProps) {
   const hasLoadingState = loading !== undefined || loadingLabel !== undefined
@@ -27,8 +28,8 @@ export function ActionButton({
     disabled={disabled || loading}
     aria-busy={loading || undefined}
   >
-    <span className={styles.content} data-progress-hidden={showSpinner && !loadingLabel || undefined} aria-hidden={showSpinner && !!loadingLabel || undefined}>{children}</span>
-    {hasLoadingState && <span className={styles.content} data-progress-visible={showSpinner ? true : undefined} aria-hidden={!showSpinner || !loadingLabel || undefined}>
+    <span className={styles.content} data-progress-hidden={showSpinner && !loadingLabel && !keepLabelDuringLoading || undefined} aria-hidden={showSpinner && !!loadingLabel || undefined}>{children}</span>
+    {hasLoadingState && <span className={styles.content} data-progress-visible={showSpinner ? true : undefined} data-progress-with-label={keepLabelDuringLoading || undefined} aria-hidden={!showSpinner || !loadingLabel || undefined}>
       <span className={styles.spinner} data-button-spinner={showSpinner || undefined} aria-hidden="true" />
       {loadingLabel}
     </span>}
