@@ -45,12 +45,12 @@ export function SearchExerciseDetails({ children, api, userId, preview = [], ena
     recordMethod: 'SETS_REPS', instructionsKo: null, equipmentDescription: null,
   }
   const detail = prepared?.owner === owner && prepared.detail.id === selected?.id ? prepared.detail : undefined
-  return <Context value={option => {
+  return <Context value={(option, trigger) => {
     const id = option.exerciseId
     if (!id || !enabled) return
     pageRead.cancel()
     feedback.clear()
-    remember()
+    remember(trigger)
     const route = { id, name: option.name }
     if (!api || !userId || details.has(id)) {
       setPrepared(undefined)

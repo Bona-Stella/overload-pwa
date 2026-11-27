@@ -6,10 +6,6 @@
   word-break: keep-all;
 }
 
-.header { display: grid; gap: 4px; justify-items: start; }
-.header h1 { margin: 0; font-size: 24px; }
-.header .back { padding-inline: 4px 12px; }
-.back span { margin-right: 4px; font-size: 1.2em; }
 .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .description, .aliases { color: var(--text-muted); font-size: 13px; }
 .catalogList {

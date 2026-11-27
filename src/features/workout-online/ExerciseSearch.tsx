@@ -20,7 +20,7 @@ export function ExerciseSearch<T extends SearchExercise>({ exercises, onSelect, 
   const results=useMemo(()=>browseExercises(exercises,query,filter),[exercises,query,filter])
   return <div className="exercise-search" onKeyDown={e=>{if(e.key==='Escape'&&!e.nativeEvent.isComposing)onCancel?.()}}>
     <SearchList defaultOpen={defaultOpen} tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:filter,onSelect:id=>setFilter(id as CatalogGroup|'ALL')}}
-      onDetail={(id,event)=>{const exercise=results.find(e=>e.id===id);if(!exercise)return;if(!resetOnSelect)onSelect(exercise,event);else{onCancel?.();detail?.({id,exerciseId:id,name:exercise.name,description:''})}}}
+      onDetail={(id,event)=>{const exercise=results.find(e=>e.id===id);if(!exercise)return;if(!resetOnSelect)onSelect(exercise,event);else{onCancel?.();detail?.({id,exerciseId:id,name:exercise.name,description:''},event.currentTarget)}}}
       resultsLabel="표준 운동 목록" closeOnSelect={resetOnSelect} query={query} onQuery={setQuery} onClear={()=>{setQuery('');setFilter('ALL')}} disabled={disabled} autoFocus={autoFocus}
       label="표준 운동 검색 · 이름 또는 별칭" loading={loading} issue={failed?'운동 목록을 불러오지 못했어요.':undefined}
       emptyTitle={exercises.length ? '검색 결과가 없어요' : '등록된 표준 운동이 없어요'}

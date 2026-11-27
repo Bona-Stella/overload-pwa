@@ -14,7 +14,7 @@ export function SearchResults({options,onSelect,onDetail,disabled=false,label='�
  const detail=useExerciseDetails()
  return <ul role="list" aria-label={label} className={styles.results+' '+searchStyles.results}>{options.map(o=><li key={o.id}>
   <button type="button" className={styles.result} disabled={disabled} onClick={e=>onSelect(o.id,e)}>{o.icon}<span className={styles.resultText}><strong>{o.name}</strong><small className="muted">{o.description}</small></span></button>
-  {o.exerciseId&&<button type="button" className={searchStyles.detail} aria-label={o.name+' 상세 보기'} disabled={disabled||!detail&&!onDetail} onClick={e=>onDetail?onDetail(o.id,e):detail?.(o)}><span aria-hidden="true">›</span></button>}
+  {o.exerciseId&&<button type="button" className={searchStyles.detail} aria-label={o.name+' 상세 보기'} disabled={disabled||!detail&&!onDetail} onClick={e=>onDetail?onDetail(o.id,e):detail?.(o,e.currentTarget)}><span aria-hidden="true">›</span></button>}
  </li>)}</ul>
 }
 export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,onDetail,query,onQuery,options,onSelect,selected,onClear,disabled,issue,emptyTitle='검색 결과가 없어요',loading=false,resultsPending=false,resultsFooter,onCloseSearch,onSearchOpenChange,autoFocus=false,defaultOpen=false,closeOnSelect=true,resultsLabel='검색 결과',label='이름 검색'}:{

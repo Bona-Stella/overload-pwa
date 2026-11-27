@@ -4,7 +4,7 @@ import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState }
 import { navigateBack, useScreenHistory } from '../../app/navigation.ts'
 import type { Ref } from 'react'
 import { ReviewExerciseMediaContext } from '../../app/review-context.ts'
-import { Button, Card, Metadata } from '../../components/ui.tsx'
+import { Card, Metadata } from '../../components/ui.tsx'
 import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
 import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
 import { ContentError } from '../../components/common-ui/ContentFeedback.tsx'
@@ -61,15 +61,6 @@ export function PublicCatalog({ api, userId, onInvalid, onBack, active = true, e
   if (!active) return null
   return <CatalogView key={userId} items={current ? current.items : prefetched ?? null} failed={current?.failed} message={current?.message} refreshing={!!current && current.request !== retry} loadDetail={loadDetail} detailCache={details}
     onRetry={() => setRetry(value => value + 1)} mediaSources={mediaSources} onBack={onBack} historyScope={userId ?? 'unavailable'} />
-}
-
-function CatalogHeading({ title, backLabel, onBack, headingRef }: {
-  title: string; backLabel: string; onBack: () => void; headingRef: Ref<HTMLHeadingElement>
-}) {
-  return <header className={styles.header}>
-    <Button shape="control" variant="quiet" className={styles.back} aria-label={backLabel} onClick={onBack}><span aria-hidden="true">‹</span> 뒤로</Button>
-    <h1 ref={headingRef} tabIndex={-1}>{title}</h1>
-  </header>
 }
 
 type DetailLoader = (id: string, signal: AbortSignal) => Promise<CatalogBrowseExercise>
@@ -133,7 +124,7 @@ export function CatalogView({ items, failed = false, message, refreshing = false
     </div>
     <Toast toast={openFeedback.toast} onDismiss={openFeedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
     {selected ? <CatalogDetail exercise={selected} onBack={back} headingRef={detailTitle} prepared={prepared?.id === selected.id ? prepared : undefined} loadDetail={loadDetail} detailCache={detailCache} instructionNote={instructionNotes?.[selected.id]} mediaSource={mediaSources?.[selected.id]} reviewNote={reviewNote}/>
-      : selectedId && <div className={styles.screen}><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={back} headingRef={detailTitle} />
+      : selectedId && <div className={styles.screen}><RecordSubpageHeader title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={back} headingRef={detailTitle} />
         {items === null && !failed ? <LoadingSkeleton layout="detail" label="운동 정보를 불러오고 있어요." /> : <ContentError title="운동 정보를 찾을 수 없어요." action={failed ? retry : undefined} />}</div>}
     <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </>
@@ -141,7 +132,11 @@ export function CatalogView({ items, failed = false, message, refreshing = false
 
 /** The existing standard catalog detail page, also used by search-result navigation. */
 export function CatalogDetail({exercise,onBack,headingRef,loadDetail,detailCache,instructionNote,mediaSource,reviewNote,prepared}:{exercise:CatalogBrowseExercise;onBack:()=>void;headingRef:Ref<HTMLHeadingElement>;loadDetail?:DetailLoader;detailCache?:Map<string,CatalogBrowseExercise>;instructionNote?:string;mediaSource?:string;reviewNote?:string;prepared?:CatalogBrowseExercise}){
- return <div className={styles.screen+" catalog-detail-page"} data-catalog-detail><CatalogHeading title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={onBack} headingRef={headingRef}/><SelectedExercise key={exercise.id} exercise={exercise} prepared={prepared} loadDetail={loadDetail} detailCache={detailCache} instructionNote={instructionNote} mediaSource={mediaSource}/>{reviewNote&&<p className={styles.description}>{reviewNote}</p>}</div>
+  return <div className={`${styles.screen} catalog-detail-page`} data-catalog-detail>
+    <RecordSubpageHeader title="운동 상세" backLabel="운동 목록으로 돌아가기" onBack={onBack} headingRef={headingRef} />
+    <SelectedExercise key={exercise.id} exercise={exercise} prepared={prepared} loadDetail={loadDetail} detailCache={detailCache} instructionNote={instructionNote} mediaSource={mediaSource} />
+    {reviewNote && <p className={styles.description}>{reviewNote}</p>}
+  </div>
 }
 
 export function SelectedExercise({ exercise, loadDetail, detailCache, instructionNote, mediaSource, prepared }: {

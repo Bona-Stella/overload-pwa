@@ -993,6 +993,12 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await press('Enter')
     await wait(async () => (await body()).includes('GIF를 제공하지 않습니다'), 'exercise detail')
     assert.equal(await evaluate('document.activeElement.textContent'), '운동 상세')
+    assert.deepEqual(await evaluate(`(() => {
+      const header = document.querySelector('[data-catalog-detail] > header');
+      const back = header.querySelector('button[aria-label="운동 목록으로 돌아가기"]');
+      const title = header.querySelector('h1');
+      return [back.offsetWidth, back.offsetHeight, getComputedStyle(title).fontSize, title.offsetTop < back.offsetTop + back.offsetHeight];
+    })()`), [44, 44, '22px', true])
     assert.deepEqual(await evaluate('[...document.querySelectorAll("main h2")].filter(e => e.getClientRects().length).map(e => e.textContent)'),
       ['랫 풀다운', '동작 시연', '주요 자극 근육', '보조 자극 근육'])
     assert.match(await body(), /PULL.*후면.*조회 전용/s)
@@ -1065,6 +1071,19 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await evaluate('history.back()'); await activeTab('설정')
     await evaluate('history.forward()'); await activeTab('기록')
     assert.equal(await evaluate('document.querySelector(".record-statistics-body")===window.reviewRecordCards'), true)
+    await click('운동 현황', 'ariaLabel')
+    const activitySearch = 'main input[placeholder="운동·분류·근육 검색"]'
+    await wait(() => evaluate(`!!document.querySelector('${activitySearch}')`), 'activity search')
+    await evaluate(`document.querySelector('${activitySearch}').focus()`)
+    await set(activitySearch, '벤치')
+    const detailAction = 'main .record-search li button[aria-label$="상세 보기"]:enabled'
+    const detailLabel = await wait(() => evaluate(`document.querySelector('${detailAction}')?.ariaLabel`), 'exercise result detail')
+    // Pointer activation can leave focus in the input until the detail opens.
+    assert.equal(await evaluate(`document.activeElement.matches('${activitySearch}')`), true)
+    await click(detailLabel, 'ariaLabel', detailAction)
+    await wait(() => evaluate(`document.activeElement.matches('[data-catalog-detail] h1')`), 'detail heading focus')
+    await click('운동 목록으로 돌아가기', 'ariaLabel')
+    await wait(() => evaluate(`document.activeElement.ariaLabel === ${JSON.stringify(detailLabel)}`), 'focus returns to the result that opened the detail')
     await verifyWorkoutReview({ origin, send, evaluate, wait, click, set, body, verifyWidth, drag })
     await verifyExerciseSwipe({ origin, send, evaluate, wait, click, set, verifyWidth })
     await verifyWorkoutProcess({ origin, send, evaluate, wait, click, verifyWidth })
