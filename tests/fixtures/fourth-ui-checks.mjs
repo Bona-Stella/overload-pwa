@@ -19,6 +19,7 @@ export async function verifyFourthUi({go,title,click,set,evaluate,send,wait,widt
  await wait(()=>evaluate('!!document.querySelector("[data-wheel-selection]")'),'continuous wheel')
  for(const w of [320,375,390,430]){
   await capture('fourth-number-wheel','react',w)
+  await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))')
   const wheel=await evaluate('(()=>{const selected=document.querySelector("dialog[open]:not(:has(dialog[open])) [aria-pressed=true]"),other=selected.previousElementSibling,marker=document.querySelector("[data-wheel-selection]"),r=selected.getBoundingClientRect(),m=marker.getBoundingClientRect(),c=getComputedStyle(selected),o=getComputedStyle(other);return{background:c.backgroundColor,radius:c.borderRadius,border:c.borderTopWidth,center:Math.abs(r.top+r.height/2-m.top-m.height/2),selectedOpacity:Number(c.opacity),otherOpacity:Number(o.opacity),font:parseFloat(c.fontSize)>parseFloat(o.fontSize),snap:getComputedStyle(selected.parentElement).scrollSnapType}})()')
   assert.equal(wheel.background,'rgba(0, 0, 0, 0)');assert.equal(wheel.radius,'0px');assert.equal(wheel.border,'0px');assert(wheel.center<1);assert(wheel.selectedOpacity>wheel.otherOpacity);assert(wheel.font);assert.equal(wheel.snap,'y mandatory')
  }

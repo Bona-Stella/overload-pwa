@@ -34,13 +34,13 @@ function workingValue(workout: LocalWorkout, id: string, history: Session[] | nu
   const plan = workout.snapshot.appliedPlan.weightExercises.find(p => p.sessionExerciseId === id)!
   const standard = workout.snapshot.sessionExercises.find(e => e.id === id)?.standardExerciseId
   const previous = working?.initial && standard && history ? latestActualWeight(history, standard, plan) : undefined
-  return { value: previous ?? working?.value ?? '0', previous }
+  return { value: previous ?? working?.value ?? '', previous }
 }
 export function inputDraft(workout: LocalWorkout, id: string, ordinal: number, history: Session[] | null, pending?: Partial<SetDraft>): SetDraft {
   const plan = workout.snapshot.appliedPlan.weightExercises.find(p => p.sessionExerciseId === id)!
   const prior = history && previousRecords(history, workout, id).get(ordinal)
   return {
-    weight: workingValue(workout, id, history).value,
+    weight: workingValue(workout, id, history).value || '0',
     reps: prior ? prior.reps : suggestedReps(plan.minReps, plan.maxReps),
     ...(plan.loadType === 'BODYWEIGHT' ? { additionalWeight: '0' } : {}),
     ...workout.drafts[slotKey(id, ordinal)],
@@ -69,7 +69,7 @@ export function flowWeights(state: EditorState, history: Session[] | null = [], 
     return { id, standardId: w.snapshot.sessionExercises.find(e => e.id === id)?.standardExerciseId ?? '',
       plannedCount: plan.setCount,
       name: workoutExerciseName(id, w.snapshot, w.initialPlan, definitions, w.exerciseNames), min: plan.minReps, max: plan.maxReps,
-      manufacturerId: plan.manufacturerId, loadType: plan.loadType, working: workingKg, workingInitial: working?.initial,
+      manufacturerId: plan.manufacturerId, loadType: plan.loadType, working: workingKg, workingInitial: working?.initial || !workingKg,
       workingFromHistory: typeof previousKg === 'string', workingAmbiguous: previousKg === null,
       approved: applied?.nextApprovedWeightKg ?? initial?.approvedWeightKg ?? null,
       mode: working?.context.kind === 'INITIAL_APPROVED' ? 'approved' : working?.context.kind === 'APPROVAL_REQUEST' ? 'progression' : 'today',
@@ -79,7 +79,7 @@ export function flowWeights(state: EditorState, history: Session[] | null = [], 
         const existing = { ...w.drafts[key], ...state.drafts[key] }
         const prior = previous.get(ordinal)
         const result = performed.find(s => s.ordinal === ordinal)
-        return { id: ordinal, draft: { kg: existing.weight ?? workingKg, reps: existing.reps ?? prior?.reps ?? suggestedReps(plan.minReps, plan.maxReps), additional: existing.additionalWeight || '0' },
+        return { id: ordinal, draft: { kg: existing.weight ?? (workingKg || '0'), reps: existing.reps ?? prior?.reps ?? suggestedReps(plan.minReps, plan.maxReps), additional: existing.additionalWeight || '0' },
           repsInitial: existing.reps === undefined, additionalInitial: !existing.additionalWeight,
           previous: prior, repsPending: historyPending && previous.size === 0 && existing.reps === undefined, ...(result ? { result: resultView(result) } : {}) }
       }) }

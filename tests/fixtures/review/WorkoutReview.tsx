@@ -228,7 +228,11 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
         issue={preview ? null : issueView} resting={restRemaining(weight, now) > 0} editing={!preview && editing}
         onList={() => setModal('list')} onEnd={requestEnd}
         onWeight={() => setModal('weight')} onEdit={() => setEditing(value => !value)} onComplete={complete} onUndo={undo => setModal({ undo })}
-        onDraft={(id, draft) => { updateWeight({ ...weight, sets: weight.sets.map(s => s.id === id && !s.result ? { ...s, draft: { ...s.draft, ...draft } } : s) }); setIssue('') }}
+        onDraft={(id, draft) => {
+          updateWeight({ ...weight, sets: weight.sets.map(s => s.id === id && !s.result
+            ? { ...s, repsInitial: draft.reps === undefined ? s.repsInitial : false, draft: { ...s.draft, ...draft } } : s) })
+          setIssue('')
+        }}
         onExcludeSet={id => updateWeight({ ...weight, sets: weight.sets.filter(s => s.id !== id) })}
         onMemo={memo => updateWeight({ ...weight, memo })}
         editTools={<>

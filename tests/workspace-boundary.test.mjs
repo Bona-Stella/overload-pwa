@@ -630,7 +630,7 @@ test('real React reconciliation respects workout, settings, account, generation 
     assert.equal(await evaluate('window.cardioSurface.draft.distance'),'3.345678')
     assert.equal(await evaluate(`(() => {
       const row=document.querySelector('button[aria-label="실제 거리 수정"]').parentElement;
-      const number=row.querySelector('strong [data-modified]');
+      const number=row.querySelector('strong [data-numeric-value="modified"]');
       return number.textContent==='3.3' && number.parentElement.textContent==='3.3 km' &&
         getComputedStyle(number).color!==getComputedStyle(number.parentElement).color && !row.textContent.includes('수정');
     })()`),true)
@@ -644,10 +644,10 @@ test('real React reconciliation respects workout, settings, account, generation 
     assert.equal(await evaluate('window.cardioSurface.draft.speed'),'0')
     assert.deepEqual(await speedStyle(),originalSpeedStyle)
     assert.equal(await evaluate(`(() => {const b=document.querySelector('button[aria-label="실제 평균 속도 (km/h)"]');
-      const speed=b.querySelector('[data-modified]'),distance=document.querySelector('button[aria-label="실제 거리 수정"]').parentElement.querySelector('[data-modified]');
+      const speed=b.querySelector('[data-numeric-value="modified"]'),distance=document.querySelector('button[aria-label="실제 거리 수정"]').parentElement.querySelector('[data-numeric-value="modified"]');
       return b.textContent==='0.0 km/h' && speed.textContent==='0.0' && getComputedStyle(speed).color===getComputedStyle(distance).color &&
         getComputedStyle(speed).color!==getComputedStyle(b.querySelector('small')).color &&
-        !document.querySelector('button[aria-label="평균 심박수 (BPM)"] [data-modified]') && !document.body.innerText.includes('수정됨');})()`),true)
+        !document.querySelector('button[aria-label="평균 심박수 (BPM)"] [data-numeric-value="modified"]') && !document.body.innerText.includes('수정됨');})()`),true)
     const actualGrid = '[aria-label="실제 완료 기록"]'
     for (const view of ['completed','summary','detail']) {
       await evaluate(`window.cardioSurface.setView('${view}')`)

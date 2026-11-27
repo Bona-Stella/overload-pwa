@@ -12,12 +12,15 @@ const at=Date.parse('2026-10-31T12:10:00Z')
 const local=()=>{const s=session();s.initialPlan.weightExercises[0].loadType='BODYWEIGHT';s.snapshot.state.appliedPlan.weightExercises[0].loadType='BODYWEIGHT';return model.createLocalWorkout(s,bootstrap.settings)}
 const complete=(w,additionalWeight)=>model.applyLocalChange(w,x=>{model.editDraft(x,E,1,{weight:'80',reps:'8',...(additionalWeight!==undefined?{additionalWeight}:{})});model.completeSet(x,E,1,at)})
 
-test('ordinary and legacy BODYWEIGHT values never initialize additional load or invent body mass',()=>{
+test('new BODYWEIGHT completion saves explicit zero while legacy evidence stays absent',()=>{
   const w=complete(local()), p=w.snapshot.performedSets[0]
-  assert.equal(p.weightKg,'80');assert.equal(p.bodyweightLoad,undefined);assert.ok(localWorkout(w))
-  assert.match(bodyweightLoadLabel(p),/근거 없음/);assert.doesNotMatch(JSON.stringify(p),/additionalWeight|bodyMass/)
+  assert.equal(p.weightKg,'80');assert.deepEqual(p.bodyweightLoad,{additionalWeightKg:'0'});assert.ok(localWorkout(w))
+  assert.match(bodyweightLoadLabel(p),/0 kg/);assert.doesNotMatch(JSON.stringify(p),/bodyMass/)
   const s=session();s.snapshot.state=w.snapshot;s.snapshot.recordedContexts=[]
+  delete p.bodyweightLoad
+  assert.match(bodyweightLoadLabel(p),/근거 없음/);assert.doesNotMatch(JSON.stringify(p),/additionalWeight|bodyMass/)
   const reopened=model.createLocalWorkout(s,bootstrap.settings);assert.equal(model.draftFor(reopened,E,2).additionalWeight,undefined)
+  assert.equal(reopened.snapshot.performedSets[0].bodyweightLoad,undefined)
 })
 test('explicit extra keeps decimal precision and approval context independent of recorded weight',()=>{
   const base=local(), initial=structuredClone(base.initialPlan), w=complete(base,'00010.000001'), p=w.snapshot.performedSets[0]
@@ -33,10 +36,13 @@ test('undo and re-completion retain explicit input and original UUID evidence wi
   w=model.applyLocalChange(w,x=>model.completeSet(x,E,1,at+1));assert.notEqual(w.snapshot.performedSets[0].id,original.id);assert.deepEqual(w.snapshot.performedSets[0].bodyweightLoad,original.bodyweightLoad)
   assert.deepEqual(w.cancelled.sets,[original]);assert.ok(localWorkout(w))
 })
-test('old schema2 and fixed requests remain byte-identical while optional extra survives snapshot and finish sealing',()=>{
-  for(const extra of [undefined,'10']){
-    let w=complete(local(),extra);w=model.applyLocalChange(w,sync.sealSnapshot);const frozen=w.pendingSnapshot.requestJson
-    assert.ok(localWorkout(w));assert.equal(frozen,JSON.stringify(w.pendingSnapshot.request));assert.equal(frozen.includes('bodyweightLoad'),extra!==undefined)
+test('old schema2 and fixed requests remain byte-identical with missing, zero or positive extra weight',()=>{
+  for(const extra of [undefined,'0','10']){
+    let w=complete(local(),extra)
+    if(extra===undefined)delete w.snapshot.performedSets[0].bodyweightLoad
+    w=model.applyLocalChange(w,sync.sealSnapshot);const frozen=w.pendingSnapshot.requestJson
+    assert.ok(localWorkout(w));assert.equal(frozen,JSON.stringify(w.pendingSnapshot.request))
+    assert.equal(w.pendingSnapshot.request.snapshot.performedSets[0].bodyweightLoad?.additionalWeightKg,extra)
     const roundTrip=JSON.parse(JSON.stringify(w));assert.ok(localWorkout(roundTrip));assert.equal(roundTrip.pendingSnapshot.requestJson,frozen)
     w=model.applyLocalChange(w,x=>sync.intendFinish(x,at+1));assert.deepEqual(w.finish.snapshot.performedSets[0].bodyweightLoad,w.snapshot.performedSets[0].bodyweightLoad)
   }

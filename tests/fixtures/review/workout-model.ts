@@ -7,6 +7,7 @@ import { actualCardioMeasurement } from '../../../src/features/workout-online/ca
 import type { CardioPlan, Equipment, InitialPlan, Routine, Session, StandardExercise } from '../../../src/features/workout-online/types.ts'
 import { countDraft, decimalDraft } from '../../../src/features/workout-online/validation.ts'
 import { restSeconds } from '../../../src/features/workout-local/model.ts'
+import { suggestedReps } from '../../../src/features/workout/reps.ts'
 import type { ActualCardio, CardioFocusData, SetDraft, SetResult, SetRow, WeightAdvice, WeightFocusData } from '../../../src/features/workout-flow/types.ts'
 import { newId } from '../../../src/id.ts'
 import { defaultRestAlerts, REST_TEST_MIDDLE_SECONDS, REST_TEST_SECONDS } from '../../../src/features/workout-flow/rest-alerts.ts'
@@ -27,8 +28,8 @@ export type ReviewSession = {
 }
 export type ReviewRecord = { session: ReviewSession; endedAt: number; workoutDate?:string; judgments?:WeightSummary[] }
 
-function slot(id: number, kg: string, previous?: SetDraft): SetRow {
-  return { id, previous, draft: { kg, reps: previous?.reps ?? '', additional: previous?.additional ?? '' } }
+function slot(id: number, kg: string, fallbackReps: string, previous?: SetDraft): SetRow {
+  return { id, previous, repsInitial: true, draft: { kg: kg || '0', reps: previous?.reps ?? fallbackReps, additional: '' } }
 }
 
 export function previousSets(sessions: Session[], standardId: string, equipment: Equipment, approved?: string) {
@@ -65,7 +66,7 @@ export function startReview(routine: Routine, deload: boolean, now: number, hist
       id: p.sessionExerciseId, standardId: p.standardExerciseId, name: p.exerciseName,
       min: p.minReps, max: p.maxReps, working: p.approvedWeightKg, approved: p.approvedWeightKg, mode: 'approved',
       manufacturerId: p.manufacturerId, loadType: p.loadType, memo: '', nextSlot: p.setCount + 1,
-      sets: Array.from({ length: p.setCount }, (_, i) => slot(i + 1, p.approvedWeightKg, previous?.get(i + 1))),
+      sets: Array.from({ length: p.setCount }, (_, i) => slot(i + 1, p.approvedWeightKg, suggestedReps(p.minReps, p.maxReps), previous?.get(i + 1))),
     }
   })
   const cardio = initialPlan.cardioActivities.map(p => makeCardio(p.plan, p.sessionActivityId))
@@ -75,8 +76,8 @@ export function startReview(routine: Routine, deload: boolean, now: number, hist
 export function newReviewWeight(exercise: StandardExercise, history: Map<number, SetDraft>, equipment: Equipment): ReviewWeight {
   const working = history.get(1)?.kg ?? history.values().next().value?.kg ?? ''
   return { id: newId(), standardId: exercise.id, name: exercise.name, min: 6, max: 10,
-    ...equipment, working, approved: null, mode: 'today', memo: '', nextSlot: 4,
-    sets: [1, 2, 3].map(id => slot(id, history.get(id)?.kg ?? working, history.get(id))) }
+    ...equipment, working, workingInitial: true, approved: null, mode: 'today', memo: '', nextSlot: 4,
+    sets: [1, 2, 3].map(id => slot(id, history.get(id)?.kg ?? working, suggestedReps(6, 10), history.get(id))) }
 }
 
 export const doneCount = (weight: ReviewWeight) => weight.sets.filter(s => s.result).length
@@ -87,16 +88,16 @@ export const cardioElapsed = (cardio: ReviewCardio, now: number) =>
   cardio.accumulated + (cardio.runningSince === null ? 0 : Math.max(0, now - cardio.runningSince))
 
 export function addSet(weight: ReviewWeight): ReviewWeight {
-  return { ...weight, nextSlot: weight.nextSlot + 1, sets: [...weight.sets, slot(weight.nextSlot, weight.working)] }
+  return { ...weight, nextSlot: weight.nextSlot + 1, sets: [...weight.sets, slot(weight.nextSlot, weight.working, suggestedReps(weight.min, weight.max))] }
 }
 
 export function changeWeight(weight: ReviewWeight, value: string, mode: 'today' | 'progression', history = new Map<number, SetDraft>()): ReviewWeight {
   const kg = decimalDraft(value)
-  return { ...weight, working: kg, approved: mode === 'progression' ? kg : weight.approved, mode,
+  return { ...weight, working: kg, workingInitial: false, approved: mode === 'progression' ? kg : weight.approved, mode,
     sets: weight.sets.map(s => {
       if (s.result) return s
       const previous = mode === 'progression' ? history.get(s.id) : undefined
-      return { ...s, previous, draft: { ...s.draft, kg, reps: previous?.reps ?? '' } }
+      return { ...s, previous, repsInitial: true, draft: { ...s.draft, kg, reps: previous?.reps ?? suggestedReps(weight.min, weight.max) } }
     }) }
 }
 
@@ -110,7 +111,7 @@ export function finishSet(session: ReviewSession, weight: ReviewWeight, set: Set
     additionalKg: weight.loadType === 'BODYWEIGHT' ? additionalLoadInput(set.draft.additional).additionalWeightKg : null,
     mode: kg === weight.approved && weight.mode !== 'today' ? weight.mode : 'today',
   }
-  const updated = { ...weight, sets: weight.sets.map(s => s.id === set.id ? { ...s, result } : s) }
+  const updated = { ...weight, sets: weight.sets.map(s => s.id === set.id ? { ...s, repsInitial: false, result } : s) }
   const complete = weightDone(updated)
   updated.rest = complete ? undefined : { slot: set.id,
     ends: now + (previewRest ? REST_TEST_SECONDS : restSeconds(reviewRest, weight.max)) * 1000,

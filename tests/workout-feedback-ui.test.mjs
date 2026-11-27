@@ -1613,6 +1613,8 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       }
     })
     await t.test('locally stored unsent work keeps the same header and footer through reconnection', async () => {
+      // Sample the ACK transition after the preceding completion scroll has settled.
+      await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]})
       const status = () => evaluate(`document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus`)
       const screen = () => evaluate(`new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
           const frame=document.querySelector('[data-workout-frame]')
@@ -1641,6 +1643,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         assert.deepEqual(await screen(),before,`server ACK at ${width}px`)
         assert.equal(await evaluate('window.restSafety.requests.length'),1)
       }
+      await send('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'no-preference'}]})
     })
     await t.test('unconfirmed finish keeps its footer slot and offers a single retry', async () => {
       await send('Emulation.setDeviceMetricsOverride',{width:393,height:568,deviceScaleFactor:1,mobile:true})

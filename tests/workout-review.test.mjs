@@ -22,7 +22,8 @@ test('review sessions independently preserve initial plan, actual equipment and 
   assert.equal(changed.working, '52.3')
   assert.equal(changed.approved, '25')
   assert.equal(changed.sets[1].draft.kg, '52.3')
-  assert.equal(changed.sets[1].draft.reps, '')
+  assert.equal(changed.sets[1].draft.reps, '10')
+  assert.equal(changed.sets[1].repsInitial, true)
   assert.deepEqual(session.initialPlan, before)
   assert.equal(model.restRemaining(weight, 3000), 11)
   assert.throws(() => model.finishSet(session, changed, { ...changed.sets[1], draft: { kg: '', reps: '8', additional: '' } }, 15000, true))
@@ -47,7 +48,7 @@ test('review rest uses goal bands and final sets stop countdown while cancellati
   assert.equal(undone.sets[2].draft.reps, '8')
 })
 
-test('review replacement uses exact exercise UUID and equipment, with blank history preserved', () => {
+test('review replacement uses exact exercise UUID and equipment and fills missing history from the routine range', () => {
   const data = reviewSample('normal')
   const equipment = exerciseEquipment(exercises[0])
   const previous = model.previousSets(data.sessions, exercises[0].id, equipment)
@@ -55,7 +56,7 @@ test('review replacement uses exact exercise UUID and equipment, with blank hist
   assert.equal(model.previousSets(data.sessions, exercises[0].id, { ...equipment, loadType: 'STACK' }).size, 0)
   const replaced = model.newReviewWeight(exercises[2], new Map(), exerciseEquipment(exercises[2]))
   assert.equal(replaced.approved, null)
-  assert.ok(replaced.sets.every(set => set.draft.kg === '' && set.draft.reps === ''))
+  assert.ok(replaced.sets.every(set => set.draft.kg === '0' && set.draft.reps === '8' && set.repsInitial && !set.previous))
   assert.equal(replaced.standardId, exercises[2].id)
 })
 

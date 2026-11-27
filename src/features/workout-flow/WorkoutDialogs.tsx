@@ -35,8 +35,8 @@ export function WeightChange({ weight, progressionAllowed, onSave, onClose, prog
   onSave: (value: string, mode: 'today' | 'progression') => void; onClose: () => void
   progressionNote?: string; saveIssue?: ReactNode
 }) {
-  const [value, setValue] = useState(weight.working), [mode, setMode] = useState<'today' | 'progression'>('today')
-  const [confirmed, setConfirmed] = useState(!weight.workingInitial)
+  const [value, setValue] = useState(weight.working || '0'), [mode, setMode] = useState<'today' | 'progression'>('today')
+  const [confirmed, setConfirmed] = useState(!weight.workingInitial && !!weight.working)
   const [issue, setIssue] = useState('')
   return <Dialog title="중량 변경" onClose={onClose}>
     <div className="stack">

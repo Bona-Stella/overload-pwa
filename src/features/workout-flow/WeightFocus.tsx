@@ -54,6 +54,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
   const titleRef = useFitWorkoutTitle(title, !preview)
   const manufacturer = manufacturers.find(m => m.id === weight.manufacturerId)
   const plateWeight = preparing && weight.loadType === 'PLATE' ? halfWeight(weight.working) : null
+  const workingInitial = weight.workingInitial || !weight.working
   const memoId = useId()
   const memo = memoContent ?? <><label>기구 세팅 메모<textarea data-workout-memo={preview ? undefined : ''} rows={2} value={weight.memo} readOnly={preview}
     onChange={preview ? undefined : event => onMemo(event.target.value)} placeholder="예: 의자 높이 3" /></label>
@@ -75,8 +76,8 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
         <Button compact variant="quiet" className={styles.weightChange} onClick={preview ? undefined : onWeight}>중량 변경</Button>
       </div>
       <div className={styles.workingValues}>
-        <strong><span data-numeric-value={weight.workingInitial ? 'initial' : undefined}
-          aria-label={weight.workingInitial ? `${weight.working} kg 초기값` : undefined}>{weight.working || '0'}</span> <small>kg</small></strong>
+        <strong><span data-numeric-value={workingInitial ? 'initial' : undefined}
+          aria-label={workingInitial ? `${weight.working || '0'} kg 초기값` : undefined}>{weight.working || '0'}</span> <small>kg</small></strong>
         <p className="muted small">승인 중량 {weight.approved === null ? '없음' : weight.approved + ' kg'}
           {weight.mode === 'today' && weight.working && ' · 오늘만 적용'}
           {weight.mode === 'progression' && (' · ' + (approvalNote ?? '진행 중량 변경 시연'))}</p>

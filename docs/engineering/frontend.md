@@ -624,7 +624,7 @@ iPhone의 화면 구조를 고려합니다.
 
 **기초 코드 조사** 2026-11-16 (KST). Frontend `56993a0`·Backend `732e0c3`를 기준으로 1차 개발의 기능·호출 경로·저장 모델과 테스트 내용을 조사했다. 과거 커밋·자동 테스트 수·승인 기록은 각각 당시 근거로 보존한다.
 
-**FRONT 18 최종 점검(2026-11-28).** [6단계 공통 UI·상태 전환 현황](#front18-stage6)에 최신 확정 정책, 구현·검증 범위 및 후속 과제를 기록한다.
+**FRONT 18 현행 점검.** [6단계 공통 UI·상태 전환](#front18-stage6)과 [7단계 숫자 값 상태](#front18-stage7)에 적용과 검증 근거를 기록한다. 서버 의존 과제는 [BACKEND 일괄 보류](#front18-backend-followup)에서 확인한다.
 
 **FRONT 후속 대조** 2026-11-23 (KST). 문서 갱신을 시작할 때 FRONT는 깨끗한 `main`의 `e88c90c`였으며 로컬의 `origin/main` 추적 참조보다 1개 커밋 앞서 있었다. 소스, 커밋과 보존 검증 로그를 [후속 UI와 안정성 현황](#front-후속-ui와-안정성-현황)에 대조했다. 이번 갱신에서는 테스트·빌드·실기기 검증을 재실행하지 않았다.
 
@@ -648,9 +648,9 @@ iPhone의 화면 구조를 고려합니다.
 | 포커스 테두리(UI-25) | 버튼·링크·목록의 키보드 `:focus-visible` 표시를 유지한다. 이미 포커스된 요소를 터치·클릭해 브라우저가 윤곽선을 유지하는 경우에는 공통 셸에서 표시만 해제한다. 메뉴 `summary`를 포함한 클릭 요소의 기본 탭 하이라이트를 정리했다. 편집 중 강조와 오류색, 포커스 이동·복원은 유지한다. | 4173 후속 사용자 검수 대기. iPhone Safari·설치형 PWA 실기기 미검증 |
 | 홈 일정 날짜 테두리(UI-21·UI-25 후속) | 오늘은 배경 채움 없이 파란색 2px 캡슐과 파란 날짜 숫자, 흰색 내용을 표시한다. 포인터로 다른 날짜를 선택하면 해당 날짜에 2px 강조와 파란 날짜 숫자를 표시하고 오늘은 회색 1px 캡슐, 흐린 파란 날짜 숫자와 회색 내용으로 바뀐다. 날짜 영역 밖에서는 오늘의 강조를 복귀시키고 선택한 날짜 상세를 유지한다. | 4173 캡슐 디자인 검수 대기. iPhone Safari·설치형 PWA 실기기 미검증 |
 | 운동 종목 보기(UI-26) | 목록 화면에 기존 공통 헤더를 재사용한다. 결과 목록은 화면의 남은 공간을 사용하며 높이 600px 이하에서는 페이지가 세로 스크롤을 맡는다. | 2차 4173 사용자 검수 대기. 휴식 설정과 재진입용 카탈로그의 React 키 충돌을 수정했다. Chrome에서 `세트 사이 휴식 → 뒤로 → 운동 종목 보기`를 12회 반복해 휴식 화면 DOM 잔존 0건을 확인했다. iPhone Safari·설치형 PWA 실기기 미검증 |
-| 루틴 | RoutineForm → 온라인 루틴 API. 명시 weightApprovals, 조합 변경 NEW, 초안·고정 요청 보호 | 최근 실제값 자동 제안 없음 |
+| 루틴 | RoutineForm → 온라인 루틴 API. 명시 weightApprovals, 조합 변경 NEW, 초안·고정 요청 보호. NEW 중량은 현행 종료 상세에서 조회한 후보를 사용 | 조합별 최신 실제값·메모 전용 서버 조회 미구현 |
 | 운동·시간 | LocalWorkoutController·LocalWorkoutFlow → IndexedDB/snapshot/FINISH, weight-timing·record-summary | 미관찰 시간/과거 구간 미확인, 기기 간 로컬 초안 복원 보장 아님 |
-| 일반 운동 반복 입력(UI-05) | 미완료 세트의 기존 반복 초안을 우선 표시한다. 과거 수행 이력에 따른 자동 입력은 별도 평가 응답 전에 반영하고, 조회 중에는 `확인 중`을 표시한다. 미입력 상태의 중간값은 회색 한 줄로 표시하고 `(미정)`은 단위 스타일을 사용한다. 휠의 `확인`은 움직임 없이도 선택값을 로컬 초안으로 반영한다. 정상 저장 중에는 입력 보존 안내를 표시하지 않으며 실패한 초안은 재시도할 수 있다. | 3차 UI 보완 및 4173 사용자 검수 대기. 실제 iPhone Safari·설치형 PWA 및 다른 숫자 입력의 UI-22 적용은 별도 |
+| 일반 운동 반복 입력(UI-05) | 기존 초안과 이전 동일 순번의 우선순위, 부족한 순번의 루틴 평균 및 일괄 완료는 [7단계 값 상태](#front18-stage7)를 적용한다. 정상 저장 중에는 입력 보존 안내를 표시하지 않으며 실패한 초안은 재시도할 수 있다. | 실제 iPhone Safari·설치형 PWA 확인은 9단계 |
 | 권고·승인 | reference-reminder·SavedWeightReview → GET weight-review / POST weight-review-approvals, 승인 후 재조회 | 공식 evaluate의 전체 조합 제외·대체 슬롯 인정은 미완성 |
 | 달성·기록 | achievement·display-achievement·achievementReasons, RecordFeed/ClosedWorkout, 최초/현재 평가 구분 | loaded closed 페이지 범위. UI 이유는 파생값이며 서버 영구 판정 사건 아님 |
 | 기록 메인 UI | `594cf25`의 주간 요약·분석 2×2·최근 3행 및 전용 CSS Modules. 사용자 디자인 승인·커밋 완료 | 총 운동 시간 미제공으로 미확인. 완료 종목 수·기존 조회/판정 유지. 색상 통합 검토·하위 기능 경계는 별도 |
@@ -678,6 +678,8 @@ iPhone의 화면 구조를 고려합니다.
 
 #### UI-15·UI-12 유산소 편집과 완료 확인 — 2026-11-20
 
+이 절은 당시 4173 검수의 기록이다. 운영 앱의 값 상태, 실제 속도 단독 저장과 거리 출처는 [7단계 현황](#front18-stage7)을 적용한다.
+
 - PC와 iPhone의 UI 검수는 `npm run review:lan`으로 연 4173의 루트에서 진행한다. iPhone 접속에는 `OVERLOAD_REVIEW_LAN_IP`에 PC의 사설 IPv4를 지정한다. 루트에서 유산소 합성 루틴을 바로 시작할 수 있다. 화면과 계산은 앱의 공통 컴포넌트를 사용하고 검수 상태는 메모리에 보관한다. 정적 빌드로 제공하며, 별도 프리뷰 URL과 서버 API는 이 검수 서버에서 열리지 않는다. 4180은 명시적인 외부 검수가 필요할 때 사용한다.
 - 루틴과 진행 운동에서 표준 유산소 카탈로그의 이름·별칭 검색, 유형 필터, 목표 입력을 재사용한다. 목표 시간은 초안에서 비울 수 있다. 현행 루틴·세션 쓰기 계약은 양의 정수 초를 요구하므로 미입력 상태에서 서버 저장을 보류한다.
 - 거리 자동 추정은 계정별 기기 설정이며 기본값은 OFF다. 목표 거리와 실제 활동시간으로 만든 추정 거리·자동 평균 속도는 완료 확인 초안에 표시한다. 목표 거리 추정은 실제 수행이나 통계에 포함하지 않는다. 수동 거리 및 실제 속도에서 계산한 거리는 현재 측정 계약으로 저장할 수 있다.
@@ -694,7 +696,7 @@ iPhone의 화면 구조를 고려합니다.
 | 3-3 웨이트 시간 A안 | **정책 확정 / 구현 확인.** weight-timing은 보이는 수행 화면 구간만 측정하며 기록 집계에서 불완전은 null이다. [P1 이후 시작·준비·휴식 처리](#p1-01부터-05까지-구현과-검증)를 적용한다. | **정책 확정 / 구현 확인.** V37 parser/서비스·종료 불변 구간 보존. 실제 동작 감지나 미관찰 시간 복원 아님 |
 | 3-4 조합 변경 NEW | **정책 확정 / 일부 구현.** RoutineForm의 교체/장비 변경은 NEW 처리. 조합 왕복 편집·취소 등 전체 경계 실행 검증은 별도 | **정책 확정 / 구현 필요.** 기존 EDIT가 같은 배치 장비 변경을 수용하므로 서버 강제가 미완성 |
 | 3-5 오늘만 대체 | **정책 확정 / 일부 구현.** 조합 변경 감지·검토 제외 일부. 원슬롯 완료 연결 없음 | **정책 확정 / 일부 구현.** V36 봉인 권고 제외와 공식 evaluate의 전체 제외는 다름. 원슬롯·홈/통계/G4 연결 필요 |
-| 3-6 최근 실제·메모 | **정책 확정 / 구현 필요.** NEW 중량 수동 입력. CombinationMemo는 메모리만 있으며 blur/LWW/온라인 서버 저장 없음 | **정책 확정 / 구현 필요.** FINISHED 전용 최근 마지막 세트·조합별 최신 메모 API 없음. 저장 시점·동시 수정은 이제 확정 정책 |
+| 3-6 최근 실제·메모 | **일부 구현.** 7단계부터 NEW 중량에 종료 상세 기반 후보를 사용한다. CombinationMemo는 메모리만 있으며 blur/LWW/온라인 서버 저장 없음 | **구현 필요.** FINISHED 전용 최근 마지막 세트·조합별 최신 메모 API 없음. [BACKEND 일괄 보류](#front18-backend-followup) |
 | 3-7 전체 과거 검색 | **정책 확정 / 일부 구현.** 월 복귀·순차 closed 조회는 있음. 루틴 검색은 로드 범위, 실제 운동명 검색 미연결 | **정책 확정 / 구현 필요.** closed의 cursor/limit에는 월·루틴명·실제 운동명 필터 없음. 전체 다운로드 대신 서버 필터/페이지 필요 |
 | 3-8 독립 집계·일별 추이 | **정책 확정 / 일부 구현.** 선택 프리셋/근육 기여 일부. 실제 독립 분류·선택 대상 일별 값 없음 | **정책 확정 / 일부 구현.** 근육 기여·전체 days 존재. groups는 근육 매핑 참여이며 검수 운동 부위 직접 집계와 다름 |
 
@@ -1178,9 +1180,40 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 **6-5 최종 검증.** FRONT `45ce324`에서 TypeScript, ESLint, 전체 자동 회귀 758/758건, 운영 빌드와 Mac 4174 검수 빌드를 통과했다. 기존 4174에 반영한 뒤 LAN 앱·Preview 및 격리 Spring 상태를 확인했다. 실제 격리 계정으로 홈 주간 일정의 44px 상세 행과 24px 기록 링크의 상세 이동, 오늘만 루틴 선택과 START 활성화, 메뉴 수정 진입·취소, 종목 상세에서 원래 검색 버튼으로의 복귀를 확인했다. Chrome 320·374·375·393·1280px에서 셸 여백과 검색·모달·헤더를 검증했다. 실제 START·진행 세션 재진입·스냅샷 저장·FINISH와 종료 요약은 6-E의 격리 Spring 쓰기 검증 및 6-5 자동 회귀를 근거로 삼았다. 최종 확인에서 제품 코드의 추가 회귀 수정은 발생하지 않았다.
 
-**BACKEND 일괄 개선 보류.** 유산소 배치 두 개 중 마지막 배치를 삭제하는 루틴 수정 요청은 Spring에 직접 보내도 `409 WRITE_CONFLICT`를 반환했다. PostgreSQL 고유 제약 `routine_cardio_active_position`과 삭제 표시 및 임시 순번 변경을 같은 flush에 처리하는 경로가 충돌한다. 서버의 배치 삭제·재정렬 순서가 후속 수정 범위다. 프론트는 기존 오류 표시와 요청 계약을 사용한다. [루틴 수정과 배치 순번](../../../overload-server/src/main/java/com/overload/overload_server/routine/RoutineService.java#L144) · [제약](../../../overload-server/src/main/resources/db/migration/V11__create_routine_management.sql#L65)
+**후속 범위.** 마지막 유산소 배치 삭제의 `409 WRITE_CONFLICT`는 [BACKEND 일괄 보류](#front18-backend-followup)에 원인과 함께 유지한다. 숫자 값 상태는 [7단계](#front18-stage7)를 적용한다.
 
-**후속 검증.** 기본값·추천·미확정 조작은 7단계, 일반 하위 제목 20px과 승인된 공통 헤더 22px의 통합 여부 및 글자·아이콘·세부 간격은 8단계, 실제 iPhone Safari·설치형 PWA를 포함한 전체 통합은 9단계에서 확인한다.
+<a id="front18-stage7"></a>
+
+#### FRONT 18 · 7단계 숫자 초기값·확정·정정
+
+7-A의 운영 화면·하위 흐름 20개와 공통 입력을 포함한 70개 사용처를 기준으로 7-C `ec6f9ca`를 반영했다. 정책은 [Decision Log 10.47절](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage7-decision), 조작은 [UI/UX 3.12절](../product/ui-ux.md#312-공통-숫자-입력), 토큰은 [숫자 값 상태의 시각 규격](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-value-state-visual)을 따른다.
+
+| 경로 | 현행 구현 및 보호 경계 |
+| --- | --- |
+| 루틴·진행 웨이트 | 조합 신규·교체의 중량 후보는 최신 FINISHED의 마지막 유효 세트에서 가져온다. 조회 실패와 기록 없음을 구분한다. 중복 배치의 반복은 기존 원배치로 구분 가능한 경우만 연결한다. 최신 매칭 운동에 빠진 순번은 루틴 평균을 사용한다. 현재 승인 중량, 복원한 초안과 완료 기록은 보존한다. [조회와 비교](../../src/features/workout-online/workout-history.ts) · [초안과 입력](../../src/features/workout-local/flow-data.ts) |
+| 로컬 초안·서버 저장 | 미조작 후보와 실제로 조작한 필드를 분리하며 IndexedDB에는 입력한 필드를 보존한다. 완료에서 필수 범위를 검증하고 유효한 값을 확정한다. 화면 확정, 로컬 기록, 서버 ACK는 각각 구분한다. 신규 맨몸 완료의 `additionalWeightKg`는 명시 0 또는 입력값이다. 기존 API의 NULL 허용과 미기록 기록·집계는 유지한다. [로컬 보호](#12-진행-운동의-로컬-보호-및-복원) · [완료 검증](../../src/features/workout-local/completion-input.ts) · [현행 추가 부하 계약](../../../overload-server/docs/api/bodyweight-additional-load.md) |
+| 유산소·기록 정정 | 유산소 과거 후보는 같은 표준 종목·활동·유형으로 확인 가능한 기록을 사용한다. 계획 기반 거리 추정은 기존 기기별 설정을 유지한다. 미확정 후보는 스냅샷 실적에 포함하지 않는다. 확정 속도 단독 입력은 현행 식과 소수 6자리 반올림으로 `CALCULATED` 거리를 제공한다. 직접 거리, 타이머 원본, 정정의 원시값·출처와 변경 이력을 보호한다. [완료 검토](../../src/features/workout-flow/CardioFocus.tsx) · [계산과 출처](../../src/features/workout-online/cardio-measurement.ts) · [실측 API](../../../overload-server/docs/api/cardio-actual-measurements.md) |
+| FRONT·BACKEND | FRONT는 계정·세대·기록 버전에 매인 기존 종료 목록·상세 조회를 공유하고 미확정 후보 및 루틴 평균을 결정한다. 6-E의 병렬 상세 읽기와 순서 보존을 적용한다. BACKEND는 원본 계획, 유효 실제 수행과 공식 평가·추천, 저장 검증과 정정 이력을 관리한다. [종료 목록 계약](../../../overload-server/docs/api/workout-sessions.md#종료-운동-목록--frontend-5d-최소-읽기-계약) |
+
+**7-C 검증 근거.** 집중 테스트 176/176과 Mac 4174 격리 Spring에서 루틴 저장, 시작·재진입·완료·종료, 반복 이력·평균, 맨몸 0과 양수, 추정 ON/OFF·동일값 확인·후보 저장 제외·속도 단독 저장, 기록 정정을 확인했다.
+
+**7-E 최종 검증(2026-11-28).** TypeScript·ESLint·운영 빌드·Mac 4174 앱 및 Preview 빌드를 통과했다. 전체 자동 회귀 1회는 752건 중 745건 통과, 7건 실패였다. 미설정 중량의 원판 안내를 수정하고, 이전 정책을 기대하던 테스트와 화면 정착 대기를 보정했다. 관련 테스트 파일 9개는 각각의 마지막 실행에서 통과했으며, 마지막 Chrome 집중 실행은 14/14였다. 기존 4174 앱·LAN·Preview와 Spring 상태 응답을 확인했다. 실제 Spring 쓰기는 7-C 격리 검증을 근거로 삼았다.
+
+**후속 검증.** 일반 하위 제목 20px과 승인된 공통 헤더 22px의 통합 여부 및 글자·아이콘·세부 간격은 8단계 범위다. 실제 iPhone Safari·설치형 PWA 및 전체 통합은 9단계에서 검증한다.
+
+<a id="front18-backend-followup"></a>
+
+#### FRONT 18 BACKEND 일괄 개선 보류
+
+FRONT UI·UX 확정 이후 일괄 검토한다. 아래 항목은 기존 서버 계약의 미구현 또는 서버 개선 범위다.
+
+| 항목 | 현행 근거와 후속 범위 |
+| --- | --- |
+| 종목별 최신 유효 기록과 계층 책임 | 현재 목록은 `closedAt`·UUID 커서의 메타이고 FRONT가 상세를 읽어 후보를 찾는다. 전체 과거 상세 조회를 대체할 종목·조합별 공급과 초기값 계산·조회 책임을 정리한다. 10.25.6의 실제 종료 시각과 목록 시각, 마지막 세트 및 동률의 조회 계약을 포함한다. [최근 실제값 정책과 조합 메모](../product/Overload_UI_Decision_Log_v0.9.md#10256-최근-실제-중량과-조합-메모--정책-3-6) |
+| 맨몸 추가 중량 | 신규 FRONT 완료의 명시 0/양수와 기존 서버의 선택 필드·NULL·집계 계약을 정합화한다. 과거 미기록 NULL과 명시 0을 구별하며 기존 기록을 0으로 채우지 않는다. [현행 맨몸 계약](../../../overload-server/docs/api/bodyweight-additional-load.md) |
+| 유산소 미지원 항목과 ST-19 | 실제 페이스·경사·저항·케이던스 및 센서 출처, Preview 전용 목표 심박·케이던스 범위의 서버 계약은 보류한다. 실제 거리 null일 때 시간만 비교하는 ST-19의 날짜별 달성·요약·통계·G4 등 양쪽 미완료 구현은 기존 추적을 유지한다. [ST-19](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md#31-하루-종목-완료-기준) · [정책별 구현 점검](#2026-11-16-확정-정책별-구현-점검) |
+| 유산소 마지막 배치 삭제 | 6-5에서 유산소 배치 두 개 중 마지막 배치를 삭제하는 루틴 수정 요청은 Spring 직접 호출에서도 `409 WRITE_CONFLICT`였다. PostgreSQL 고유 제약 `routine_cardio_active_position`과 삭제 표시·임시 순번 변경을 같은 flush에서 처리하는 순서가 충돌한다. 기존 FRONT 오류 처리와 API를 유지하며 서버 삭제·재정렬 순서를 후속 검토한다. [루틴 수정과 배치 순번](../../../overload-server/src/main/java/com/overload/overload_server/routine/RoutineService.java#L144) · [제약](../../../overload-server/src/main/resources/db/migration/V11__create_routine_management.sql#L65) |
+| 기존 후속 과제 | 10.25.6의 조합별 최신 서버 메모·blur 저장·LWW 및 정책별 점검에 남은 NEW 강제, 오늘만 대체의 원슬롯·공식 평가, 서버 과거 검색과 독립 집계를 계속 추적한다. [정책별 구현 점검](#2026-11-16-확정-정책별-구현-점검) |
 
 #### 현황 갱신
 
@@ -1317,9 +1350,9 @@ Overload의 핵심 기능은 운동 기록 입력입니다.
 
 일반 버튼과 폼은 공통 `Button`·`Field`, 메시지는 공통 Dialog 표면과 동작을 재사용합니다. 분할 선택·필터·검색은 역할별 기존 구조와 접근성 이름을 유지합니다. `ConnectedDropdown`, 기간·일정, 설정, OTP, 압축 세트 표는 화면에 필요한 기존 조작을 적용합니다. [공통 폼](../../src/components/ui.tsx) · [Dialog](../../src/components/Dialog.tsx) · [현행 치수와 예외](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-controls-visual)
 
-숫자 Dialog는 `NumberWheel`과 `DurationWheel`을 재사용합니다. 연속 탐색 시 최대 61개 옵션의 DOM과 스크롤 위치 보정을 유지합니다. 중앙 스냅, 방향키 선택·실제 포커스 동기화, 선택 항목 중심의 Tab, 입력 오류 안내, 닫은 뒤 진입점 포커스 복귀를 확인합니다. 필드별 배경 클릭·취소 정책을 보존합니다. [숫자 휠](../../src/components/NumberWheel.tsx) · [시간 휠](../../src/components/DurationWheel.tsx) · [옵션 범위](../../src/components/wheel-options.ts)
+숫자 Dialog는 `NumberWheel`과 `DurationWheel`을 재사용합니다. 연속 탐색 시 최대 61개 옵션의 DOM과 스크롤 위치 보정을 유지합니다. 중앙 스냅, 방향키와 선택 포커스 동기화, 오류 안내, 취소·외부 터치와 닫은 뒤 포커스 복귀를 검증합니다. 동일값 확인은 원시값과 확정 의도를 보존하며 배경 취소와 분리합니다. [숫자 휠](../../src/components/NumberWheel.tsx) · [시간 휠](../../src/components/DurationWheel.tsx) · [옵션 범위](../../src/components/wheel-options.ts)
 
-`WeightWheelFields`는 기존 부하 방식과 값의 출처를 사용합니다. `CardioPlanFields`는 루틴과 세션 계획, `CardioActualFields`는 완료 검토와 기록 정정에 재사용합니다. 표시용 반올림·공란의 0 표시와 실제 데이터는 분리합니다. 열기·취소에서 정밀값을 보존하고 변경 확인은 부모 초안에만 반영합니다. 버전·충돌 보호, 미확정 반복, 기존 저장·승인, 타이머와 로컬 보호는 각 도메인 경로에서 처리합니다. [웨이트 입력](../../src/features/workout-flow/WeightWheelFields.tsx) · [유산소 계획](../../src/features/workout-online/CardioPlanFields.tsx) · [유산소 실측](../../src/features/workout-online/CardioActualFields.tsx)
+`WeightWheelFields`는 기존 부하 방식과 값의 출처를 사용합니다. `CardioPlanFields`는 루틴과 세션 계획, `CardioActualFields`는 완료 검토와 기록 정정에 재사용합니다. 공통 부품은 표시와 접근성 상태를 받습니다. 도메인 호출부는 필수·선택, 후보 우선순위, 확정 및 저장을 관리합니다. 표시용 반올림과 필수 0·선택 NULL은 실제 저장 형식과 범위로 검증합니다. [값 상태 정책](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage7-decision) · [웨이트 입력](../../src/features/workout-flow/WeightWheelFields.tsx) · [유산소 실측](../../src/features/workout-online/CardioActualFields.tsx)
 - 음수 및 허용 범위는 도메인 규칙에 따라 처리합니다.
 - 사용자 로케일에 따른 소수점 입력 차이를 고려합니다.
 
