@@ -41,6 +41,7 @@ export function intendFinish(w: LocalWorkout, now: number) {
 export function sealFinish(w: LocalWorkout) {
   if (!w.finish || w.finish.request) return
   if (w.pendingSnapshot && !w.pendingSnapshot.rejected || w.pendingResolution && !w.pendingResolution.rejected) throw new SyncStateConflict('앞선 저장 결과를 먼저 확인해 주세요.')
+  if (w.pendingSnapshot?.rejected && BigInt(w.localRevision) <= BigInt(w.pendingSnapshot.request.localRevision)) throw new SyncStateConflict()
   // Reuse V13 validation/normalization without issuing an intermediate PUT or inventing a revision.
   const copy = structuredClone(w)
   if (Object.values(copy.presence).some(x => x === 'UNKNOWN') || copy.snapshot.performedSets.some(s => s.weightContext.kind === 'UNVERIFIED')) throw new SyncStateConflict()
@@ -59,6 +60,7 @@ export function acceptFinish(w: LocalWorkout, ack: FinishAck) {
   w.confirmedDeletedCardioIds = [...new Set([...(w.confirmedDeletedCardioIds ?? []), ...request.snapshot.deletedCardioResultIds])]
   w.serverRevision = ack.acceptedLocalRevision
   if (BigInt(ack.currentVersion) > BigInt(w.serverVersion)) w.serverVersion = ack.currentVersion
+  if (w.pendingSnapshot?.rejected) w.pendingSnapshot = null
   w.approvalResults = structuredClone(ack.approvalResults); w.finish!.ack = structuredClone(ack); w.syncState = 'CLEAN'
 }
 export function acceptSnapshot(w: LocalWorkout, ack: SnapshotAck) {

@@ -18,6 +18,7 @@ type Api = Pick<WorkoutApi, 'detail' | 'assessment' | 'changes' | 'records' | 'r
 export type ClosedState = { server: Session | null; assessment: AssessmentView | null; changes: ChangeEvents | null; copies: LocalWorkout[]; pending: ClosedWrite | null;
   busy: boolean; writable: boolean; issue: string | null; notice: string; noticeTone?: 'info' | 'success' }
 export type ClosedDisplay = Pick<ClosedState, 'server' | 'assessment' | 'changes'>
+const lockedIssue = '다른 탭에서 운동을 열고 있거나 이 환경에서 편집 잠금을 사용할 수 없습니다. 다른 탭을 닫은 뒤 다시 확인해 주세요.'
 /** One online closed-session edit at a time, with one durable result-check slot. No automatic write replay. */
 export class ClosedWorkoutController {
   private state: ClosedState = { server: null, assessment: null, changes: null, copies: [], pending: null, busy: true, writable: false, issue: null, notice: '' }
@@ -54,15 +55,23 @@ export class ClosedWorkoutController {
     this.set({ issue: error instanceof Error && (error instanceof LocalStoreError || error.name === 'ClosedConflict') ? error.message : onlineIssue(error) })
   }
   private conflict(message: string): never { const error = new Error(message); error.name = 'ClosedConflict'; throw error }
+  private async ensureLease() {
+    if (this.canWrite()) return true
+    if (!this.current()) return false
+    const device = await this.store.deviceId()
+    if (!this.current()) return false
+    const lease = await this.acquire({ ...this.scope, sessionId: this.id, editorDeviceId: device, writerEpoch: '0' })
+    if (!this.current()) { await lease?.release(); return false }
+    this.lease = lease
+    const writable = this.canWrite()
+    this.set({ writable, issue: writable ? null : lockedIssue })
+    return writable
+  }
   async open(initial?: Session) {
     try {
-      const device = await this.store.deviceId()
+      await this.ensureLease()
       if (!this.current()) return
-      this.lease = await this.acquire({ ...this.scope, sessionId: this.id, editorDeviceId: device, writerEpoch: '0' })
-      if (!this.current()) { this.lease?.release(); return }
       await this.read(initial)
-      this.set({ writable: !!this.lease?.held(), issue: null })
-      if (!this.lease) this.set({ issue: '다른 탭이 운동을 편집 중이거나 편집 잠금을 지원하지 않습니다. 읽기 전용입니다.' })
     } catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
   }
   private async read(initial?: Session) {
@@ -88,7 +97,12 @@ export class ClosedWorkoutController {
       this.set({ pending: confirmed, notice: '저장 결과를 확인했어요.', noticeTone: 'info' })
     }
   }
-  refresh = async () => { if (!this.current() || this.state.busy) return; this.set({ busy: true, issue: null }); try { await this.read(); this.set({ writable: !!this.lease?.held() }) } catch (error) { this.failure(error) } finally { this.set({ busy: false }) } }
+  refresh = async () => {
+    if (!this.current() || this.state.busy) return
+    this.set({ busy: true, issue: null })
+    try { await this.ensureLease(); if (this.current()) await this.read() }
+    catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
+  }
   private async dispatch(write: ClosedWrite) {
     switch (write.kind) {
       case 'records': return this.api.records(this.scope, this.id, write.body, this.abort.signal)
@@ -172,17 +186,32 @@ export class ClosedWorkoutController {
     try { await this.store.saveClosedWrite(next, pending, this.canWrite); this.set({ pending: next, issue: null, notice: '현재 기록을 확인했어요.', noticeTone: 'info' }) } catch (error) { this.failure(error) }
   }
   confirmFinish = async (local: LocalWorkout) => {
-    if (!this.canWrite() || this.state.busy || !local.finish?.request || local.finish.ack || this.state.server?.deletedAt || this.state.server?.status !== 'FINISHED') return
+    const server = this.state.server
+    if (!this.current() || this.state.busy || !local.finish?.request || local.finish.ack || server?.deletedAt || server?.status !== 'FINISHED') return
     if (local.userId !== this.scope.userId || local.dataGeneration !== this.scope.dataGeneration || local.sessionId !== this.id
-      || local.writerEpoch !== this.state.server.writerEpoch || local.editorDeviceId !== this.state.server.editorDeviceId) {
+      || local.writerEpoch !== server.writerEpoch || local.editorDeviceId !== server.editorDeviceId) {
       this.set({ issue: '다른 편집 사본의 종료 요청은 자동 적용하지 않습니다. 원본을 보존하고 누락 수행 비교에서 확인해 주세요.' }); return
     }
     this.set({ busy: true, issue: null })
-    // Keep the session Web Lock while the same sender confirms its original FINISH.
-    // Releasing/reacquiring with ifAvailable can race the browser's lock release.
-    const c = new LocalWorkoutController(this.store, this.current, async () => ({ held: this.canWrite, release() {} }), { api: this.api, online: this.current })
-    try { await c.open(this.state.server!, local.restPolicy); await c.syncSettled(); if (!c.getSnapshot().workout?.finish?.ack) this.conflict('원래 종료 요청과 서버 종료가 일치하는지 확인하지 못했습니다. 원본을 유지합니다.') }
-    catch (error) { this.failure(error) } finally { c.stop(); if (this.current()) { try { await this.read() } catch (error) { this.failure(error) } } this.set({ busy: false }) }
+    try {
+      if (!await this.ensureLease()) return
+      const original = await this.store.readLocal(local)
+      if (!this.canWrite()) return
+      if (!original?.finish?.request || original.finish.requestJson !== local.finish.requestJson) {
+        this.conflict('이 기기의 종료 요청이 변경되었습니다. 현재 기록을 다시 확인해 주세요.')
+      }
+      if (!original.finish.ack) {
+        // The original FINISH sender uses the lock already held by this screen.
+        const c = new LocalWorkoutController(this.store, this.current, async () => ({ held: this.canWrite, release() {} }), { api: this.api, online: this.current })
+        try {
+          await c.open(server, original.restPolicy)
+          await c.syncSettled()
+          const result = c.getSnapshot()
+          if (!result.workout?.finish?.ack) this.conflict(result.syncIssue ?? '원래 종료 요청과 서버 종료가 일치하는지 확인하지 못했습니다. 원본을 유지합니다.')
+        } finally { c.stop() }
+      }
+      if (this.current()) { await this.read(); this.set({ notice: '운동 종료 결과를 확인했어요.', noticeTone: 'info' }) }
+    } catch (error) { this.failure(error) } finally { this.set({ busy: false }) }
   }
   stop() { this.stopped = true; this.abort.abort(); this.lease?.release() }
 }

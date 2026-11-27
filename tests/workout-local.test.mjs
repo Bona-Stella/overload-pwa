@@ -6,6 +6,7 @@ import { localWorkout } from '../src/features/workout-local/validation.ts'
 import { LocalWorkoutController } from '../src/features/workout-local/controller.ts'
 import { activeWorkoutProgress } from '../src/features/home/active-workout.ts'
 import { observedWeightMs } from '../src/features/workout-local/weight-timing.ts'
+import { intendFinish, sealFinish } from '../src/features/workout-local/sync-state.ts'
 import { acquireEditor, editorLockName } from '../src/features/workout-local/lock.ts'
 import { LocalStoreError, LocalWriteBlocked } from '../src/features/workout-online/storage.ts'
 import { AuthController } from '../src/features/auth/controller.ts'
@@ -412,6 +413,42 @@ test('StrictMode setup-cleanup-setup cannot revive an obsolete acquisition or lo
   const acquire=async()=>{assert.equal(held,false);held=true;return{held:()=>held,release(){held=false}}}
   const c=new LocalWorkoutController({readLocal:async()=>stored,openLocal:async()=>stored,saveLocal:async v=>{stored=v}},()=>true,acquire)
   const first=c.open(session(),policy);c.stop();const second=c.open(session(),policy);await Promise.all([first,second]);assert.equal(c.getSnapshot().writable,true);c.stop();assert.equal(held,false)
+})
+test('reopening a sealed finish with a weight clock preserves the document and the fixed request',async()=>{
+  let stored=set(local())
+  stored.weightClock={visible:false,runningSince:null,observedAt:new Date(at+2).toISOString()}
+  stored=change(stored,w=>intendFinish(w,at+3))
+  sealFinish(stored)
+  const original=structuredClone(stored)
+  const store={readLocal:async()=>structuredClone(stored),openLocal:async()=>structuredClone(stored),saveLocal:async next=>{
+    if (stored.finish) throw new LocalWriteBlocked()
+    stored=next
+  }}
+  const controller=new LocalWorkoutController(store,()=>true,async()=>({held:()=>true,release(){}}))
+  await controller.open(session(),policy)
+  assert.equal(controller.getSnapshot().issue,null)
+  assert.deepEqual(controller.getSnapshot().workout,original)
+  assert.deepEqual(stored,original)
+  controller.stop()
+})
+test('manual reopen waits for the previous asynchronous lock release before acquiring again',async()=>{
+  const released=gate()
+  let held=false, acquired=0
+  const store={readLocal:async()=>local(),openLocal:async()=>local(),saveLocal:async()=>{}}
+  const controller=new LocalWorkoutController(store,()=>true,async()=>{
+    assert.equal(held,false)
+    acquired++;held=true
+    return {held:()=>held,release:async()=>{await released.promise;held=false}}
+  })
+  await controller.open(session(),policy)
+  const reopening=controller.open(session(),policy)
+  await settle()
+  assert.equal(acquired,1)
+  released.resolve()
+  await reopening
+  assert.equal(acquired,2)
+  assert.equal(controller.getSnapshot().writable,true)
+  controller.stop()
 })
 test('workout expiry is an in-memory local capability; explicit logout and account change revoke it',async()=>{
   let owner=USER, expired=false

@@ -10,6 +10,7 @@ import { normalizePresetName, presetNameLimit, validPresetName } from './preset-
 import { useTrainingSchedule } from './useTrainingSchedule.ts'
 import type { TrainingSchedule } from './useTrainingSchedule.ts'
 import { Dialog } from '../../components/Dialog.tsx'
+import { ActionDialog } from '../../components/common-ui/ActionDialog.tsx'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactNode } from 'react'
 import { useAuth } from '../auth/context.ts'
@@ -599,6 +600,9 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
   useLayoutEffect(() => { if (enteredWorkout) window.scrollTo(0, 0) }, [enteredWorkout])
   const workoutLoading = visible && !opening && !!workoutRoute && workoutRoute !== session?.id
   const showWorkoutLoading = useDelayedPending(workoutLoading && !state.issue)
+  const [dismissedWorkoutRoute, setDismissedWorkoutRoute] = useState<string | null>(null)
+  const [recheckingWorkoutLoad, setRecheckingWorkoutLoad] = useState(false)
+  if (!workoutLoading && dismissedWorkoutRoute) setDismissedWorkoutRoute(null)
   const routineEditor = visible && tab === 'routines' && routineRoutes.focused
   const shellFocused = visible && (focused || workoutLoading || recordFocused || routineEditor)
   const present = (content: ReactNode) => renderShell ? renderShell(content, shellFocused, routineEditor) : content
@@ -663,6 +667,14 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
   const leaveWorkout = () => navigateBack(() => { void (async () => {
     if (await flush()) setWorkoutRoute(null, true)
   })() })
+  const recheckWorkoutSession = async (id: string) => {
+    const previous = controller.getSnapshot()
+    const route = window.history.state?.overloadNavigation
+    if (previous.busy || !accountReady || !await flush()) return null
+    const current = controller.getSnapshot()
+    if (current.scope !== previous.scope || window.history.state?.overloadNavigation !== route) return null
+    return controller.showDetail(id)
+  }
   const authorized = () => {
     const a = authentication.getSnapshot(), s = controller.getSnapshot()
     return a.pending !== 'logout' && !!session && s.scope?.dataGeneration === session.dataGeneration && s.detail?.id === session.id
@@ -712,9 +724,16 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
             action={<RefreshButton loading={state.status === 'loading'} failure={state.issue} onRefresh={() => void controller.refresh()} />} />
             : <LoadingSkeleton layout="detail" label="운동 기록을 불러오고 있어요." />)}</div>
     {showDetailWait && <div className={flowStyles.detailWait}><StatusNotice>운동 기록을 확인하는 중입니다.</StatusNotice></div>}
-    {workoutLoading && <><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" />
-      {state.issue && state.scope ? <StatusNotice error>{state.issue} <Button disabled={!accountReady} loading={state.busy} onClick={() => void controller.showDetail(workoutRoute)}>세션 상세 다시 확인</Button></StatusNotice>
-        : showWorkoutLoading && <LoadingSkeleton layout="workout" label="운동 정보를 확인하는 중입니다." />}</>}
+    {workoutLoading && <><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" backDisabled={recheckingWorkoutLoad} />
+      <ActionDialog kind="confirm" tone="critical" open={!!state.scope && (!!state.issue || recheckingWorkoutLoad) && dismissedWorkoutRoute !== workoutRoute}
+        title="운동을 불러오지 못했습니다" description={<p>현재 운동 상태를 확인하지 못했습니다. 연결을 확인한 뒤 다시 확인해 주세요.</p>}
+        confirmLabel="다시 확인" pending={recheckingWorkoutLoad} onDismiss={() => setDismissedWorkoutRoute(workoutRoute)}
+        onConfirm={() => {
+          if (!accountReady || controller.getSnapshot().busy || recheckingWorkoutLoad) return
+          setRecheckingWorkoutLoad(true)
+          void controller.showDetail(workoutRoute).finally(() => setRecheckingWorkoutLoad(false))
+        }} />
+      {showWorkoutLoading && <LoadingSkeleton layout="workout" label="운동 정보를 확인하는 중입니다." />}</>}
     {session && session.status === 'ACTIVE' && !editable && <div hidden={!focused}><RecordSubpageHeader title="운동 진행" onBack={leaveWorkout} backLabel="이전 화면으로" /><details open><summary>세션 상태·편집 기기 확인</summary><SessionView session={session} deviceId={state.deviceId} saved={state.copySaved} busy={state.busy} issue={state.issue} manufacturers={state.data?.manufacturers} onRefresh={() => { void (async () => { if (await flush()) await controller.showDetail(session.id) })() }} onTakeover={controller.takeover} /></details></div>}
     {visible && !localSession && workoutPermissionIssue && <StatusNotice>{workoutPermissionIssue}</StatusNotice>}
     {summaryPending && !handoffEditor && <RecordSubpageHeader title="운동 기록 요약" onBack={leaveWorkout} />}
@@ -724,7 +743,8 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       visible={focused || summaryPending} preparingSummary={summaryPending} onHome={leaveWorkout} backLabel={tab === 'routines' ? '루틴' : undefined}
       navigationIssue={workoutNavigationIssue} permissionIssue={workoutPermissionIssue}
       accountIssue={localOnly ? auth.issue?.message : undefined} onReconnect={() => void authentication.restore()}
-      onRecheckSession={() => { void (async () => { if (await flush()) await controller.showDetail(localSession.id) })() }}
+      onRecheckSession={() => { void recheckWorkoutSession(localSession.id) }}
+      recheckBeforeOpen={() => recheckWorkoutSession(localSession.id)}
       history={repHistory?.key === localReferenceKey ? repHistory.sessions : referenceKey && referenceKey === localReferenceKey ? null : []}
       referenceRecords={referenceHistory?.key===localReferenceKey?referenceHistory.references:[]} referenceRoutine={referenceHistory?.key===localReferenceKey?referenceHistory.routine:null}
       server={localSession} policy={state.data!.settings} definitions={localOnly ? [] : sessionDefinitions} manufacturers={localOnly ? [] : state.data!.manufacturers} activities={localOnly ? [] : activities} authorized={authorized} localOnly={localOnly} onExitGuard={registerExit} onReady={admitOffline} onWorkoutChange={setHomeWorkout} onOpened={onEditorOpened}

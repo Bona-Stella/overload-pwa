@@ -61,6 +61,25 @@ test('opening a different closed record does not invalidate summary data; observ
     assert.equal(s.controller.getSnapshot().recordsRevision, before + 1)
   } finally { s.disconnect() }
 })
+test('session recheck never returns or persists an older response and does not duplicate the GET',async t=>{
+  const s=setup({active:async()=>({...scope,session:session({version:'1'})})})
+  t.after(s.disconnect)
+  await settle()
+  const response=gate()
+  let reads=0
+  s.api.detail=async()=>{reads++;await response.promise;return session({version:'1'})}
+  const checking=s.controller.showDetail(start.id)
+  assert.equal(await s.controller.showDetail(start.id),null)
+  s.controller.observeSession(session({version:'2'}))
+  response.resolve()
+  assert.equal(await checking,null)
+  assert.equal(reads,1)
+  assert.equal(s.controller.getSnapshot().detail.version,'2')
+  assert.equal(s.getCopies()[0].server.version,'1')
+  s.api.detail=async()=>session({version:'2'})
+  assert.equal((await s.controller.showDetail(start.id)).version,'2')
+  assert.equal(s.getCopies()[0].server.version,'2')
+})
 test('confirmed approval refreshes the list once per version and preserves the closed plan and local copy', async t => {
   let reads = 0
   const version = String(BigInt(routine.version) + 1n)
@@ -270,6 +289,20 @@ test('definitive START clock rejection retires only that attempt and permits a c
   assert.notEqual(s.starts[0].id, rejected.id)
   assert.equal(s.getCopies().length, 1)
   s.disconnect()
+})
+test('a confirmed FINISH clears the active-session block on the next START', async t => {
+  const running = session()
+  const s = setup({active:async()=>({...scope,session:running})})
+  t.after(s.disconnect)
+  await settle()
+  await s.controller.select(ROUTINE)
+  await s.controller.start()
+  assert.equal(s.starts.length,0)
+  s.controller.observeSession({...running,status:'FINISHED',version:'1',localRevision:'2'})
+  assert.equal(s.controller.getSnapshot().active,null)
+  await s.controller.start()
+  assert.equal(s.starts.length,1)
+  assert.notEqual(s.starts[0].id,running.id)
 })
 test('START is dispatched only after durable attempt, and duplicate clicks do not start twice',async()=>{
   const s=setup();await settle();await s.controller.select(ROUTINE)

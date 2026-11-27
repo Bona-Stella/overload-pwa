@@ -37,6 +37,7 @@ async function editor(options={}){
     server.version=String(BigInt(server.version)+1n);server.snapshot.approvalResults.forEach(r=>{r.status='NOT_APPLIED';r.reason='KEPT_CURRENT';r.resolvedAt=new Date(at).toISOString();r.resolvedByRequestId=null});return{}
   },snapshot:async(_scope,_id,body)=>{
     calls.push({kind:'snapshot',body:clone(body)});if(options.snapshotGate)await options.snapshotGate.promise
+    if(options.beforeSnapshot)await options.beforeSnapshot(body)
     server={...server,localRevision:body.localRevision,version:String(BigInt(server.version)+1n),snapshot:{...server.snapshot,state:clone(body.snapshot)}};return ack(body,false)
   },finish:async(_scope,_id,body)=>{
     calls.push({kind:'finish',body:clone(body)});if(options.beforeFinish)await options.beforeFinish(body)
@@ -46,7 +47,9 @@ async function editor(options={}){
     const value={...ack(body,duplicate),status:'FINISHED',currentVersion:server.version,deletedAt:server.deletedAt,endedAt:server.endedAt,closedAt:server.closedAt,completionAssessment:server.completionAssessment}
     if(options.afterFinish)await options.afterFinish(value);return value
   }}
-  const c=new LocalWorkoutController(store,()=>authorized,async()=>({held:()=>held,release(){held=false}}),{api,online:()=>online,onServer:value=>{if(value.status==='FINISHED')assert.ok(stored.finish.ack,'publish only after durable ACK')}})
+  const c=new LocalWorkoutController(store,()=>authorized,async()=>({held:()=>held,release(){held=false;return options.releaseGate?.promise}}),{api,online:()=>online,onServer:value=>{
+    if(value.status==='FINISHED'){assert.ok(stored.finish.ack,'publish only after durable ACK');options.onFinished?.(value)}
+  }})
   await c.open(server,bootstrap.settings);await c.syncSettled()
   return{c,api,calls,seen,read:()=>clone(stored),remote:()=>clone(server),fail:fn=>fail=fn,online:v=>online=v,authorize:v=>authorized=v,setServer:v=>server=v}
 }
@@ -90,6 +93,21 @@ test('offline finish persists once, locks later edits and resumes with original 
   assert.equal(e.calls.length,0);assert.equal(await e.c.change(w=>complete(w,2)),false);e.c.draft(E,2,{weight:'70',reps:'9'});assert.equal(e.c.getSnapshot().unsavedDrafts,false)
   e.online(true);await e.c.retrySync();assert.equal(e.calls.length,1);assert.equal(e.calls[0].kind,'finish');assert.equal(e.calls[0].body.endedAt,new Date(at+20).toISOString());e.c.stop()
 })
+test('the saved FINISH is published only after the editor lock has been released',async()=>{
+  const releaseGate=gate(),published=[]
+  const e=await editor({releaseGate,onFinished:value=>published.push(value)})
+  await e.c.finish(at+20)
+  await tick()
+  assert.ok(e.read().finish.ack)
+  assert.equal(e.c.getSnapshot().syncStatus,'SENDING')
+  assert.equal(e.c.getSnapshot().writable,false)
+  assert.deepEqual(published,[])
+  releaseGate.resolve()
+  await e.c.syncSettled()
+  assert.equal(e.c.getSnapshot().syncStatus,'SAVED')
+  assert.equal(published.length,1)
+  e.c.stop()
+})
 test('ending at the weight/cardio choice keeps the plan and records only completed weight',async()=>{
   const e=await editor()
   e.online(false)
@@ -123,6 +141,74 @@ test('a durable unresolved approval resolution is confirmed before freezing FINI
 test('FINISH ACK loss uses identical body, bounded replay, and no intermediate snapshot',async()=>{
   let lost=true;const e=await editor({afterFinish:async()=>{if(lost){lost=false;throw Error('lost ACK')}}});e.online(false);await e.c.change(w=>complete(w,1));await e.c.finish(at+20);e.online(true);await e.c.retrySync()
   assert.deepEqual(e.calls.map(c=>c.kind),['finish','finish']);assert.deepEqual(e.calls[0].body,e.calls[1].body);assert.ok(e.read().finish.ack);e.c.stop()
+})
+function finishAfterRejectedSnapshot(){
+  let stored=change(local(),w=>complete(w,1))
+  stored=change(stored,s.sealSnapshot)
+  stored=change(stored,s.rejectSnapshot)
+  return change(stored,w=>s.intendFinish(w,at+20))
+}
+test('a rejected older snapshot cannot strand a restored FINISH on the same server revision',async()=>{
+  const stored=finishAfterRejectedSnapshot()
+  const e=await editor({stored})
+  try {
+    assert.deepEqual(e.calls.map(call=>call.kind),['finish'])
+    assert.equal(e.calls[0].body.endedAt,stored.finish.endedAt)
+    assert.equal(e.calls[0].body.localRevision,stored.localRevision)
+    assert.deepEqual(e.calls[0].body.snapshot,stored.finish.snapshot)
+    assert.ok(e.read().finish.ack)
+    assert.equal(e.read().pendingSnapshot,null)
+    assert.deepEqual(e.read().snapshot.performedSets,stored.snapshot.performedSets)
+  } finally { e.c.stop() }
+})
+test('an explicit finish proceeds if a snapshot was rejected just before or during the request',async()=>{
+  for(const rejectDuringFinish of [false,true]){
+    const snapshotGate=rejectDuringFinish?gate():undefined
+    const e=await editor({snapshotGate,beforeSnapshot:()=>{throw{status:422,code:'CLOCK_CONTEXT_INVALID'}}})
+    try {
+      await e.c.change(w=>complete(w,1))
+      if (!snapshotGate) await e.c.syncSettled()
+      assert.equal(await e.c.finish(at+20),true)
+      snapshotGate?.resolve()
+      await e.c.syncSettled()
+      assert.deepEqual(e.calls.map(call=>call.kind),['snapshot','finish'])
+      assert.equal(e.read().finish.ack.status,'FINISHED')
+      assert.equal(e.read().snapshot.performedSets.length,1)
+    } finally { snapshotGate?.resolve();e.c.stop() }
+  }
+})
+test('a newer server revision blocks FINISH after snapshot rejection',async()=>{
+  const unsealed=finishAfterRejectedSnapshot()
+  for (const stored of [unsealed,change(unsealed,s.sealFinish)]) {
+    const server=session({localRevision:stored.pendingSnapshot.request.localRevision,version:'1'})
+    const e=await editor({stored,server})
+    try {
+      assert.deepEqual(e.calls,[])
+      assert.equal(e.c.getSnapshot().syncStatus,'CHECK')
+      assert.deepEqual(e.read().finish,stored.finish)
+      assert.deepEqual(e.read().pendingSnapshot,stored.pendingSnapshot)
+    } finally { e.c.stop() }
+  }
+})
+test('if the full FINISH is rejected, frozen time and records survive and the original is rechecked exactly',async()=>{
+  const stored=finishAfterRejectedSnapshot()
+  let refuse=true
+  const e=await editor({stored,beforeFinish:()=>{if(refuse)throw{status:422,code:'CLOCK_CONTEXT_INVALID'}}})
+  try {
+    assert.equal(e.remote().status,'ACTIVE')
+    assert.match(e.c.getSnapshot().syncIssue,/기기 날짜/)
+    assert.equal(e.calls.length,1)
+    assert.deepEqual(e.read().pendingSnapshot,stored.pendingSnapshot)
+    assert.equal(e.read().finish.ack,undefined)
+    const fixed=e.read().finish.requestJson
+    refuse=false
+    await e.c.retrySync()
+    assert.equal(e.calls.length,2)
+    assert.deepEqual(e.calls[0].body,e.calls[1].body)
+    assert.equal(e.read().finish.requestJson,fixed)
+    assert.ok(e.read().finish.ack)
+    assert.deepEqual(e.read().snapshot.performedSets,stored.snapshot.performedSets)
+  } finally { e.c.stop() }
 })
 test('fixed FINISH storage failure prevents HTTP; ACK storage failure retains the same fixed original',async()=>{
   const e=await editor();e.online(false);await e.c.change(w=>complete(w,1));await e.c.finish(at+20)
@@ -177,7 +263,7 @@ async function closed(options={}){
     const ack={...scope,sessionId:server.id,status:server.status,version:server.version,changed:true,changeEventIds:events.map(e=>e.id),recoveredIds:[],alreadyPresentIds:[],deletedAt:null}
     if(options.lose)throw Error('lost response');return ack
   }}
-  const c=new ClosedWorkoutController(api,store,scope,server.id,()=>authorized,undefined,async()=>options.readonly?null:{held:()=>held,release(){held=false}});await c.open()
+  const c=new ClosedWorkoutController(api,store,scope,server.id,()=>authorized,undefined,options.acquire??(async()=>options.readonly?null:{held:()=>held,release(){held=false}}));await c.open()
   const body=()=>({dataGeneration:scope.dataGeneration,expectedVersion:server.version,setCorrections:[{id:OTHER,weightKg:'62.5',reps:9}],cardioCorrections:[],deletedPerformedSetIds:[],deletedCardioResultIds:[]})
   return{c,api,calls,body,read:()=>clone(pending),remote:()=>clone(server),setVersion:v=>server.version=v,authorize:v=>authorized=v,fail:fn=>fail=fn}
 }
@@ -253,6 +339,27 @@ test('closed local-save failure never dispatches; ACK/result-save failure retain
 test('closed mutations respect Web Locks and logout protects late responses',async()=>{
   const readonly=await closed({readonly:true});assert.equal(await readonly.c.edit(readonly.body()),false);assert.equal(readonly.calls.length,0);readonly.c.stop()
   const hold=gate(),e=await closed({sendGate:hold});const send=e.c.edit(e.body());await tick();e.authorize(false);hold.resolve();assert.equal(await send,false);assert.equal(e.read().status,'PENDING');e.c.stop()
+})
+test('closed result can restore editing after the previous view releases the session lock',async()=>{
+  let available=false
+  const e=await closed({acquire:async()=>available?{held:()=>true,release(){}}:null})
+  assert.equal(e.c.getSnapshot().writable,false)
+  available=true
+  await e.c.refresh()
+  assert.equal(e.c.getSnapshot().writable,true)
+  assert.equal(e.c.getSnapshot().issue,null)
+  e.c.stop()
+})
+test('confirm FINISH reports a held lock and does not send or change the frozen original',async()=>{
+  const e=await closed({readonly:true})
+  const original=change(change(local(),x=>{complete(x,1);s.intendFinish(x,at+20)}),s.sealFinish)
+  const before=clone(original)
+  await e.c.confirmFinish(original)
+  assert.match(e.c.getSnapshot().issue,/다른 탭.*다시 확인/)
+  assert.equal(e.c.getSnapshot().busy,false)
+  assert.deepEqual(e.calls,[])
+  assert.deepEqual(original,before)
+  e.c.stop()
 })
 test('closed generation changes stop editing and keep the durable prior request intact',async()=>{
   const e=await closed();const before=e.read();e.api.detail=async()=>{throw{status:409,code:'DATA_GENERATION_MISMATCH'}}

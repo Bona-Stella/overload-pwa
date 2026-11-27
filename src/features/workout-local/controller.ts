@@ -13,6 +13,7 @@ import type { WorkoutActionFailure } from './action-error.ts'
 
 type Store = Pick<WorkoutStore, 'openLocal' | 'readLocal' | 'saveLocal'> & Partial<Pick<WorkoutStore, 'saveSyncLocal' | 'saveSession'>>
 export type EditorState = { workout: LocalWorkout | null; writable: boolean; loading: boolean; pending: number; issue: string | null;
+  openFailure?: { kind: 'lock' | 'conflict' | 'storage'; preserved: boolean } | null;
   drafts: Record<string, SetDraft>; cardioDrafts: Record<string, Partial<CardioTimer>>; memos: Record<string, string>; unsavedDrafts: boolean; syncStatus?: SyncStatus; syncIssue?: string | null }
 type DraftCollections = Pick<EditorState, 'drafts' | 'cardioDrafts' | 'memos'>
 type DraftPatch = Partial<DraftCollections & Pick<EditorState, 'unsavedDrafts'>>
@@ -31,6 +32,7 @@ export class LocalWorkoutController {
   private draftSerial = 0
   private generation = 0
   private opening: Promise<unknown> = Promise.resolve()
+  private releasing: Promise<unknown> = Promise.resolve()
   private readonly syncOptions?: SyncOptions
   private synchronizer: WorkoutSynchronizer | null = null
   constructor(store: Store, authorized: () => boolean, acquire = acquireEditor, sync?: SyncOptions) { this.store = store; this.authorized = authorized; this.acquire = acquire; this.syncOptions = sync }
@@ -38,41 +40,71 @@ export class LocalWorkoutController {
   subscribe = (fn: () => void) => { this.listeners.add(fn); return () => this.listeners.delete(fn) }
   private set(patch: Partial<EditorState>) { if (this.stopped) return; this.state = { ...this.state, ...patch }; this.listeners.forEach(fn => fn()) }
   private allowed = () => !this.stopped && !!this.lease?.held() && this.authorized()
+  private releaseEditor() {
+    const lease = this.lease
+    this.lease = null
+    if (lease) this.releasing = Promise.resolve(lease.release())
+    return this.releasing
+  }
   async open(server: Session, policy: RestPolicy) {
     const generation = ++this.generation
     this.stopped = false
+    this.synchronizer?.stop()
+    this.synchronizer = null
+    void this.releaseEditor()
+    this.set({ loading: true, writable: false })
     const previousOpening = this.opening
     let opened!: () => void
     this.opening = new Promise<void>(resolve => { opened = resolve })
-    await previousOpening
-    if (generation !== this.generation || this.stopped) { opened(); return }
     const key: LocalKey = { userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, editorDeviceId: server.editorDeviceId, writerEpoch: server.writerEpoch }
+    const current = () => generation === this.generation && !this.stopped
+    const allowed = () => current() && this.allowed()
     try {
+      await previousOpening
+      await this.tail
+      await this.releasing
+      if (!current()) return
       const lease = await this.acquire(key)
-      if (this.stopped || generation !== this.generation) { lease?.release(); return }
+      if (!current()) { await lease?.release(); return }
       this.lease = lease
-      if (!lease || !this.authorized()) {
-        lease?.release()
-        this.set({ workout: await this.store.readLocal(key), loading: false, issue: '다른 탭이 운동을 편집 중이거나 이 환경이 편집 잠금을 지원하지 않습니다. 이 탭은 읽기 전용입니다.' }); return
+      if (!allowed()) {
+        await this.releaseEditor()
+        const workout = await this.store.readLocal(key)
+        if (current()) this.set({ workout, loading: false, issue: '다른 탭이 운동을 편집 중이거나 이 환경이 편집 잠금을 지원하지 않습니다. 이 탭은 읽기 전용입니다.',
+          openFailure: workout ? null : { kind: 'lock', preserved: false } })
+        return
       }
-      let workout = await this.store.openLocal(server, policy, this.allowed)
-      if (workout.weightClock || workout.rest !== undefined) {
+      let workout = await this.store.openLocal(server, policy, allowed)
+      // FINISH was sealed with its last clock checkpoint. Recovery must replay that durable intent as-is.
+      if (!workout.finish && (workout.weightClock || workout.rest !== undefined)) {
         const next = applyLocalChange(workout, w => { migrateRest(w); recoverWeightClock(w, Date.now()) }, true)
-        await this.store.saveLocal(next, workout.editVersion, this.allowed)
+        await this.store.saveLocal(next, workout.editVersion, allowed)
         workout = next
       }
-      if (generation === this.generation) this.set({ workout, loading: false, writable: this.allowed(), issue: null })
-      if (generation === this.generation && this.syncOptions && this.allowed()) {
-        this.synchronizer?.stop()
+      if (!current()) return
+      if (!allowed()) throw new LocalWriteBlocked()
+      this.set({ workout, loading: false, writable: true, issue: null, openFailure: null, syncIssue: null, syncStatus: undefined })
+      if (this.syncOptions && allowed()) {
         this.synchronizer = new WorkoutSynchronizer(this.syncOptions, {
-          read: () => this.state.workout, allowed: () => generation === this.generation && this.allowed(),
+          read: () => this.state.workout, allowed,
           mutate: fn => this.update(fn, true), saveServer: s => this.store.saveSession!(s, s),
-          block: () => { this.lease?.release(); this.lease = null; this.set({ writable: false }) },
-          status: (syncStatus, issue) => { if (generation === this.generation) this.set({ syncStatus, syncIssue: issue ?? null, ...(syncStatus === 'OTHER' ? { writable: false } : {}) }) },
+          block: () => {
+            if (!current()) return
+            const released = this.releaseEditor()
+            this.set({ writable: false })
+            return released
+          },
+          status: (syncStatus, issue) => { if (current()) this.set({ syncStatus, syncIssue: issue ?? null, ...(syncStatus === 'OTHER' ? { writable: false } : {}) }) },
         })
         void this.synchronizer.retry()
       }
-    } catch (error) { if (generation === this.generation) { this.set({ loading: false, writable: false, issue: error instanceof Error ? error.message : new LocalStoreError().message }); this.lease?.release() } }
+    } catch (error) {
+      if (!current()) return
+      void this.releaseEditor()
+      const preserved = !!await this.store.readLocal(key).catch(() => null)
+      if (current()) this.set({ loading: false, writable: false, issue: error instanceof Error ? error.message : new LocalStoreError().message,
+        openFailure: { kind: error instanceof LocalWriteBlocked ? 'conflict' : 'storage', preserved } })
+    }
     finally {
       opened()
     }
@@ -117,7 +149,7 @@ export class LocalWorkoutController {
         if (!sync && (next.localRevision !== previous.localRevision || !previous.finish && next.finish)) this.synchronizer?.request()
         return true
       } catch (error) {
-        if (error instanceof LocalWriteBlocked) { this.lease?.release(); this.lease = null }
+        if (error instanceof LocalWriteBlocked) void this.releaseEditor()
         const message = error instanceof LocalWriteBlocked || error instanceof LocalStoreError ? error.message : new LocalStoreError().message
         this.set({ issue: message,
           ...(error instanceof LocalWriteBlocked ? { writable: false } : {}) })
@@ -182,16 +214,19 @@ export class LocalWorkoutController {
   async settled() { await this.tail }
   flushDrafts = async () => { await this.tail; return !this.state.unsavedDrafts || this.retryDrafts() }
   retrySync = () => this.synchronizer?.retry()
+  canRetrySync = () => this.allowed() && !!this.synchronizer
   finish = async (now: number, onFailure?: OnActionFailure) => {
     if (this.state.workout?.finish) { await this.retrySync(); return false }
     if (!await this.flushDrafts()) {
       onFailure?.({ kind: 'storage', message: '입력값을 이 기기에 보존하지 못했습니다. 저장 상태를 열어 다시 확인해 주세요.' })
       return false
     }
-    return this.update(w => intendFinish(w, now), false, now, undefined, onFailure)
+    const saved = await this.update(w => intendFinish(w, now), false, now, undefined, onFailure)
+    if (saved && this.state.workout?.pendingSnapshot?.rejected) void this.synchronizer?.retry()
+    return saved
   }
   async syncSettled() { await this.synchronizer?.settled(); await this.tail }
   resolveApproval = (exerciseId: string, ids: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE', nextWeight: string) => this.synchronizer?.resolve(exerciseId, ids, decision, nextWeight)
   isStopped() { return this.stopped }
-  stop() { this.stopped = true; this.generation++; this.synchronizer?.stop(); this.synchronizer = null; this.lease?.release(); this.lease = null }
+  stop() { this.stopped = true; this.generation++; this.synchronizer?.stop(); this.synchronizer = null; void this.releaseEditor() }
 }

@@ -69,8 +69,13 @@ test('real React reconciliation respects workout, settings, account, generation 
   const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'workspace-component-only', enforce: 'pre',
     resolveId(id, importer) { if (importer?.endsWith('/WorkoutWorkspace.tsx') && replaced.has(id)) return '\0workspace-boundary-stub' },
     load(id) { if (id === '\0workspace-boundary-stub') return stub },
-    configureServer(vite) { vite.middlewares.use('/boundary', async (_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(await vite.transformIndexHtml('/boundary', '<!doctype html><html><head></head><body><div id="root"></div><script type="module" src="/tests/fixtures/workspace-boundary.jsx"></script></body></html>')) }) },
-  }, react()], server: { host: '127.0.0.1', port: 0, watch: { ignored: ['**/logs/**'] } }, clearScreen: false })
+    configureServer(vite) { vite.middlewares.use('/boundary', async (req, res) => {
+      const fixture = req.originalUrl?.includes('?access=') ? 'workout-access-ui' : 'workspace-boundary'
+      res.setHeader('Content-Type', 'text/html')
+      const viewport = fixture === 'workout-access-ui' ? '<meta name="viewport" content="width=device-width,initial-scale=1">' : ''
+      res.end(await vite.transformIndexHtml('/boundary', `<!doctype html><html><head>${viewport}</head><body><div id="root"></div><script type="module" src="/tests/fixtures/${fixture}.jsx"></script></body></html>`))
+    }) },
+  }, react()], server: { host: '127.0.0.1', port: 0, hmr: false, ws: false, watch: { ignored: ['**/logs/**', '**/.local-backups/**'] } }, clearScreen: false })
   let browser, ws, next = 0
   const pending = new Map()
   const wait = async fn => { const until = Date.now() + 12000; while (Date.now() < until) { const r = await fn(); if (r) return r; await new Promise(r => setTimeout(r, 30)) } throw Error('Component DOM transition timeout') }
@@ -280,6 +285,140 @@ test('real React reconciliation respects workout, settings, account, generation 
     await wait(() => evaluate('document.body.innerText.includes("준비운동 완료")'))
     await evaluate('new Promise(requestAnimationFrame)')
     assert.equal(await evaluate('window.watchStart=false;window.startFrames.some(f=>f.home)&&window.startFrames.some(f=>f.warmup)&&window.startFrames.every(f=>!f.resume&&!f.skeleton&&(!f.warmup||!f.home&&!f.tabs))&&window.startScenario.posts===1'),true)
+
+    const access = phase => send('Page.navigate', { url: origin + '/boundary?access=' + phase })
+    const dialog = 'dialog[open][data-message-tone="critical"]'
+    const confirm = `${dialog} [data-dialog-actions] button`
+    const modalReady = () => wait(() => evaluate(`!!document.querySelector('${dialog}')`))
+    await send('Emulation.setDeviceMetricsOverride', { width: 393, height: 852, deviceScaleFactor: 1, mobile: true })
+    await access('retry')
+    await modalReady()
+    assert.deepEqual(await evaluate(`(() => {
+      const d=document.querySelector('${dialog}'), button=d.querySelector('[data-dialog-actions] button');
+      return [d.querySelector('h2').textContent,d.querySelector('[data-dialog-description]').textContent,
+        button.textContent,getComputedStyle(d).borderRadius,getComputedStyle(d).padding,document.activeElement===d.querySelector('h2')];
+    })()`),['운동을 불러오지 못했습니다','현재 운동 상태를 다시 확인해 주세요.','다시 확인','5px','16px',true])
+    await evaluate(`const button=document.querySelector('${confirm}');button.click();button.click()`)
+    await wait(() => evaluate(`!!document.querySelector('${confirm}:disabled')`))
+    assert.equal(await evaluate('window.workoutAccess.reads'),1)
+    assert.equal(await evaluate(`document.querySelector('${dialog} button[aria-label="닫기"]').disabled`),true)
+    await evaluate(`(() => {
+      for (const state of ['hidden','visible']) {
+        Object.defineProperty(document,'visibilityState',{value:state,configurable:true});
+        document.dispatchEvent(new Event('visibilitychange'));
+      }
+      delete document.visibilityState;
+    })()`)
+    assert.equal(await evaluate(`window.workoutAccess.reads===1 && document.querySelector('${confirm}').disabled`),true)
+    await evaluate('window.workoutAccess.failRead()')
+    await wait(() => evaluate(`document.querySelector('${dialog}')?.textContent.includes('연결을 확인해 주세요.')`))
+    await evaluate(`document.querySelector('${confirm}').click()`)
+    await wait(() => evaluate(`!!document.querySelector('[data-workout-frame]') && !document.querySelector('${dialog}')`))
+    assert.equal(await evaluate('window.workoutAccess.reads'),2)
+    assert.deepEqual(await evaluate(`window.workoutAccess.read().then(w=>[w.serverRevision,w.snapshot.performedSets.length])`),['1',1])
+
+    await access('conflict')
+    await modalReady()
+    assert.equal(await evaluate(`document.querySelector('${dialog}').textContent.includes('운동 데이터는 보존되어 있습니다.')`),true)
+    await evaluate(`document.querySelector('${confirm}').click()`)
+    await wait(() => evaluate(`window.workoutAccess.reads===1 && !document.querySelector('${confirm}').disabled`))
+    assert.equal(await evaluate('window.workoutAccess.state().writable'),false)
+    assert.equal(await evaluate(`document.querySelector('${dialog}').textContent.includes('운동 상태가 바뀌었습니다.')`),true)
+    assert.equal(await evaluate('window.workoutAccess.read().then(w=>JSON.stringify(w)===JSON.stringify(window.workoutAccess.original))'),true)
+    await send('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
+    await wait(() => evaluate(`!document.querySelector('${dialog}')`))
+    await evaluate(`document.querySelector('button[aria-label="홈으로"]').click()`)
+    await wait(() => evaluate("document.querySelector('main button')?.textContent==='운동 이어가기'"))
+
+    await access('finish')
+    await wait(() => evaluate('window.workoutAccess?.finish && !!document.querySelector("[data-workout-frame]")'))
+    const frozen = await evaluate('window.workoutAccess.original.finish.requestJson')
+    assert.ok(frozen)
+    assert.equal(await evaluate('window.workoutAccess.rejectOrdinaryWrite()'),true)
+    assert.equal(await evaluate('window.workoutAccess.read().then(w=>JSON.stringify(w)===JSON.stringify(window.workoutAccess.original))'),true)
+    const beforeReload = await evaluate('performance.timeOrigin')
+    await send('Page.reload')
+    await wait(() => evaluate(`performance.timeOrigin !== ${beforeReload} && window.workoutAccess?.finish && !!document.querySelector('[data-workout-frame]')`))
+    assert.equal(await evaluate('window.workoutAccess.original.finish.requestJson'),frozen)
+    assert.equal(await evaluate('window.workoutAccess.original.snapshot.performedSets.length'),1)
+
+    const findButton = label => `[...document.querySelectorAll('main button')].find(button=>button.textContent.trim()===${JSON.stringify(label)}&&button.getClientRects().length)`
+    for (const phase of ['finish-lock', 'closed-finish']) {
+      await access(phase)
+      const local = phase === 'finish-lock'
+      const button = findButton(local ? '서버 저장 상태 다시 확인' : '종료 결과 확인')
+      await wait(() => evaluate(`window.workoutAccess?.phase===${JSON.stringify(phase)} && !!(${button}) && !(${button}).disabled`))
+      assert.equal(await evaluate(`!(${button}).closest('[inert]') && (${button}).getBoundingClientRect().height>0`),true)
+      assert.equal(await evaluate('window.workoutAccess.'+(local ? 'state()' : 'closed()')+'.writable'),false)
+      await evaluate(`(${button}).click()`)
+      await wait(() => evaluate(local ? 'window.workoutAccess.reads===1 && !window.workoutAccess.state().loading'
+        : 'window.workoutAccess.closed().issue?.includes("다시 확인해 주세요") && !window.workoutAccess.closed().busy'))
+      assert.equal(await evaluate('window.workoutAccess.requests.length'),0)
+      assert.equal(await evaluate('window.workoutAccess.read().then(w=>JSON.stringify(w)===JSON.stringify(window.workoutAccess.original))'),true)
+      await evaluate('window.workoutAccess.release()')
+      await evaluate(`{const button=${button};button.click();button.click()}`)
+      await wait(() => evaluate('window.workoutAccess.requests.length===1'))
+      assert.equal(await evaluate(`(${button})?.disabled!==false`),true)
+      await evaluate('window.workoutAccess.completeRequest()')
+      await wait(() => evaluate('document.querySelector("main h1")?.textContent==="운동 기록 요약" && window.workoutAccess.closed().writable && !window.workoutAccess.closed().busy'))
+      assert.equal(await evaluate('window.workoutAccess.requests.length'),1)
+      assert.equal(await evaluate(`window.workoutAccess.read().then(w=>!!w.finish.ack && w.finish.requestJson===window.workoutAccess.requests[0] &&
+        w.finish.requestJson===window.workoutAccess.original.finish.requestJson &&
+        JSON.stringify(w.snapshot.performedSets)===JSON.stringify(window.workoutAccess.original.snapshot.performedSets))`),true)
+      assert.equal(await evaluate(`!(${findButton('종료 결과 확인')})`),true)
+      await evaluate(`document.querySelector('main button[aria-label="홈으로"]').click()`)
+      await wait(() => evaluate(`!!(${findButton('운동 이어가기')})`))
+    }
+
+    await access('finish-revoked')
+    const recheckFinish = findButton('종료 결과 확인')
+    await wait(() => evaluate(`window.workoutAccess?.phase==='finish-revoked' && !!(${recheckFinish}) && !(${recheckFinish}).disabled`))
+    await evaluate('window.workoutAccess.revoke()')
+    assert.equal(await evaluate('window.workoutAccess.state().writable'),true, 'the view has not yet observed the revoked lock')
+    const elapsed = 'document.querySelector("[data-workout-frame] [data-keyboard-header] strong")?.textContent'
+    const stoppedTime = await evaluate(elapsed)
+    assert.ok(stoppedTime)
+    const tapFinish = async () => {
+      const point = await evaluate(`(() => {
+        const {x,y,width,height}=(${recheckFinish}).getBoundingClientRect()
+        return {x:x+width/2,y:y+height/2}
+      })()`)
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    }
+    await tapFinish()
+    await wait(() => evaluate('document.body.innerText.includes("기기 날짜·시간과 입력을 확인해 주세요")'))
+    assert.equal(await evaluate('window.workoutAccess.reads'),1)
+    assert.equal(await evaluate('window.workoutAccess.requests.length'),2)
+    assert.equal(await evaluate('window.workoutAccess.read().then(w=>w.finish.requestJson===window.workoutAccess.original.finish.requestJson && w.snapshot.performedSets.length===1)'),true)
+    await evaluate('new Promise(resolve=>setTimeout(resolve,1100))')
+    assert.equal(await evaluate(elapsed),stoppedTime)
+    await evaluate('window.workoutAccess.rejectFinish=false')
+    await tapFinish()
+    await wait(() => evaluate('typeof window.workoutAccess.completeRequest==="function"'))
+    await evaluate('window.workoutAccess.completeRequest()')
+    await wait(() => evaluate('document.querySelector("main h1")?.textContent==="운동 기록 요약" && window.workoutAccess.closed().writable && !window.workoutAccess.closed().busy'))
+    assert.equal(await evaluate('new Set(window.workoutAccess.requests).size'),1)
+    assert.equal(await evaluate('window.workoutAccess.read().then(w=>!!w.finish.ack && w.snapshot.performedSets.length===1)'),true)
+
+    await access('finish-rejected')
+    await wait(() => evaluate(`window.workoutAccess?.phase==='finish-rejected' && !!(${recheckFinish}) && !(${recheckFinish}).disabled`))
+    assert.equal(await evaluate('window.workoutAccess.requests.length'),1)
+    assert.equal(await evaluate('window.workoutAccess.original.pendingSnapshot.rejected && !window.workoutAccess.original.finish.request'),true)
+    await tapFinish()
+    const detail = 'dialog[open]'
+    await wait(() => evaluate(`document.querySelector('${detail}')?.innerText.includes('기기 날짜·시간과 입력을 확인해 주세요')`))
+    assert.equal(await evaluate('window.workoutAccess.requests.length'),2)
+    assert.equal(await evaluate(`!document.querySelector('${detail}').innerText.includes('앞선 저장이 거절되었습니다.')`),true)
+    await evaluate(`window.workoutAccess.rejectFinish=false;[...document.querySelectorAll('${detail} button')].find(b=>b.textContent==='종료 결과 확인').click()`)
+    await wait(() => evaluate('typeof window.workoutAccess.completeRequest==="function"'))
+    await evaluate('window.workoutAccess.completeRequest()')
+    await wait(() => evaluate('document.querySelector("main h1")?.textContent==="운동 기록 요약" && window.workoutAccess.closed().writable && !window.workoutAccess.closed().busy'))
+    assert.equal(await evaluate('window.workoutAccess.requests.length'),3)
+    assert.equal(await evaluate('new Set(window.workoutAccess.requests).size'),1)
+    assert.equal(await evaluate(`window.workoutAccess.read().then(w=>!!w.finish.ack && w.pendingSnapshot===null &&
+      w.finish.endedAt===window.workoutAccess.original.finish.endedAt &&
+      JSON.stringify(w.snapshot.performedSets)===JSON.stringify(window.workoutAccess.original.snapshot.performedSets))`),true)
   } catch(error){if(ws?.readyState===1){try{console.error('Boundary DOM:',await evaluate('document.body.innerText'));console.error('Boundary requests:',await evaluate('window.boundaryRequests'))}catch{}}throw error} finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))

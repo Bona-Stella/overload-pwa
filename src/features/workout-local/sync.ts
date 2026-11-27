@@ -12,7 +12,7 @@ class SessionReadError extends Error {
 export type SyncApi = Pick<WorkoutApi, 'detail' | 'snapshot' | 'resolve' | 'routine'> & Partial<Pick<WorkoutApi, 'finish'>>
 export type SyncOptions = { api: SyncApi; online: () => boolean; onServer?: (server: Session) => void; onInvalid?: (error: unknown) => void }
 type Access = { read: () => LocalWorkout | null; allowed: () => boolean; mutate: (fn: (w: LocalWorkout) => void) => Promise<boolean>;
-  saveServer: (server: Session) => Promise<unknown>; status: (value: SyncStatus, issue?: string) => void; block: () => void }
+  saveServer: (server: Session) => Promise<unknown>; status: (value: SyncStatus, issue?: string) => void; block: () => void | Promise<unknown> }
 /** One session/epoch sender. The durable frozen document is authoritative; there is no command queue. */
 export class WorkoutSynchronizer {
   private readonly options: SyncOptions
@@ -43,6 +43,9 @@ export class WorkoutSynchronizer {
     if (!this.current()) throw new state.SyncStateConflict()
     this.options.onServer?.(server)
     try { state.assertWriter(w, server) } catch (error) { this.access.block(); throw error }
+    if (w.finish && w.pendingSnapshot?.rejected && (server.localRevision !== w.serverRevision || BigInt(server.version) < BigInt(w.serverVersion))) {
+      throw new state.SyncStateConflict('서버 기록이 달라 이 기기의 운동을 종료할 수 없습니다. 이 기기의 기록은 보존했습니다.')
+    }
     return server
   }
   private display() {
@@ -53,8 +56,7 @@ export class WorkoutSynchronizer {
     if (!this.current()) { if (!this.stopped) this.access.status('WAITING'); return }
     if (!this.suspended && !this.running) void this.launch(false)
   }
-  retry = async () => {
-    await this.running
+  retry = () => {
     if (this.running) return this.running
     if (!this.current()) { if (!this.stopped) this.access.status('WAITING'); return }
     this.suspended = false
@@ -100,7 +102,10 @@ export class WorkoutSynchronizer {
       await this.mutate(next => state.acceptSnapshot(next, ack))
     } catch (error) {
       const code = (error as { status?: number }).status
-      if (code === 400 || code === 404 || code === 422) await this.mutate(state.rejectSnapshot)
+      if (code === 400 || code === 404 || code === 422) {
+        await this.mutate(state.rejectSnapshot)
+        if (this.document().finish) return
+      }
       if (code === 409) { const server = await this.detail(); state.assertWriter(this.document(), server) }
       throw error
     }
@@ -124,6 +129,7 @@ export class WorkoutSynchronizer {
   }
   private async pump(check: boolean) {
     let server: Session | undefined
+    if (this.access.read()?.finish) this.access.status('SENDING')
     if (this.access.read()?.finish?.ack) { await this.publishFinished(); return }
     if (check) { server = await this.detail(); if (server.status === 'ACTIVE') await this.mutate(w => state.observeServer(w, server!)) }
     while (this.current()) {
@@ -131,13 +137,14 @@ export class WorkoutSynchronizer {
       if (w.pendingResolution && !w.pendingResolution.rejected) {
         this.access.status('SENDING'); await this.sendResolution(server); server = undefined; continue
       }
-      if (w.finish && !w.pendingSnapshot) {
+      if (w.finish && (!w.pendingSnapshot || w.pendingSnapshot.rejected)) {
+        // A rejected PUT can only be followed by FINISH from the last confirmed server revision.
+        if (w.pendingSnapshot?.rejected && !server) await this.detail()
         if (!w.finish.request) await this.mutate(state.sealFinish)
         await this.sendFinish(); return
       }
       if (w.pendingSnapshot?.rejected && w.localRevision === w.pendingSnapshot.request.localRevision) throw new state.SyncStateConflict('서버가 입력을 거절했습니다. 입력을 수정한 뒤 다시 확인해 주세요.')
       if (!w.pendingSnapshot || w.pendingSnapshot.rejected) {
-        if (w.finish && w.pendingSnapshot?.rejected) throw new state.SyncStateConflict('앞선 저장이 거절되었습니다. 종료 원본을 보존했습니다. 서버 기록을 확인해 주세요.')
         if (w.localRevision === w.serverRevision) { this.display(); return }
         await this.mutate(state.sealSnapshot); w = this.document()
       }
@@ -152,7 +159,10 @@ export class WorkoutSynchronizer {
     if (!this.current()) return
     await this.access.saveServer(server)
     if (!this.current()) return
-    this.access.status('SAVED'); this.access.block(); this.options.onServer?.(server)
+    await this.access.block()
+    if (this.stopped || this.abort.signal.aborted) return
+    this.access.status('SAVED')
+    if (this.options.online()) this.options.onServer?.(server)
   }
   private async sendFinish() {
     const w = this.document(), fixed = w.finish

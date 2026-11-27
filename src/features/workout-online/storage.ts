@@ -38,7 +38,9 @@ export class WorkoutStore {
     this.factory = factory; this.randomId = randomId; this.databaseName = databaseName
   }
   private open(): Promise<IDBDatabase> {
-    if (!this.connection) this.connection = new Promise<IDBDatabase>((resolve, reject) => {
+    if (this.connection) return this.connection
+    const forget = () => { if (this.connection === connection) this.connection = null }
+    const connection = new Promise<IDBDatabase>((resolve, reject) => {
       if (!this.factory) { reject(new LocalStoreError()); return }
       const opening = this.factory.open(this.databaseName, 3)
       let failed = false
@@ -66,11 +68,13 @@ export class WorkoutStore {
       opening.onsuccess = () => {
         const db = opening.result
         if (failed) { db.close(); return }
-        db.onversionchange = () => { db.close(); this.connection = null }
+        db.onclose = forget
+        db.onversionchange = () => { db.close(); forget() }
         resolve(db)
       }
-    }).catch(error => { this.connection = null; throw error instanceof LocalStoreError ? error : new LocalStoreError() })
-    return this.connection
+    }).catch(error => { forget(); throw error instanceof LocalStoreError ? error : new LocalStoreError() })
+    this.connection = connection
+    return connection
   }
   private async run<T>(stores: string[], mode: IDBTransactionMode, action: (tx: IDBTransaction) => Promise<T>): Promise<T> {
     let tx: IDBTransaction | undefined
@@ -283,5 +287,10 @@ export class WorkoutStore {
       if (!canWrite()) throw new LocalWriteBlocked()
     })
   }
-  async close() { const db = await this.connection; db?.close(); this.connection = null }
+  async close() {
+    const connection = this.connection
+    const db = await connection
+    db?.close()
+    if (this.connection === connection) this.connection = null
+  }
 }

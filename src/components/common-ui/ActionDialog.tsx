@@ -18,7 +18,7 @@ type ActionDialogProps = {
   | { kind: 'alert' }
   | {
     kind: 'confirm' | 'destructive'
-    cancelLabel: string
+    cancelLabel?: string
     onConfirm: () => void
     pending?: boolean
     pendingLabel?: string
@@ -44,7 +44,7 @@ export function ActionDialog(props: ActionDialogProps) {
   >
     <div id={descriptionId} data-dialog-description className={styles.description}>{props.description}</div>
     <div className={styles.actions} data-dialog-actions>
-      {props.kind !== 'alert' && <ActionButton size="modal" appearance="contrast-outline" disabled={pending}
+      {props.kind !== 'alert' && props.cancelLabel && <ActionButton size="modal" appearance="contrast-outline" disabled={pending}
         onClick={props.onDismiss}>{props.cancelLabel}</ActionButton>}
       <ActionButton
         size="modal"

@@ -261,18 +261,28 @@ export class WorkoutOnlineController {
       if (context.current()) this.set({ busy: false })
     }
   }
-  showDetail = async (id: string) => {
-    const scope = this.state.scope, context = this.context(); if (!scope || !context) return
+  showDetail = async (id: string): Promise<Session | null> => {
+    const scope = this.state.scope, context = this.context(); if (!scope || !context) return null
     this.set({ busy: true, issue: null })
     try {
-      const detail = await this.api.detail(scope, id, context.signal)
-      if (!context.current()) return
+      const detail = await readWithDeadline(context.signal, signal => this.api.detail(scope, id, signal))
+      if (!context.current()) return null
+      const known = this.state.detail
+      if ([known, this.state.active].some(value => value?.id === id && BigInt(value.version) > BigInt(detail.version))) {
+        throw new WorkoutApiError('RESPONSE_INVALID')
+      }
+      if (known?.id !== id || known.editorDeviceId !== detail.editorDeviceId || known.writerEpoch !== detail.writerEpoch) this.set({ copySaved: false })
       if (this.state.detail?.id === id) this.observeSession(detail)
       else this.set({ detail, active: detail.status === 'ACTIVE' ? detail : this.state.active?.id === detail.id ? null : this.state.active })
       await this.store.saveSession(scope, detail)
-      if (context.current()) this.set({ copySaved: true })
+      const published = this.state.detail
+      if (!context.current() || published?.id !== detail.id || published.version !== detail.version
+        || published.editorDeviceId !== detail.editorDeviceId || published.writerEpoch !== detail.writerEpoch) return null
+      this.set({ copySaved: true })
+      return detail
     } catch (error) { if (context.current()) this.failure(error) }
     finally { if (context.current()) this.set({ busy: false }) }
+    return null
   }
   observeSession = (detail: Session) => {
     const current = this.state.detail

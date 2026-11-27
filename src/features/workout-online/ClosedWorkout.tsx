@@ -23,6 +23,7 @@ import { createRepeatPointerGuard } from '../../components/repeatPointerGuard.ts
 import type { RepeatPointerGuard } from '../../components/repeatPointerGuard.ts'
 import { WorkoutApi } from './api.ts'
 import { WorkoutStore } from './storage.ts'
+import type { LocalWorkout } from '../workout-local/types.ts'
 import { ClosedWorkoutController } from './closed-controller.ts'
 import type { ClosedDisplay, ClosedState } from './closed-controller.ts'
 import type { Manufacturer, CardioResult, ChangeEvents, ClosedPage, CompletionAssessment, PerformedSet, RecordEdit, Scope, Session } from './types.ts'
@@ -168,12 +169,12 @@ export function ClosedWorkout({ api, scope, recordId, session, cache, authorized
           : <LoadingSkeleton layout="detail" label="운동 기록을 확인하는 중입니다." />}
     </>}
     {view?.state.server && <div hidden={!showRecord}>
-      <ClosedWorkoutView {...view} state={accountReady ? view.state : { ...view.state, writable: false }} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} reviewContent={<SavedWeightReview api={api} session={view.state.server} readOnly={!summary} disabled={!accountReady||view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh} onRoutineApproved={onRoutineApproved} onReadSettled={setReviewVersion}/>} />
+      <ClosedWorkoutView {...view} state={accountReady ? view.state : { ...view.state, writable: false }} accountReady={accountReady} manufacturers={manufacturers} definitions={definitions} onBack={onBack} backLabel={backLabel} summary={summary} reviewContent={<SavedWeightReview api={api} session={view.state.server} readOnly={!summary} disabled={!accountReady||view.state.busy||!view.state.writable||!!view.state.pending&&view.state.pending.status==='PENDING'} authorized={authorized} onChanged={view.controller.refresh} onRoutineApproved={onRoutineApproved} onReadSettled={setReviewVersion}/>} />
     </div>}
   </>
 }
 type EditTarget = { kind: 'SET'; record: PerformedSet } | { kind: 'CARDIO'; record: Extract<CardioResult, { status: 'COMPLETED' }> } | { kind: 'SKIPPED'; record: Extract<CardioResult, { status: 'SKIPPED' }> }
-export function ClosedWorkoutView({ state, controller, manufacturers = [], definitions = [], onBack = () => {}, backLabel, summary = false, reviewContent, takeInitialScroll }: { reviewContent?:ReactNode; summary?: boolean; takeInitialScroll?: () => boolean; state: ClosedState; controller: ClosedWorkoutController; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string }) {
+export function ClosedWorkoutView({ state, controller, accountReady = true, manufacturers = [], definitions = [], onBack = () => {}, backLabel, summary = false, reviewContent, takeInitialScroll }: { reviewContent?:ReactNode; summary?: boolean; takeInitialScroll?: () => boolean; state: ClosedState; controller: ClosedWorkoutController; accountReady?: boolean; manufacturers?: Manufacturer[]; definitions?: StandardExercise[]; onBack?: () => void; backLabel?: string }) {
   const [mode, setMode] = useState<'correction' | 'history' | null>(null)
   const [dialog, setDialog] = useState<'delete' | 'recovery' | EditTarget | null>(null)
   const [deleteCloseGuard] = useState(createRepeatPointerGuard)
@@ -184,20 +185,24 @@ export function ClosedWorkoutView({ state, controller, manufacturers = [], defin
   const feedback = useReadErrorToast(notice || null, state.issue ? pending ? 'warning' : 'error' : state.noticeTone ?? 'info')
   const toast = <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   if (!server) return <ContentError title="운동 기록을 불러오지 못했어요." action={<RefreshButton loading={state.busy} failure={state.issue} onRefresh={() => void controller.refresh()} />} />
+  const finishCopies = state.copies.filter(copy => copy.finish?.request && !copy.finish.ack)
+  const canConfirmFinish = (copy: LocalWorkout) => accountReady && server.status === 'FINISHED' &&
+    copy.writerEpoch === server.writerEpoch && copy.editorDeviceId === server.editorDeviceId
   const name = (id: string) => recordName(server,id,definitions)
   const status = <>
     {server.status==='AUTO_CLOSED' && <StatusNotice>연결 종료로 기록이 자동 마감되었습니다. 실제 종료 시각은 기록되지 않았으며, 기기에 남은 완료 수행을 확인할 수 있습니다.</StatusNotice>}
     {server.deletedAt && <StatusNotice>삭제된 운동입니다. 기록 변경과 복구를 할 수 없습니다.</StatusNotice>}
     {!state.writable && <StatusNotice>읽기 전용</StatusNotice>}
+    {!state.writable && !server.deletedAt && accountReady && !finishCopies.some(canConfirmFinish) &&
+      <RefreshButton loading={state.busy} onRefresh={() => void controller.refresh()} />}
     {pending && !dialog && <Card className={detailStyles.recordPending}><StatusNotice>변경 결과를 아직 확인하지 못했어요.</StatusNotice>
       <Button disabled={!state.writable || !!server.deletedAt} pending={state.busy} onClick={() => void controller.retry()}>저장 결과 확인</Button>
       <Button variant="quiet" disabled={!state.writable} pending={state.busy} onClick={() => void confirm({
         title: '현재 기록을 확인했나요?', description: <p>현재 기록과 변경 이력을 검토 완료로 표시해요.<br />추가 변경은 다시 선택해 주세요.</p>,
         confirmLabel: '검토 완료', onConfirm: () => controller.reviewed(),
       })}>현재 기록 확인 완료</Button></Card>}
-    {!server.deletedAt && state.copies.filter(c=>c.finish?.request&&!c.finish.ack).map((c,i)=><Button key={i}
-      disabled={state.busy || !state.writable || server.status!=='FINISHED' || c.writerEpoch!==server.writerEpoch || c.editorDeviceId!==server.editorDeviceId}
-      onClick={()=>void controller.confirmFinish(c)}>종료 결과 확인</Button>)}
+    {!server.deletedAt && finishCopies.map((copy, i) => <Button key={i} pending={state.busy} disabled={!canConfirmFinish(copy)}
+      onClick={() => void controller.confirmFinish(copy)}>종료 결과 확인</Button>)}
   </>
   const menu = <ActionMenu label="운동 기록 메뉴" className={styles.recordMenu} icon="⋮" actions={[
     { label: '기록 정정', disabled, run: () => setMode('correction') },
