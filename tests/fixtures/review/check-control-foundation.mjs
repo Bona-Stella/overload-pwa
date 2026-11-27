@@ -188,7 +188,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   })()`)
   await click('확인', dialog)
   await modalClosed()
-  assert.equal(await goalValue('목표 거리'), '0.0 km')
+  assert.equal(await goalValue('목표 거리'), '— km')
   await open('목표 거리 수정')
   await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`)
   for (const expected of ['0.1 km','0.2 km','0.3 km']) {
@@ -314,7 +314,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   assert.equal(await directDraft(),'6.512345')
   await press('Escape',27); await modalClosed()
   await startPace(); await direct(''); await modalClosed()
-  assert.equal(await valueOf('목표 페이스 (분/km)'),'0:00 분/km')
+  assert.equal(await valueOf('목표 페이스 (분/km)'),'— 분/km')
   assert.equal(await evaluate(`document.querySelector('${goalButton('목표 페이스 (분/km)')}').dataset.wheelEmpty`),'true')
   await startPace()
   const mousePoint = await evaluate(`(() => {const r = document.querySelector('[data-wheel-selection]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`)
@@ -328,7 +328,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await press('Escape',27); await modalClosed()
 
   const incline = '목표 경사도 (%)'
-  assert.equal(await valueOf(incline),'0.0 %')
+  assert.equal(await valueOf(incline),'— %')
   assert.equal(await evaluate(`document.querySelector('${goalButton(incline)}').dataset.wheelEmpty`),'true')
   await open(incline); await click('0.0 %',dialog); await click('확인',dialog); await modalClosed()
   assert.equal(await evaluate(`document.querySelector('${goalButton(incline)}').hasAttribute('data-wheel-empty')`),false)
@@ -352,7 +352,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await open(bpm); await direct('301')
   assert.match(await evaluate(`document.querySelector('dialog[open] [role="alert"]').textContent`),/20~300 BPM/)
   await press('Escape',27); await modalClosed()
-  await open(bpm); await direct(''); await modalClosed(); assert.equal(await valueOf(bpm),'0 BPM')
+  await open(bpm); await direct(''); await modalClosed(); assert.equal(await valueOf(bpm),'— BPM')
 
   const future = '[data-control-example="future-goals"]'
   await evaluate(`document.querySelector('${future} > details').open=true`)
@@ -385,7 +385,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await open('목표 저항'); await click('직접 입력',dialog)
   assert.equal(await directDraft(),'7.123456')
   await press('Escape',27); await modalClosed()
-  await open('목표 저항'); await direct(''); await modalClosed(); assert.equal(await valueOf('목표 저항'),'0')
+  await open('목표 저항'); await direct(''); await modalClosed(); assert.equal(await valueOf('목표 저항'),'—')
 
   const rollout = [
     ['실제 중량', '52.3 kg', '54.8 kg'],
@@ -409,7 +409,7 @@ export async function checkControlFoundation({ click, evaluate, send, waitFor, m
   await open('추가 중량'); await direct('0'); await modalClosed()
   assert.equal(await valueOf('추가 중량'), '0 kg')
   await open('추가 중량'); await direct(''); await modalClosed()
-  assert.equal(await valueOf('추가 중량'), '입력')
+  assert.equal(await valueOf('추가 중량'), '—')
   await open('실제 반복 횟수'); await direct('0')
   assert.match(await evaluate(`document.querySelector('dialog[open] [role="alert"]').textContent`), /숫자/)
   await press('Escape', 27); await modalClosed()

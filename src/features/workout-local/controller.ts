@@ -14,7 +14,7 @@ import type { WorkoutActionFailure } from './action-error.ts'
 type Store = Pick<WorkoutStore, 'openLocal' | 'readLocal' | 'saveLocal'> & Partial<Pick<WorkoutStore, 'saveSyncLocal' | 'saveSession'>>
 export type EditorState = { workout: LocalWorkout | null; writable: boolean; loading: boolean; pending: number; issue: string | null;
   openFailure?: { kind: 'lock' | 'conflict' | 'storage'; preserved: boolean } | null;
-  drafts: Record<string, SetDraft>; cardioDrafts: Record<string, Partial<CardioTimer>>; memos: Record<string, string>; unsavedDrafts: boolean; syncStatus?: SyncStatus; syncIssue?: string | null }
+  drafts: Record<string, Partial<SetDraft>>; cardioDrafts: Record<string, Partial<CardioTimer>>; memos: Record<string, string>; unsavedDrafts: boolean; syncStatus?: SyncStatus; syncIssue?: string | null }
 type DraftCollections = Pick<EditorState, 'drafts' | 'cardioDrafts' | 'memos'>
 type DraftPatch = Partial<DraftCollections & Pick<EditorState, 'unsavedDrafts'>>
 type DraftWrite = { queued?: DraftPatch; committed: () => DraftPatch | undefined }
@@ -176,10 +176,12 @@ export class LocalWorkoutController {
       },
     })
   }
-  draft(id: string, ordinal: number, value: SetDraft) {
-    this.saveDraft('drafts', `${id}:${ordinal}`, value, workout => editDraft(workout, id, ordinal, value))
+  draft(id: string, ordinal: number, patch: Partial<SetDraft>) {
+    const key = `${id}:${ordinal}`
+    const value = { ...this.state.drafts[key], ...patch }
+    this.saveDraft('drafts', key, value, workout => editDraft(workout, id, ordinal, value))
   }
-  cardioDraft(id: string, patch: Pick<Partial<CardioTimer>, 'distance' | 'distanceSource' | 'speed' | 'speedSource' | 'bpm' | 'correctedSeconds'>) {
+  cardioDraft(id: string, patch: Pick<Partial<CardioTimer>, 'distance' | 'distanceSource' | 'speed' | 'speedSource' | 'bpm' | 'bpmConfirmed' | 'correctedSeconds'>) {
     const value = { ...this.state.cardioDrafts[id], ...patch }
     this.saveDraft('cardioDrafts', id, value, workout => {
       workout.timers[id] = { ...(workout.timers[id] ?? emptyTimer()), ...value }

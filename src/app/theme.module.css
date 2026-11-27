@@ -6,6 +6,7 @@
   --text-primary: #F0F1F4;
   --text-muted: #A9ADB7;
   --accent: #6C93C6;
+  --numeric-recommendation: #6C93C6;
   --on-accent: #111820;
   --accent-soft: #6C93C615;
   --border-subtle: #353941;
@@ -51,6 +52,9 @@
   --blue: var(--accent);
   color-scheme: dark;
 }
+.theme :global([data-numeric-value='initial']), .theme :global([data-numeric-value='empty']) { color: var(--text-muted); }
+.theme :global([data-numeric-value='confirmed']) { color: var(--text-primary); }
+.theme :global([data-numeric-value='modified']) { color: var(--status-warning); }
 .theme[data-theme='deload'] {
   --accent: #78B89A;
   --accent-soft: #78B89A15;

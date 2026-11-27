@@ -2,7 +2,8 @@ import type { Equipment, UpdateRoutine, WeightNew } from './types.ts'
 import { countDraft, decimalDraft } from './validation.ts'
 
 export type WeightDraft = Equipment & { restore?: boolean; id: string; standardExerciseId: string; exerciseName: string;
-  setCount: string; minReps: string; maxReps: string; initialWeightKg: string; approvedWeightKg: string | null; approve: boolean; nextWeightKg: string }
+  setCount: string; minReps: string; maxReps: string; initialWeightKg: string; approvedWeightKg: string | null; approve: boolean; nextWeightKg: string
+  initialTargets?: ('setCount' | 'minReps' | 'maxReps')[] }
 export function newWeights(weights: WeightDraft[]): WeightNew[] {
   return weights.map(w => {
     const setCount = countDraft(w.setCount), minReps = countDraft(w.minReps), maxReps = countDraft(w.maxReps)

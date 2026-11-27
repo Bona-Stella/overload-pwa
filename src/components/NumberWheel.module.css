@@ -5,8 +5,7 @@
   text-align: center; overflow-wrap: anywhere; font-size: 16px; font-variant-numeric: tabular-nums;
 }
 .control > button[data-action-shape]:active:not(:disabled) { background: var(--accent-soft); }
-.control > button > small, .unconfirmed > small { font-size: 10px; }
-.unconfirmed { display: block; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.control > button > small { font-size: 10px; }
 .hideSteps { grid-template-columns: minmax(0,1fr); }
 .plainSteps { grid-template-columns: 44px minmax(0, 1fr) 44px; }
 .weightControl { grid-template-columns: minmax(0, 48px) minmax(0, 104px) minmax(0, 48px); max-width: 220px; margin-inline: auto; justify-content: center; }

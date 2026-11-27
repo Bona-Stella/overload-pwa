@@ -35,7 +35,9 @@ test('cardio validation keeps optional measurements and explains invalid actual 
   assert.equal(cardioCompletionInput(draft,'TREADMILL',1000).distanceKm,null)
   assert.throws(()=>cardioCompletionInput(draft,'TREADMILL',0),/운동 시간을 기록해 주세요/)
   assert.throws(()=>cardioCompletionInput({...draft,distance:'0.0001'},'TREADMILL',1000),/0.001~1000 km/)
-  assert.throws(()=>cardioCompletionInput({...draft,speed:'12',speedSource:'manual'},'TREADMILL',1000),/실제 거리를 입력/)
+  assert.deepEqual(cardioCompletionInput({...draft,speed:'12',speedSource:'manual'},'TREADMILL',300000).measurement,
+    {actualSpeedKmh:'12',distanceSource:'CALCULATED'})
+  assert.equal(cardioCompletionInput({...draft,speed:'12',speedSource:'manual'},'TREADMILL',300000).distanceKm,'1')
   assert.throws(()=>cardioCompletionInput({...draft,bpm:'301'},'TREADMILL',1000),/20~300 BPM/)
 })
 test('applied order and stable exercise IDs survive mapping, completion and navigation',()=>{
@@ -79,7 +81,7 @@ test('recent real records match equipment and preserve explicitly empty or pendi
   previous.snapshot.state.performedSets[0].loadType='BODYWEIGHT'
   assert.equal(flowWeights(state(w),[previous])[0].sets[0].previous,undefined)
 })
-test('rep suggestions round valid ranges and never enter the set draft or completion',()=>{
+test('repetition candidates round valid ranges and become facts only on completion',()=>{
   for (const [min,max,expected] of [[6,10,'8'],[6,9,'8'],[8,12,'10'],[10,15,'13'],[1,1,'1'],[2147483647,2147483647,'2147483647'],
     [null,null,'0'],[6,undefined,'0'],[10,6,'0'],[6.5,9,'0'],[0,9,'0'],[1,2147483648,'0']]) {
     assert.equal(suggestedReps(min,max),expected)
@@ -87,9 +89,15 @@ test('rep suggestions round valid ranges and never enter the set draft or comple
   const w=local(), before=structuredClone(w)
   const view=flowWeights(state(w))[0]
   assert.equal(suggestedReps(view.min,view.max),'8')
-  assert.equal(view.sets[0].draft.reps,'')
-  assert.throws(()=>completeSet(w,E,1,at),/반복 횟수를 입력해 주세요/)
+  assert.equal(view.sets[0].draft.reps,'8')
+  assert.equal(view.sets[0].repsInitial,true)
   assert.deepEqual(w,before)
+  const value=inputDraft(w,E,1,[])
+  editDraft(w,E,1,value)
+  completeSet(w,E,1,at)
+  assert.equal(w.snapshot.performedSets[0].reps,8)
+  editDraft(w,E,2,{reps:'0'})
+  assert.throws(()=>completeSet(w,E,2,at),/입력한 반복 횟수/)
 })
 test('existing drafts appear while history is pending and retain priority when history arrives',()=>{
   const w=local(), historical=local()
@@ -100,12 +108,41 @@ test('existing drafts appear while history is pending and retain priority when h
   const record=session({status:'FINISHED',snapshot:{...session().snapshot,state:historical.snapshot}})
   editDraft(w,E,1,{reps:'9'})
   const pending=flowWeights(state(w),null)[0].sets
-  assert.deepEqual(pending.map(s=>[s.draft.reps,s.repsPending]),[['9',false],['',true],['',true]])
+  assert.deepEqual(pending.map(s=>[s.draft.reps,s.repsPending]),[['9',false],['8',true],['8',true]])
   const latest={...state(w),drafts:{[E+':1']:{weight:'60',reps:'11'}}}
   const restored=flowWeights(latest,[record])[0].sets
-  assert.deepEqual(restored.map(s=>[s.draft.reps,s.repsPending]),[['11',false],['7',false],['',false]])
+  assert.deepEqual(restored.map(s=>[s.draft.reps,s.repsPending]),[['11',false],['7',false],['8',false]])
   assert.equal(restored[0].previous.reps,'6')
   assert.equal(flowWeights(state(w),[record])[0].sets[0].draft.reps,'9')
+})
+test('a weight edit does not freeze a pending repetition and missing ordinals never use older workouts',()=>{
+  const w=local()
+  editDraft(w,E,1,{weight:'0'})
+  const source=(ordinal,reps)=> {
+    const record=session({status:'FINISHED'})
+    record.snapshot.state.performedSets=[{id:OTHER,sessionExerciseId:E,ordinal,reps,weightKg:'42',
+      manufacturerId:null,loadType:null,completedAt:new Date(at).toISOString()}]
+    return record
+  }
+  const previous=[source(1,12),source(2,17)]
+  assert.equal(inputDraft(w,E,1,previous).weight,'0')
+  assert.equal(inputDraft(w,E,1,previous).reps,'12')
+  assert.equal(inputDraft(w,E,2,previous).reps,'8')
+  const view=flowWeights(state(w),previous)[0]
+  assert.equal(view.sets[0].repsInitial,true)
+  assert.equal(view.sets[1].previous,undefined)
+})
+test('new bodyweight sets store explicit zero or positive extra weight',()=>{
+  const w=local()
+  w.snapshot.appliedPlan.weightExercises[0].loadType='BODYWEIGHT'
+  for(const [ordinal,additionalWeight] of [[1,'0'],[2,'7.123456']]){
+    if(ordinal===2) editDraft(w,E,ordinal,{additionalWeight})
+    const draft=inputDraft(w,E,ordinal,[])
+    assert.equal(draft.additionalWeight,additionalWeight)
+    editDraft(w,E,ordinal,draft)
+    completeSet(w,E,ordinal,at+ordinal)
+  }
+  assert.deepEqual(w.snapshot.performedSets.map(set=>set.bodyweightLoad.additionalWeightKg),['0','7.123456'])
 })
 test('sparse exclusions never renumber completed ordinals and huge counts stay bounded',()=>{
   const w=local();w.excludedSetOrdinals={[E]:[2]};w.snapshot.appliedPlan.weightExercises[0].setCount=2

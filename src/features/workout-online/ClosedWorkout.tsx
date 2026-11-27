@@ -300,6 +300,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
   const [seconds, setSeconds] = useState(cardio ? String(cardio.activeMs / 1000) : ''), [corrected, setCorrected] = useState(cardio?.corrected ?? false)
   const [measurements, setMeasurements] = useState(() => cardio ? cardioMeasurementDraft(cardio) : { distance: '', speed: '' })
   const [bpm, setBpm] = useState(cardio?.averageBpm == null ? '' : String(cardio.averageBpm)), [issue, setIssue] = useState('')
+  const editedActiveMs = cardio && (corrected ? Math.round(Number(seconds) * 1000) : cardio.timerMs)
   const [action, setAction] = useState<'save' | 'remove' | null>(null)
   const [prepared, setPrepared] = useState<{ body: RecordEdit; remove: boolean } | null>(null)
   const saving = useRef(false), cancelConfirmation = useRef<HTMLButtonElement>(null)
@@ -322,7 +323,8 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
         if (activeMs < 1 || activeMs > 86400000) throw Error('활동 시간은 0.001초~24시간이어야 합니다.')
         const averageBpm = actualAverageBpm(bpm)
         const measured = actualCardioMeasurement(measurements, activeMs)
-        body.cardioCorrections.push({ id: target.record.id, activeMs, corrected, distanceKm: measured.distanceKm, averageBpm,
+        body.cardioCorrections.push({ id: target.record.id, activeMs,
+          corrected: activeMs === target.record.result.activeMs ? target.record.result.corrected : corrected, distanceKm: measured.distanceKm, averageBpm,
           ...(cardio?.measurement !== undefined || measurements.speedSource !== undefined || measurements.distanceSource === 'manual' ? { measurement: measured.measurement } : {}) })
       }
       setIssue('')
@@ -348,11 +350,12 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
       <RecordFacts record={target.record} server={initial} manufacturers={manufacturers}/></Card>
     <fieldset disabled={busy || !!prepared} className="online-fieldset stack">
     {target.kind === 'SET' ? <>
-      <WeightWheelField label="실제 중량" value={weight} loadType={target.record.loadType} onChange={next => { setWeight(next); setIssue('') }} />
-      <RecordedRepsField value={reps} onChange={next => { setReps(next); setIssue('') }} />
+      <WeightWheelField label="실제 중량" value={weight} loadType={target.record.loadType}
+        valueState={weight === target.record.weightKg ? 'confirmed' : 'modified'} onChange={next => { setWeight(next); setIssue('') }} />
+      <RecordedRepsField value={reps} modified={reps !== String(target.record.reps)} onChange={next => { setReps(next); setIssue('') }} />
       {target.record.loadType === 'BODYWEIGHT' && <>
-        <WeightWheelField label="추가 중량" value={additionalWeight} loadType="BODYWEIGHT" optional onChange={next => {
-          setAdditionalWeight(next); setAdditionalTouched(true); setIssue('')
+        <WeightWheelField label="추가 중량" value={additionalWeight} loadType="BODYWEIGHT" optional valueState={additionalTouched ? 'modified' : undefined} onChange={next => {
+          setAdditionalWeight(next); setAdditionalTouched(next !== (target.record.bodyweightLoad?.additionalWeightKg ?? '')); setIssue('')
         }} />
         <p className="muted small">총중량에는 명시적 추가 중량만 사용합니다. 비우면 추가 중량을 제거합니다. 체중과 기존 중량을 자동 합산하지 않습니다.</p>
       </>}
@@ -363,7 +366,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
         <CardioActualFields draft={measurements} bpm={bpm} activeMs={corrected ? Math.round(Number(seconds) * 1000) : target.record.result.timerMs}
           motion={supportsDistance} incline={kind === 'TREADMILL'} original={target.record.result} disabled={busy || !!prepared}
           time={<CardioTimeField key={String(corrected)} label="실제 활동 시간" seconds={seconds} fractionalSeconds
-            displayMs={corrected ? Number(seconds) * 1000 : target.record.result.timerMs} modified={corrected}
+            displayMs={editedActiveMs ?? target.record.result.activeMs} modified={editedActiveMs !== target.record.result.activeMs}
             disabled={!corrected || busy || !!prepared} onChange={value => { setSeconds(value); setIssue('') }} />}
           onChange={patch => { setMeasurements(value => ({ ...value, ...patch })); setIssue('') }}
           onBpm={value => { setBpm(value); setIssue('') }} />

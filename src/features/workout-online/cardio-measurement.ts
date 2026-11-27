@@ -30,11 +30,9 @@ export function calculatedSpeed(distance: string, activeMs: number): string {
 
 export function editCardioSpeed(draft: CardioMeasurementDraft, speed: string, activeMs: number): Partial<CardioMeasurementDraft> {
   const edit = { speed, speedSource: 'manual' as const }
-  if (speed.trim() && (draft.distanceSource === 'estimated' || draft.distanceSource === 'derived')) {
-    try {
-      const distance = calculatedDistance(speed, activeMs)
-      if (distance !== null) return { ...edit, distance, distanceSource: 'derived' }
-    } catch { /* Keep the visible input for correction. */ }
+  if ((!draft.distance.trim() && draft.distanceSource !== 'manual') || draft.distanceSource === 'estimated' || draft.distanceSource === 'derived') {
+    try { return { ...edit, distance: calculatedDistance(speed.trim() ? speed : null, activeMs) ?? '', distanceSource: 'derived' } }
+    catch { return { ...edit, distance: '', distanceSource: 'derived' } }
   }
   return edit
 }
@@ -46,19 +44,14 @@ export function cardioMeasurementDraft(result: ActualCardio): CardioMeasurementD
 }
 
 export function actualCardioMeasurement(draft: CardioMeasurementDraft, activeMs: number) {
-  if (draft.distanceSource === 'estimated') {
-    if (draft.speed.trim()) throw Error('수정한 평균 속도를 저장하려면 실제 거리를 입력해 주세요.')
-    return measuredCardio('', '', activeMs)
-  }
-  if (draft.distanceSource === 'derived') {
-    const measured = measuredCardio(draft.speed, '', activeMs)
-    if (measured.distanceKm !== draft.distance) throw Error('계산한 거리와 입력값이 달라요. 실제 거리를 입력하거나 거리와 속도를 비워 주세요.')
-    return measured
-  }
-  if (!draft.distance.trim() && draft.speed.trim() && (draft.distanceSource === 'manual' || draft.speedSource === 'manual')) {
-    throw Error('평균 속도를 저장하려면 실제 거리를 입력해 주세요.')
-  }
-  return measuredCardio(draft.speed, draft.distance, activeMs, draft.distanceSource === 'stored')
+  const provisional = draft.distanceSource === 'estimated' || draft.distanceSource === 'derived'
+  return measuredCardio(draft.speed, provisional ? '' : draft.distance, activeMs, draft.distanceSource === 'stored')
+}
+
+export function displayedCardioDistance(draft: CardioMeasurementDraft, activeMs: number) {
+  if (draft.distanceSource !== 'derived' && (draft.distance || !draft.speed)) return draft.distance
+  try { return calculatedDistance(draft.speed || null, activeMs) ?? '' }
+  catch { return '' }
 }
 
 export function calculatedDistance(speed: string | null, activeMs: number): string | null {

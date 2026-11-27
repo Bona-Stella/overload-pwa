@@ -285,7 +285,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await searchVisible();await evaluate(`document.querySelector('[aria-label="표준 운동 목록"] li > button:first-child').click()`);await new Promise(r=>setTimeout(r,80))
     assert.match(await evaluate(`document.querySelector('[aria-label="웨이트 1"] h3').textContent`),/바벨 스쿼트/)
     assert.equal(await evaluate('window.addedCardScrolls.length'),0,'changing an exercise does not align a card')
-    assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] button[aria-label="설정 중량"]').textContent.trim()`),'입력','new exercise does not inherit an approved weight')
+    assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] button[aria-label="설정 중량"] [data-numeric-value="initial"]').textContent`),'0','new exercise does not inherit an approved weight')
     assert.equal(await evaluate(`document.querySelector('[aria-label="웨이트 1"] button[aria-label="본세트"]').textContent.trim()`),'3 세트')
     const wheel = async (section,value) => { await evaluate(`document.querySelector('${section} button[aria-label="설정 중량"]').click()`);await click('직접 입력');await input('dialog[open] input',value);await click('확인') }
     await viewport(320)

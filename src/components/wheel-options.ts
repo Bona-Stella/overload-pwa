@@ -1,3 +1,8 @@
+export type NumericValueState = 'initial' | 'empty' | 'confirmed' | 'modified'
+export const numericStateDescription: Record<NumericValueState, string> = {
+  initial: '초기값', empty: '미입력', confirmed: '확정값', modified: '수정값',
+}
+
 export type WheelAdjust = (value: string, direction: -1 | 1) => string | null
 
 const radius = 30

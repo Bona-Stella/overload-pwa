@@ -18,12 +18,12 @@ import type { WorkoutApi } from '../workout-online/api.ts'
 import { useProgressAssessment } from './useProgressAssessment.ts'
 export { LocalWorkoutView } from './LocalWorkoutFlow.tsx'
 
-export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, onOpened, onWorkoutChange, offlineRestart = false, visible = true, preparingSummary = false, onHome, backLabel, history = [], historyPending, assessmentApi, referenceRecords = [], referenceRoutine = null, navigationIssue, permissionIssue, accountIssue, onReconnect, onRecheckSession, recheckBeforeOpen, editor }: {
+export function LocalWorkoutScreen({ server, policy, definitions, manufacturers = [], activities = [], authorized, localOnly = false, onExitGuard, sync, authenticated = false, onReady, onOpened, onWorkoutChange, offlineRestart = false, visible = true, preparingSummary = false, onHome, backLabel, history = [], historyPending, historyFailed, assessmentApi, referenceRecords = [], referenceRoutine = null, navigationIssue, permissionIssue, accountIssue, onReconnect, onRecheckSession, recheckBeforeOpen, editor }: {
   server: Session; policy: RestPolicy; definitions: StandardExercise[]; manufacturers?: Manufacturer[]; activities?: CardioActivity[]
   authorized: () => boolean; localOnly?: boolean; onExitGuard?: ExitGuardRegistration; sync?: SyncOptions; authenticated?: boolean
   onReady?: (workout: LocalWorkout) => void; onWorkoutChange?: (workout: LocalWorkout) => void
   onOpened?: (session: Session) => void; preparingSummary?: boolean
-  offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[] | null; historyPending?: boolean
+  offlineRestart?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; history?: Session[] | null; historyPending?: boolean; historyFailed?: boolean
   assessmentApi?: Pick<WorkoutApi, 'progressAssessment'>; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
   navigationIssue?: string; permissionIssue?: string; accountIssue?: string; onReconnect?: () => void; onRecheckSession?: () => void
   recheckBeforeOpen?: () => Promise<Session | null>
@@ -154,7 +154,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
       && <ApprovalControls key="approval" state={state} controller={controller} />,
   ].filter(Boolean)
   return <LocalWorkoutView state={state} controller={controller} definitions={definitions} manufacturers={manufacturers} activities={activities}
-    referenceRecords={referenceRecords} referenceRoutine={referenceRoutine} history={history} historyPending={historyPending} visible={visible} onHome={onHome} backLabel={backLabel} notices={notices} progressAssessment={progress.value}
+    referenceRecords={referenceRecords} referenceRoutine={referenceRoutine} history={history} historyPending={historyPending} historyFailed={historyFailed} visible={visible} onHome={onHome} backLabel={backLabel} notices={notices} progressAssessment={progress.value}
     progressAssessmentPending={progress.pending}
     preparingSummary={preparingSummary} confirmingFinish={confirmingFinish} navigationIssue={navigationIssue}
     recheckIssue={checkFailure === 'read' ? '현재 운동 상태를 확인하지 못했습니다. 연결을 확인해 주세요.' : checkFailure === 'changed'

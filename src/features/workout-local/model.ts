@@ -127,11 +127,14 @@ export function advanceAfterCompletion(workout: LocalWorkout, id: string) {
   // Keep the existing finish/continue choice at the WEIGHT → CARDIO boundary.
   if (!weight || snapshot.appliedPlan.weightExercises.some(e => e.sessionExerciseId === next)) workout.currentExerciseId = next
 }
-export function draftFor(workout: LocalWorkout, id: string, ordinal: number): SetDraft { return workout.drafts[slotKey(id, ordinal)] ?? { weight: workout.weights[id]?.value ?? '', reps: '' } }
+export function draftFor(workout: LocalWorkout, id: string, ordinal: number): SetDraft {
+  return { weight: workout.weights[id]?.value ?? '', reps: '', ...workout.drafts[slotKey(id, ordinal)] }
+}
 export function editDraft(workout: LocalWorkout, id: string, ordinal: number, patch: Partial<ReturnType<typeof draftFor>>) {
   requireWeight(workout, id)
   if (!count(ordinal) || workout.snapshot.performedSets.some(x => x.sessionExerciseId === id && x.ordinal === ordinal)) throw new WorkoutActionError('완료한 세트는 먼저 완료 취소해 주세요.')
-  workout.drafts[slotKey(id, ordinal)] = { ...draftFor(workout, id, ordinal), ...patch }
+  const key = slotKey(id, ordinal)
+  workout.drafts[key] = { ...workout.drafts[key], ...patch }
 }
 function requireWeight(workout: LocalWorkout, id: string) {
   const e = workout.snapshot.appliedPlan.weightExercises.find(x => x.sessionExerciseId === id)
@@ -152,9 +155,10 @@ export function completeSet(workout: LocalWorkout, id: string, ordinal: number, 
   if (approval && Date.parse(approval.occurredAt) > now) throw new WorkoutActionError('완료 시각이 승인 요청보다 이릅니다. 기기 시각을 확인해 주세요.')
   const performed = { id: freshId(workout, randomId), sessionExerciseId: id, ordinal, weightKg, reps, completedAt, weightContext: { ...context }, manufacturerId: plan.manufacturerId, loadType: plan.loadType,
     ...(bodyweightLoad ? { bodyweightLoad } : {}) }
+  if (selected?.initial) workout.weights[id] = { value: weightKg, context }
   workout.snapshot.performedSets.push(performed); workout.presence[performed.id] = 'LOCAL_ONLY'
   // Preserve the original input text, including trailing decimal zeros.
-  workout.drafts[slotKey(id, ordinal)] = { ...draft }
+  workout.drafts[slotKey(id, ordinal)] = { ...draft, ...(bodyweightLoad ? { additionalWeight: draft.additionalWeight || '0' } : {}) }
   const rests = migrateRest(workout)
   if (weightDone(workout.snapshot, id)) delete rests[id]
   else {
@@ -215,7 +219,7 @@ export function addWeight(workout: LocalWorkout, standardExerciseId: string, nam
   const id = freshId(workout, randomId)
   workout.snapshot.sessionExercises.push({ id, kind: 'WEIGHT', standardExerciseId })
   workout.snapshot.appliedPlan.weightExercises.push({ sessionExerciseId: id, setCount: 3, minReps: 6, maxReps: 10, ...settings })
-  workout.weights[id] = { value: '0', context: { kind: 'TODAY_ONLY', requestId: null } }; workout.exerciseNames[id] = name; workout.currentExerciseId = id
+  workout.weights[id] = { value: '0', initial: true, context: { kind: 'TODAY_ONLY', requestId: null } }; workout.exerciseNames[id] = name; workout.currentExerciseId = id
 }
 export function replaceWeight(workout: LocalWorkout, id: string, standardExerciseId: string, name: string, randomId = newId) {
   const target = requireWeight(workout, id)

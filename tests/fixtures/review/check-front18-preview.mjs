@@ -153,9 +153,6 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
     ['유산소 활동 시간 없음', '유산소 기록 확정', '운동 시간을 기록해 주세요.'],
     ['유산소 시간 정정 범위 오류', '유산소 기록 확정', '정정한 운동 시간을 확인해 주세요.'],
     ['유산소 거리 범위 오류', '유산소 기록 확정', '직접 입력 거리는 0.001~1000 km'],
-    ['실측 속도만 입력', '유산소 기록 확정', '평균 속도를 저장하려면 실제 거리를 입력해 주세요.'],
-    ['예상 거리와 수정 속도', '유산소 기록 확정', '수정한 평균 속도를 저장하려면 실제 거리를 입력해 주세요.'],
-    ['계산 거리 불일치', '유산소 기록 확정', '계산한 거리와 입력값이 달라요.'],
     ['유산소 심박수 범위 오류', '유산소 기록 확정', '평균 심박수는 20~300 BPM'],
     ['거리·속도를 지원하지 않는 종목', '유산소 기록 확정', '거리와 속도는 러닝머신·자전거·야외 운동에만'],
   ]) {
@@ -163,6 +160,12 @@ export async function checkFront18Preview({ click, evaluate, send, waitFor, moda
     await save('saved')
     await click(label, 'footer button')
     await toast(message)
+  }
+  for (const scenario of ['실측 속도만 입력', '예상 거리와 수정 속도', '계산 거리 불일치']) {
+    await tools(scenario)
+    await click('유산소 기록 확정', 'footer button')
+    await shown('실제 완료 기록')
+    await shown('계산 거리')
   }
   await tools('저장 완료 · 정상 상태 초기화')
   await click('운동 종료', '[data-workout-frame] button')

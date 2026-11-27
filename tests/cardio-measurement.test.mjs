@@ -114,14 +114,19 @@ test('manual values and deletions are protected through recalculation and server
       distanceKm: '4', measurement: { actualSpeedKmh: '9.5', distanceSource: 'MANUAL' },
     })
   }
-  assert.throws(() => actualCardioMeasurement({ ...manualBoth, distance: '' }, 2400000), /평균 속도를 저장하려면 실제 거리를/)
+  assert.deepEqual(actualCardioMeasurement({ ...manualBoth, distance: '' }, 2400000),
+    {distanceKm:'6.333333', measurement:{actualSpeedKmh:'9.5', distanceSource:'CALCULATED'}})
   const cleared = { ...manualDistance, ...editCardioSpeed(manualDistance, '', 1800000) }
   assert.equal(actualCardioMeasurement(cleared, 1800000).measurement.actualSpeedKmh, null)
   const estimate = { distance: '5', speed: '', distanceSource: 'estimated' }
   const derived = { ...estimate, ...editCardioSpeed(estimate, '9.5', 1800000) }
   assert.equal(derived.distance, '4.75')
   assert.equal(actualCardioMeasurement(derived, 1800000).measurement.distanceSource, 'CALCULATED')
-  assert.throws(() => actualCardioMeasurement(derived, 2400000), /계산한 거리와 입력값이 달라요/)
+  assert.equal(actualCardioMeasurement(derived, 2400000).distanceKm, '6.333333')
+  const changedSpeed = { ...derived, ...editCardioSpeed(derived, '12', 1800000) }
+  assert.equal(actualCardioMeasurement(changedSpeed, 1800000).distanceKm, '6')
+  const clearedSpeed = { ...derived, ...editCardioSpeed(derived, '', 1800000) }
+  assert.equal(actualCardioMeasurement(clearedSpeed, 1800000).distanceKm, null)
   const legacy = cardioMeasurementDraft({ distanceKm: '3.8' })
   assert.equal(actualCardioMeasurement(legacy, 1800000).measurement.distanceSource, null)
 })

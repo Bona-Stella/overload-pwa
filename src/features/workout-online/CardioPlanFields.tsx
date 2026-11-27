@@ -34,7 +34,7 @@ export function CardioPlanFields({ value, onChange, previewGoals }: {
   }
 
   return <div className={`${styles.fields} ${styles.planFields}`}>
-    <CardioTimeField label="목표 시간" wheelLabel="목표 시간" seconds={seconds} onChange={seconds => patch({ seconds, minutes: undefined })} />
+    <CardioTimeField label="목표 시간" wheelLabel="목표 시간" seconds={seconds} initial={!Number(seconds)} onChange={seconds => patch({ seconds, minutes: undefined })} />
     {motion && <CardioNumberField field="distance" label="목표 거리" value={value.distance} onChange={distance => patch({ distance })} />}
     {!Number(seconds) && <small className={styles.note}>{missingCardioTime}</small>}
     {motion && <details className={styles.extra} open={expanded} onToggle={event => setExpanded(event.currentTarget.open)}>
@@ -61,7 +61,7 @@ function PaceGoal({ value, onChange }: { value: string; onChange: (value: string
   const seed = seconds ? Math.max(10, Math.round(seconds / 5) * 5) : 0
   return <div className={numeric.field}>
     <span>목표 페이스 · 선택</span>
-    <NumberWheel label="목표 페이스 (분/km)" value={value} unit="분/km" hideSteps describeBlank
+    <NumberWheel label="목표 페이스 (분/km)" value={value} unit="분/km" hideSteps showEmptyUnit valueState={value ? 'confirmed' : 'empty'}
       displayValue={paceLabel(seconds)} start="0" wheelSeed={String(seed)}
       formatOption={choice => paceLabel(Number(choice))} adjust={adjustPaceWheel} validateSelection={paceFromSeconds}
       inputMode="text" directHint="분:초 또는 소수 분을 입력해 주세요. 공란으로 두면 목표가 해제돼요."
@@ -76,7 +76,7 @@ function AdditionalGoal({ field, value, onChange }: { field: 'incline' | 'resist
   const validate = (next: string) => cardioWheelValue(next, field)
   return <div className={numeric.field}>
     <span>{label} · 선택</span>
-    <NumberWheel label={incline ? `${label} (%)` : label} value={value} unit={incline ? '%' : ''} hideSteps describeBlank
+    <NumberWheel label={incline ? `${label} (%)` : label} value={value} unit={incline ? '%' : ''} hideSteps showEmptyUnit valueState={value ? 'confirmed' : 'empty'}
       displayValue={seed}
       start={incline ? '0.0' : '0'} wheelSeed={seed} inputMode="decimal" validate={validate}
       validateSelection={incline ? undefined : next => next === '0' ? '' : validate(next)}

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { roundedDurationMs } from '../../components/duration.ts'
 import { formatDuration } from '../workout/model.ts'
-import { cardioMotionValue, distanceSourceLabel, estimatedCardioDistance } from '../workout-online/cardio-measurement.ts'
+import { calculatedSpeed, cardioMotionValue, distanceSourceLabel, estimatedCardioDistance } from '../workout-online/cardio-measurement.ts'
 import { CardioTimeField } from '../workout-online/CardioTimeField.tsx'
 import { CardioValue } from './CardioValueRow.tsx'
 import { CardioActualFields } from '../workout-online/CardioActualFields.tsx'
@@ -25,24 +25,33 @@ export function CardioActual({ result, heading: Heading = 'h2', children }: {
         {result.corrected && <small>자동 기록 {formatDuration(result.timerMs)}</small>}
       </div>
       <div><dt>실제 거리</dt>
-        <dd>{result.distanceKm === null ? '미입력' : <>{cardioMotionValue(result.distanceKm)}<small>km</small></>}</dd>
+        <dd>{result.distanceKm === null ? <span data-numeric-value="empty" aria-label="미입력">—</span> : <>{cardioMotionValue(result.distanceKm)}<small>km</small></>}</dd>
         {result.distanceKm !== null && <small>{distanceSourceLabel(result.measurement?.distanceSource)}</small>}
       </div>
-      <div><dt>평균 속도</dt><dd>{speed === null ? '미입력' : <>{cardioMotionValue(speed)}<small>km/h</small></>}</dd></div>
-      <div><dt>평균 심박수</dt><dd>{result.averageBpm === null ? '미입력' : <>{result.averageBpm}<small>BPM</small></>}</dd></div>
+      <div><dt>평균 속도</dt><dd>{speed === null ? <span data-numeric-value="empty" aria-label="미입력">—</span> : <>{cardioMotionValue(speed)}<small>km/h</small></>}</dd></div>
+      <div><dt>평균 심박수</dt><dd>{result.averageBpm === null ? <span data-numeric-value="empty" aria-label="미입력">—</span> : <>{result.averageBpm}<small>BPM</small></>}</dd></div>
     </dl>
     {children}
   </Card>
 }
 
-function CardioReview({ draft, activeMs, plan, estimate, issue, onDraft, onCancel, preview }: {
+function CardioReview({ draft, activeMs, plan, previous, estimate, issue, onDraft, onCancel, preview }: {
   draft: CardioDraft; activeMs: number; plan: CardioFocusData['plan']; estimate: boolean; issue: ReactNode
   onDraft: (value: Partial<CardioDraft>) => void; onCancel: () => void; preview: boolean
+  previous?: ActualCardio
 }) {
   const motion = supportsCardioMotion(plan.kind)
   const measuredSeconds = String(roundedDurationMs(activeMs))
   const recordMs = draft.correctedSeconds === null ? activeMs : Number(draft.correctedSeconds) * 1000
   const modified = draft.correctedSeconds !== null && Number(draft.correctedSeconds) !== Number(measuredSeconds)
+  const estimated = estimatedCardioDistance(draft, plan.targetDistanceKm, recordMs, estimate)
+  const pastDistance = previous?.distanceKm
+  const initial = {
+    distance: pastDistance && Number(pastDistance) >= .001 && Number(pastDistance) <= 1000 ? pastDistance : estimated.distance,
+    speed: previous?.measurement?.actualSpeedKmh ?? (plan.intensity?.mode === 'SPEED' ? plan.intensity.value
+      : estimated.distance ? calculatedSpeed(estimated.distance, recordMs) : undefined),
+    bpm: previous?.averageBpm == null ? undefined : String(previous.averageBpm),
+  }
 
   return <Card className={cardioStyles.card}>
     <div className={cardioStyles.reviewHeading}>
@@ -52,8 +61,8 @@ function CardioReview({ draft, activeMs, plan, estimate, issue, onDraft, onCance
         <rect x="7" y="2.5" width="6" height="4" rx="1" />
       </svg>
     </div>
-    <CardioActualFields draft={draft} activeMs={recordMs} bpm={draft.bpm} motion={motion} incline={plan.kind === 'TREADMILL'}
-      disabled={preview} onChange={onDraft} onBpm={bpm => onDraft({ bpm })}
+    <CardioActualFields draft={draft} activeMs={recordMs} bpm={draft.bpm} bpmConfirmed={draft.bpmConfirmed} initial={initial}
+      motion={motion} incline={plan.kind === 'TREADMILL'} disabled={preview} onChange={onDraft} onBpm={bpm => onDraft({ bpm, bpmConfirmed: true })}
       time={<CardioTimeField label="실제 활동 시간" seconds={draft.correctedSeconds ?? measuredSeconds}
         displayMs={recordMs} modified={modified} disabled={preview} onChange={seconds => {
           const correctedSeconds = seconds === measuredSeconds ? null : seconds
@@ -103,7 +112,7 @@ export function CardioFocus({ cardio, activeMs, estimate = false, navigation, is
       <strong>{phase === 'skipped' ? '—' : formatDuration(result?.activeMs ?? activeMs)}</strong>
       <small className={cardioStyles.timerStatus} data-phase={phase}>{measurementStatus}</small>
     </Card>
-    {phase === 'review' && <CardioReview key={cardio.id} draft={draft} activeMs={activeMs} plan={plan} estimate={estimate}
+    {phase === 'review' && <CardioReview key={cardio.id} draft={draft} activeMs={activeMs} plan={plan} previous={cardio.previous} estimate={estimate}
       issue={issue} onDraft={onDraft} onCancel={onCancelReview} preview={preview} />}
     {result && <CardioActual result={result}>
       <Button onClick={preview ? undefined : onUndo}>유산소 완료 취소</Button>

@@ -18,8 +18,8 @@ export function setCompletionInput(draft: SetDraft, loadType: Equipment['loadTyp
   const reps = inputValue(() => countDraft(draft.reps), '입력한 반복 횟수를 확인해 주세요.')
   if (!draft.weight.trim()) throw new WorkoutActionError('중량을 입력해 주세요.')
   const weightKg = inputValue(() => decimalDraft(draft.weight), '입력한 중량을 확인해 주세요.')
-  const bodyweightLoad = loadType === 'BODYWEIGHT' && draft.additionalWeight?.trim()
-    ? { additionalWeightKg: inputValue(() => decimalDraft(draft.additionalWeight!), '입력한 추가 중량을 확인해 주세요.') } : undefined
+  const bodyweightLoad = loadType === 'BODYWEIGHT'
+    ? { additionalWeightKg: inputValue(() => decimalDraft(draft.additionalWeight?.trim() || '0'), '입력한 추가 중량을 확인해 주세요.') } : undefined
   return { reps, weightKg, bodyweightLoad }
 }
 

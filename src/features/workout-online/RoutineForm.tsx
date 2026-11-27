@@ -19,7 +19,7 @@ import type { CardioDraft as PlanDraft } from './cardio-draft.ts'
 import type { RoutineTag } from '../home/tags.ts'
 import styles from './Routine.module.css'
 import editStyles from './RoutineEdit.module.css'
-import type { CardioActivity, CreateRoutine, Manufacturer, StandardExercise, Routine, UpdateRoutine } from './types.ts'
+import type { CardioActivity, CreateRoutine, Manufacturer, Session, StandardExercise, Routine, UpdateRoutine } from './types.ts'
 import { count, countDraft, decimalDraft, name as validName } from './validation.ts'
 import type { WorkoutOnlineController } from './controller.ts'
 import { ExerciseSearch } from './ExerciseSearch.tsx'
@@ -31,16 +31,18 @@ import { Toast } from '../../components/common-ui/Toast.tsx'
 import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
 
 import { newWeights, updatedWeights } from './routine-weights.ts'
+import { latestActualWeight } from './workout-history.ts'
 import type { WeightDraft } from './routine-weights.ts'
 
 type Targets = Pick<WeightDraft, 'setCount' | 'minReps' | 'maxReps'>
 
-export function RoutineTargetFields({ value, onChange }: { value: Targets; onChange: (changes: Partial<Targets>) => void }) {
+export function RoutineTargetFields({ value, initial, onChange }: { value: Targets; initial?: (keyof Targets)[]; onChange: (changes: Partial<Targets>) => void }) {
   return <div className={styles.targets}>
     {([['setCount', '본세트', '세트'], ['minReps', '최소 반복', '회'], ['maxReps', '최대 반복', '회']] as const).map(([key, label, unit]) =>
       <div className={numeric.field} key={key}><span>{label}</span><NumberWheel label={label} value={value[key]} unit={unit} start="1" hideSteps
+        valueState={initial?.includes(key) ? 'initial' : 'confirmed'}
         adjust={(current, direction) => { const next = Number(current) + direction; return count(next) ? String(next) : null }}
-        validate={next => next.trim() ? String(countDraft(next)) : ''} onChange={next => onChange({ [key]: next })} /></div>)}
+        validate={next => String(countDraft(next))} onChange={next => onChange({ [key]: next })} /></div>)}
   </div>
 }
 type CardioDraft = PlanDraft & {id:string;existing:boolean;restore?:boolean}
@@ -67,7 +69,8 @@ function EmptyExerciseList({ weight = false }: { weight?: boolean }) {
   </Card>
 }
 
-export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, activities = [], onSaved, managementBlocked = false, navigationKey, backLabel = '루틴 목록으로' }: {
+export function RoutineForm({ routine, generation, exercises, manufacturers = [], busy, controller, onClose, activities = [], onSaved, managementBlocked = false, navigationKey, backLabel = '루틴 목록으로', history = [], historyStatus = 'ready' }: {
+  history?: Session[]; historyStatus?: 'pending' | 'ready' | 'failed'
   activities?:CardioActivity[]; onSaved?:(id: string, name: string)=>void; managementBlocked?:boolean; routine: Routine | null; generation: string; exercises: StandardExercise[]; manufacturers?: Manufacturer[]; busy: boolean; controller: Pick<WorkoutOnlineController, 'saveRoutine' | 'removedRoutine' | 'invalidateScope'> & Partial<Pick<WorkoutOnlineController, 'getSnapshot'>>; onClose: () => void; navigationKey?: string; backLabel?: string
 }) {
   const editing = routine !== null
@@ -145,6 +148,10 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
     else fallback()
   }
   const changeWeight = (id: string, patch: Partial<WeightDraft>) => setWeights(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
+  function initialWeight(weight: WeightDraft) {
+    const recent = latestActualWeight(history, weight.standardExerciseId, weight)
+    return { value: recent ?? '0', available: typeof recent === 'string' || recent === undefined && historyStatus === 'ready' }
+  }
   const changeCardio = (id: string, patch: Partial<CardioDraft>) => setCardio(values => values.map(value => value.id === id ? { ...value, ...patch } : value))
   function openCardioPicker(id: string | null) {
     if (cardioPicker && cardioPicker !== id) {
@@ -196,11 +203,17 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       let body = submitted
       if (!body) {
         if (!validName(name) || weights.length + cardio.length === 0) throw new Error('루틴 이름과 한 개 이상의 운동을 입력해 주세요.')
-        const weightPlacements = newWeights(weights)
+        const resolvedWeights = weights.map(weight => {
+          if (weight.approvedWeightKg !== null || weight.initialWeightKg) return weight
+          const initial = initialWeight(weight)
+          if (!initial.available) throw Error(`${weight.exerciseName}의 이전 중량을 확인하지 못했어요. 설정 중량을 입력해 주세요.`)
+          return { ...weight, initialWeightKg: initial.value }
+        })
+        const weightPlacements = newWeights(resolvedWeights)
         if (cardio.some(c => !c.existing && !c.standardExerciseId)) throw new Error('추가할 유산소 종목을 카탈로그에서 선택해 주세요.')
         const cardioPlacements = cardio.map(c => ({ id: c.id, plan: cardioPlan(c) }))
         body = routine ? { dataGeneration: generation, expectedVersion: routine.version, name, tag:tag||null,
-          weightPlacements: updatedWeights(weights),
+          weightPlacements: updatedWeights(resolvedWeights),
           cardioPlacements: cardioPlacements.map(c => ({ ...c, mode: cardio.find(x => x.id === c.id)!.restore ? 'RESTORE' as const : cardio.find(x => x.id === c.id)!.existing ? 'EXISTING' as const : 'NEW' as const })),
           weightApprovals: weights.filter(w => w.approve && w.approvedWeightKg !== null).map(w => ({ placementId: w.id, nextApprovedWeightKg: decimalDraft(w.nextWeightKg), occurredAt: new Date().toISOString() })) }
           : { id, dataGeneration: generation, name, tag:tag||null, weightPlacements, cardioPlacements }
@@ -247,23 +260,25 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
         const definition = exercises.find(e => e.id === w.standardExerciseId)
         const description = definition ? exerciseDescription(definition) : '부위·근육 미분류'
         const step = w.loadType === 'PLATE' || w.loadType === 'STACK' ? 2.5 : 1
+        const unconfirmed = w.approvedWeightKg === null && !w.initialWeightKg
+        const settingWeight = w.approvedWeightKg === null ? w.initialWeightKg || initialWeight(w).value : w.nextWeightKg
         return <Card className={cardClass} key={w.id} aria-label={`웨이트 ${index + 1}`} ref={addedCardId === w.id ? addedCard : undefined}>
           <ExerciseEditHeading index={index} name={w.exerciseName} description={description} picking={picker === w.id} onChange={() => showPicker(w.id)} />
           <EquipmentFields value={w} manufacturers={manufacturers} onChange={value => {
             if (value.manufacturerId === w.manufacturerId && value.loadType === w.loadType) return
             changeWeight(w.id, { ...value, ...(w.approvedWeightKg !== null ? { id:newId(), approvedWeightKg:null, initialWeightKg:'', approve:false, nextWeightKg:'', restore:false } : {}) })
           }} />
-          <RoutineTargetFields value={w} onChange={changes => changeWeight(w.id, changes)} />
+          <RoutineTargetFields value={w} initial={w.initialTargets}
+            onChange={changes => changeWeight(w.id, { ...changes, initialTargets: w.initialTargets?.filter(key => !(key in changes)) })} />
           <div className={editStyles.weight}>
             <div><span>설정 중량</span><small>{step}kg 단위</small></div>
-            <KgWheel label="설정 중량" step={step} compact value={w.approvedWeightKg === null ? w.initialWeightKg : w.nextWeightKg} onChange={value => {
+            <KgWheel label="설정 중량" step={step} compact required value={settingWeight} valueState={unconfirmed ? 'initial' : 'confirmed'} onChange={value => {
               if (w.approvedWeightKg === null) changeWeight(w.id, { initialWeightKg: value })
               else {
                 const approve = value !== decimalDraft(w.approvedWeightKg)
                 changeWeight(w.id, { nextWeightKg: approve ? value : w.approvedWeightKg, approve })
               }
             }} />
-            {w.approvedWeightKg === null && <small className="muted">현재 조합의 시작 중량을 입력하세요.</small>}
           </div>
           <CombinationMemo exerciseId={w.standardExerciseId} equipment={w} draftNotice="미저장 · 새로고침하면 메모가 사라집니다." />
           <ExerciseActions index={index} count={weights.length} onMove={delta => setWeights(v => move(v, index, delta))} onRemove={() => {
@@ -274,9 +289,12 @@ export function RoutineForm({ routine, generation, exercises, manufacturers = []
       })}
       <button data-close-text={editing && picker !== null || undefined} type="button" className="outline" aria-expanded={editing ? picker !== null : picker === 'add'} onClick={()=>{ if (!editing || picker === null) showPicker('add'); else setPicker(null) }}>{editing && picker !== null ? '종목 선택 닫기' : '+ 웨이트 종목 추가'}</button>
       {picker !== null && <section ref={searchRegion} data-edit-picker className={`${styles.formbox} ${styles.searchRegion} stack`} aria-label={picker === 'add' ? '웨이트 종목 추가 선택' : '웨이트 종목 변경 선택'}><ExerciseSearch key={picker} exercises={exercises} defaultOpen onCancel={() => setPicker(null)} onSelect={exercise => {
-        const fresh: WeightDraft = { id: newId(), standardExerciseId: exercise.id, exerciseName: exercise.name, manufacturerId: null, loadType: null, setCount: '3', minReps: '6', maxReps: '10', initialWeightKg: '', approvedWeightKg: null, approve: false, nextWeightKg: '' }
+        const fresh: WeightDraft = { id: newId(), standardExerciseId: exercise.id, exerciseName: exercise.name, manufacturerId: null, loadType: null,
+          setCount: '3', minReps: '6', maxReps: '10', initialTargets: ['setCount', 'minReps', 'maxReps'],
+          initialWeightKg: '', approvedWeightKg: null, approve: false, nextWeightKg: '' }
         // A different exercise is a NEW placement; never retarget an immutable existing placement/approval.
-        setWeights(values => picker === 'add' ? [...values, fresh] : values.map(w => w.id !== picker || w.standardExerciseId === exercise.id ? w : { ...fresh, setCount:w.setCount, minReps:w.minReps, maxReps:w.maxReps }))
+        setWeights(values => picker === 'add' ? [...values, fresh] : values.map(w => w.id !== picker || w.standardExerciseId === exercise.id ? w
+          : { ...fresh, setCount: w.setCount, minReps: w.minReps, maxReps: w.maxReps, initialTargets: w.initialTargets }))
         if (picker === 'add') setAddedCardId(fresh.id)
         setPicker(null)
       }} />{!editing && <button type="button" className="outline" data-close-text onClick={() => setPicker(null)}>종목 선택 닫기</button>}</section>}

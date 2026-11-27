@@ -6,7 +6,7 @@ export type LocalKey = Scope & { sessionId: string; editorDeviceId: string; writ
 export type RecordPresence = 'LOCAL_ONLY' | 'SERVER_CONFIRMED' | 'UNKNOWN'
 export type SetDraft = { weight: string; reps: string; additionalWeight?: string }
 export type CardioTimer = Omit<CardioMeasurementDraft, 'speed'> & { startedAt: string | null; runningSince: string | null; accumulatedMs: number;
-  segments: { startedAt: string; stoppedAt: string }[]; speed?: string; bpm: string; correctedSeconds: string | null; reviewing: boolean }
+  segments: { startedAt: string; stoppedAt: string }[]; speed?: string; bpm: string; bpmConfirmed?: true; correctedSeconds: string | null; reviewing: boolean }
 export type RestPolicy = { restLowSeconds: number; restMediumSeconds: number; restHighSeconds: number }
 export type ExerciseRest = { endsAt: string; startedAt: string; seconds: number; sessionExerciseId: string; ordinal: number
   middleAt?: RestMiddleSeconds | typeof REST_TEST_MIDDLE_SECONDS }
@@ -26,8 +26,8 @@ export type LocalWorkout = LocalKey & {
   approvalResults: Session['snapshot']['approvalResults']
   presence: Record<string, RecordPresence>
   cancelled: { sets: PerformedSet[]; cardio: CardioResult[] }
-  drafts: Record<string, SetDraft>
-  weights: Record<string, { value: string; context: ActiveWeightContext }>
+  drafts: Record<string, Partial<SetDraft>>
+  weights: Record<string, { value: string; context: ActiveWeightContext; initial?: true }>
   timers: Record<string, CardioTimer>
   currentExerciseId: string
   startedWeights?: Record<string, string>

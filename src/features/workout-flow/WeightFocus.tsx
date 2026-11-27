@@ -4,7 +4,8 @@ import type { ReactNode, RefObject } from 'react'
 import { Button, Card, Help } from '../../components/ui.tsx'
 import { CircleCheck } from '../../components/common-ui/CircleCheck.tsx'
 import { NumberWheel } from '../../components/NumberWheel.tsx'
-import { adjustRepsDraft, suggestedReps } from '../workout/reps.ts'
+import type { NumericValueState } from '../../components/wheel-options.ts'
+import { adjustRepsDraft } from '../workout/reps.ts'
 import { halfWeight } from '../workout/weight.ts'
 import { adjust } from '../workout-online/cardio-draft.ts'
 import { countDraft, decimalDraft } from '../workout-online/validation.ts'
@@ -26,15 +27,16 @@ function adjustReps(value: string, direction: -1 | 1) {
   const next = adjustRepsDraft(value, direction)
   return next !== null && Number(next) <= 2147483647 ? next : null
 }
-export function KgWheel({ label, value, onChange, step = 2.5, compact = false, preview, disabled, required = false }: {
-  label: string; value: string; onChange: (value: string) => void; step?: 1 | 2.5; compact?: boolean; preview?: boolean; disabled?: boolean; required?: boolean
+export function KgWheel({ label, value, onChange, step = 2.5, compact = false, preview, disabled, required = false, valueState }: {
+  label: string; value: string; onChange: (value: string) => void; step?: 1 | 2.5; compact?: boolean; preview?: boolean; disabled?: boolean; required?: boolean; valueState?: NumericValueState
 }) {
   return <NumberWheel preview={preview} disabled={disabled} label={label} value={value} onChange={onChange} unit="kg" start="0"
+    displayValue={!value && !required ? '—' : undefined} valueState={valueState ?? (!value && !required ? 'empty' : undefined)}
     adjust={(value, direction) => adjustKg(value, direction, step)} validate={value => required || value.trim() ? decimalDraft(value) : ''}
     stepLabel={compact ? '' : String(step)} compactStepper={compact} />
 }
 
-export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, completionProtected, editing, editTools, referenceNoteBelowControls = false,
+export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, completionProtected, editing, editTools,
   onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, memoOpen = true, onMemoToggle, preview = false }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
   issue?: ReactNode; preparing?: boolean; resting: boolean; completionProtected?: boolean; editing: boolean; editTools: ReactNode
@@ -44,14 +46,10 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
   onWeight: () => void; onEdit: () => void; onMemo: (memo: string) => void
   onList: () => void; onEnd: () => void
   memoContent?: ReactNode; memoNote?: string; approvalNote?: string; additionalInput?: boolean; preview?: boolean
-  memoOpen?: boolean; onMemoToggle?: () => void; referenceNoteBelowControls?: boolean
+  memoOpen?: boolean; onMemoToggle?: () => void
 }) {
   const completed = weight.sets.filter(s => s.result).length
   const count = weight.plannedCount ?? weight.sets.length
-  const repsSuggestion = suggestedReps(weight.min, weight.max)
-  const noPreviousRecord = !weight.sets.some(set => !set.result && (set.previous || set.repsPending))
-  const referenceNote = weight.sets.some(set => !set.result) && noPreviousRecord &&
-    <p className="muted small">비교 가능한 기준이 없습니다. 이번 반복 횟수를 직접 입력해 주세요.</p>
   const title = `${String(position).padStart(2, '0')}. ${weight.name}`
   const titleRef = useFitWorkoutTitle(title, !preview)
   const manufacturer = manufacturers.find(m => m.id === weight.manufacturerId)
@@ -77,7 +75,8 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
         <Button compact variant="quiet" className={styles.weightChange} onClick={preview ? undefined : onWeight}>중량 변경</Button>
       </div>
       <div className={styles.workingValues}>
-        <strong>{weight.working || '—'} <small>kg</small></strong>
+        <strong><span data-numeric-value={weight.workingInitial ? 'initial' : undefined}
+          aria-label={weight.workingInitial ? `${weight.working} kg 초기값` : undefined}>{weight.working || '0'}</span> <small>kg</small></strong>
         <p className="muted small">승인 중량 {weight.approved === null ? '없음' : weight.approved + ' kg'}
           {weight.mode === 'today' && weight.working && ' · 오늘만 적용'}
           {weight.mode === 'progression' && (' · ' + (approvalNote ?? '진행 중량 변경 시연'))}</p>
@@ -87,7 +86,6 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       </div>}
       <div className={styles.equipment} aria-label="현재 장비"><span>{manufacturer?.name ?? '제조사 미지정'}</span><span>{weight.loadType ? LOAD_LABELS[weight.loadType] : '부하 미지정'}</span></div>
     </Card>
-    {!referenceNoteBelowControls && referenceNote}
     <Card className={styles.sets}>
       <div className={styles.setsHeading}><h2>세트 기록</h2><span>{weight.min}–{weight.max}회 × {count}세트</span><b>{completed}/{count}{completed >= count ? ' 완료' : ''}</b></div>
       <progress className={styles.setProgress} aria-label="현재 종목 세트 진행률" value={completed} max={count} />
@@ -103,14 +101,16 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
             <b role="cell">{String(ordinal).padStart(2, '0')}</b>
             <span role="cell" className={styles.prior}>{set.previous ? set.previous.reps + '회' : '—'}</span>
             <div role="cell" className={styles.setValues}>{result ? <strong>{result.reps}회</strong> :
-              <NumberWheel preview={preview} label={`${ordinal}세트 이번 반복 횟수`} value={set.draft.reps}
-                onChange={reps => onDraft(set.id, { reps })} unit="회" start="0" suggestion={repsSuggestion} pending={set.repsPending} confirmUnchanged plainSteps
-                adjust={adjustReps} validate={value => value.trim() ? String(countDraft(value)) : ''} />
+              <NumberWheel preview={preview} label={`${ordinal}세트 이번 반복 횟수`} value={set.draft.reps || '0'}
+                onChange={reps => onDraft(set.id, { reps })} unit="회" start="0" valueState={set.repsInitial || !set.draft.reps ? 'initial' : 'confirmed'} plainSteps
+                valueNote={set.repsPending ? '이전 기록 확인 중' : undefined}
+                adjust={adjustReps} validate={value => String(countDraft(value))} />
             }
               {additionalInput && weight.loadType === 'BODYWEIGHT' && (result
                 ? <small>{result.additionalKg === null ? '추가 부하 미기록' : `추가 ${result.additionalKg}kg`}</small>
-                : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} step={1} value={set.draft.additional} onChange={additional => onDraft(set.id, { additional })} />
-                  <small className="muted">선택 입력 · 체중은 포함하지 않습니다.</small></>)}
+                : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} step={1} required value={set.draft.additional || '0'}
+                  valueState={set.additionalInitial ? 'initial' : 'confirmed'} onChange={additional => onDraft(set.id, { additional })} />
+                  <small className="muted">체중은 포함하지 않습니다.</small></>)}
             </div>
             <div role="cell" className={styles.checkCell} data-completion-protected={!result && completionProtected || undefined}>
               <CircleCheck label={`${ordinal}세트 ${result ? '완료 취소' : '완료'}`} checked={!!result}
@@ -136,7 +136,6 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       {onMemoToggle ? <div id={memoId} hidden={!memoOpen}>{memo}</div> : memo}
     </section>
     <Button className={styles.endWorkout} onClick={preview ? undefined : onEnd}>운동 종료</Button>
-    {referenceNoteBelowControls && referenceNote}
   </>
 }
 

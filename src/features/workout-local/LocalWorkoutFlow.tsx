@@ -4,7 +4,7 @@ import type { Routine } from '../workout-online/types.ts'
 import { CombinationMemo } from '../workout-online/CombinationMemo.tsx'
 import { changedOriginalCombination } from '../workout-online/approval-weight.ts'
 import { localStoreErrorMessage } from '../workout-online/storage.ts'
-import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Children, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent, ReactNode } from 'react'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import { Dialog } from '../../components/Dialog.tsx'
@@ -27,7 +27,7 @@ import type { EditorState, LocalWorkoutController } from './controller.ts'
 import type { LocalWorkout } from './types.ts'
 import { slotKey } from './types.ts'
 import * as model from './model.ts'
-import { flowCardio, flowWeights, inputDraft, isWeightDone } from './flow-data.ts'
+import { flowCardio, flowWeights, inputDraft, isWeightDone, previousCardioResult } from './flow-data.ts'
 import { observedWeightMs } from './weight-timing.ts'
 import { workoutSaveStatus } from './save-status.ts'
 import { WorkoutActionError } from './action-error.ts'
@@ -43,9 +43,9 @@ type Modal = 'list' | 'weight' | 'end' | 'add' | 'replace' | 'cardio' | 'edit-ca
 const restKey = (rest: LocalWorkout['rest']) => rest ? [rest.sessionExerciseId, rest.ordinal, rest.startedAt].join(':') : null
 const REST_TRANSITION_GUARD_MS = 275
 const FINAL_SET_REVIEW_WINDOW_MS = 750
-export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], historyPending, visible = true, onHome = () => {}, backLabel, notices, progressAssessment, progressAssessmentPending = false, referenceRecords = [], referenceRoutine = null, createSetId, preparingSummary = false, confirmingFinish = false, navigationIssue, recheckIssue, localOnly = false, onReconnect, onRecheckSession, onReopenLocal, retryFinish, reopeningLocal = false }: {
+export function LocalWorkoutView({ state, controller, definitions, manufacturers = [], activities = [], history = [], historyPending, historyFailed, visible = true, onHome = () => {}, backLabel, notices, progressAssessment, progressAssessmentPending = false, referenceRecords = [], referenceRoutine = null, createSetId, preparingSummary = false, confirmingFinish = false, navigationIssue, recheckIssue, localOnly = false, onReconnect, onRecheckSession, onReopenLocal, retryFinish, reopeningLocal = false }: {
   state: EditorState; controller: LocalWorkoutController; definitions: StandardExercise[]; manufacturers?: Manufacturer[]
-  activities?: CardioActivity[]; history?: Session[] | null; historyPending?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
+  activities?: CardioActivity[]; history?: Session[] | null; historyPending?: boolean; historyFailed?: boolean; visible?: boolean; onHome?: () => void; backLabel?: string; notices?: ReactNode
   progressAssessment?: ProgressAssessment; progressAssessmentPending?: boolean; referenceRecords?:ReferenceRecord[]; referenceRoutine?:Routine|null
   createSetId?: () => string; preparingSummary?: boolean; confirmingFinish?: boolean; navigationIssue?: string; recheckIssue?: string
   localOnly?: boolean; onReconnect?: () => void; onRecheckSession?: () => void; onReopenLocal?: () => void; reopeningLocal?: boolean
@@ -89,7 +89,11 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   useEffect(() => {
     if (visible && recheckIssue) showFeedback(recheckIssue, 'error')
   }, [visible, recheckIssue, showFeedback])
-  const weights = workout ? flowWeights(state, history, definitions, historyPending) : []
+  const weights = useMemo(() => state.workout ? flowWeights(state, history, definitions, historyPending) : [],
+    [state, history, definitions, historyPending])
+  const cardioPlans = workout?.snapshot.appliedPlan.cardioActivities
+  const cardioHistory = useMemo(() => new Map(cardioPlans?.map(activity =>
+    [activity.sessionActivityId, previousCardioResult(history, activity.plan)])), [history, cardioPlans])
   const weight = weights.find(weight => weight.id === workout?.currentExerciseId)
   const nextSet = weight?.sets.find(set => !set.result)
   const completeWeight = !!weight && isWeightDone(weight)
@@ -310,14 +314,18 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     if (nextSetScope && completionGuard.current === nextSetScope) return
     const current = controller.getSnapshot()
     if (!current.workout || current.workout.currentExerciseId !== id) return
-    const draft = current.drafts[slotKey(id, ordinal)] ?? inputDraft(current.workout, id, ordinal, history)
+    if (weight.workingInitial && !weight.workingFromHistory && (historyFailed || weight.workingAmbiguous)) {
+      feedback.show('이전 중량을 확인하지 못했어요. 진행 중량을 확인해 주세요.', 'warning')
+      return
+    }
+    const draft = inputDraft(current.workout, id, ordinal, history, current.drafts[slotKey(id, ordinal)])
     if (!validate(() => setCompletionInput(draft, weight.loadType))) return
     feedback.clearError()
     if (event && weight.sets.filter(set => !set.result).length === 1) footerRepeatGuard.arm(event)
     void unlock()
     void completeExercise((w, at) => {
       if (!model.weightStarted(w, id) || model.restRemaining(w, at, id) > 0) throw new WorkoutActionError('운동을 시작하고 휴식을 마친 뒤 완료해 주세요.')
-      model.editDraft(w, id, ordinal, inputDraft(w, id, ordinal, history))
+      model.editDraft(w, id, ordinal, { ...draft, ...w.drafts[slotKey(id, ordinal)] })
       model.completeSet(w, id, ordinal, at, createSetId, alerts)
     }, ordinal).then(saved => {
       if (saved && controller.getSnapshot().workout?.currentExerciseId === id) setCompletedScroll({ exerciseId: id, top: window.scrollY })
@@ -450,7 +458,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     const open = memoOpen[id] ?? !started
     return <>
       {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
-      {weight && <WeightFocus preview={preview} additionalInput referenceNoteBelowControls weight={weight} position={at + 1} workingRef={preview ? undefined : working} manufacturers={manufacturers}
+      {weight && <WeightFocus preview={preview} additionalInput weight={weight} position={at + 1} workingRef={preview ? undefined : working} manufacturers={manufacturers}
         description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
         preparing={!started && !resting && !isWeightDone(weight)}
         resting={!started || resting || id === workout.currentExerciseId && endingRest}
@@ -463,8 +471,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
           feedback.clearError()
           const current = controller.getSnapshot().workout
           if (!current) return
-          const value = controller.getSnapshot().drafts[slotKey(id, ordinal)] ?? inputDraft(current, id, ordinal, history)
-          controller.draft(id, ordinal, { ...value, ...(draft.reps !== undefined ? { reps: draft.reps } : {}),
+          controller.draft(id, ordinal, { ...(draft.reps !== undefined ? { reps: draft.reps } : {}),
             ...(draft.kg !== undefined ? { weight: draft.kg } : {}), ...(draft.additional !== undefined ? { additionalWeight: draft.additional } : {}) })
         }}
         onComplete={complete} onUndo={ordinal => setModal({ undo: ordinal })} onAddSet={addSet}
@@ -487,7 +494,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
             <Button disabled={weight.sets.some(s => !!s.result)} onClick={() => setModal('replace')}>현재 종목 교체</Button>
             <Button variant="danger" disabled={weight.sets.some(s => !!s.result) || items.length < 2} onClick={() => setModal('remove')}>현재 종목 제외</Button>
           </Card></>} />}
-      {activity && <CardioFocus preview={preview} cardio={activity} activeMs={activity.activeMs} estimate={estimateCardio} navigation={navigation} editing={!preview && editing}
+      {activity && <CardioFocus preview={preview} cardio={{ ...activity, previous: cardioHistory.get(activity.id) }} activeMs={activity.activeMs} estimate={estimateCardio} navigation={navigation} editing={!preview && editing}
         onEdit={() => setEditing(v => !v)} onUndo={() => setModal('undo-cardio')}
         onDraft={patch => { feedback.clearError(); controller.cardioDraft(id, patch) }}
         onCancelReview={() => void act(w => { if (w.timers[id]) w.timers[id].reviewing = false })}

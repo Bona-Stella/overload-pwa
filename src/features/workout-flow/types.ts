@@ -5,17 +5,18 @@ import type { CardioMeasurementDraft } from '../workout-online/cardio-measuremen
 export type WeightMode = 'approved' | 'today' | 'progression'
 export type SetDraft = { kg: string; reps: string; additional: string }
 export type SetResult = Equipment & { kg: string; reps: number; additionalKg: string | null; mode: WeightMode; at: number }
-export type SetRow = { id: number; draft: SetDraft; previous?: SetDraft; result?: SetResult; repsPending?: boolean }
+export type SetRow = { id: number; draft: SetDraft; previous?: SetDraft; result?: SetResult; repsPending?: boolean; repsInitial?: boolean; additionalInitial?: boolean }
 export type WeightFocusData = Equipment & {
   id: string; standardId: string; name: string; min: number; max: number
-  working: string; approved: string | null; mode: WeightMode; sets: SetRow[]; memo: string
+  working: string; workingInitial?: boolean; workingFromHistory?: boolean; workingAmbiguous?: boolean
+  approved: string | null; mode: WeightMode; sets: SetRow[]; memo: string
   plannedCount?: number
 }
-export type CardioDraft = CardioMeasurementDraft & { bpm: string; correctedSeconds: string | null }
+export type CardioDraft = CardioMeasurementDraft & { bpm: string; bpmConfirmed?: true; correctedSeconds: string | null }
 export type ActualCardio = Extract<CardioResult, { status: 'COMPLETED' }>['result']
 export type CardioFocusData = {
   id: string; plan: CardioPlan; phase: 'ready' | 'running' | 'paused' | 'review' | 'completed' | 'skipped'
-  draft: CardioDraft; result?: ActualCardio
+  draft: CardioDraft; result?: ActualCardio; previous?: ActualCardio
 }
 export const cardioPhaseLabel: Record<CardioFocusData['phase'], string> = {
   ready: '유산소 준비', running: '유산소 진행 중', paused: '유산소 일시정지',
