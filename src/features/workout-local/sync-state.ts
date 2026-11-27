@@ -1,4 +1,4 @@
-import type { ActiveResolution, ApprovalRequest, FinishAck, Resolution, Session, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
+import type { ActiveResolution, ApprovalRequest, FinishAck, Resolution, Session, Snapshot, SnapshotAck, SnapshotRequest } from '../workout-online/types.ts'
 import { newId } from '../../id.ts'
 import type { LocalWorkout } from './types.ts'
 import { decimalDraft } from '../workout-online/validation.ts'
@@ -62,6 +62,42 @@ export function acceptFinish(w: LocalWorkout, ack: FinishAck) {
   if (BigInt(ack.currentVersion) > BigInt(w.serverVersion)) w.serverVersion = ack.currentVersion
   if (w.pendingSnapshot?.rejected) w.pendingSnapshot = null
   w.approvalResults = structuredClone(ack.approvalResults); w.finish!.ack = structuredClone(ack); w.syncState = 'CLEAN'
+}
+
+function comparableSnapshot(snapshot: Snapshot) {
+  const byId = <T extends { id: string }>(items: T[]) => items.toSorted((a, b) => a.id.localeCompare(b.id))
+  // Detail returns records in server order and serializes Instants without redundant fractional zeros.
+  return JSON.stringify({
+    ...snapshot,
+    sessionExercises: byId(snapshot.sessionExercises),
+    performedSets: byId(snapshot.performedSets),
+    cardioResults: byId(snapshot.cardioResults),
+    approvalRequests: byId(snapshot.approvalRequests),
+    deletedPerformedSetIds: snapshot.deletedPerformedSetIds.toSorted(),
+    deletedCardioResultIds: snapshot.deletedCardioResultIds.toSorted(),
+  }, (key, value: unknown) => {
+    if (typeof value === 'string' && /^(started|ended|occurred|completed)At$/.test(key)) {
+      return value.replace(/(\.\d*?[1-9])0+Z$/, '$1Z').replace(/\.0+Z$/, 'Z')
+    }
+    if (value && typeof value === 'object' && !Array.isArray(value)) return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)))
+    return value
+  })
+}
+
+export function finishedDetailAck(w: LocalWorkout, server: Session): FinishAck {
+  const request = w.finish?.request
+  const { completionAssessment, endedAt, closedAt, lastSnapshotSavedAt } = server
+  if (!request || server.status !== 'FINISHED' || server.deletedAt || server.editorDeviceId !== w.editorDeviceId
+    || server.writerEpoch !== w.writerEpoch || server.id !== w.sessionId || server.userId !== w.userId || server.dataGeneration !== w.dataGeneration
+    || server.localRevision !== request.localRevision || Date.parse(endedAt ?? '') !== Date.parse(request.endedAt)
+    || !completionAssessment || !endedAt || !closedAt || !lastSnapshotSavedAt || server.version !== completionAssessment.sessionVersion
+    || BigInt(server.version) < BigInt(w.serverVersion) || comparableSnapshot(server.snapshot.state) !== comparableSnapshot(request.snapshot)) {
+    throw new SyncStateConflict('서버의 종료 기록과 이 기기의 기록이 달라 확인이 필요합니다. 이 기기의 기록은 보존했습니다.')
+  }
+  return { userId: server.userId, dataGeneration: server.dataGeneration, sessionId: server.id, writerEpoch: server.writerEpoch,
+    status: 'FINISHED', acceptedLocalRevision: server.localRevision, version: completionAssessment.sessionVersion, currentVersion: server.version,
+    deletedAt: null, snapshotSavedAt: lastSnapshotSavedAt, lastWorkoutSyncedAt: server.lastWorkoutSyncedAt, endedAt, closedAt,
+    duplicate: false, approvalResults: server.snapshot.approvalResults, completionAssessment }
 }
 export function acceptSnapshot(w: LocalWorkout, ack: SnapshotAck) {
   const pending = w.pendingSnapshot

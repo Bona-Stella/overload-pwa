@@ -295,9 +295,10 @@ export class AuthController {
       if (signal.aborted || this.generation !== generation) throw obsolete()
       let failure = error
       if (current() && error instanceof AuthError && ['NETWORK', 'TIMEOUT'].includes(error.code)) {
-        const workoutTransition = method === 'POST' && /^\/api\/v1\/workout-sessions(?:\/[0-9a-f-]+\/finish)?$/.test(path)
-        // START and FINISH can reconcile a lost write response while the session is still reachable.
-        if (globalThis.navigator?.onLine === false || method !== 'GET' && !workoutTransition) this.networkUnavailable()
+        const recoverableWorkoutWrite = method === 'POST' && /^\/api\/v1\/workout-sessions(?:\/[0-9a-f-]+\/finish)?$/.test(path)
+          || method === 'PUT' && /^\/api\/v1\/workout-sessions\/[0-9a-f-]+\/snapshot$/.test(path)
+        // The frozen workout writes can reconcile a lost response while the account is still reachable.
+        if (globalThis.navigator?.onLine === false || method !== 'GET' && !recoverableWorkoutWrite) this.networkUnavailable()
         else {
           try { await this.checkSessionAfterReadFailure(generation, expected) }
           catch (sessionError) {

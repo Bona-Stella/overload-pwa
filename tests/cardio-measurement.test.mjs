@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { actualCardioMeasurement, calculatedDistance, calculatedSpeed, cardioMeasurementDraft, editCardioSpeed, estimatedCardioDistance, measuredCardio, distanceLabel } from '../src/features/workout-online/cardio-measurement.ts'
+import { actualCardioMeasurement, calculatedDistance, calculatedSpeed, cardioMeasurementDraft, cardioMotionValue, editCardioSpeed, estimatedCardioDistance, measuredCardio, distanceLabel } from '../src/features/workout-online/cardio-measurement.ts'
 import * as m from '../src/features/workout-local/model.ts'
 import * as sync from '../src/features/workout-local/sync-state.ts'
 import { localWorkout } from '../src/features/workout-local/validation.ts'
@@ -56,11 +56,18 @@ test('extended finish is sealed once with original measurements and audit compar
   const changed=structuredClone(r);changed.result.measurement.actualSpeedKmh='10';assert.equal(sameRecord(r,changed),false)
 })
 test('manual calculated and unknown distances have distinct labels, including zero and absent values',()=>{
-  assert.match(distanceLabel(measuredCardio('8','',1800000)),/계산 거리 4 km/)
+  assert.match(distanceLabel(measuredCardio('8','',1800000)),/계산 거리 4\.0 km/)
   assert.match(distanceLabel(measuredCardio('8','3.8',1800000)),/직접 입력 거리 3.8 km/)
   assert.match(distanceLabel({distanceKm:'3.8'}),/출처 미확인/)
-  assert.match(distanceLabel(measuredCardio('0','',1800000)),/계산 거리 0 km/)
+  assert.match(distanceLabel(measuredCardio('0','',1800000)),/계산 거리 0\.0 km/)
   assert.equal(distanceLabel({distanceKm:null}),'거리 미입력')
+})
+test('display rounds to one decimal without replacing the stored measurement', () => {
+  const result = measuredCardio('8.123456', '3.249999', 1800125)
+  assert.equal(cardioMotionValue('1.15'), '1.2')
+  assert.equal(cardioMotionValue(result.measurement.actualSpeedKmh), '8.1')
+  assert.equal(distanceLabel(result), '직접 입력 거리 3.2 km')
+  assert.deepEqual(result, { distanceKm: '3.249999', measurement: { actualSpeedKmh: '8.123456', distanceSource: 'MANUAL' } })
 })
 
 test('goal distance estimates use elapsed time only and stay inside the resumable draft', () => {

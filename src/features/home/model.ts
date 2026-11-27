@@ -1,3 +1,4 @@
+import { cardioGoalValues } from '../workout-online/cardio-draft.ts'
 import type { PlannedDay } from '../statistics/api.ts'
 import type { CardioPlan, Routine } from '../workout-online/types.ts'
 import type { PartialResult } from '../statistics/display-achievement.ts'
@@ -38,7 +39,5 @@ export function representativeExercises(routine: Routine) {
   return [...activeWeights(routine).map(p => p.exerciseName), ...activeCardio(routine).map(p => p.plan.name)].slice(0, 2).join(' · ') || '등록된 운동 없음'
 }
 export function cardioPlanLabel(plan: CardioPlan) {
-  const duration = plan.targetSeconds % 60 === 0 ? `${plan.targetSeconds / 60}분` : `${Math.floor(plan.targetSeconds / 60)}분 ${plan.targetSeconds % 60}초`
-  return [duration, plan.targetDistanceKm !== null ? `${plan.targetDistanceKm} km` : null,
-    plan.intensity ? `${plan.intensity.value} ${plan.intensity.mode === 'SPEED' ? 'km/h' : '분/km'}` : null].filter(Boolean).join(' · ')
+  return cardioGoalValues(plan).flatMap(({ value, unit }) => value === null ? [] : [unit ? value + ' ' + unit : value]).join(' · ')
 }

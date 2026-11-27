@@ -1,3 +1,18 @@
+dialog.functional[data-editor-dialog] {
+  padding: 16px;
+  border-radius: var(--radius-card-compact, 5px);
+  --card-padding-override: initial;
+  --card-radius-override: initial;
+}
+.functional > :global(.section-heading) { margin-bottom: 16px; }
+.functional [data-dialog-actions] { gap: 8px; }
+.functional [data-dialog-actions] > button[data-action-shape='pill'] {
+  min-height: 48px;
+  padding: 6px 16px;
+  border-radius: var(--radius-action, 999px);
+  line-height: 1.2;
+}
+
 dialog.message {
   width: min(calc(100% - max(32px, var(--space-page, 16px) * 2)), 340px);
   padding: 16px;

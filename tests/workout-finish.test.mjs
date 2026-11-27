@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { LocalWorkoutController } from '../src/features/workout-local/controller.ts'
 import { ClosedWorkoutController } from '../src/features/workout-online/closed-controller.ts'
 import { LocalStoreError } from '../src/features/workout-online/storage.ts'
-import { AuthApi } from '../src/features/auth/api.ts'
+import { AuthApi, AuthError } from '../src/features/auth/api.ts'
 import * as m from '../src/features/workout-local/model.ts'
 import * as s from '../src/features/workout-local/sync-state.ts'
 import { localWorkout } from '../src/features/workout-local/validation.ts'
@@ -43,7 +43,7 @@ async function editor(options={}){
     calls.push({kind:'finish',body:clone(body)});if(options.beforeFinish)await options.beforeFinish(body)
     const duplicate=server.status==='FINISHED'
     if(duplicate)assert.equal(JSON.stringify(body),fixedFinish??stored.finish.requestJson)
-    else{fixedFinish=JSON.stringify(body);server={...server,status:'FINISHED',localRevision:body.localRevision,version:String(BigInt(server.version)+1n),endedAt:body.endedAt,closedAt:new Date(at+50).toISOString(),completionAssessment:assessment(String(BigInt(server.version)+1n)),snapshot:{...server.snapshot,state:clone(body.snapshot)}}}
+    else{fixedFinish=JSON.stringify(body);server={...server,status:'FINISHED',localRevision:body.localRevision,version:String(BigInt(server.version)+1n),endedAt:body.endedAt,closedAt:new Date(at+50).toISOString(),lastSnapshotSavedAt:new Date(at).toISOString(),completionAssessment:assessment(String(BigInt(server.version)+1n)),snapshot:{...server.snapshot,state:clone(body.snapshot)}}}
     const value={...ack(body,duplicate),status:'FINISHED',currentVersion:server.version,deletedAt:server.deletedAt,endedAt:server.endedAt,closedAt:server.closedAt,completionAssessment:server.completionAssessment}
     if(options.afterFinish)await options.afterFinish(value);return value
   }}
@@ -108,6 +108,37 @@ test('the saved FINISH is published only after the editor lock has been released
   assert.equal(published.length,1)
   e.c.stop()
 })
+test('stale detail after a FINISH ACK keeps recovery available without sending FINISH twice',async t=>{
+  const published=[]
+  const e=await editor({onFinished:value=>published.push(value)})
+  t.after(()=>e.c.stop())
+  e.api.detail=async()=>session()
+  await e.c.finish(at+20)
+  await e.c.syncSettled()
+  assert.ok(e.read().finish.ack)
+  assert.equal(e.c.getSnapshot().syncStatus,'READ')
+  assert.equal(e.c.getSnapshot().writable,true)
+  assert.deepEqual(published,[])
+  e.api.detail=async()=>e.remote()
+  await e.c.retrySync()
+  assert.equal(e.c.getSnapshot().syncStatus,'SAVED')
+  assert.equal(published.length,1)
+  assert.equal(e.calls.length,1)
+})
+test('losing the connection during final lock release preserves the ACK and offers recovery',async t=>{
+  const releaseGate=gate(),published=[]
+  const e=await editor({releaseGate,onFinished:value=>published.push(value)})
+  t.after(()=>e.c.stop())
+  await e.c.finish(at+20)
+  await tick()
+  assert.ok(e.read().finish.ack)
+  e.online(false)
+  releaseGate.resolve()
+  await e.c.syncSettled()
+  assert.equal(e.c.getSnapshot().syncStatus,'WAITING')
+  assert.deepEqual(published,[])
+  assert.equal(e.calls.length,1)
+})
 test('ending at the weight/cardio choice keeps the plan and records only completed weight',async()=>{
   const e=await editor()
   e.online(false)
@@ -138,12 +169,62 @@ test('a durable unresolved approval resolution is confirmed before freezing FINI
   const hold=gate();let e;const opening=editor({stored:w,server,resolutionGate:hold});await tick();hold.resolve();e=await opening
   assert.deepEqual(e.calls.map(c=>c.kind),['resolve','finish']);assert.ok(e.read().finish.ack);assert.equal(e.read().pendingResolution,null);e.c.stop()
 })
-test('FINISH ACK loss uses identical body, bounded replay, and no intermediate snapshot',async()=>{
-  let lost=true;const e=await editor({afterFinish:async()=>{if(lost){lost=false;throw Error('lost ACK')}}});e.online(false);await e.c.change(w=>complete(w,1));await e.c.finish(at+20);e.online(true);await e.c.retrySync()
-  assert.deepEqual(e.calls.map(c=>c.kind),['finish','finish']);assert.deepEqual(e.calls[0].body,e.calls[1].body);assert.ok(e.read().finish.ack);e.c.stop()
+test('FINISH ACK loss is confirmed by detail with no duplicate POST',async()=>{
+  let lost=true;const e=await editor({afterFinish:async()=>{if(lost){lost=false;throw new AuthError('NETWORK')}}});e.online(false);await e.c.change(w=>complete(w,1));await e.c.finish(at+20);e.online(true);await e.c.retrySync()
+  assert.deepEqual(e.calls.map(c=>c.kind),['finish']);assert.ok(e.read().finish.ack);e.c.stop()
+})
+test('a suspended snapshot is reconciled automatically when finish is requested',async t=>{
+  let errors=2
+  const e=await editor({beforeSnapshot:()=>{if(errors-- > 0)throw new TypeError('Lost response')}})
+  t.after(()=>e.c.stop())
+  await e.c.change(w=>complete(w,1));await e.c.syncSettled()
+  assert.equal(e.c.getSnapshot().syncStatus,'WAITING')
+  await e.c.finish(at+20);await e.c.syncSettled()
+  assert.deepEqual(e.calls.map(call=>call.kind),['snapshot','snapshot','snapshot','finish'])
+  assert.equal(new Set(e.calls.slice(0,3).map(call=>JSON.stringify(call.body))).size,1)
+  assert.equal(e.read().finish.ack.status,'FINISHED')
+  assert.equal(e.read().snapshot.performedSets.length,1)
+})
+test('a failed detail after a successful FINISH is retried once without another POST',async t=>{
+  const published=[],e=await editor({onFinished:server=>published.push(server)})
+  t.after(()=>e.c.stop())
+  let reads=0
+  e.api.detail=async()=>{if(++reads===1)throw new TypeError('Lost detail');return e.remote()}
+  await e.c.finish(at+20);await e.c.syncSettled()
+  assert.equal(reads,2);assert.equal(e.calls.length,1);assert.equal(published.length,1)
+})
+test('snapshot response recovery does not spend the FINISH confirmation attempt',async t=>{
+  const snapshotGate=gate()
+  let snapshots=0
+  const e=await editor({snapshotGate,beforeSnapshot:()=>{if(++snapshots===1)throw new AuthError('NETWORK')},
+    afterFinish:()=>{throw new AuthError('NETWORK')}})
+  t.after(()=>e.c.stop())
+  await e.c.change(w=>complete(w,1));await tick()
+  assert.equal(await e.c.finish(at+20),true)
+  snapshotGate.resolve()
+  await e.c.syncSettled()
+  assert.deepEqual(e.calls.map(call=>call.kind),['snapshot','snapshot','finish'])
+  assert.equal(e.read().finish.ack.status,'FINISHED')
+})
+test('a failed FINISH is replayed once only after the server confirms ACTIVE',async t=>{
+  let tries=0,reads=0
+  const e=await editor({beforeFinish:()=>{if(++tries<=2)throw new TypeError('Before commit')}})
+  t.after(()=>e.c.stop())
+  e.api.detail=async()=>{reads++;return e.remote()}
+  await e.c.finish(at+20);await e.c.syncSettled()
+  assert.equal(reads,2);assert.equal(e.calls.length,2)
+  assert.equal(e.c.getSnapshot().syncStatus,'WAITING')
+  assert.equal(JSON.stringify(e.calls[1].body),e.read().finish.requestJson)
+  await e.c.retrySync()
+  assert.ok(e.read().finish.ack);assert.equal(e.calls.length,3)
 })
 function finishAfterRejectedSnapshot(){
-  let stored=change(local(),w=>complete(w,1))
+  let stored=change(local(),w=>{
+    complete(w,1)
+    w.snapshot.weightTiming={schemaVersion:1,complete:true,
+      intervals:[{startedAt:new Date(at-1499).toISOString(),endedAt:w.snapshot.performedSets[0].completedAt}],
+    }
+  })
   stored=change(stored,s.sealSnapshot)
   stored=change(stored,s.rejectSnapshot)
   return change(stored,w=>s.intendFinish(w,at+20))
@@ -190,7 +271,7 @@ test('a newer server revision blocks FINISH after snapshot rejection',async()=>{
     } finally { e.c.stop() }
   }
 })
-test('if the full FINISH is rejected, frozen time and records survive and the original is rechecked exactly',async()=>{
+test('a FINISH clock rejection preserves measured intervals, set time and the exact request for recheck',async()=>{
   const stored=finishAfterRejectedSnapshot()
   let refuse=true
   const e=await editor({stored,beforeFinish:()=>{if(refuse)throw{status:422,code:'CLOCK_CONTEXT_INVALID'}}})
@@ -200,6 +281,8 @@ test('if the full FINISH is rejected, frozen time and records survive and the or
     assert.equal(e.calls.length,1)
     assert.deepEqual(e.read().pendingSnapshot,stored.pendingSnapshot)
     assert.equal(e.read().finish.ack,undefined)
+    assert.deepEqual(e.calls[0].body.snapshot.weightTiming,stored.snapshot.weightTiming)
+    assert.equal(e.calls[0].body.endedAt,stored.finish.endedAt)
     const fixed=e.read().finish.requestJson
     refuse=false
     await e.c.retrySync()
@@ -208,6 +291,7 @@ test('if the full FINISH is rejected, frozen time and records survive and the or
     assert.equal(e.read().finish.requestJson,fixed)
     assert.ok(e.read().finish.ack)
     assert.deepEqual(e.read().snapshot.performedSets,stored.snapshot.performedSets)
+    assert.deepEqual(e.read().snapshot.weightTiming,stored.snapshot.weightTiming)
   } finally { e.c.stop() }
 })
 test('fixed FINISH storage failure prevents HTTP; ACK storage failure retains the same fixed original',async()=>{
@@ -218,8 +302,13 @@ test('fixed FINISH storage failure prevents HTTP; ACK storage failure retains th
 })
 test('restart with server FINISHED confirms the durable original FINISH instead of creating a new end time',async()=>{
   let stored=change(local(),w=>{complete(w,1);s.intendFinish(w,at+20)});stored=change(stored,s.sealFinish)
-  const server=session({status:'FINISHED',version:'1',localRevision:stored.localRevision,endedAt:stored.finish.endedAt,closedAt:new Date(at+50).toISOString(),completionAssessment:assessment('1'),snapshot:{state:clone(stored.snapshot),approvalResults:[],recordedContexts:[]}})
-  const e=await editor({stored,server});assert.equal(e.calls.length,1);assert.equal(JSON.stringify(e.calls[0].body),stored.finish.requestJson);assert.ok(e.read().finish.ack);e.c.stop()
+  const server=session({status:'FINISHED',version:'1',localRevision:stored.localRevision,endedAt:stored.finish.endedAt,closedAt:new Date(at+50).toISOString(),
+    lastSnapshotSavedAt:new Date(at).toISOString(),completionAssessment:assessment('1'),snapshot:{state:clone(stored.snapshot),approvalResults:[],recordedContexts:[]}})
+  const e=await editor({stored,server});assert.equal(e.calls.length,0);assert.equal(e.read().finish.requestJson,stored.finish.requestJson);assert.ok(e.read().finish.ack);e.c.stop()
+  const altered=clone(server);altered.snapshot.state.performedSets[0].reps++
+  const conflict=await editor({stored,server:altered})
+  assert.equal(conflict.calls.length,0);assert.equal(conflict.c.getSnapshot().syncStatus,'CHECK')
+  assert.deepEqual(conflict.read().finish,stored.finish);conflict.c.stop()
 })
 test('AUTO_CLOSED, deleted and foreign epoch stop automatic FINISH and preserve the intent',async()=>{
   for(const patch of [{status:'AUTO_CLOSED',closedAt:new Date(at+30).toISOString()},{deletedAt:new Date(at+30).toISOString()},{writerEpoch:'1',editorDeviceId:OTHER}]){

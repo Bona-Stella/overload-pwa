@@ -222,7 +222,7 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
     <p className={styles.note}>실제 효과음 크기는 기기 음량과 브라우저 환경의 영향을 받을 수 있어요.</p>
     <p className={styles.note}>{review ? 'UI 검토용 설정입니다.' : '알림 설정은 이 브라우저에 저장돼요.'}</p>
     {running && previewDim && <div className={styles.dimPreview}>
-      <Dialog title="화면 어둡게 미리보기" onClose={close}><RestCountdown seconds={seconds} /></Dialog>
+      <Dialog title="화면 어둡게 미리보기" surface="fullscreen" onClose={close}><RestCountdown seconds={seconds} /></Dialog>
     </div>}
   </section>
 }

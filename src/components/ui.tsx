@@ -3,16 +3,18 @@ import type { ComponentPropsWithRef, ReactNode } from 'react'
 import { useDelayedPending } from './useDelayedPending.ts'
 import styles from './ui.module.css'
 
-export function Button({ variant = 'secondary', shape = 'pill', compact = false, className = '', type = 'button', children, loading = false, pending = false, disabled, ...props }: ComponentPropsWithRef<'button'> & {
+export function Button({ variant = 'secondary', shape = 'pill', compact = false, className = '', type = 'button', children, loading = false, loadingLabel, pending = false, disabled, ...props }: ComponentPropsWithRef<'button'> & {
   variant?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'neutral' | 'warning' | 'destructive' | 'recovery'
   shape?: 'pill' | 'control'
   compact?: boolean
   /** This button initiated a task and may show delayed progress. */
   loading?: boolean
+  loadingLabel?: string
   /** Temporarily lock this button while leaving its normal appearance. */
   pending?: boolean
 }) {
   const showSpinner = useDelayedPending(loading && !disabled)
+  const showLoadingLabel = showSpinner && !!loadingLabel
   const control = shape === 'control' || props.role === 'switch' || props['aria-pressed'] !== undefined
   const appearance = variant === 'secondary' || variant === 'neutral' ? 'outline'
     : variant === 'warning' || variant === 'destructive' || variant === 'recovery' ? `${variant}-action` : variant
@@ -20,11 +22,13 @@ export function Button({ variant = 'secondary', shape = 'pill', compact = false,
     data-action-shape={control ? 'control' : 'pill'} data-modal-neutral={variant === 'neutral' || undefined}
     data-button-size={compact ? 'compact' : undefined}
     data-button-pending={!disabled && (loading || pending) || undefined} data-close-text={typeof children==='string'&&children.includes('닫기')||undefined}
-    type={type} className={`${styles.button} ${showSpinner ? styles.loadingButton : ''} ${appearance} ${className}`}>
-    {compact ? <span className={styles.compactSurface} data-compact-surface>
+    type={type} className={`${styles.button} ${showSpinner && !showLoadingLabel ? styles.loadingButton : ''} ${appearance} ${className}`}>
+    {showLoadingLabel ? <span className={styles.loadingContent}>
+      <span className={styles.buttonSpinner} data-button-spinner aria-hidden="true" />{loadingLabel}
+    </span> : compact ? <span className={styles.compactSurface} data-compact-surface>
       <span className={styles.compactLabel} data-compact-label>{children}</span>
     </span> : children}
-    {showSpinner && <span className={styles.buttonSpinner} data-button-spinner aria-hidden="true" />}
+    {showSpinner && !showLoadingLabel && <span className={styles.buttonSpinner} data-button-spinner aria-hidden="true" />}
   </button>
 }
 export function Card({ hero = false, className = '', ...props }: ComponentPropsWithRef<'section'> & { hero?: boolean }) {

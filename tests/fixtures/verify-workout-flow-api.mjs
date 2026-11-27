@@ -125,7 +125,9 @@ try{
   const paused=(await local(id)).timers[cardio].accumulatedMs
   await reload();assert.equal((await local(id)).timers[cardio].accumulatedMs,paused)
   await d.click('유산소 완료',root)
-  await d.labelInput('실제 거리','0.125',root);await d.labelInput('평균 심박수','120',root)
+  for(const [label, value] of [['실제 거리 수정','0.125'],['평균 심박수 (BPM)','120']]){
+    await clickAria(label);await d.click('직접 입력',dialog);await d.input(dialog+' input',value);await d.click('확인',dialog)
+  }
   await d.click('유산소 기록 확정',root);await saved(id)
   actual=(await detail(id)).snapshot.state.cardioResults[0]
   assert.equal(actual.status,'COMPLETED');assert.equal(actual.result.distanceKm,'0.125');assert.equal(actual.result.averageBpm,120)
@@ -133,20 +135,16 @@ try{
   d.proxy.fault.dropFinish=true
   await d.click('운동 종료 및 요약',root)
   await waitFor(()=>d.proxy.records.some(r=>r.path.endsWith('/finish')&&r.failure==='AFTER_BACKEND_200'),'real finish response discarded after commit')
-  await waitFor(()=>visible('서버 저장 상태 다시 확인'),'finish response loss')
-  const closing=await local(id), ended=closing.finish.endedAt
-  assert.equal((await detail(id)).status,'FINISHED')
-  assert.equal(await visible('운동 기록 요약'),false)
+  await waitFor(()=>visible('운동 기록 요약'),'confirmed server summary after response loss')
+  const closing=await local(id)
+  assert.ok(closing.finish.ack)
   d.proxy.fault.dropFinish=false
-  if(await visible('같은 계정 인증 다시 확인')) await d.click('같은 계정 인증 다시 확인'); else await d.click('서버 저장 상태 다시 확인',root)
-  await waitFor(()=>visible('운동 기록 요약'),'confirmed server summary')
   const finished=await detail(id)
-  assert.equal(finished.endedAt,ended);assert.equal(finished.snapshot.state.performedSets.length,3)
+  assert.equal(finished.endedAt,closing.finish.endedAt);assert.equal(finished.snapshot.state.performedSets.length,3)
   const sends=d.proxy.records.filter(r=>r.path.endsWith('/finish'))
-  assert(sends.length>=2);assert.equal(new Set(sends.map(r=>r.requestSha256)).size,1)
-  assert(sends.some(r=>r.ack?.duplicate))
+  assert.equal(sends.length,1)
   assert.equal(await visible('합성 데이터'),false)
-  note('FINISH response loss replays identical request, confirms one session and shows real summary')
+  note('FINISH response loss confirms one finished session by GET and shows real summary without a second POST')
   assert.equal(await visible('운동 수행'),false)
   assert.equal(await visible('기록 정정·복구 및 서버 평가 상세'),false)
   await d.click('기록으로 돌아가기')

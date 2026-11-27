@@ -94,7 +94,7 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   }
   async function retryFinish() {
     const before = controller.getSnapshot()
-    if (retrying.current || before.loading || before.unsavedDrafts || before.pending || before.syncStatus === 'SENDING') return
+    if (retrying.current || before.loading || before.unsavedDrafts || before.syncStatus === 'SENDING') return
     if (!controller.canRetrySync()) {
       await retryOpen()
       await controller.syncSettled()
@@ -134,7 +134,10 @@ export function LocalWorkoutScreen({ server, policy, definitions, manufacturers 
   </section>
   const retryLocal = !state.writable && !state.unsavedDrafts && !state.pending &&
     (!!state.workout.finish || !!state.issue && !state.syncIssue)
-  const confirmingFinish = !!state.workout.finish && state.syncStatus === 'SENDING'
+  // A saved FINISH can reach the editor before the workspace commits the summary handoff.
+  const confirmingFinish = !!state.workout.finish && (state.syncStatus === 'SENDING' ||
+    authenticated && state.writable && state.syncStatus === undefined ||
+    authenticated && !!state.workout.finish.ack && state.syncStatus === 'SAVED')
   const onReopenLocal = retryLocal ? () => void retryOpen() : undefined
   const notices = [
     localOnly && <p key="local">{offlineRestart ? <>이 기기에 남은 운동을 이어가고 있어요.<br />로그인 상태를 확인하면 서버로 전송할 수 있어요.</> : '로그인 상태를 확인하기 전까지 이 기기에 기록해요.'}</p>,

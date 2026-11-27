@@ -58,6 +58,7 @@ import type { RestExitGuard } from '../settings/RestSettings.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
 import { useRoutineEditorRoutes } from './useRoutineEditorRoutes.ts'
+import { formatDuration } from '../workout/model.ts'
 
 export const workoutNavigationFailure = '입력 초안을 저장하지 못해 화면 이동을 보류했습니다. 운동 원본과 입력을 유지합니다.'
 export const workoutPermissionFailure = '오프라인 재실행 허용을 저장하지 못했습니다. 운동 원본은 유지됩니다. 저장소 설정을 확인해 주세요.'
@@ -77,9 +78,9 @@ export function SessionView({ session, deviceId, saved, busy, onRefresh, onTakeo
     {session.deletedAt && <p className="notice">삭제된 운동입니다. 기록을 자동 복원하지 않습니다.</p>}
     {issue ? <StatusNotice error>{issue}</StatusNotice> : !saved && <StatusNotice error>이 기기에 운동을 열지 못해 수행 입력을 시작할 수 없습니다. 세션을 다시 확인해 주세요.</StatusNotice>}
     <details><summary>시작 당시 계획</summary><div className="stack">{session.initialPlan.weightExercises.map(e => <p key={e.sessionExerciseId}>{e.exerciseName} · {e.setCount}세트 · {e.minReps}~{e.maxReps}회 · 승인 {e.approvedWeightKg} kg · <Metadata>{equipmentLabel(e, manufacturers)}</Metadata></p>)}
-      {session.initialPlan.cardioActivities.map(c => <p key={c.sessionActivityId}>{c.plan.name} · 목표 {c.plan.targetSeconds}초</p>)}</div></details>
+      {session.initialPlan.cardioActivities.map(c => <p key={c.sessionActivityId}>{c.plan.name} · 목표 {formatDuration(c.plan.targetSeconds * 1000)}</p>)}</div></details>
     <details><summary>서버에서 마지막 확인한 적용 계획·수행</summary><div className="stack">{session.snapshot.state.appliedPlan.weightExercises.map(e => <p key={e.sessionExerciseId}>{session.initialPlan.weightExercises.find(x => x.sessionExerciseId === e.sessionExerciseId)?.exerciseName ?? '추가된 세션 종목'} · {e.setCount}세트 · {e.minReps}~{e.maxReps}회</p>)}
-      {session.snapshot.state.appliedPlan.cardioActivities.map(c => <p key={c.sessionActivityId}>{c.plan.name} · 목표 {c.plan.targetSeconds}초</p>)}
+      {session.snapshot.state.appliedPlan.cardioActivities.map(c => <p key={c.sessionActivityId}>{c.plan.name} · 목표 {formatDuration(c.plan.targetSeconds * 1000)}</p>)}
       <p>완료 웨이트 {session.snapshot.state.performedSets.length}세트 · 확정 유산소 {session.snapshot.state.cardioResults.length}건</p>
       {session.snapshot.state.performedSets.map(s => <p key={s.id}>{s.ordinal}세트 · {s.weightKg} kg × {s.reps}회 · <Metadata>{equipmentLabel(s, manufacturers)}</Metadata></p>)}</div></details>
     {session.snapshot.approvalResults.some(r => r.status === 'PENDING') && <p className="notice">승인 확인 필요 · 수행 기록의 저장과 중량 승인 적용은 별개입니다.</p>}
@@ -388,7 +389,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
               setRenaming({ ...renaming, base: schedule, version: latestName.version })
             }}>최신 버전 사용</button></>
           : <p role="status">이 일정이 삭제되었거나 더 이상 조회할 수 없습니다.</p>)}
-        <div className="row">
+        <div className="row" data-dialog-actions>
           <button type="button" className="action-pill modal-neutral" data-modal-neutral disabled={busy} data-button-pending={training.busy || undefined} onClick={() => setRenaming(null)}>취소</button>
           <Button type="submit" variant="primary" disabled={!!renameStale || scheduleBlocked && !training.busy} pending={training.busy && !renameStale} aria-busy={training.busy || undefined}>저장</Button>
         </div>

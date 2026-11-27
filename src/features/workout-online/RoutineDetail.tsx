@@ -3,6 +3,7 @@ import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card } from '../../components/ui.tsx'
 import { activeCardio, activeWeights, dateInZone } from '../home/model.ts'
 import { cardioDescription, exerciseDescription } from './catalog-label.ts'
+import { cardioGoalValues } from './cardio-draft.ts'
 import { CombinationMemo } from './CombinationMemo.tsx'
 import { LOAD_LABELS } from './equipment.ts'
 import { routinePresetEntries } from './preset-schedule.ts'
@@ -86,15 +87,11 @@ export function RoutineDetail({ routine, exercises, activities, manufacturers, p
       {!cardio.length && <p className={styles.empty}>등록된 유산소 계획 없음</p>}
       {cardio.map(({ id, plan }, index) => {
         const description = cardioDescription(plan, activities)
-        const wholeMinutes = plan.targetSeconds % 60 === 0
-        const pace = plan.intensity?.mode === 'PACE'
         return <Card key={id} className={styles.exercise} aria-label={`유산소 ${index + 1}`}>
           <ExerciseHeading index={index} name={plan.name} />
           <div className={styles.metadata}><span title={description}>{description}</span></div>
           <Metrics values={[
-            { label: '목표 시간', value: wholeMinutes ? plan.targetSeconds / 60 : plan.targetSeconds, unit: wholeMinutes ? '분' : '초' },
-            { label: '목표 거리', value: plan.targetDistanceKm, unit: 'km' },
-            { label: pace ? '목표 페이스' : '목표 속도', value: plan.intensity?.value ?? null, unit: pace ? '분/km' : 'km/h' },
+            ...cardioGoalValues(plan),
             plan.kind === 'BIKE' ? { label: '저항', value: plan.resistance } : { label: '경사도', value: plan.inclinePercent, unit: '%' },
           ]} />
         </Card>

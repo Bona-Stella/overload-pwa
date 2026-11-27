@@ -34,6 +34,8 @@
 .loadingButton:not([data-button-size='compact']) > :not([data-button-spinner]),
 .loadingButton .compactLabel { opacity: 0; }
 .buttonSpinner { position: absolute; inset: 0; margin: auto; width: 1em; height: 1em; border: 2px solid var(--text-muted); border-top-color: var(--text-primary); border-radius: 50%; animation: button-spin .75s linear infinite; }
+.loadingContent { display: inline-flex; align-items: center; gap: 8px; }
+.loadingContent .buttonSpinner { position: static; margin: 0; border-color: currentColor; border-top-color: transparent; }
 @keyframes button-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) { .buttonSpinner { animation: none; } }
 :where(.cardSurface) {

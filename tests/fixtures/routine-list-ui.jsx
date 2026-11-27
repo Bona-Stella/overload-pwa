@@ -8,7 +8,7 @@ import { HomePanel } from '../../src/features/home/HomePanel.tsx'
 import { useTrainingSchedule } from '../../src/features/workout-online/useTrainingSchedule.ts'
 import { WorkoutApiError } from '../../src/features/workout-online/api.ts'
 import { AppShell } from '../../src/app/AppShell.tsx'
-import { addDays, dayOfWeek } from '../../src/features/home/model.ts'
+import { addDays, dateInZone, dayOfWeek } from '../../src/features/home/model.ts'
 
 const scope = { userId: routine.userId, dataGeneration: routine.dataGeneration }
 const ids = [routine.id, '30000000-1111-4222-8333-000000000002', '30000000-1111-4222-8333-000000000003']
@@ -32,7 +32,7 @@ const ui = window.listUi = { ids, requests: [], selected: [], edited: [], delete
 const presetId = '90000000-0000-4000-8000-000000000011'
 const transport = { workoutRequest: async (owner, path, method, body) => {
   if (owner !== scope.userId) throw Error('Fixture owner mismatch')
-  if (path === '/api/v1/deload-periods/current') return { status: 200, data: { ...scope, period: null } }
+  if (path === '/api/v1/deload-periods/current') return { status: 200, data: { ...scope, period: ui.deloadPeriod ?? null } }
   if (path === '/api/v1/deload-analysis') return { status: 200, data: { ...scope, enabled: true, calculationStatus: 'INITIAL', confirmedWeeks: null, recommendationThreshold: { numerator: '8', denominator: '1' } } }
   ui.requests.push({ path, method, body: structuredClone(body) })
   if (method === 'GET' && path === '/api/v1/weekly-schedule' && ui.scheduleReadError) throw Error('Schedule is temporarily unavailable')
@@ -77,6 +77,11 @@ function ReviewWorkspace() {
   ui.showRoutines = () => setTab('routines')
   ui.refresh = () => setRefresh(n => n + 1)
   ui.calendar = () => structuredClone(calendar)
+  ui.setHomeSchedule = assignments => {
+    calendar = { ...calendar, assignments, version: String(BigInt(calendar.version) + 1n) }
+    setRefresh(n => n + 1)
+  }
+  ui.todayWeekday = () => dayOfWeek(dateInZone(new Date(), calendar.timeZone))
   ui.useUnregistered = () => { calendar = { ...calendar, version: '0', appliedAt: null, assignments: [] }; setRefresh(n => n + 1) }
   const [visible, setVisible] = useState(true)
   ui.hide = () => setVisible(false)

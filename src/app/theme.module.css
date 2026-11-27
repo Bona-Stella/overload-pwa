@@ -92,10 +92,6 @@
 .theme :global(.online-session-badge), .theme :global(.badge) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .theme :global(.workout-online [aria-pressed='true']) { border-color: var(--accent); }
 .theme :global(dialog) { background: var(--surface-card); color: var(--text-primary); border: var(--border-card); border-radius: var(--radius-card); }
-.theme :global(dialog:not([data-message-tone])) {
-  --card-padding-override: var(--space-card);
-  --card-radius-override: var(--radius-card);
-}
 .theme :global(dialog[data-message-tone]) { border-radius: var(--radius-card-compact); }
 .theme :global(.local-set-equipment) { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
 .theme :global(a) { color: var(--accent); }

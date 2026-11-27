@@ -13,11 +13,11 @@ function isBackdrop(dialog: HTMLDialogElement, event: Pick<MouseEvent, 'target' 
   return event.target === dialog && (event.clientX < left || event.clientX >= right || event.clientY < top || event.clientY >= bottom)
 }
 
-export function Dialog({ title, tone, onClose, children, initialFocus, className, descriptionId, closePointerGuard, dismissBlocked = false, dismissOnBackdrop = false, duringTraversal, onDismissed }: {
+export function Dialog({ title, tone, surface, onClose, children, initialFocus, className, descriptionId, closePointerGuard, dismissBlocked = false, dismissOnBackdrop = false, duringTraversal, onDismissed }: {
   title: string; onClose: () => void; children: ReactNode; initialFocus?: RefObject<HTMLElement | null>
   className?: string; descriptionId?: string; closePointerGuard?: RepeatPointerGuard; dismissBlocked?: boolean; dismissOnBackdrop?: boolean
   duringTraversal?: boolean; onDismissed?: () => void
-  tone?: DialogTone
+  tone?: DialogTone; surface?: 'wheel' | 'fullscreen'
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const backdropPressed = useRef(false)
@@ -34,7 +34,7 @@ export function Dialog({ title, tone, onClose, children, initialFocus, className
     ;(initialFocus?.current ?? titleRef.current)?.focus({ preventScroll: true })
     return () => { dialog?.close(); if (previous instanceof HTMLElement) previous.focus({ preventScroll: true }) }
   }, [initialFocus])
-  return <dialog ref={ref} className={[tone && styles.message, className].filter(Boolean).join(' ') || undefined} data-editor-dialog data-message-tone={tone}
+  return <dialog ref={ref} className={[tone ? styles.message : !surface && styles.functional, className].filter(Boolean).join(' ') || undefined} data-editor-dialog data-message-tone={tone}
     closedby={dismissBlocked ? 'none' : undefined} onCancel={event => { event.preventDefault(); event.stopPropagation(); requestClose() }}
     onPointerDown={dismissOnBackdrop ? event => { backdropPressed.current = isBackdrop(event.currentTarget, event) } : undefined}
     onClick={dismissOnBackdrop ? event => {

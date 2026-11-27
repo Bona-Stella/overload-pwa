@@ -77,10 +77,17 @@ export function measuredCardio(speedDraft: string, distanceDraft: string, active
   const distanceKm = calculatedDistance(actualSpeedKmh, activeMs)
   return { distanceKm, measurement: { actualSpeedKmh, distanceSource: distanceKm === null ? null : 'CALCULATED' } }
 }
+export function cardioMotionValue(value: string) {
+  if (!validDecimal(value)) return value
+  const tenths = (scaled(value) + 50000n) / 100000n
+  return `${tenths / 10n}.${tenths % 10n}`
+}
+export function distanceSourceLabel(source: CardioMeasurement['distanceSource'] | undefined) {
+  return source === 'CALCULATED' ? '계산 거리' : source === 'MANUAL' ? '직접 입력 거리' : '거리 · 출처 미확인'
+}
 export function distanceLabel(result: { distanceKm: string | null; measurement?: CardioMeasurement }) {
   if (result.distanceKm === null) return '거리 미입력'
-  const source = result.measurement?.distanceSource
-  return `${source === 'CALCULATED' ? '계산 거리' : source === 'MANUAL' ? '직접 입력 거리' : '거리 · 출처 미확인'} ${result.distanceKm} km`
+  return `${distanceSourceLabel(result.measurement?.distanceSource)} ${cardioMotionValue(result.distanceKm)} km`
 }
 export const averageBpmBounds = { min: 20, max: 300 } as const
 export const averageBpmMessage = '평균 심박수는 20~300 BPM을 입력해 주세요.'

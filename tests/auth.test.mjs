@@ -39,14 +39,15 @@ test('settings account summary uses verified masked contact and linked methods w
   await assert.rejects(controller.readSettingsAccount(USER, stale.signal), {code:'SESSION_CHANGED'})
 })
 
-test('lost START and FINISH responses leave a reachable account available for read-only reconciliation', async () => {
-  for (const path of ['/api/v1/workout-sessions', `/api/v1/workout-sessions/${CHALLENGE}/finish`]) {
+test('lost START, snapshot and FINISH responses leave a reachable account available for reconciliation', async () => {
+  for (const [method, path] of [['POST', '/api/v1/workout-sessions'], ['PUT', `/api/v1/workout-sessions/${CHALLENGE}/snapshot`],
+    ['POST', `/api/v1/workout-sessions/${CHALLENGE}/finish`]]) {
     const { api, controller, setSession } = fake()
     setSession({ userId: USER })
     await controller.start()
     let requests = 0
     api.workoutRequest = async () => { requests++; throw new AuthError('NETWORK') }
-    await assert.rejects(controller.workoutRequest(USER, path, 'POST', {}, new AbortController().signal), { code: 'NETWORK' })
+    await assert.rejects(controller.workoutRequest(USER, path, method, {}, new AbortController().signal), { code: 'NETWORK' })
     assert.equal(requests, 1)
     assert.equal(controller.getSnapshot().status, 'authenticated')
     assert.equal(controller.getSnapshot().userId, USER)

@@ -13,6 +13,7 @@ type Snapshot = {
   request: string
   schedule?: LiveSchedule
   protection?: HomeProtection
+  completeRest?: boolean
   issue?: string
   scheduleVerified: boolean
 }
@@ -66,7 +67,8 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
         owner, request, issue,
         scheduleVerified: schedule.status === 'fulfilled',
         schedule: schedule.status === 'fulfilled' ? schedule.value : !readAccessDenied(schedule.reason) && previous?.owner === owner ? previous.schedule : undefined,
-        protection: protection.status === 'fulfilled' ? protection.value : undefined,
+        protection: protection.status === 'fulfilled' ? protection.value.status : undefined,
+        completeRest: protection.status === 'fulfilled' && protection.value.completeRest,
       }))
     })
     return () => abort.abort()
@@ -114,7 +116,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
       }
     }
   }
-  return { schedule: current?.schedule, protection: current?.protection, analysis: analysis?.owner === owner ? analysis.value : undefined, loading, busy,
+  return { schedule: current?.schedule, protection: current?.protection, completeRest: current?.completeRest, analysis: analysis?.owner === owner ? analysis.value : undefined, loading, busy,
     canWrite, issue: current?.issue, writeIssue: writeIssue?.owner === owner ? writeIssue.text : null,
     writeIssueTone: writeIssue?.owner === owner ? writeIssue.tone : undefined,
     clearWriteIssue: () => setWriteIssue(null), refresh, write }

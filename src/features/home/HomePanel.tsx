@@ -203,7 +203,7 @@ export function HomePanel(props: Props) {
     recent={recentResult?.data && { recent: recentResult.data.details, recentRows: recentResult.data.rows,
       recentLimited: recentResult.data.limited, recentFailed: recentResult.data.failed }} recentFailed={recentResult?.failed}
     canStart={props.enabled !== false && editingSupported && props.localReady && !loading && !refreshFailed && !props.readIssue && training.canWrite}
-    protectedView={protectedView} protectionNotice={protectionNotice} refreshIssue={refreshIssue} feedbackVisible={props.startupHome !== false}
+    protectedView={protectedView} completeRest={training.completeRest} protectionNotice={protectionNotice} refreshIssue={refreshIssue} feedbackVisible={props.startupHome !== false}
     header={<HomeTrainingHeader analysis={analysis} protection={protection} />}
     presetFilter={schedule ? { presets: schedule.presets, activeId: schedule.activeId, visit: props.visit } : undefined}
     showHttpNote={!!review && !editingSupported} onRefresh={() => {
@@ -248,6 +248,7 @@ type HomeViewProps = Pick<Props, 'action' | 'attempt' | 'busy' | 'localReady' | 
   onRefresh: () => void
   presetFilter?: { presets: SchedulePreset[]; activeId: string; visit: number }
   protectedView?: boolean
+  completeRest?: boolean
 }
 
 export function HomeView(props: HomeViewProps) {
@@ -278,7 +279,10 @@ export function HomeView(props: HomeViewProps) {
   const chosenId = restSelected ? null : overrideId ?? assignment?.routineId
   const chosen = chosenId ? data?.routines.get(chosenId) : null
   const restDay = restSelected || !chosenId && !!data && data.schedule.version !== '0'
-  const showStart = props.attempt || props.action === 'start' || !!chosenId || !!data && !props.hideChooser
+  const hideStartForRest = restDay || props.completeRest
+  const showStart = props.attempt || props.action === 'start' || !hideStartForRest && (!!chosenId || !!data && !props.hideChooser)
+  const startLabel = props.action === 'retry' ? '확인 중' : hideStartForRest && props.attempt ? '기존 시작 요청 다시 확인'
+    : hideStartForRest && props.action === 'start' ? '시작 요청 확인 중' : '운동 시작'
   const chooserLocked = props.busy || !!props.action || !!props.active || props.attempt || props.protectedView
   const routineRefresh = chosenId && !props.active && !props.attempt ? props.routineRefreshes?.get(chosenId) : undefined
   const startable = (detail: Routine | null | undefined) => !!detail && (activeWeights(detail).length > 0 || activeCardio(detail).length > 0)
@@ -338,7 +342,7 @@ export function HomeView(props: HomeViewProps) {
         data-click-action={props.attempt ? 'retry-start' : 'start'}
         disabled={!props.action && (props.busy || (props.attempt ? !props.localReady : !canStart))}
         onClick={() => { if (props.attempt) props.onRetry(); else if (chosen) void props.onStart(chosen) }}>
-        {props.action === 'retry' ? '확인 중' : '운동 시작'}</Button>}
+        {startLabel}</Button>}
       {!props.hideChooser && (data ? <ConnectedDropdown label="오늘만 다른 루틴 선택">{close => <div className={styles.chooserContent}>
         {presetFilter && <div className={`${filterStyles.strip} ${styles.choiceFilters}`} role="group" aria-label="루틴 일정 필터">
           <button type="button" aria-pressed={selectedFilter === 'all'} onClick={() => chooseFilter('all')}><span>전체</span></button>

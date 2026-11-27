@@ -2,8 +2,7 @@ import { ActionMenu } from '../../components/common-ui/ActionMenu.tsx'
 import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import {SavedWeightReview} from './SavedWeightReview.tsx'
 import type {ReactNode} from 'react'
-import { durationLabel } from '../../components/duration.ts'
-import { DurationWheel } from '../../components/DurationWheel.tsx'
+import { formatDuration } from '../workout/model.ts'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { useDelayedPending } from '../../components/useDelayedPending.ts'
@@ -32,8 +31,10 @@ import { equipment, cardioMeasurement } from './validation.ts'
 import { countDraft, decimalDraft } from './validation.ts'
 import { recoveryRows, RECOVERY_LABEL } from './closed-model.ts'
 import { onlineIssue } from './controller.ts'
-import { actualAverageBpm, actualCardioMeasurement, cardioMeasurementDraft, distanceLabel } from './cardio-measurement.ts'
+import { actualAverageBpm, actualCardioMeasurement, cardioMeasurementDraft, cardioMotionValue, distanceLabel } from './cardio-measurement.ts'
 import { CardioActualFields } from './CardioActualFields.tsx'
+import { CardioTimeField } from './CardioTimeField.tsx'
+import { CardioValue } from '../workout-flow/CardioValueRow.tsx'
 import { supportsCardioMotion } from './cardio-draft.ts'
 import { additionalLoadInput, bodyweightLoadLabel } from './bodyweight-load.ts'
 import { WorkoutSummary } from '../workout-flow/WorkoutSummary.tsx'
@@ -52,7 +53,11 @@ function ChangeEntry({ event: e, manufacturers, name }: { event: ChangeEvents['e
     if (!value) return ''
     if (typeof value.weightKg === 'string' && typeof value.reps === 'number') return `${value.ordinal}세트 · ${equipment(value) ? setPerformance(value as PerformedSet) : value.weightKg+' kg × '+value.reps+'회'}${equipment(value) ? ' · ' + equipmentLabel(value as PerformedSet, manufacturers) + (value.loadType === 'BODYWEIGHT' ? ' · ' + bodyweightLoadLabel(value as PerformedSet) : '') : ''}`
     const r = value.result as Extract<CardioResult, { status: 'COMPLETED' }>['result'] | null
-    return r && typeof r.activeMs === 'number' ? `${durationLabel(r.activeMs)} · ${distanceLabel({ distanceKm: typeof r.distanceKm === 'string' ? r.distanceKm : null, ...(cardioMeasurement(r.measurement) ? { measurement: r.measurement } : {}) })} · 실제 속도 ${cardioMeasurement(r.measurement) ? r.measurement.actualSpeedKmh ?? '미입력' : '미입력'} km/h · 심박수 ${r.averageBpm ?? '미입력'}` : ''
+    if (!r || typeof r.activeMs !== 'number') return ''
+    const measurement = cardioMeasurement(r.measurement) ? r.measurement : undefined
+    const distance = distanceLabel({ distanceKm: typeof r.distanceKm === 'string' ? r.distanceKm : null, measurement })
+    const speed = measurement?.actualSpeedKmh == null ? '미입력' : cardioMotionValue(measurement.actualSpeedKmh) + ' km/h'
+    return `${formatDuration(r.activeMs)} · ${distance} · 실제 속도 ${speed} · 심박수 ${r.averageBpm ?? '미입력'}`
   }
   const exercise = e.after?.sessionExerciseId ?? e.before?.sessionExerciseId ?? e.after?.sessionActivityId ?? e.before?.sessionActivityId
   return <section className={styles.changeEntry}><small className="muted">{time(e.recordedAt)}</small>{typeof exercise === 'string' && <h4>{name(exercise)}</h4>}<p>{e.recordKind === 'SET' ? '세트' : e.recordKind === 'CARDIO' ? '유산소' : '운동'} · {e.changeKind === 'CORRECTED' ? '수치 정정' : e.changeKind === 'RECOVERED' ? '누락 수행 복구' : '기록 삭제'}{!!e.changeContext?.claimedWeightContext && <span> · 원래 승인 문맥 보존</span>}</p>
@@ -78,7 +83,7 @@ function RecordFacts({ record, server, manufacturers, showEquipment = true }: { 
       {record.loadType==='BODYWEIGHT' && <small>{bodyweightLoadLabel(record)}</small>}
       {showEquipment && <small>{equipmentLabel(record,manufacturers)}</small>}
       <small><time dateTime={record.completedAt}>{clockTime(record.completedAt,server.startedTimeZone)}</time></small></>
-      : <><strong>{record.status==='SKIPPED'?'미수행':durationLabel(record.result.activeMs)}</strong>
+      : <><strong><CardioValue modified={record.result?.corrected}>{record.status==='SKIPPED'?'미수행':formatDuration(record.result.activeMs)}</CardioValue></strong>
         {record.result && <small>{distanceLabel(record.result)} · 심박수 {record.result.averageBpm??'미입력'}</small>}
         <small><time dateTime={record.occurredAt}>{clockTime(record.occurredAt,server.startedTimeZone)}</time></small></>}
   </div>
@@ -339,7 +344,7 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
   }
   const id = target.kind==='SET'?target.record.sessionExerciseId:target.record.sessionActivityId
   return <Dialog title="기록 정정" dismissBlocked={busy || !!action} onClose={onClose}><div className={styles.recordForm}>
-    <Card><h3>{recordName(initial,id,definitions)}{target.kind==='SET'&&' · '+String(target.record.ordinal).padStart(2,'0')+'세트'}</h3>
+    <Card className={styles.recordOriginal}><h3>{recordName(initial,id,definitions)}{target.kind==='SET'&&' · '+String(target.record.ordinal).padStart(2,'0')+'세트'}</h3>
       <RecordFacts record={target.record} server={initial} manufacturers={manufacturers}/></Card>
     <fieldset disabled={busy || !!prepared} className="online-fieldset stack">
     {target.kind === 'SET' ? <>
@@ -353,21 +358,24 @@ function CorrectionDialog({ target, server, controller, busy, onClose, manufactu
       </>}
     </>
       : target.kind === 'CARDIO' ? <>
-        <p>원본 타이머 {durationLabel(target.record.result.timerMs)}</p>
+        <p>원본 타이머 {formatDuration(target.record.result.timerMs)}</p>
         <label><input type="checkbox" checked={corrected} onChange={e => { setCorrected(e.target.checked); setIssue('') }} />활동 시간 정정</label>
-        <DurationWheel seconds={seconds} disabled={!corrected} fractionalSeconds onChange={value => { setSeconds(value); setIssue('') }} />
         <CardioActualFields draft={measurements} bpm={bpm} activeMs={corrected ? Math.round(Number(seconds) * 1000) : target.record.result.timerMs}
-          motion={supportsDistance} incline={kind === 'TREADMILL'} onChange={patch => { setMeasurements(value => ({ ...value, ...patch })); setIssue('') }}
+          motion={supportsDistance} incline={kind === 'TREADMILL'} original={target.record.result} disabled={busy || !!prepared}
+          time={<CardioTimeField key={String(corrected)} label="실제 활동 시간" seconds={seconds} fractionalSeconds
+            displayMs={corrected ? Number(seconds) * 1000 : target.record.result.timerMs} modified={corrected}
+            disabled={!corrected || busy || !!prepared} onChange={value => { setSeconds(value); setIssue('') }} />}
+          onChange={patch => { setMeasurements(value => ({ ...value, ...patch })); setIssue('') }}
           onBpm={value => { setBpm(value); setIssue('') }} />
       </> : <p>명시 건너뜀 기록입니다. 측정 수치를 만들거나 완료 기록으로 바꾸지 않습니다.</p>}
     </fieldset>
     {issue && <StatusNotice error>{issue}</StatusNotice>}
     {prepared ? <>
       <p>{prepared.remove ? '이 수행을 삭제하면 기록과 통계에서 제외됩니다.' : '입력한 실제 수행값으로 변경합니다. 운동 계획과 수행 시각은 유지됩니다.'}</p>
-      <div className={styles.actions}><Button variant="neutral" ref={cancelConfirmation} disabled={busy || !!action} onClick={() => setPrepared(null)}>계속 편집</Button>
+      <div className={styles.actions} data-dialog-actions><Button variant="neutral" ref={cancelConfirmation} disabled={busy || !!action} onClick={() => setPrepared(null)}>계속 편집</Button>
         <Button variant={prepared.remove ? 'danger' : 'primary'} loading={!!action} disabled={busy && !action} onClick={() => void submit()}>{prepared.remove ? '삭제 확인' : '변경 확인'}</Button></div>
     </> : <>
-      <div className={styles.actions}><Button variant="neutral" pending={busy} onClick={onClose}>취소</Button>{target.kind !== 'SKIPPED' && <Button ref={saveButton} variant="primary" pending={busy} onClick={() => prepare(false)}>변경 저장</Button>}</div>
+      <div className={styles.actions} data-dialog-actions><Button variant="neutral" pending={busy} onClick={onClose}>취소</Button>{target.kind !== 'SKIPPED' && <Button ref={saveButton} variant="primary" pending={busy} onClick={() => prepare(false)}>변경 저장</Button>}</div>
       <Button ref={removeButton} variant="danger" pending={busy} onClick={() => prepare(true)}>이 수행 삭제</Button>
     </>}
   </div></Dialog>
@@ -396,7 +404,7 @@ function RecoveryDialog({ state, controller, onClose, manufacturers, definitions
     {issue&&<StatusNotice error>{issue}</StatusNotice>}
     {confirming ? <>
       <p>선택한 완료 수행 {selected.length}건을 원래 중량·반복·완료 시각으로 복구합니다.</p>
-      <div className={styles.actions}><Button variant="neutral" ref={cancelConfirmation} disabled={locked} onClick={() => setConfirming(false)}>선택으로 돌아가기</Button>
+      <div className={styles.actions} data-dialog-actions><Button variant="neutral" ref={cancelConfirmation} disabled={locked} onClick={() => setConfirming(false)}>선택으로 돌아가기</Button>
         <Button variant="primary" loading={pending} disabled={state.busy && !pending} onClick={async () => {
           if (locked || saving.current) return
           saving.current = true
@@ -409,7 +417,7 @@ function RecoveryDialog({ state, controller, onClose, manufacturers, definitions
             }
           } finally { saving.current = false; setPending(false) }
         }}>복구 확인</Button></div>
-    </> : <div className={styles.actions}><Button variant="neutral" pending={locked} onClick={onClose}>취소</Button>
+    </> : <div className={styles.actions} data-dialog-actions><Button variant="neutral" pending={locked} onClick={onClose}>취소</Button>
       <Button ref={trigger} variant="primary" disabled={locked || !selected.length} onClick={() => { reviewed.current = true; setIssue(''); setConfirming(true) }}>선택한 수행 복구</Button></div>}
   </div></Dialog>
 }

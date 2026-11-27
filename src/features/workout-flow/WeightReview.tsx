@@ -124,7 +124,7 @@ function ApprovalWeightDialog({ weight, value, onConfirm, onClose, closePointerG
   const step = approvalStep(weight.loadType ?? null)
   return <Dialog title="승인 예정 중량" onClose={onClose} closePointerGuard={closePointerGuard}><div className="stack"><p className="approval-draft-value">현재 승인 중량 {weight.review!.referenceKg}kg → <strong data-approval-direction={compareWeight(draft,weight.review!.referenceKg)}>{draft||'—'}kg</strong></p>
     <NumberWheel label="승인 예정 중량" value={draft} onChange={setDraft} unit="kg" start="0" stepLabel={step} adjust={(s,d) => { try { const next = decimalDraft(adjustApproval(s,d,step)); return next === s ? null : next } catch { return null } }} validate={decimalDraft} />
-    {issue && <p role="alert">{issue}</p>}<div className={styles.actions}><Button variant="neutral" onClick={onClose}>취소</Button><Button variant="primary" onClick={() => { try { onConfirm(decimalDraft(draft)) } catch { setIssue('0 이상의 중량을 입력해 주세요.') } }}>확인</Button></div></div></Dialog>
+    {issue && <p role="alert">{issue}</p>}<div className={styles.actions} data-dialog-actions><Button variant="neutral" onClick={onClose}>취소</Button><Button variant="primary" onClick={() => { try { onConfirm(decimalDraft(draft)) } catch { setIssue('0 이상의 중량을 입력해 주세요.') } }}>확인</Button></div></div></Dialog>
 }
 
 function compareWeight(a:string,b:string){try{const scale=(v:string)=>{const [x,y='']=decimalDraft(v).split('.');return BigInt(x)*1000000n+BigInt(y.padEnd(6,'0'))};return scale(a)>scale(b)?'increase':scale(a)<scale(b)?'decrease':'same'}catch{return 'same'}}

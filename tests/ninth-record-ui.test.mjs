@@ -111,9 +111,10 @@ test('immediate summary uses the applied set count and shows only saved cardio m
  assert.match(mixed,/10\.31 · 토 · 21:00–22:10/)
  assert.match(mixed,/총 3\/4세트 · 총 750kg/)
  assert.match(mixed,/총 1\/1종목/)
- assert.match(mixed,/직접 입력 거리 2.5 km/)
- assert.match(mixed,/실제 평균 속도 7.5/)
- assert.doesNotMatch(mixed,/평균 심박|경사도|운동 기록 메뉴|운동 기록 상세|<h2>중량 검토<\/h2>|중량 검토 결과를 확인하지 못했습니다/)
+ assert.match(mixed,/<dt>실제 거리<\/dt><dd>2\.5<small>km<\/small><\/dd><small>직접 입력 거리<\/small>/)
+ assert.match(mixed,/<dt>평균 속도<\/dt><dd>7\.5<small>km\/h<\/small><\/dd>/)
+ assert.match(mixed,/<dt>평균 심박수<\/dt><dd>미입력<\/dd>/)
+ assert.doesNotMatch(mixed,/경사도|운동 기록 메뉴|운동 기록 상세|<h2>중량 검토<\/h2>|중량 검토 결과를 확인하지 못했습니다/)
 
  s.initialPlan.weightExercises=[]
  state.appliedPlan.weightExercises=[]
@@ -152,8 +153,10 @@ test('detail marks only explicitly corrected cardio time and preserves measured 
   const s=mixedRecord(),result=s.snapshot.state.cardioResults[0].result
   result.corrected=corrected;result.measurement={actualSpeedKmh:'7.5',distanceSource:'MANUAL'};result.averageBpm=125
   const before=structuredClone(s),data=summaryData(s,null),html=render(WorkoutSummary,{...data,detail:true,manufacturers:[],onBack(){}})
-  assert.equal((html.match(/class="corrected"/g)||[]).length,corrected?1:0)
-  assert.match(html,/직접 입력 거리 2.5 km · 평균 심박 125 BPM/);assert.match(html,/실제 속도 7.5 km\/h/)
+  assert.equal((html.match(/data-modified="true"/g)||[]).length,corrected?1:0)
+  assert.doesNotMatch(html,/수정됨/)
+  assert.match(html,/<dt>실제 거리<\/dt><dd>2\.5<small>km<\/small><\/dd><small>직접 입력 거리/)
+  assert.match(html,/<dt>평균 심박수<\/dt><dd>125<small>BPM/);assert.match(html,/<dt>평균 속도<\/dt><dd>7\.5<small>km\/h/)
   assert.doesNotMatch(html,/\(수정\)/);if(corrected)assert.match(html,/자동 기록/)
   assert.deepEqual(s,before)
  }

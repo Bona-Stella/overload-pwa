@@ -9,6 +9,12 @@ export type SyncStatus = 'LOCAL' | 'SENDING' | 'SAVED' | 'WAITING' | 'APPROVAL' 
 class SessionReadError extends Error {
   constructor(cause: unknown) { super('세션을 확인하지 못했습니다.', { cause }) }
 }
+function transientFailure(error: unknown) {
+  if (error instanceof state.SyncStateConflict || error instanceof LocalStoreError) return false
+  const { status, code } = (error ?? {}) as { status?: number; code?: string }
+  return code === 'NETWORK' || code === 'TIMEOUT' || status === undefined || status >= 500 || status === 408
+    || status === 200 && code === 'RESPONSE_INVALID'
+}
 export type SyncApi = Pick<WorkoutApi, 'detail' | 'snapshot' | 'resolve' | 'routine'> & Partial<Pick<WorkoutApi, 'finish'>>
 export type SyncOptions = { api: SyncApi; online: () => boolean; onServer?: (server: Session) => void; onInvalid?: (error: unknown) => void }
 type Access = { read: () => LocalWorkout | null; allowed: () => boolean; mutate: (fn: (w: LocalWorkout) => void) => Promise<boolean>;
@@ -30,18 +36,23 @@ export class WorkoutSynchronizer {
     if (!this.current()) throw new state.SyncStateConflict()
   }
   private async readSession(w: LocalWorkout) {
-    try { return await this.options.api.detail(w, w.sessionId, this.abort.signal) }
-    catch (error) { throw new SessionReadError(error) }
+    const read = () => this.options.api.detail(w, w.sessionId, this.abort.signal)
+    try { return await read() }
+    catch (error) {
+      if (!this.access.read()?.finish || !this.current() || !transientFailure(error)) throw new SessionReadError(error)
+      try { return await read() }
+      catch (retryError) { throw new SessionReadError(retryError) }
+    }
   }
   private async detail() {
     const w = this.document(), server = await this.readSession(w)
     if (!this.current()) throw new state.SyncStateConflict()
-    // A closing session is published only after its duplicate FINISH ACK commits locally.
+    // Never publish a pending local finish before its server confirmation is stored.
     if (w.finish && !w.finish.ack && !server.deletedAt && server.status === 'FINISHED' && w.finish.request
       && server.writerEpoch === w.writerEpoch && server.editorDeviceId === w.editorDeviceId) return server
     await this.access.saveServer(server)
     if (!this.current()) throw new state.SyncStateConflict()
-    this.options.onServer?.(server)
+    if (!w.finish || server.status === 'ACTIVE') this.options.onServer?.(server)
     try { state.assertWriter(w, server) } catch (error) { this.access.block(); throw error }
     if (w.finish && w.pendingSnapshot?.rejected && (server.localRevision !== w.serverRevision || BigInt(server.version) < BigInt(w.serverVersion))) {
       throw new state.SyncStateConflict('서버 기록이 달라 이 기기의 운동을 종료할 수 없습니다. 이 기기의 기록은 보존했습니다.')
@@ -131,7 +142,16 @@ export class WorkoutSynchronizer {
     let server: Session | undefined
     if (this.access.read()?.finish) this.access.status('SENDING')
     if (this.access.read()?.finish?.ack) { await this.publishFinished(); return }
-    if (check) { server = await this.detail(); if (server.status === 'ACTIVE') await this.mutate(w => state.observeServer(w, server!)) }
+    if (check) {
+      server = await this.detail()
+      if (server.status === 'FINISHED') { await this.confirmFinished(server); return }
+      const w = this.document()
+      if (w.finish && (BigInt(server.localRevision) < BigInt(w.serverRevision) || BigInt(server.version) < BigInt(w.serverVersion))) throw new state.SyncStateConflict()
+      if (w.finish && BigInt(server.localRevision) > BigInt(w.serverRevision) && server.localRevision !== w.pendingSnapshot?.request.localRevision) {
+        throw new state.SyncStateConflict()
+      }
+      await this.mutate(w => state.observeServer(w, server!))
+    }
     while (this.current()) {
       let w = this.document()
       if (w.pendingResolution && !w.pendingResolution.rejected) {
@@ -154,31 +174,47 @@ export class WorkoutSynchronizer {
       server = await this.detail(); await this.mutate(next => state.observeServer(next, server!))
     }
   }
-  private async publishFinished() {
-    const w = this.document(), server = await this.readSession(w)
-    if (!this.current()) return
+  private async confirmFinished(server: Session) {
+    const ack = state.finishedDetailAck(this.document(), server)
+    await this.mutate(w => state.acceptFinish(w, ack))
+    await this.publishFinished(server)
+  }
+  private async publishFinished(confirmed?: Session) {
+    const w = this.document(), server = confirmed ?? await this.readSession(w)
+    if (!this.current()) { if (!this.stopped) this.access.status('WAITING'); return }
+    if (server.status !== 'FINISHED' || w.finish?.ack && BigInt(server.version) < BigInt(w.finish.ack.currentVersion)) {
+      throw new SessionReadError(new state.SyncStateConflict())
+    }
     await this.access.saveServer(server)
-    if (!this.current()) return
+    if (!this.current()) { if (!this.stopped) this.access.status('WAITING'); return }
     await this.access.block()
     if (this.stopped || this.abort.signal.aborted) return
+    if (!this.options.online()) { this.access.status('WAITING'); return }
+    this.options.onServer?.(server)
     this.access.status('SAVED')
-    if (this.options.online()) this.options.onServer?.(server)
   }
   private async sendFinish() {
     const w = this.document(), fixed = w.finish
-    if (!fixed?.requestJson || !this.options.api.finish) throw new state.SyncStateConflict()
+    const api = this.options.api
+    if (!fixed?.requestJson || !api.finish) throw new state.SyncStateConflict()
     this.access.status('SENDING')
     const request = JSON.parse(fixed.requestJson) as FinishRequest
-    const send = () => this.options.api.finish!(w, w.sessionId, request, this.abort.signal)
-    let ack
-    try { ack = await send() } catch (error) {
-      const status = (error as { status?: number }).status ?? 0
-      if (status >= 400 && status < 500) { if (status === 409) await this.detail(); throw error }
-      await this.detail() // AUTO_CLOSED, deletion and ownership loss stop here; FINISHED allows exact confirmation.
-      ack = await send()
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let ack
+      try { ack = await api.finish(w, w.sessionId, request, this.abort.signal) }
+      catch (error) {
+        const conflict = (error as { status?: number }).status === 409
+        if (!this.current() || !conflict && !transientFailure(error)) throw error
+        const server = await this.detail()
+        if (server.status === 'FINISHED') { await this.confirmFinished(server); return }
+        if (conflict || attempt !== 0) throw error
+        if (server.localRevision !== w.serverRevision || BigInt(server.version) < BigInt(w.serverVersion)) throw new state.SyncStateConflict()
+        continue
+      }
+      await this.mutate(next => state.acceptFinish(next, ack))
+      await this.publishFinished()
+      return
     }
-    await this.mutate(next => state.acceptFinish(next, ack))
-    await this.publishFinished()
   }
   resolve = async (exerciseId: string, pendingIds: string[], decision: 'KEEP_CURRENT' | 'REAPPROVE', nextWeight: string) => {
     if (this.resolving) return false

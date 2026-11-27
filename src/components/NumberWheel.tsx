@@ -1,6 +1,6 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { Button } from './ui.tsx'
 import { Dialog } from './Dialog.tsx'
 import { extendWheelOptions, wheelOptions } from './wheel-options.ts'
@@ -16,6 +16,7 @@ type Props = {
   compactStepper?: boolean; preview?: boolean; inputMode?: 'numeric' | 'decimal' | 'text'
   wheelSeed?: string; validateSelection?: (value: string) => string
   displayValue?: string; formatOption?: (value: string) => string; directHint?: string
+  renderValue?: (value: string) => ReactNode
   describeBlank?: boolean
   renderTrigger?: (open: (() => void) | undefined, disabled: boolean | undefined) => React.ReactNode
   suggestion?: string; pending?: boolean; confirmUnchanged?: boolean
@@ -32,7 +33,7 @@ function EditableNumberWheel(props: Props) {
   </NumberWheelControls>
 }
 
-function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, stepLabel = '', plainSteps, hideSteps, compactStepper, displayValue, describeBlank, suggestion, pending, renderTrigger, open, children }:
+function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, stepLabel = '', plainSteps, hideSteps, compactStepper, displayValue, renderValue, describeBlank, suggestion, pending, renderTrigger, open, children }:
   Omit<Props, 'onChange' | 'validate' | 'start'> & { onChange?: Props['onChange']; open?: () => void; children?: React.ReactNode }) {
   const stepValue = value || suggestion || ''
   const unavailable = disabled || pending
@@ -41,9 +42,10 @@ function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, s
     const next = adjust(stepValue, direction)
     if (next !== null) onChange?.(next)
   }
+  const shownValue = displayValue ?? (value || '입력')
   const display = pending ? <span className={styles.unconfirmed}>확인 중</span> : showSuggestion
     ? <span className={styles.unconfirmed}>{suggestion}<small> {unit} (미정)</small></span>
-    : <>{displayValue ?? (value || '입력')}{(value || displayValue !== undefined) && unit && <small> {unit}</small>}</>
+    : <>{renderValue ? renderValue(shownValue) : shownValue}{(value || displayValue !== undefined) && unit && <small> {unit}</small>}</>
   const description = pending ? '기존 기록 확인 중' : showSuggestion ? suggestion + unit + ' (미정)'
     : describeBlank ? value ? `${displayValue ?? value} ${unit}`.trim() : '미입력' : undefined
   if (renderTrigger) return <>{renderTrigger(open, unavailable)}{children}</>
@@ -119,7 +121,7 @@ function WheelDialog({ label, seed, value, unit, adjust, validate, validateSelec
     if (suggestion !== undefined && !value && !draft.trim() || apply(draft)) onClose()
   }
 
-  return <Dialog title={label} className={styles.dialog} onClose={onClose} dismissOnBackdrop={confirmUnchanged}>
+  return <Dialog title={label} surface="wheel" className={styles.dialog} onClose={onClose} dismissOnBackdrop={confirmUnchanged}>
     {direct ? <div className={styles.body} onKeyDown={event => {
       if (event.key !== 'Enter' || event.nativeEvent.isComposing) return
       event.preventDefault()

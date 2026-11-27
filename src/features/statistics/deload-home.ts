@@ -16,11 +16,11 @@ async function read(transport: WorkoutTransport, scope: Scope, path: string, sig
   if (data.dataGeneration !== scope.dataGeneration) throw new WorkoutApiError('DATA_GENERATION_MISMATCH', 409)
   return data
 }
-export async function readHomeProtection(transport: WorkoutTransport, scope: Scope, signal: AbortSignal): Promise<HomeProtection> {
+export async function readHomeProtection(transport: WorkoutTransport, scope: Scope, signal: AbortSignal): Promise<{ status: HomeProtection; completeRest: boolean }> {
   const { period } = await read(transport, scope, '/api/v1/deload-periods/current', signal)
-  if (period === null) return null
+  if (period === null) return { status: null, completeRest: false }
   if (!v.object(period) || (period.status !== 'ACTIVE' && period.status !== 'COMPLETED')) throw new WorkoutApiError('RESPONSE_INVALID')
-  return period.status
+  return { status: period.status, completeRest: period.currentMethod === 'REST' }
 }
 export async function readHomeAnalysis(transport: WorkoutTransport, scope: Scope, signal: AbortSignal): Promise<HomeAnalysis> {
   const value = await read(transport, scope, '/api/v1/deload-analysis', signal)

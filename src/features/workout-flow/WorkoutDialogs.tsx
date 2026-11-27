@@ -52,7 +52,7 @@ export function WeightChange({ weight, progressionAllowed, onSave, onClose, prog
       </fieldset>
       <p className="muted small">완료한 세트는 보존됩니다.</p>
       {issue && <p role="alert" className="notice error">{issue}</p>}
-      <div className={styles.actions}><Button variant="neutral" onClick={onClose}>취소</Button><Button variant="primary" onClick={() => {
+      <div className={styles.actions} data-dialog-actions><Button variant="neutral" onClick={onClose}>취소</Button><Button variant="primary" onClick={() => {
         try { onSave(decimalDraft(value), mode) }
         catch (error) { setIssue(error instanceof Error ? error.message : '변경 중량을 확인해 주세요.') }
       }}>확인</Button></div>
@@ -107,7 +107,7 @@ export function ExerciseList({ weights, cardio, current, onClose, onSelect, onAp
           </div>)}
         </section>
       })}
-      <div className={styles.actions}>
+      <div className={styles.actions} data-dialog-actions>
         <Button variant="neutral" onClick={onClose}>목록 닫기</Button>
         <Button variant="primary" disabled={!changed || !!sorting.drag} onClick={() => onApply(order)}>변경하기</Button>
       </div>
@@ -122,7 +122,7 @@ export function SessionExerciseSearch({ replace, exercises, onSelect, onClose, s
     <div className="stack">
       {saveIssue}
       <p className="muted small">이번 운동에만 적용됩니다.</p>
-      <ExerciseSearch exercises={exercises} onSelect={onSelect} />
+      <ExerciseSearch exercises={exercises} defaultOpen onSelect={onSelect} />
       <Button variant="neutral" onClick={onClose}>취소</Button>
     </div>
   </Dialog>
@@ -154,7 +154,7 @@ export function SessionCardioPlan({ activities, index, plan, canReplace = true, 
         {!canReplace && <small className="muted">종목 교체는 측정을 시작하기 전에 할 수 있습니다.</small>}
       </Card>}
       {issue && <p role="alert" className="notice error">{issue}</p>}
-      <div className={styles.actions}><Button variant="neutral" onClick={onClose}>취소</Button>{!picking && <Button variant="primary" type="submit">{action}</Button>}</div>
+      <div className={styles.actions} data-dialog-actions><Button variant="neutral" onClick={onClose}>취소</Button>{!picking && <Button variant="primary" type="submit">{action}</Button>}</div>
     </form>
   </Dialog>
 }

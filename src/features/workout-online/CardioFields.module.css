@@ -15,21 +15,6 @@
 .timeActions { display: flex; gap: 8px; }
 .timeActions > button { flex: 1 1 0; min-width: 0; font-size: 13px; }
 
-.field { display: grid; align-content: start; gap: 4px; min-width: 0; }
-.field input { width: 100%; min-width: 0; font-size: 16px; }
-.value { position: relative; min-width: 0; display: block; }
-.field .value[data-unit] > input { padding-inline-end: 49px; }
-.value > small { position: absolute; inset-inline-end: 12px; inset-block-start: 50%; translate: 0 -50%; pointer-events: none; font-size: 11px; }
-.label { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 22px; }
-.tag {
-  flex: none;
-  border-radius: 6px;
-  padding: 1px 5px;
-  background: var(--surface-input);
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
 .extra, .note { grid-column: 1 / -1; min-width: 0; }
 .note { color: var(--text-muted); }
 .extra summary { padding-block: 8px; cursor: pointer; color: var(--text-muted); font-size: 13px; }

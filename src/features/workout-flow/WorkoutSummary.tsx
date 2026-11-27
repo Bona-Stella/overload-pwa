@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { useLayoutEffect } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
-import { distanceLabel } from '../workout-online/cardio-measurement.ts'
+import { CardioActual } from './CardioFocus.tsx'
 import { cardioPlanLabel } from '../home/model.ts'
 import { formatDuration } from '../workout/model.ts'
 import { equipmentLabel } from '../workout-online/equipment.ts'
@@ -133,23 +133,10 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
           {detail ? recordFacts && <b>총 {recordFacts.achievement.cardio.completed}/{recordFacts.achievement.cardio.planned}종목</b> : <b>총 {cardioCount}종목</b>}</div>
         {cardio.map((item,index) => <section className={styles.recordItem} data-achievement={detail&&achievementReasons[item.id]?.length?recordFacts?.status.kind:undefined} key={item.id}>
           <div className={detailStyles.cardioHeading}><h4><span className={detailStyles.number}>{String(index+1).padStart(2,'0')}</span>{item.plan?.name ?? '운동 정보 확인 필요'}{item.added&&<small className="muted"> · 세션에서 추가</small>}</h4>
-            {item.result&&<strong className={detailStyles.cardioTime}>
-              {!detail && <span className="sr-only">실제 활동 시간 </span>}
-              {item.result.corrected&&<span className={detailStyles.corrected}>수정</span>}{formatDuration(item.result.activeMs)}
-            </strong>}
           </div>
           <p className="muted small">{item.plan ? '목표 ' + cardioPlanLabel(item.plan) : '계획 정보 확인 필요'}</p>
           {detail&&achievementReasons[item.id]?.map(reason=><p className={styles.achievementReason} key={reason}>{recordFacts?.status.mark} {reason}</p>)}
-          {item.result ? <div className={detailStyles.cardioActual}>
-            {item.result.corrected&&<p className="muted small">자동 기록 {formatDuration(item.result.timerMs)}</p>}
-            {detail ? <p>{distanceLabel(item.result)} · 평균 심박 {item.result.averageBpm===null?'미입력':item.result.averageBpm+' BPM'}</p>
-              : (item.result.distanceKm !== null || item.result.averageBpm !== null) && <p>
-                {item.result.distanceKm !== null && distanceLabel(item.result)}
-                {item.result.distanceKm !== null && item.result.averageBpm !== null && ' · '}
-                {item.result.averageBpm !== null && `평균 심박 ${item.result.averageBpm} BPM`}
-              </p>}
-            {item.result.measurement?.actualSpeedKmh!=null&&<p>{`${detail ? '실제 속도' : '실제 평균 속도'} ${item.result.measurement.actualSpeedKmh} km/h`}</p>}
-          </div> : <p className="muted small">{item.phase === 'ready' ? '미시작' : '미완료 · 건너뜀'}</p>}
+          {item.result ? <CardioActual result={item.result} heading="h5" /> : <p className="muted small">{item.phase === 'ready' ? '미시작' : '미완료 · 건너뜀'}</p>}
         </section>)}
       </section>}
     </Card>}

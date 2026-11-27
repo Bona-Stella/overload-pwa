@@ -70,9 +70,10 @@ test('real React reconciliation respects workout, settings, account, generation 
     resolveId(id, importer) { if (importer?.endsWith('/WorkoutWorkspace.tsx') && replaced.has(id)) return '\0workspace-boundary-stub' },
     load(id) { if (id === '\0workspace-boundary-stub') return stub },
     configureServer(vite) { vite.middlewares.use('/boundary', async (req, res) => {
-      const fixture = req.originalUrl?.includes('?access=') ? 'workout-access-ui' : 'workspace-boundary'
+      const fixture = req.originalUrl?.includes('?access=') ? 'workout-access-ui'
+        : req.originalUrl?.includes('?surface=cardio') ? 'cardio-surface-ui' : 'workspace-boundary'
       res.setHeader('Content-Type', 'text/html')
-      const viewport = fixture === 'workout-access-ui' ? '<meta name="viewport" content="width=device-width,initial-scale=1">' : ''
+      const viewport = fixture !== 'workspace-boundary' ? '<meta name="viewport" content="width=device-width,initial-scale=1">' : ''
       res.end(await vite.transformIndexHtml('/boundary', `<!doctype html><html><head>${viewport}</head><body><div id="root"></div><script type="module" src="/tests/fixtures/${fixture}.jsx"></script></body></html>`))
     }) },
   }, react()], server: { host: '127.0.0.1', port: 0, hmr: false, ws: false, watch: { ignored: ['**/logs/**', '**/.local-backups/**'] } }, clearScreen: false })
@@ -343,26 +344,30 @@ test('real React reconciliation respects workout, settings, account, generation 
     assert.equal(await evaluate('window.workoutAccess.original.snapshot.performedSets.length'),1)
 
     const findButton = label => `[...document.querySelectorAll('main button')].find(button=>button.textContent.trim()===${JSON.stringify(label)}&&button.getClientRects().length)`
+    const finishDialog = 'dialog[open][data-message-tone="critical"]'
+    const finishRetry = `document.querySelector('${finishDialog} [data-dialog-actions] button')`
     for (const phase of ['finish-lock', 'closed-finish']) {
       await access(phase)
       const local = phase === 'finish-lock'
-      const button = findButton(local ? '서버 저장 상태 다시 확인' : '종료 결과 확인')
+      const button = local ? finishRetry : findButton('종료 결과 확인')
       await wait(() => evaluate(`window.workoutAccess?.phase===${JSON.stringify(phase)} && !!(${button}) && !(${button}).disabled`))
       assert.equal(await evaluate(`!(${button}).closest('[inert]') && (${button}).getBoundingClientRect().height>0`),true)
       assert.equal(await evaluate('window.workoutAccess.'+(local ? 'state()' : 'closed()')+'.writable'),false)
       await evaluate(`(${button}).click()`)
-      await wait(() => evaluate(local ? 'window.workoutAccess.reads===1 && !window.workoutAccess.state().loading'
+      await wait(() => evaluate(local ? 'window.workoutAccess.reads===1 && !window.workoutAccess.state().loading && !document.querySelector("dialog[open] [data-dialog-actions] button")?.disabled'
         : 'window.workoutAccess.closed().issue?.includes("다시 확인해 주세요") && !window.workoutAccess.closed().busy'))
       assert.equal(await evaluate('window.workoutAccess.requests.length'),0)
       assert.equal(await evaluate('window.workoutAccess.read().then(w=>JSON.stringify(w)===JSON.stringify(window.workoutAccess.original))'),true)
       await evaluate('window.workoutAccess.release()')
       await evaluate(`{const button=${button};button.click();button.click()}`)
-      await wait(() => evaluate('window.workoutAccess.requests.length===1'))
-      assert.equal(await evaluate(`(${button})?.disabled!==false`),true)
-      await evaluate('window.workoutAccess.completeRequest()')
+      if (local) {
+        await wait(() => evaluate('window.workoutAccess.requests.length===1'))
+        assert.equal(await evaluate(`(${button})?.disabled!==false`),true)
+        await evaluate('window.workoutAccess.completeRequest()')
+      }
       await wait(() => evaluate('document.querySelector("main h1")?.textContent==="운동 기록 요약" && window.workoutAccess.closed().writable && !window.workoutAccess.closed().busy'))
-      assert.equal(await evaluate('window.workoutAccess.requests.length'),1)
-      assert.equal(await evaluate(`window.workoutAccess.read().then(w=>!!w.finish.ack && w.finish.requestJson===window.workoutAccess.requests[0] &&
+      assert.equal(await evaluate('window.workoutAccess.requests.length'),local ? 1 : 0)
+      assert.equal(await evaluate(`window.workoutAccess.read().then(w=>!!w.finish.ack &&
         w.finish.requestJson===window.workoutAccess.original.finish.requestJson &&
         JSON.stringify(w.snapshot.performedSets)===JSON.stringify(window.workoutAccess.original.snapshot.performedSets))`),true)
       assert.equal(await evaluate(`!(${findButton('종료 결과 확인')})`),true)
@@ -371,7 +376,7 @@ test('real React reconciliation respects workout, settings, account, generation 
     }
 
     await access('finish-revoked')
-    const recheckFinish = findButton('종료 결과 확인')
+    const recheckFinish = finishRetry
     await wait(() => evaluate(`window.workoutAccess?.phase==='finish-revoked' && !!(${recheckFinish}) && !(${recheckFinish}).disabled`))
     await evaluate('window.workoutAccess.revoke()')
     assert.equal(await evaluate('window.workoutAccess.state().writable'),true, 'the view has not yet observed the revoked lock')
@@ -387,7 +392,7 @@ test('real React reconciliation respects workout, settings, account, generation 
       await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     }
     await tapFinish()
-    await wait(() => evaluate('document.body.innerText.includes("기기 날짜·시간과 입력을 확인해 주세요")'))
+    await wait(() => evaluate('window.workoutAccess.requests.length===2 && document.body.innerText.includes("기기 날짜·시간과 입력을 확인해 주세요")'))
     assert.equal(await evaluate('window.workoutAccess.reads'),1)
     assert.equal(await evaluate('window.workoutAccess.requests.length'),2)
     assert.equal(await evaluate('window.workoutAccess.read().then(w=>w.finish.requestJson===window.workoutAccess.original.finish.requestJson && w.snapshot.performedSets.length===1)'),true)
@@ -407,10 +412,11 @@ test('real React reconciliation respects workout, settings, account, generation 
     assert.equal(await evaluate('window.workoutAccess.original.pendingSnapshot.rejected && !window.workoutAccess.original.finish.request'),true)
     await tapFinish()
     const detail = 'dialog[open]'
-    await wait(() => evaluate(`document.querySelector('${detail}')?.innerText.includes('기기 날짜·시간과 입력을 확인해 주세요')`))
+    await wait(() => evaluate(`window.workoutAccess.requests.length===2 && !(${recheckFinish})?.disabled &&
+      document.querySelector('${detail}')?.innerText.includes('기기 날짜·시간과 입력을 확인해 주세요')`))
     assert.equal(await evaluate('window.workoutAccess.requests.length'),2)
     assert.equal(await evaluate(`!document.querySelector('${detail}').innerText.includes('앞선 저장이 거절되었습니다.')`),true)
-    await evaluate(`window.workoutAccess.rejectFinish=false;[...document.querySelectorAll('${detail} button')].find(b=>b.textContent==='종료 결과 확인').click()`)
+    await evaluate(`window.workoutAccess.rejectFinish=false;(${recheckFinish}).click()`)
     await wait(() => evaluate('typeof window.workoutAccess.completeRequest==="function"'))
     await evaluate('window.workoutAccess.completeRequest()')
     await wait(() => evaluate('document.querySelector("main h1")?.textContent==="운동 기록 요약" && window.workoutAccess.closed().writable && !window.workoutAccess.closed().busy'))
@@ -419,6 +425,235 @@ test('real React reconciliation respects workout, settings, account, generation 
     assert.equal(await evaluate(`window.workoutAccess.read().then(w=>!!w.finish.ack && w.pendingSnapshot===null &&
       w.finish.endedAt===window.workoutAccess.original.finish.endedAt &&
       JSON.stringify(w.snapshot.performedSets)===JSON.stringify(window.workoutAccess.original.snapshot.performedSets))`),true)
+
+    const completionChecks = []
+    for (const phase of ['complete-weight', 'complete-cardio']) {
+      await access(phase)
+      const action = phase === 'complete-weight' ? '1세트 완료' : '유산소 기록 확정'
+      const final = ['+ 유산소 추가', '운동 종료 및 요약']
+      await wait(() => evaluate(`window.workoutAccess?.phase===${JSON.stringify(phase)} && window.workoutAccess.state().syncStatus==='SAVED'
+        && document.querySelector('[data-workout-frame] footer button:enabled')?.textContent===${JSON.stringify(action)}`))
+      const point = await evaluate(`(() => {
+        const frame = document.querySelector('[data-workout-frame]')
+        const footer = frame.querySelector('footer')
+        const original = footer.querySelector('button')
+        window.completionTransitions = []
+        footer.addEventListener('transitionrun', event => {
+          if (event.target===original) window.completionTransitions.push(event.propertyName)
+        })
+        window.sampleCompletion = () => {
+          const buttons = [...footer.querySelectorAll('button')]
+          const {x, y, width, height, bottom} = footer.getBoundingClientRect()
+          return {same: footer===frame.querySelector('footer'), x, y, width, height, bottom, background:getComputedStyle(footer).backgroundColor,
+            reserved:frame.style.getPropertyValue('--workout-footer-height'), labels:buttons.map(button=>button.textContent),
+            inheritedAction:original.isConnected && original.textContent!==${JSON.stringify(action)},
+            sameCompletion:buttons[0]===original,
+            spinner:!!footer.querySelector('[data-button-spinner]')}
+        }
+        window.completionFrames = [window.sampleCompletion()]
+        window.recordCompletion = true
+        const sample = () => {if(window.recordCompletion){window.completionFrames.push(window.sampleCompletion());requestAnimationFrame(sample)}}
+        requestAnimationFrame(sample)
+        const {x,y,width,height}=original.getBoundingClientRect()
+        return {x:x+width/2,y:y+height/2}
+      })()`)
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] })
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await wait(() => evaluate('window.workoutAccess.completionWrites===1'))
+      assert.equal(await evaluate(`document.querySelector('[data-workout-frame] footer button')?.disabled`),true)
+      await evaluate(`document.querySelector('[data-workout-frame] footer button').click()`)
+      await evaluate('new Promise(resolve=>setTimeout(resolve,350))')
+      await evaluate('window.workoutAccess.failCompletion()')
+      await wait(() => evaluate('!!document.querySelector(\'[data-workout-frame] footer button:enabled\') && !!window.workoutAccess.state().issue'))
+      assert.equal(await evaluate('window.workoutAccess.read().then(w=>w.localRevision===window.workoutAccess.original.localRevision)'),true)
+      await evaluate(`window.workoutAccess.holdSnapshot=true;document.querySelector('[data-workout-frame] footer button').click()`)
+      await wait(() => evaluate('window.workoutAccess.completionWrites===2'))
+      await evaluate('window.workoutAccess.commitCompletion()')
+      await wait(() => evaluate('typeof window.workoutAccess.releaseSnapshot==="function"'))
+      assert.equal(await evaluate(`document.querySelector('[data-workout-save-status]')?.dataset.workoutSaveStatus`),'saving')
+      await wait(() => evaluate(`window.sampleCompletion().labels.join()===${JSON.stringify(final.join())}`))
+      if (phase === 'complete-cardio') {
+        await evaluate('window.workoutAccess.holdSnapshot=false;window.workoutAccess.rejectSnapshotReplay=true;window.workoutAccess.failSnapshot()')
+        await wait(() => evaluate('window.workoutAccess.state().syncStatus==="WAITING"'))
+        assert.equal(await evaluate("document.querySelector('[data-workout-save-status]').dataset.workoutSaveStatus"),'failed')
+        assert.equal(await evaluate('window.workoutAccess.read().then(w=>w.snapshot.cardioResults.length)'),1)
+      }
+      await evaluate('new Promise(resolve=>setTimeout(resolve,180))')
+      const frames = await evaluate('window.recordCompletion=false;window.completionFrames')
+      const before = frames[0], after = frames.at(-1)
+      assert.ok(frames.length > 4)
+      assert.deepEqual([...new Set(frames.map(frame => frame.labels.join()))], [action, final.join()])
+      assert.ok(frames.every(frame => frame.same && frame.bottom===before.bottom && frame.x===before.x &&
+        frame.width===before.width && frame.background===before.background && frame.reserved===frame.height+'px'))
+      assert.ok(frames.every(frame => frame.labels.length===1
+        ? frame.y===before.y && frame.height===before.height && frame.sameCompletion
+        : frame.y===after.y && frame.height===after.height))
+      completionChecks.push({phase, reused:frames.some(frame => frame.inheritedAction),
+        spinner:frames.some(frame => frame.spinner), transitions:await evaluate('window.completionTransitions')})
+      assert.equal(await evaluate('window.workoutAccess.completionWrites'),2)
+      if (phase === 'complete-cardio') {
+        await evaluate("window.workoutAccess.rejectSnapshotReplay=false;document.querySelector('button[aria-label^=\"저장 실패\"]').click()")
+        await evaluate(`[...document.querySelectorAll('dialog[open] button')].find(button=>button.textContent==='저장 결과 확인').click()`)
+      } else await evaluate('window.workoutAccess.releaseSnapshot()')
+      await wait(() => evaluate('window.workoutAccess.state().syncStatus==="SAVED"'))
+      assert.deepEqual(await evaluate('window.workoutAccess.read().then(w=>[w.snapshot.performedSets.length, w.snapshot.cardioResults.length])'),
+        [1, phase === 'complete-cardio' ? 1 : 0])
+    }
+    assert.deepEqual(completionChecks, ['complete-weight', 'complete-cardio'].map(phase => ({phase, reused:false, spinner:false, transitions:[]})))
+
+    for (const phase of ['footer-weight', 'footer-cardio']) {
+      await access(phase)
+      const finishButton = 'footer button[data-click-action$=":finish"]'
+      await wait(() => evaluate(`window.workoutAccess?.phase===${JSON.stringify(phase)} && window.workoutAccess.state().syncStatus==='SAVED' && !!document.querySelector('${finishButton}:enabled')`))
+      await evaluate(`{
+        const footer = document.querySelector('[data-workout-frame] footer')
+        const finish=footer.querySelector('${finishButton}')
+        window.sampleFooter = () => ({same: footer===document.querySelector('[data-workout-frame] footer'),
+          sameButton:finish===footer.querySelector('${finishButton}'), height:footer.offsetHeight,
+          color:getComputedStyle(finish).backgroundColor, labels:[...footer.querySelectorAll('button')].map(button=>button.textContent), locked:footer.inert})
+        window.footerFrames = []
+        window.recordFooter = true
+        const sample = () => {if(window.recordFooter){window.footerFrames.push(window.sampleFooter());requestAnimationFrame(sample)}}
+        requestAnimationFrame(sample)
+        window.workoutAccess.dropFinishResponse=${phase === 'footer-weight'}
+        finish.click(); finish.click()
+      }`)
+      await wait(() => evaluate('window.workoutAccess.requests.length===1'))
+      await evaluate('new Promise(resolve=>setTimeout(resolve,320))')
+      assert.equal(await evaluate(`document.querySelector('${finishButton}').textContent`),'운동 종료 중')
+      assert.equal(await evaluate(`!!document.querySelector('${finishButton} [data-button-spinner]')`),true)
+      if (phase === 'footer-cardio') {
+        await evaluate('window.workoutAccess.failRequest()')
+        await wait(() => evaluate(`(${finishRetry})?.innerText.trim()==='다시 시도'`))
+        assert.equal(await evaluate(`document.querySelector('${finishDialog} h2').textContent`),'운동 종료를 확인하지 못했습니다')
+        assert.equal(await evaluate(`document.querySelector('${finishButton}:enabled')?.textContent`),'운동 종료 및 요약')
+        assert.deepEqual(await evaluate(`(() => {const f=window.sampleFooter();return [f.same,f.height===window.footerFrames[0].height,f.locked]})()`),[true,true,false])
+        assert.equal(await evaluate('window.workoutAccess.read().then(w=>!w.finish.ack && w.snapshot.cardioResults.length===1)'),true)
+        await send('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27})
+        await wait(() => evaluate(`!document.querySelector('${finishDialog}')`))
+        await evaluate(`document.querySelector('${finishButton}').click()`)
+        await wait(() => evaluate(`!!(${finishRetry})`))
+        await evaluate(`window.footerFrames=[];const retry=${finishRetry};retry.click();retry.click();`)
+        await wait(() => evaluate('window.workoutAccess.requests.length===2'))
+      }
+      await evaluate('window.workoutAccess.completeRequest()')
+      await wait(() => evaluate('typeof window.workoutAccess.beginSummary==="function"'))
+      await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))')
+      await evaluate('window.workoutAccess.beginSummary()')
+      await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))')
+      const frames = await evaluate('window.recordFooter=false;window.footerFrames')
+      assert.ok(frames.length > 4)
+      assert.ok(frames.every(frame=>frame.same && frame.sameButton && frame.locked && frame.height===frames[0].height && frame.color===frames[0].color &&
+        ['+ 유산소 추가,운동 종료 중', '+ 유산소 추가,운동 종료 및 요약'].includes(frame.labels.join())),
+        JSON.stringify([...new Set(frames.map(frame=>JSON.stringify(frame)))]))
+      assert.equal(await evaluate('window.workoutAccess.requests.length'),phase === 'footer-cardio' ? 2 : 1)
+      assert.equal(await evaluate('new Set(window.workoutAccess.requests).size'),1)
+      assert.equal(await evaluate('window.workoutAccess.read().then(w=>!!w.finish.ack && w.snapshot.performedSets.length===1)'),true)
+      await evaluate('window.workoutAccess.showSummary()')
+      await wait(() => evaluate('document.querySelector("main h1")?.textContent==="운동 기록 요약" && !document.querySelector("[data-workout-frame]")'))
+    }
+
+    await send('Emulation.setDeviceMetricsOverride', { width: 320, height: 565, deviceScaleFactor: 1, mobile: true })
+    await send('Page.navigate', { url: origin + '/boundary?surface=cardio' })
+    await wait(() => evaluate('!!window.cardioSurface'))
+    const topDialog = 'dialog[open]:not(:has(dialog[open]))'
+    const clickInDialog = label => evaluate(`[...document.querySelectorAll('${topDialog} button')].find(b=>b.textContent.trim()===${JSON.stringify(label)}).click()`)
+    const dialogLayout = () => evaluate(`(() => {
+      const d=document.querySelector('${topDialog}'),s=getComputedStyle(d);
+      return [s.borderRadius,s.padding,getComputedStyle(d.firstElementChild).marginBottom,
+        d.getBoundingClientRect().width<=innerWidth,d.clientHeight<=innerHeight];
+    })()`)
+    for (const phase of ['add','replace']) {
+      await evaluate(`window.cardioSurface.setModal('${phase}')`)
+      await wait(() => evaluate(`!!document.querySelector('${topDialog} [data-search-state="EDITING"] [role="list"] li')`))
+      assert.deepEqual(await dialogLayout(),['5px','16px','16px',true,true])
+      assert.equal(await evaluate(`(() => {const list=document.querySelector('${topDialog} [role="list"]');list.scrollTop=60;return list.scrollTop>0})()`),true)
+      await evaluate(`document.querySelector('${topDialog} [role="list"] li button').click()`)
+      await wait(() => evaluate(`!document.querySelector('${topDialog}') && !!window.cardioSurface.selected`))
+    }
+    const rowStyle = selector => evaluate(`(() => {
+      const rows=[...document.querySelectorAll(${JSON.stringify(selector)})];
+      return rows.map(button => {const row=button.parentElement,s=getComputedStyle(row);return [s.backgroundColor,s.borderRadius,s.minHeight,s.alignItems]});
+    })()`)
+    const actualRows = await rowStyle('button[aria-label="실제 활동 시간 수정"], button[aria-label="실제 거리 수정"]')
+    for (const phase of ['cardio-add','cardio-edit']) {
+      await evaluate(`window.cardioSurface.setModal('${phase}')`)
+      await wait(() => evaluate(`!!document.querySelector('${topDialog}')`))
+      if (phase==='cardio-add') await evaluate(`document.querySelector('${topDialog} [aria-label="표준 유산소 목록"] li button').click()`)
+      const targetButtons = `${topDialog} button[aria-label="목표 시간 수정"], ${topDialog} button[aria-label="목표 거리 수정"]`
+      await wait(() => evaluate(`document.querySelectorAll(${JSON.stringify(targetButtons)}).length===2`))
+      assert.deepEqual(await rowStyle(targetButtons),actualRows)
+      assert.deepEqual(await evaluate(`(() => {
+        const d=document.querySelector('${topDialog}'), card=getComputedStyle(d.querySelector('.app-card')), actions=d.querySelector('[data-dialog-actions]');
+        return [card.borderRadius,card.padding,getComputedStyle(actions).gap,...Array.from(actions.children,b=>[getComputedStyle(b).borderRadius,b.getBoundingClientRect().height])];
+      })()`),['5px','12px','8px',['999px',48],['999px',48]])
+      await clickInDialog(phase==='cardio-add'?'취소':'유산소 변경 적용')
+      await wait(() => evaluate(`!document.querySelector('${topDialog}')`))
+    }
+    assert.equal(await evaluate('window.cardioSurface.plan.targetDistanceKm'),'3.234567')
+    await evaluate(`document.querySelector('button[aria-label="실제 거리 수정"]').click()`)
+    await wait(() => evaluate(`!!document.querySelector('${topDialog}')`))
+    assert.deepEqual((await dialogLayout()).slice(0,3),['5px','23px','22px'])
+    await clickInDialog('직접 입력')
+    const editDecimal = async value => {
+      await wait(() => evaluate(`!!document.querySelector('${topDialog} input')`))
+      await evaluate(`{const field=document.querySelector('${topDialog} input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,${JSON.stringify(value)});field.dispatchEvent(new Event('input',{bubbles:true}))}`)
+      await clickInDialog('확인')
+      await wait(() => evaluate(`!document.querySelector('${topDialog}')`))
+    }
+    await editDecimal('3.345678')
+    assert.equal(await evaluate('window.cardioSurface.draft.distance'),'3.345678')
+    assert.equal(await evaluate(`(() => {
+      const row=document.querySelector('button[aria-label="실제 거리 수정"]').parentElement;
+      const number=row.querySelector('strong [data-modified]');
+      return number.textContent==='3.3' && number.parentElement.textContent==='3.3 km' &&
+        getComputedStyle(number).color!==getComputedStyle(number.parentElement).color && !row.textContent.includes('수정');
+    })()`),true)
+    const speedStyle = () => evaluate(`(() => {const b=document.querySelector('button[aria-label="실제 평균 속도 (km/h)"]');
+      return [getComputedStyle(b).color,getComputedStyle(b.querySelector('small')).color,getComputedStyle(b.closest('div').parentElement.querySelector('span')).color];})()`)
+    const originalSpeedStyle = await speedStyle()
+    await evaluate(`document.querySelector('button[aria-label="실제 평균 속도 (km/h)"]').click()`)
+    await wait(() => evaluate(`!!document.querySelector('${topDialog}')`))
+    await clickInDialog('직접 입력')
+    await editDecimal('0')
+    assert.equal(await evaluate('window.cardioSurface.draft.speed'),'0')
+    assert.deepEqual(await speedStyle(),originalSpeedStyle)
+    assert.equal(await evaluate(`(() => {const b=document.querySelector('button[aria-label="실제 평균 속도 (km/h)"]');
+      const speed=b.querySelector('[data-modified]'),distance=document.querySelector('button[aria-label="실제 거리 수정"]').parentElement.querySelector('[data-modified]');
+      return b.textContent==='0.0 km/h' && speed.textContent==='0.0' && getComputedStyle(speed).color===getComputedStyle(distance).color &&
+        getComputedStyle(speed).color!==getComputedStyle(b.querySelector('small')).color &&
+        !document.querySelector('button[aria-label="평균 심박수 (BPM)"] [data-modified]') && !document.body.innerText.includes('수정됨');})()`),true)
+    const actualGrid = '[aria-label="실제 완료 기록"]'
+    for (const view of ['completed','summary','detail']) {
+      await evaluate(`window.cardioSurface.setView('${view}')`)
+      await wait(() => evaluate(`!!document.querySelector('${actualGrid}')`))
+      assert.equal(await evaluate(`(() => {const grid=document.querySelector('${actualGrid}');const values=grid.querySelectorAll('[data-modified]');
+        return values.length===1 && values[0].textContent==='00:20:30' && grid.textContent.includes('자동 기록 00:20:00') && !grid.textContent.includes('수정됨')})()`),true)
+      assert.deepEqual(await evaluate(`(() => {const grid=document.querySelector('${actualGrid}'),[a,b,c,d]=grid.children;
+        return [[...grid.querySelectorAll('dt')].map(el=>el.textContent),a.offsetWidth===b.offsetWidth,c.offsetWidth===d.offsetWidth,
+          a.offsetTop===b.offsetTop,c.offsetTop===d.offsetTop,c.offsetTop>a.offsetTop,getComputedStyle(b).borderInlineStartWidth,
+          getComputedStyle(c).borderBlockStartWidth,getComputedStyle(grid.parentElement).borderRadius,getComputedStyle(grid.parentElement).padding];})()`),
+        [['실제 활동 시간','실제 거리','평균 속도','평균 심박수'],true,true,true,true,true,'1px','1px','5px','12px'])
+    }
+    await evaluate(`document.querySelector('button[aria-label="운동 기록 메뉴"]').click()`)
+    await evaluate(`(${findButton('기록 정정')}).click()`)
+    await evaluate(`[...document.querySelectorAll('main button')].findLast(b=>b.textContent.trim()==='정정').click()`)
+    await wait(() => evaluate(`!!document.querySelector('${topDialog} button[aria-label="실제 활동 시간 수정"]')`))
+    assert.deepEqual(await dialogLayout(),['5px','16px','16px',true,true])
+    assert.deepEqual(await evaluate(`(() => {const s=getComputedStyle(document.querySelector('${topDialog} .app-card'));return [s.borderRadius,s.padding]})()`),['18px','14px'])
+    const correctionTime = `${topDialog} button[aria-label="실제 활동 시간 수정"]`
+    await evaluate(`document.querySelector('${topDialog} input[type="checkbox"]').click()`)
+    assert.equal(await evaluate(`document.querySelector('${correctionTime}').disabled`),true)
+    assert.equal(await evaluate(`document.querySelector('${correctionTime}').parentElement.querySelector('strong').textContent`),'00:20:00')
+    await evaluate(`document.querySelector('${topDialog} input[type="checkbox"]').click()`)
+    await evaluate(`document.querySelector('${topDialog} button[aria-label="실제 활동 시간 수정"]').click()`)
+    assert.equal(await evaluate(`document.querySelector('${topDialog} button[aria-label="실제 활동 초"]').textContent.trim()`),'30.125 초')
+    await clickInDialog('시간 적용')
+    await clickInDialog('변경 저장')
+    await clickInDialog('변경 확인')
+    await wait(() => evaluate('!!window.cardioSurface.correction'))
+    assert.deepEqual(await evaluate(`(({activeMs,distanceKm,measurement})=>[activeMs,distanceKm,measurement.actualSpeedKmh,measurement.distanceSource])(window.cardioSurface.correction)`),
+      [1230125,'3.234567','6.123456','MANUAL'])
   } catch(error){if(ws?.readyState===1){try{console.error('Boundary DOM:',await evaluate('document.body.innerText'));console.error('Boundary requests:',await evaluate('window.boundaryRequests'))}catch{}}throw error} finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))

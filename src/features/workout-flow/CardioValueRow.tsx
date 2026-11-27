@@ -1,13 +1,17 @@
 import type { ReactNode, Ref } from 'react'
 import styles from './CardioFocus.module.css'
 
-export function CardioValueRow({ label, value, editLabel, onEdit, expanded, controls, modified, disabled, buttonRef }: {
+export function CardioValue({ children, modified }: { children: ReactNode; modified?: boolean }) {
+  return modified ? <span className={styles.modifiedValue} data-modified>{children}</span> : children
+}
+
+export function CardioValueRow({ label, value, editLabel, onEdit, expanded, controls, disabled, buttonRef }: {
   label: ReactNode; value: ReactNode; editLabel: string; onEdit?: () => void; expanded?: boolean; controls?: string
-  modified?: boolean; disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>
+  disabled?: boolean; buttonRef?: Ref<HTMLButtonElement>
 }) {
   return <div className={styles.recordedTime}>
     <span>{label}</span>
-    <strong data-modified={modified || undefined}>{value}</strong>
+    <strong>{value}</strong>
     <button ref={buttonRef} type="button" className={`quiet ${styles.editTime}`} aria-label={editLabel}
       aria-expanded={expanded} aria-controls={controls} disabled={disabled} onClick={onEdit}>
       <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

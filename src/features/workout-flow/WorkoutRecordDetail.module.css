@@ -65,10 +65,6 @@
 .detail :global([aria-label='웨이트 수행']) > section > div:not(:first-child) > span { min-width: 0; font-size: 11px; overflow-wrap: anywhere; }
 .cardioHeading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 10px; }
 .cardioHeading h4 { flex: 1; min-width: 100px; }
-.cardioTime { display: inline-flex; align-items: baseline; flex-wrap: wrap; justify-content: flex-end; gap: 4px; margin-left: auto; font-size: 14px; }
-.corrected { display: inline-block; padding: 1px 6px; border-radius: 99px; background: color-mix(in srgb,var(--status-warning) 15%,transparent); color: var(--status-warning); font-size: 10px; font-weight: 400; white-space: nowrap; }
-.cardioActual { display: grid; gap: 6px; font-size: 12px; }
-.detail .cardioActual p { margin: 0; font-size: 12px; line-height: 1.5; }
 .cardioHeading + p { margin-top: 10px; margin-bottom: 6px; }
 .detail .preservation { gap: 10px; }
 .preservation h2,.preservation p { margin: 0; }

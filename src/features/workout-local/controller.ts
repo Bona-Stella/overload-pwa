@@ -222,7 +222,8 @@ export class LocalWorkoutController {
       return false
     }
     const saved = await this.update(w => intendFinish(w, now), false, now, undefined, onFailure)
-    if (saved && this.state.workout?.pendingSnapshot?.rejected) void this.synchronizer?.retry()
+    // A prior snapshot failure can suspend automatic sends. An explicit finish must restart reconciliation.
+    if (saved) void this.synchronizer?.retry()
     return saved
   }
   async syncSettled() { await this.synchronizer?.settled(); await this.tail }

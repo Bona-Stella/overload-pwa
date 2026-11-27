@@ -1,4 +1,4 @@
-import { chooseDropdown, dropdownOptions } from './fixtures/dropdown-driver.mjs'
+import { chooseDropdown, dropdownOptions, openDropdown } from './fixtures/dropdown-driver.mjs'
 import assert from 'node:assert/strict'
 import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 import { test } from 'node:test'
@@ -14,7 +14,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
   await mkdir(profile, { recursive: true })
   const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'routine-component-only', enforce: 'pre',
     configureServer(vite) { vite.middlewares.use('/boundary', async (_req, res) => { res.setHeader('Content-Type', 'text/html'); res.end(await vite.transformIndexHtml('/boundary', '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div id="root"></div><script type="module" src="/tests/fixtures/routine-ui.jsx"></script></body></html>')) }) },
-  }, react()], server: { host: '127.0.0.1', port: 0, watch: { ignored: ['**/logs/**'] } }, clearScreen: false })
+  }, react()], server: { host: '127.0.0.1', port: 0, hmr: false, ws: false, watch: { ignored: ['**/logs/**'] } }, clearScreen: false })
   let browser, ws, next = 0
   const pending = new Map()
   const wait = async fn => { const until = Date.now() + 12000; while (Date.now() < until) { const r = await fn(); if (r) return r; await new Promise(r => setTimeout(r, 30)) } throw Error('Component DOM transition timeout') }
@@ -862,6 +862,43 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       await evaluate(`window.listUi.setHomeReview(${JSON.stringify(state)})`);await wait(async()=>await firstMark()===mark)
       await verifyLayout('home-week-'+state+'-393',393);await verifyLayout('home-week-'+state+'-320',320)
     }
+    const homeStart = '[aria-label="홈"] button[data-click-action="start"]'
+    const todayChooser = '[data-dropdown-label="오늘만 다른 루틴 선택"]'
+    const assertRestStart = async () => {
+      await wait(() => evaluate(`document.querySelector('[aria-label="오늘의 루틴"] h2')?.textContent==='오늘은 쉬어가는 날'`))
+      assert.equal(await evaluate(`document.querySelector('${homeStart}')`),null)
+      assert.equal(await evaluate(`(() => {
+        const today=document.querySelector('[aria-label="오늘의 루틴"]'), chooser=today.nextElementSibling
+        return (chooser.matches('${todayChooser}') || !!chooser.querySelector('${todayChooser}')) &&
+          Math.abs(chooser.getBoundingClientRect().top-today.getBoundingClientRect().bottom-parseFloat(getComputedStyle(today.parentElement).rowGap))<1
+      })()`),true,'rest keeps a single layout gap before the routine chooser')
+    }
+    const assignments = await evaluate('window.listUi.calendar().assignments')
+    await evaluate('window.listUi.setHomeSchedule([])')
+    await assertRestStart()
+    await openDropdown(evaluate, todayChooser)
+    await tap('[aria-label="루틴 일정 필터"] button:first-child')
+    await wait(() => evaluate(`!!document.querySelector('[aria-label="선택할 루틴"] button:not(:disabled)')`))
+    await tap('[aria-label="선택할 루틴"] button:not(:disabled)')
+    await wait(() => evaluate(`!!document.querySelector('${homeStart}:enabled')`))
+    await openDropdown(evaluate, todayChooser)
+    await click('오늘의 원래 일정으로')
+    await assertRestStart()
+    await evaluate(`window.listUi.setHomeSchedule([{dayOfWeek:window.listUi.todayWeekday(),routineId:${JSON.stringify(first)}}])`)
+    await wait(() => evaluate(`!!document.querySelector('${homeStart}:enabled')`))
+    await openDropdown(evaluate, todayChooser)
+    await tap('[aria-label="루틴 일정 필터"] button:last-child')
+    await tap('[aria-label="선택할 루틴"] button')
+    await assertRestStart()
+    await openDropdown(evaluate, todayChooser)
+    await click('오늘의 원래 일정으로')
+    await wait(() => evaluate(`!!document.querySelector('${homeStart}:enabled')`))
+    await evaluate("window.listUi.deloadPeriod={status:'ACTIVE',method:'KEEP',currentMethod:'REST'};window.listUi.refresh()")
+    await wait(() => evaluate(`document.querySelector('[aria-label="오늘의 루틴"]').textContent.includes('디로딩 진행 중에는')`))
+    assert.equal(await evaluate(`document.querySelector('${homeStart}')`),null,'current complete rest overrides the ordinary scheduled routine')
+    await evaluate("window.listUi.deloadPeriod={status:'ACTIVE',method:'REST',currentMethod:'KEEP'};window.listUi.refresh()")
+    await wait(() => evaluate(`!!document.querySelector('${homeStart}:disabled')`))
+    await evaluate(`window.listUi.deloadPeriod=null;window.listUi.setHomeSchedule(${JSON.stringify(assignments)})`)
     await evaluate('window.listUi.showRoutines()');await wait(()=>evaluate(`document.querySelector('[aria-label="가로 주간 일정"] button:nth-child(2) > span').title.includes('태그 없는')`))
     await evaluate('window.listUi.setActive(true)');await new Promise(r=>setTimeout(r,80))
     assert.equal(await evaluate(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='주간 일정 편집').disabled`),true)
