@@ -62,7 +62,7 @@ test('real workout view reuses approved layout with exact weight and truthful lo
 test('real completed set is shown only from persisted facts, and read-only tabs disable edits',()=>{
   const w=applyLocalChange(createLocalWorkout(session(),bootstrap.settings),x=>{editDraft(x,x.currentExerciseId,1,{weight:'0.000001',reps:'8'});completeSet(x,x.currentExerciseId,1,Date.parse(x.startedAt)+1000)})
   const html=render(LocalWorkoutView,{state:{...editorState(w),writable:false},controller:{},definitions:[]})
-  assert.match(html,/<fieldset disabled=""/);assert.doesNotMatch(html,/revision|epoch|hash/);assert.match(html,/8회/);assert.match(html,/aria-label="1세트 완료 취소"/)
+  assert.match(html,/<fieldset disabled=""/);assert.doesNotMatch(html,/revision|epoch|hash/);assert.match(html,/>8<\/span><small>회<\/small>/);assert.match(html,/aria-label="1세트 완료 취소"/)
 })
 
 test('BODYWEIGHT recording offers an empty optional extra field without copying the existing weight',()=>{
@@ -147,7 +147,7 @@ test('routine detail displays exact stored plans and schedule membership without
   assert.match(html,/실내 사이클<\/span><\/h3><div[^>]*><span title="사이클">사이클<\/span>/)
   assert.match(html,/aria-label="유산소 3".*유산소 분류 미확인/)
   assert.doesNotMatch(html,/걷기 · 실내 걷기|사이클 · 실내 자전거/)
-  assert.match(html,/목표 시간.*00:10:01.*목표 페이스.*3:08.*분\/km.*저항.*7\.5/)
+  assert.match(html,/목표 시간.*10:01.*목표 페이스.*3:08.*분\/km.*저항.*7\.5/)
   assert.match(html,/경사도<\/dt><dd>0 <small>%/)
   assert.match(html,/총 1개 일정.*>02<.*연결된 일정.*>월<.*>일</)
   assert.doesNotMatch(html,/<(?:form|fieldset|input|select|textarea)|배정되지 않은 프리셋|루틴 저장|제거한 배치|종목 추가|증량 가능|감량 가능|메모 없음/)

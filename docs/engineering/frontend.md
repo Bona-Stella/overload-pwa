@@ -624,7 +624,7 @@ iPhone의 화면 구조를 고려합니다.
 
 **기초 코드 조사** 2026-11-16 (KST). Frontend `56993a0`·Backend `732e0c3`를 기준으로 1차 개발의 기능·호출 경로·저장 모델과 테스트 내용을 조사했다. 과거 커밋·자동 테스트 수·승인 기록은 각각 당시 근거로 보존한다.
 
-**FRONT 18 현행 점검.** [6단계 공통 UI·상태 전환](#front18-stage6)과 [7단계 숫자 값 상태](#front18-stage7)에 적용과 검증 근거를 기록한다. 서버 의존 과제는 [BACKEND 일괄 보류](#front18-backend-followup)에서 확인한다.
+**FRONT 18 현행 점검.** [6단계 공통 UI·상태 전환](#front18-stage6), [7단계 숫자 값 상태](#front18-stage7), [8단계 타이포그래피·아이콘·레이아웃](#front18-stage8)에 적용과 검증 근거를 기록한다. 서버 의존 과제는 [BACKEND 일괄 보류](#front18-backend-followup)에서 확인한다.
 
 **FRONT 후속 대조** 2026-11-23 (KST). 문서 갱신을 시작할 때 FRONT는 깨끗한 `main`의 `e88c90c`였으며 로컬의 `origin/main` 추적 참조보다 1개 커밋 앞서 있었다. 소스, 커밋과 보존 검증 로그를 [후속 UI와 안정성 현황](#front-후속-ui와-안정성-현황)에 대조했다. 이번 갱신에서는 테스트·빌드·실기기 검증을 재실행하지 않았다.
 
@@ -1172,7 +1172,7 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 | 적용 경로 | 구현 및 보호 경계 |
 | --- | --- |
 | 선택·모달·유산소 | 6-A `5191a78`에서 선택 변형과 업무 메뉴를 적용했다. 6-C `545b711`에서 공통 기능형 Dialog 및 운동 중 검색 첫 화면, 실제값 입력과 읽기용 표현을 정리했다. [선택 구현](../../src/components/common-ui/ConnectedDropdown.tsx) · [모달](../../src/components/Dialog.tsx) · [유산소 측정 입력](../../src/features/workout-online/CardioActualFields.tsx) |
-| 6-E 전환과 긴급 회귀 | `e60039b`에서 조회 준비·취소와 출처 복원, 일정·기록의 로딩과 정보 공개, 고정 운동 액션·모달 재시도를 정리했다. 홈 상세 행의 인라인 링크 치수, 터치 중 메뉴 항목 보존, 루틴 수정 즉시 진입을 지킨다. [목적지 조회](../../src/app/usePageRead.ts) · [홈 스타일](../../src/features/home/Home.module.css) · [루틴 작업 영역](../../src/features/workout-online/WorkoutWorkspace.tsx) |
+| 6-E 전환과 긴급 회귀 | `e60039b`에서 조회 준비·취소와 출처 복원, 일정·기록의 로딩과 정보 공개, 고정 운동 액션·모달 재시도를 정리했다. 터치 중 메뉴 항목 보존과 루틴 수정 즉시 진입을 유지한다. 홈 상세 행의 현행 표시는 [8단계](#front18-stage8)를 따른다. [목적지 조회](../../src/app/usePageRead.ts) · [홈 스타일](../../src/features/home/Home.module.css) · [루틴 작업 영역](../../src/features/workout-online/WorkoutWorkspace.tsx) |
 | 6-E 저장과 이전 반복 | 로컬 저장·전송·확정과 안전한 재확인을 구분한다. 종료의 고정 원본·편집권·ACK를 보호한다. 이전 반복은 최신 종료 기록부터 순서대로 확인하고, 동일 계정·세대·기록 버전의 조회를 공유한다. [저장 상태](../../src/features/workout-local/save-status.ts) · [이전 운동 조회](../../src/features/workout-online/workout-history.ts) · [종료·복구 회귀](../../tests/workout-finish.test.mjs) |
 | 6-4 공통 헤더와 복귀 | `45ce324`에서 설정과 검색의 상세 및 조회 대체 화면을 공통 헤더에 연결했다. 검색 상세에서 실제 진입 버튼과 스크롤로 복귀한다. [카탈로그](../../src/features/workout-online/PublicCatalog.tsx) · [검색 상세](../../src/components/SearchExerciseDetails.tsx) · [브라우저 회귀](../../tests/preset-review.test.mjs) |
 
@@ -1199,7 +1199,27 @@ Frontend HEAD `5543e7f`의 작업 트리에서 기존 통계 화면과 기간 �
 
 **7-E 최종 검증(2026-11-28).** TypeScript·ESLint·운영 빌드·Mac 4174 앱 및 Preview 빌드를 통과했다. 전체 자동 회귀 1회는 752건 중 745건 통과, 7건 실패였다. 미설정 중량의 원판 안내를 수정하고, 이전 정책을 기대하던 테스트와 화면 정착 대기를 보정했다. 관련 테스트 파일 9개는 각각의 마지막 실행에서 통과했으며, 마지막 Chrome 집중 실행은 14/14였다. 기존 4174 앱·LAN·Preview와 Spring 상태 응답을 확인했다. 실제 Spring 쓰기는 7-C 격리 검증을 근거로 삼았다.
 
-**후속 검증.** 일반 하위 제목 20px과 승인된 공통 헤더 22px의 통합 여부 및 글자·아이콘·세부 간격은 8단계 범위다. 실제 iPhone Safari·설치형 PWA 및 전체 통합은 9단계에서 검증한다.
+**후속 검증.** 하위 제목과 글자·아이콘·세부 간격의 최종 상태는 [8단계](#front18-stage8)에 기록한다. 실제 iPhone Safari·설치형 PWA 및 전체 통합은 9단계에서 검증한다.
+
+<a id="front18-stage8"></a>
+
+#### FRONT 18 · 8단계 타이포그래피·SVG·레이아웃 마감
+
+8-A는 7-E `6fe66fb`의 운영 진입점과 320·374·375·393·1280px 대표 화면·상태 40개를 조사했다. 인라인 SVG 90개는 당시 소스 선언 위치 기준이며 같은 SVG 경로가 여러 곳에 선언된 경우도 포함한다. 9개 도형군의 중복 정의 10개를 공유했다. `4622f0f`는 8-C·8-D와 후속 조정을 함께 담는다. [최종 결정](../product/Overload_UI_Decision_Log_v0.9.md#front18-stage8-decision) · [시각 규격·원본 관리](../product/Overload_UI_Visual_Theme_Spec_v0.9.md#front18-stage8-visual)
+
+| 적용 | 현재 구현과 검수 경계 |
+| --- | --- |
+| 타이포그래피·주간 일정 | 일반 버튼 600과 주요 시작·푸터 700, 제목·계층 토큰을 적용했다. 마지막 피드백의 홈 날짜 UI 복구와 하단 상세 변경, 루틴의 숫자 없는 6px 점·회색 오늘 점·선택 해제·홈 상세 표면, 읽기 전용 통계 날짜를 반영했다. [화면 조작](../product/ui-ux.md#front18-stage8-ux) |
+| 운동 진행·완료 | 세트 입력과 읽기 슬롯, 16px·61px 일반 행, 맨몸 추가 중량과 체크 위치를 보호한다. 같은 종목 완료 후 진행 중량 정렬을 재적용했다. 준비운동·모든 종목 완료의 중복 문구는 제거했고 공통 kg 휠로 중량을 조절한다. [자동 스크롤](../../src/features/workout-flow/revealWorkingWeight.ts) · [세트·중량](../../src/features/workout-flow/WeightFocus.tsx) |
+| 진행 시간과 공식 저장 | 같은 기기의 IndexedDB 운동 사본에 완료 대기와 재개 시계를 보존한다. 진행 화면에서 계산하며 FINISH 스냅샷에는 포함하지 않는다. 실제 종료 시각과 고정 요청·재시도·ACK를 보호한다. 공식 기록의 완료 대기 제외는 서버 개선 범위다. [로컬 시계](../../src/features/workout-local/session-clock.ts) · [공식 기록 요약](../../src/features/workout-online/record-summary.ts) |
+| 기록·통계 | 좁은 유산소 목표 시간, 요약 3×1, 공통 캡슐, 큰 수 축약·원본 상세가 적용됐다. 주간 총 운동 시간은 API 집계 부재로 미확인이다. 운동 현황은 선택 기간 Overview의 양수 완료 세트·관련 분류·근육, 성장 검색은 승인 검색 API의 실제 수행일이 있는 결과만 사용한다. 이력의 전체 운동명 검색과 선택 항목의 일별 교차 집계는 연결 대기다. 신규 선택은 전체 카탈로그를 사용한다. [Overview](../../../overload-server/docs/api/statistics.md) · [성장 검색](../../../overload-server/docs/api/approved-weight-growth.md) |
+| 아이콘 | 운영 사용 규격 86개, 검수 전용 `upload` 변형 포함 카탈로그 87개다. 8-A는 선언 위치를, 카탈로그는 그룹과 의미 기반 이름의 조합을 센다. 표시 크기는 호출부에서 용도에 맞게 지정할 수 있다. 사용자 제공 PNG와 채움 SVG 경로를 보존한다. [공통 Icon](../../src/components/icons/Icon.tsx) · [카탈로그](../../tests/fixtures/review/IconCatalogPreview.tsx) · [발 원본](../../src/assets/record-footprints.png) |
+
+**8-D와 후속 검수 근거.** Chrome 다섯 화면 폭에서 날짜·목표 시간·토글·3×1·맨몸 정렬을 확인했다. 격리 Spring의 START 201·SNAPSHOT 200·FINISH 200, 완료 대기 중 새로고침, 유산소 추가 시 재개와 재정지, 실제 종료 시각 기반 공식 요약을 확인하고 검수 세션을 정리했다. 8-E의 추가 검증은 같은 쓰기를 반복할 근거가 없으면 자동 회귀와 읽기 검수로 수행한다.
+
+**8-E 빌드와 공통 UI 검증 (2026-11-29).** TypeScript·ESLint·운영 빌드와 4174 검수 앱 및 공통 UI Preview 빌드를 통과했다. 기존 4174에서 최신 앱·Preview의 HTML과 번들을 확인했다. 격리 Chrome에서 루틴 날짜 선택 시 회색 오늘 점, 하단 상세와 같은 날짜 재선택 시 필터 해제를 확인했다. 4174 카탈로그에서 아홉 그룹의 SVG 87개를 확인했다. 실제 iPhone Safari와 설치형 PWA 통합 검증은 9단계 범위다.
+
+**8-E 전체 자동 회귀.** `node --test --test-concurrency=2 tests/*.test.mjs` 최종 재실행은 **761/761건 통과**다. 운동 요약의 중량 검토 버튼은 개별 650 지정 대신 공통 600을 적용했다. 회귀 검사의 문구·시간·수치와 단위·검색 기대값은 확정 규격에 맞췄고 조작, 색상·정렬, 데이터·복원 검사는 보존했다. 스크린샷과 계측 파일을 생성하는 옵션을 끄고 격리 Chrome 검사를 포함해 실행했다.
 
 <a id="front18-backend-followup"></a>
 
@@ -1213,7 +1233,10 @@ FRONT UI·UX 확정 이후 일괄 검토한다. 아래 항목은 기존 서버 �
 | 맨몸 추가 중량 | 신규 FRONT 완료의 명시 0/양수와 기존 서버의 선택 필드·NULL·집계 계약을 정합화한다. 과거 미기록 NULL과 명시 0을 구별하며 기존 기록을 0으로 채우지 않는다. [현행 맨몸 계약](../../../overload-server/docs/api/bodyweight-additional-load.md) |
 | 유산소 미지원 항목과 ST-19 | 실제 페이스·경사·저항·케이던스 및 센서 출처, Preview 전용 목표 심박·케이던스 범위의 서버 계약은 보류한다. 실제 거리 null일 때 시간만 비교하는 ST-19의 날짜별 달성·요약·통계·G4 등 양쪽 미완료 구현은 기존 추적을 유지한다. [ST-19](../../../overload-server/docs/product/Overload_Statistics_and_Tracking_Design_Specification_v1.4.md#31-하루-종목-완료-기준) · [정책별 구현 점검](#2026-11-16-확정-정책별-구현-점검) |
 | 유산소 마지막 배치 삭제 | 6-5에서 유산소 배치 두 개 중 마지막 배치를 삭제하는 루틴 수정 요청은 Spring 직접 호출에서도 `409 WRITE_CONFLICT`였다. PostgreSQL 고유 제약 `routine_cardio_active_position`과 삭제 표시·임시 순번 변경을 같은 flush에서 처리하는 순서가 충돌한다. 기존 FRONT 오류 처리와 API를 유지하며 서버 삭제·재정렬 순서를 후속 검토한다. [루틴 수정과 배치 순번](../../../overload-server/src/main/java/com/overload/overload_server/routine/RoutineService.java#L144) · [제약](../../../overload-server/src/main/resources/db/migration/V11__create_routine_management.sql#L65) |
-| 기존 후속 과제 | 10.25.6의 조합별 최신 서버 메모·blur 저장·LWW 및 정책별 점검에 남은 NEW 강제, 오늘만 대체의 원슬롯·공식 평가, 서버 과거 검색과 독립 집계를 계속 추적한다. [정책별 구현 점검](#2026-11-16-확정-정책별-구현-점검) |
+| 실제 사용에 맞는 값의 상한 | 루틴 중량 최대 `99999999999999.999999 kg`과 세트/반복 최대 `2147483647`, 계정 휴식 최대 `2147483647초`는 저장 계약의 한계다. 현재 FRONT는 정상 시간 한 줄과 매우 긴 수치 안전 표시를 적용한다. 신규 입력의 현실적 상한·오류 표현과 과거 최대값 표시/정정은 각각 검토한다. [루틴](../../../overload-server/docs/api/routine-management.md) · [세션](../../../overload-server/docs/api/workout-sessions.md) · [휴식](../../../overload-server/docs/api/workout-online-write.md) |
+| 전체 운동 시간과 공식 요약 | 진행 화면은 같은 기기의 완료 대기를 제외한다. 실제 FINISH 시각은 바꾸지 않으며 공식 기록은 `endedAt − startedAt`이다. 대기를 공식 운동 시간에서도 제외하려면 서버가 수용할 활동·대기 근거와 요약/통계/복원 일관성을 확정해야 한다. 주간 총 운동 시간 집계도 아직 연결되지 않았다. [로컬 시계](../../src/features/workout-local/session-clock.ts) · [기록 시간](../../src/features/workout-online/record-summary.ts) |
+| 기록 기반 후보와 통계 성능 | 전체 이력에서 실제로 수행한 운동·조합을 안정적으로 검색할 수 있는 인덱스/페이지 계약과 선택 운동·분류·근육의 날짜별 조회가 필요하다. 현재 기간 Overview와 서버 성장 검색으로 제공하는 범위는 위 8단계 항목에 한정된다. 일부 이력만 보고 없음으로 판단하거나 검색어마다 전체 상세를 새로 읽지 않는다. 기존 계정·세대·시점 및 캐시 범위를 보존한다. [운영 통계 계약과 미연결](../../../overload-server/docs/api/statistics.md) · [이력](../../src/features/history/RecordFeed.tsx) |
+| 기구 세팅 메모와 기존 후속 과제 | 진행 운동의 기구 세팅 메모는 로컬에 보존한다. 10.25.6의 정확한 조합별 최신 서버 메모 연결, blur 저장과 LWW는 보류다. 정책별 점검에 남은 NEW 강제, 오늘만 대체의 원슬롯·공식 평가, 서버 과거 검색과 독립 집계를 계속 추적한다. [로컬 메모](../../src/features/workout-local/controller.ts#L194) · [정책별 구현 점검](#2026-11-16-확정-정책별-구현-점검) |
 
 #### 현황 갱신
 

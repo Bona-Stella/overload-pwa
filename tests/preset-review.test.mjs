@@ -139,7 +139,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await wait(async () => !(await send('Page.navigate', { url: origin + '/routine-preview?tab=home' })).errorText, 'page navigation')
     await wait(() => evaluate('!!document.querySelector("[data-session-id]")'), 'home')
     assert.match(await body(), /상체 푸시 \+ 러닝/)
-    assert.match(await body(), /11\.11 · 상체 푸시 \+ 러닝 · 오늘 예정/)
+    assert.match(await body(), /11\.11 수요일 - PUSH - 상체 푸시 \+ 러닝/)
     assert.equal(await evaluate('document.querySelectorAll("[aria-label=홈] [data-session-id]").length'), 3)
     assert.deepEqual(await evaluate('[...document.querySelectorAll("[aria-label=홈] [data-session-id] [data-state]")].map(e=>e.dataset.state)'), ['complete','missed','unknown'])
     const activeTab = label => wait(() => evaluate(`document.querySelector('${nav} [aria-current=page]')?.ariaLabel === ${JSON.stringify(label)}`), 'active tab ' + label)
@@ -298,7 +298,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await navTo('홈'); await activeTab('홈'); await verifyWidth(320)
     const tuesday = () => evaluate('document.querySelector("button[aria-label^=\'2026-11-10\']").click()')
     await tuesday()
-    assert.match(await body(), /11\.10 · 휴식/)
+    assert.match(await body(), /11\.10 화요일 - 휴식/)
     assert.doesNotMatch(await body(), /당일 배정 확인 불가|확인할 수 있는 계획 없음/)
 
     await navTo('루틴')
@@ -326,13 +326,16 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await click('세로 일정 보기', 'ariaLabel')
     for (const width of [320, 393]) {
       await verifyWidth(width)
-      assert.ok(await evaluate(`[...document.querySelectorAll('[aria-label="세로 주간 일정"] button')].filter(row => row.children.length === 3).every(row => {
-        const [day, info, counts] = row.children
-        const title = info.querySelector('strong')
-        return info.firstElementChild.getBoundingClientRect().left - day.getBoundingClientRect().right >= 10 &&
-          title.getBoundingClientRect().right <= counts.getBoundingClientRect().left &&
-          getComputedStyle(title).textOverflow === 'ellipsis' && row.getBoundingClientRect().height === 44
-      })`))
+      assert.ok(await evaluate(`(() => {
+        const rows = [...document.querySelectorAll('[aria-label="세로 주간 일정"] button')].filter(row => row.children.length === 4)
+        return rows.length > 0 && rows.every(row => {
+          const [marker, day, info, counts] = row.children
+          const gap = parseFloat(getComputedStyle(row).columnGap)
+          return marker.textContent === '' && Math.abs(info.getBoundingClientRect().left - day.getBoundingClientRect().right - gap) < .5 &&
+            info.getBoundingClientRect().right <= counts.getBoundingClientRect().left &&
+            getComputedStyle(info).textOverflow === 'ellipsis' && row.getBoundingClientRect().height === 44
+        })
+      })()`))
     }
     await click('가로 일정 보기', 'ariaLabel')
     assert.equal(await evaluate('document.querySelectorAll("[aria-label=\'가로 주간 일정\'] button").length'), 7)
@@ -537,7 +540,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     await navTo('홈'); await click('오늘만 다른 루틴 선택', 'textContent', chooserTrigger)
     assert.equal(await activeFilter(), '02')
     await tuesday()
-    assert.match(await body(), /11\.10 · 휴식/)
+    assert.match(await body(), /11\.10 화요일 - 휴식/)
     await click('오늘의 원래 일정으로')
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /하체 집중/)
     await navTo('루틴'); await click('자동 순환', 'ariaLabel')
@@ -696,7 +699,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.match(await evaluate('document.querySelector("[aria-label=홈] h2").innerText'), /시연용 새 루틴/)
     await navTo('루틴'); await click(createdName + ' 상세', 'ariaLabel')
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="주간 일정 배정"] li')].map(row=>[...row.children].map(cell=>cell.textContent))`),[['01','기본 훈련 주간','수']])
-    assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="유산소 1"] dd')].map(cell=>cell.textContent.trim())`),['00:20:00','2.5 km','8.0 km/h','0 %'])
+    assert.deepEqual(await evaluate(`[...document.querySelectorAll('[aria-label="루틴 상세"] [aria-label="유산소 1"] dd')].map(cell=>cell.textContent.trim())`),['20:00','2.5 km','8.0 km/h','0 %'])
     await click('편집'); await set('input[placeholder="나의 루틴"]', '시연용 수정 루틴')
     await set(fault, 'network'); await click('변경 사항 저장')
     await wait(async () => (await body()).includes('연결이 끊겼습니다'), 'routine save failure')
@@ -730,7 +733,7 @@ test('isolated HOME, ROUTINE, SETTINGS, CATALOG and WORKOUT previews support the
     assert.doesNotMatch(await body(), /루틴 확인 필요/)
     await navTo('홈')
     await evaluate('document.querySelector("button[aria-label^=\'2026-11-09\']").click()')
-    assert.match(await body(), /11\.09 · 상체 푸시 \+ 러닝 · 완료/)
+    assert.match(await body(), /11\.09 월요일 - PUSH - 상체 푸시 \+ 러닝/)
     assert.match(await evaluate('document.querySelector("[aria-label=홈] [data-session-id]").innerText'), /상체 푸시/)
     await set(scenario, 'active'); await click('일반 보기')
     assert.equal(await evaluate('[...document.querySelectorAll("button")].find(b=>b.textContent==="운동 시작").disabled'), true)

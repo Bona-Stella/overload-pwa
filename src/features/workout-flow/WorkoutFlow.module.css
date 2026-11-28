@@ -270,7 +270,7 @@
 :global([data-approval-direction='increase']) {color:var(--status-done);}
 :global([data-approval-direction='decrease']) {color:var(--status-warning);}
 
-.summary .reviewButton {width:72px;height:36px;min-height:36px;padding:4px 6px;font-size:12px;font-weight:650;line-height:1.2;white-space:nowrap;border:1px solid var(--border-subtle);}
+.summary .reviewButton {width:72px;height:36px;min-height:36px;padding:4px 6px;font-size:12px;line-height:1.2;white-space:nowrap;border:1px solid var(--border-subtle);}
 
 .summary .summaryHeader {gap:8px;}
 .summaryHeader .headingRow h1 {margin:0;}

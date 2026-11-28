@@ -15,7 +15,8 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { createReviewFixtureServer } from './fixtures/review-server.mjs'
 import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 
-test('record wireframe quality: navigation, complete isolated preview, responsive screenshot pairs', {timeout:180000}, async()=>{
+test('record wireframe quality: navigation, complete isolated preview, responsive layout', {timeout:180000}, async()=>{
+ const captureEvidence=process.env.OVERLOAD_CAPTURE_RECORD_QUALITY === '1'
  const root=resolve('logs/record-quality');await mkdir(root,{recursive:true})
  const profile=await mkdtemp(resolve(root,'browser-'))
  const vite=await createReviewFixtureServer()
@@ -52,9 +53,11 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
     assert.deepEqual(await evaluate('[...document.querySelectorAll("main button")].filter(e=>{const r=e.getBoundingClientRect();return !["운동 부위 필터","근육 분류 필터"].includes(e.closest("[role=group]")?.getAttribute("aria-label"))&&r.width>0&&(r.left<-.5||r.right>innerWidth+.5)}).map(e=>e.textContent)'),[],'button bounds at '+w+' '+name)
   }
   await evaluate('window.scrollTo(0,0)')
-  const shotHeight=await evaluate((name.startsWith('fifth-search')||name==='fifth-growth-selection')?'innerHeight':'document.querySelector("dialog[open]")?innerHeight:Math.min(5500,document.documentElement.scrollHeight)')
-  const shot=await send('Page.captureScreenshot',{format:'jpeg',quality:85,captureBeyondViewport:true,clip:{x:0,y:0,width:w,height:shotHeight,scale:1}})
-  await writeFile(resolve(root,name+'-'+side+'-'+w+'.jpg'),Buffer.from(shot.data,'base64'))
+  if(captureEvidence){
+   const shotHeight=await evaluate((name.startsWith('fifth-search')||name==='fifth-growth-selection')?'innerHeight':'document.querySelector("dialog[open]")?innerHeight:Math.min(5500,document.documentElement.scrollHeight)')
+   const shot=await send('Page.captureScreenshot',{format:'jpeg',quality:85,captureBeyondViewport:true,clip:{x:0,y:0,width:w,height:shotHeight,scale:1}})
+   await writeFile(resolve(root,name+'-'+side+'-'+w+'.jpg'),Buffer.from(shot.data,'base64'))
+  }
   const cards=await evaluate('[...document.querySelectorAll(".record-screen .app-card,#viewer .wire,.muscle-analysis .app-card")].filter(e=>e.getClientRects().length).map(e=>({text:e.textContent.slice(0,45),width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}))')
   report.screens.push({name,side,width:w,cards,overflow:await evaluate('document.documentElement.scrollWidth>screen.width')})
  }
@@ -405,7 +408,7 @@ test('record wireframe quality: navigation, complete isolated preview, responsiv
   assert.equal(await evaluate('document.querySelectorAll("#viewer input[data-review-check]:checked").length'),historyRows)
   assert.equal(await evaluate('document.querySelectorAll("#viewer button[data-act^=review-weight-]:not(:disabled)").length'),historyRows)
   for(const w of [320,375,390,430])await capture('approval-edit','html',w)
-  report.apiRequests=api;report.errors=errors;await writeFile(resolve(root,'verification.json'),JSON.stringify(report,null,2))
+  report.apiRequests=api;report.errors=errors;if(captureEvidence)await writeFile(resolve(root,'verification.json'),JSON.stringify(report,null,2))
  }catch(error){if(socket?.readyState===1)console.error((await body()).slice(0,1800));throw error}
  finally{
   if(socket?.readyState===1){try{await send('Browser.close')}catch{/* exited */}}

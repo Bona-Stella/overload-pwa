@@ -91,7 +91,8 @@ export async function verifyWorkoutProcess({ origin, send, evaluate, wait, click
   await wait(async () => await timerHeading() === '휴식 시간', 'rest')
   const completed = await evaluate(`(() => {
     const row = document.querySelector('${frame} [role="row"][data-done]');
-    return [getComputedStyle(row.querySelector('div[role="cell"] strong')).color, getComputedStyle(row.querySelector('b')).color,
+    const value = row.querySelector('[data-set-input] [data-wheel-readout] [data-numeric-value="confirmed"]');
+    return [getComputedStyle(value).color, getComputedStyle(row.querySelector('b')).color,
       getComputedStyle(row.querySelector('button span')).color, getComputedStyle(row).getPropertyValue('--text-primary').trim(),
       getComputedStyle(row).getPropertyValue('--status-done').trim()];
   })()`)

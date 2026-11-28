@@ -104,7 +104,7 @@ window.openRecordBoundary = tab => {
 window.openGraphBoundary = () => {
   window.openRecordBoundary('history')
   const scope = window.boundaryState.scope
-  const exercise = { standardExerciseId: EXERCISE, name: '벤치프레스', lastPerformedAt: null }
+  const exercise = { standardExerciseId: EXERCISE, name: '벤치프레스', lastPerformedAt: '2026-11-01T09:00:00Z' }
   const placement = { routineId: ROUTINE, placementId: PLACEMENT, routineName: routine.name, deleted: false }
   window.graphBoundary = {
     schedule: { activeId: ROUTINE, presets: [

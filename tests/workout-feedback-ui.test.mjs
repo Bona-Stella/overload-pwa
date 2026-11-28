@@ -9,6 +9,7 @@ import react from '@vitejs/plugin-react'
 import { auditMessageDialog } from './fixtures/review/modal-audit.mjs'
 
 test('workout feedback keeps manual rest silent through queued writes and fits actual title widths', { timeout: 120000 }, async t => {
+  const captureEvidence = process.env.OVERLOAD_CAPTURE_WORKOUT_FEEDBACK === '1'
   const directory = resolve('logs/workout-feedback-ui'), profile = resolve(directory, 'profile-' + crypto.randomUUID())
   await mkdir(profile, { recursive: true })
   const server = await createServer({ configFile: false, envDir: false, cacheDir: resolve(directory,'vite-cache'), plugins: [{ name: 'workout-feedback-only', enforce: 'pre',
@@ -60,14 +61,14 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         await tap(before.plus)
         await wait(()=>evaluate('window.feedback.c.getSnapshot().pending === 1'))
         const during = await inspect()
-        assert.equal(during.value,'9 회')
+        assert.equal(during.value,'9회')
         assert.equal(during.focused,'1세트 이번 반복 횟수 증가')
         const geometry = ({ value, focused, ...layout }) => layout
         assert.deepEqual(geometry(during),geometry(before))
         await evaluate('window.feedback.release()')
         await wait(()=>evaluate('!window.feedback.c.getSnapshot().unsavedDrafts'))
         await tap(before.minus)
-        await wait(async()=> (await inspect()).value === '8 회')
+        await wait(async()=> (await inspect()).value === '8회')
         assert.deepEqual(geometry(await inspect()),geometry(before))
       } finally {
         await evaluate('window.feedback.release();window.scrollTo(0,0)')
@@ -100,7 +101,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
           assert.equal(await status(),'failed')
           assert.deepEqual(await layout(),baseline,`draft error at ${width}px`)
           assert.equal(await evaluate(`!!document.querySelector('dialog[open], [data-workout-frame] aside, [data-tone="error"]')`),false)
-          assert.equal(await evaluate(`document.querySelector('[data-swipe-current] button[aria-label="1세트 이번 반복 횟수"]').textContent`),'9 회')
+          assert.equal(await evaluate(`document.querySelector('[data-swipe-current] button[aria-label="1세트 이번 반복 횟수"]').textContent`),'9회')
           await evaluate(`document.querySelector('button[aria-label="저장 실패 · 데이터 상태 확인"]').click()`)
           await wait(()=>evaluate(`!!document.querySelector('dialog[open] [role=alert]')`))
           assert.equal(await evaluate(`document.querySelectorAll('dialog[open] [role=alert]').length`),1)
@@ -472,9 +473,9 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       assert.equal(await plate(),null)
     }
     assert.equal(await evaluate('window.feedback.plateSetup("PLATE","17.5")'),true)
-    assert.equal(await plate(),'8.75 kg','preparation uses the applied weight and ignores the different approved weight')
+    assert.equal(await plate(),'8.75kg','preparation uses the applied weight and ignores the different approved weight')
     await click('기구 세팅 메모')
-    assert.equal(await plate(),'8.75 kg','closing the memo does not hide the prepared plate weight')
+    assert.equal(await plate(),'8.75kg','closing the memo does not hide the prepared plate weight')
     await click('기구 세팅 메모')
     // Start through the real completion UI to unlock audio, then shorten only the fixture clock.
     await click('운동 시작하기')
@@ -757,7 +758,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
         }
         fonts.push({width,name,font:box.font,available:box.width,rendered:box.textWidth})
       }
-      await writeFile(resolve(directory,'workout-feedback-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'))
+      if(captureEvidence)await writeFile(resolve(directory,'workout-feedback-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'))
     }
 
     await wait(()=>evaluate('!!window.progressProbe'))
@@ -807,7 +808,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       assert.equal(values.overflow,false);assert.deepEqual(values.counts,[3,1,0])
       assert.deepEqual(values.headings.map(h=>h.number),['01','02','03'])
       assert(values.headings.every(h=>h.fits&&h.goalBelow&&/세트 · 총 .*kg/.test(h.totals)))
-      await writeFile(resolve(directory,'integrated-record-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
+      if(captureEvidence)await writeFile(resolve(directory,'integrated-record-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
     }
     assert.deepEqual(await evaluate('(()=>{const root=document.querySelector(".app-shell"),font=getComputedStyle(root).fontFamily;return [...root.querySelectorAll("*")].filter(e=>e.getClientRects().length&&[...e.childNodes].some(n=>n.nodeType===3&&n.textContent.trim())&&getComputedStyle(e).fontFamily!==font).map(e=>e.textContent.slice(0,60))})()'),[],'WEIGHT/CARDIO summary fonts')
     assert.match(await evaluate('document.querySelector(\'[aria-label="유산소 수행"] [aria-label="실제 완료 기록"] [data-modified]\').textContent'),/00:20:30$/,'summary displays the correction badge and rounded seconds')
@@ -890,7 +891,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
     await evaluate('[...document.querySelectorAll("button")].filter(b=>b.textContent==="정정").at(-1).click()')
     await openDuration()
     await wait(()=>evaluate('!!document.querySelector(".duration-wheels")'));assert.deepEqual(await duration(),['0 시간','20 분','30.125 초'])
-    for(const width of [320,375,390,430]){await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true});assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);await writeFile(resolve(directory,'duration-wheel-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'))}
+    for(const width of [320,375,390,430]){await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true});assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);if(captureEvidence)await writeFile(resolve(directory,'duration-wheel-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png'})).data,'base64'))}
     await setDuration('실제 활동 분','21')
     await click('시간 적용')
     await click('변경 저장')
@@ -987,7 +988,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
      await send('Emulation.setDeviceMetricsOverride',{width,height:852,deviceScaleFactor:1,mobile:true})
      const growth=await evaluate('(()=>{const row=document.querySelector(".growth-event:has([data-direction=decrease])"),badge=row.querySelector("[data-direction=decrease]");return{overflow:document.documentElement.scrollWidth>innerWidth,color:getComputedStyle(badge).color,text:row.textContent,delta:badge.textContent,date:row.querySelector("time").textContent,latest:document.querySelector(".growth-latest").textContent,interactive:row.matches("button")}})()')
      assert.equal(growth.overflow,false);assert.equal(growth.color,'rgb(214, 188, 101)');assert.match(growth.text,/55\.000001kg → 52\.500001kg/);assert.equal(growth.delta,'−2.5kg');assert.match(growth.date,/^2026\.11\.11 · \d{2}시$/);assert.equal(growth.latest,'52.500001kg');assert.equal(growth.interactive,false)
-     await writeFile(resolve(directory,'growth-library-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
+     if(captureEvidence)await writeFile(resolve(directory,'growth-library-'+width+'.png'),Buffer.from((await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'))
     }
     await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))')
     assert.equal(await evaluate('document.querySelector(".search-disclosure").getAttribute("aria-expanded")'),'false','screenshots preserve search state')
@@ -1797,7 +1798,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await send('Input.insertText',{text:'8'})
       await click('확인','dialog[open]')
       await wait(()=>evaluate(`!document.querySelector('dialog[open]') && !document.querySelector('[data-tone="warning"]')`))
-      assert.equal(await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').textContent`),'8 회')
+      assert.equal(await evaluate(`document.querySelector('button[aria-label="1세트 이번 반복 횟수"]').textContent`),'8회')
       await evaluate('window.restSafety.controller.retryDrafts()')
       await wait(async()=>(await status())==='saved')
       await evaluate('window.restSafety.failNextWrite()')
@@ -1820,7 +1821,7 @@ test('workout feedback keeps manual rest silent through queued writes and fits a
       await wait(()=>evaluate('window.restSafety.local().snapshot.performedSets.length===2'))
       assert.equal(await evaluate('window.restSafety.local().snapshot.performedSets[1].reps'),1)
     })
-    await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts,memoRunway,restSafetyGeometry},null,2))
+    if(captureEvidence)await writeFile(resolve(directory,'feedback-checks.json'),JSON.stringify({manualSilent:true,queuedManualSilent:true,automaticTones:true,fonts,memoRunway,restSafetyGeometry},null,2))
   } finally {
     if (ws?.readyState === 1) { try { await send('Browser.close') } catch { /* closed */ } }
     if (browser?.exitCode === null) await new Promise(r => browser.once('exit', r))

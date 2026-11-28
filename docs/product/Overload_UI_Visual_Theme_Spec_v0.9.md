@@ -2,7 +2,7 @@
 
 **기준일:** 2026-11-07 · v0.9 T02-B 개정 (기존 컬러/토큰 유지)
 
-FRONT 18의 현행 시각 규격은 [18절 메시지](#front18-feedback-visual), [19절 카드](#front18-card-visual), [20절 버튼·입력](#front18-controls-visual), [21절 선택·기능형 모달](#front18-selection-dialog-visual)을 적용한다.
+FRONT 18의 현행 시각 규격은 [18절 메시지](#front18-feedback-visual), [19절 카드](#front18-card-visual), [20절 버튼·입력](#front18-controls-visual), [21절 선택·기능형 모달](#front18-selection-dialog-visual), [22절 타이포그래피·아이콘·레이아웃](#front18-stage8-visual)을 적용한다.
 
 **범위:** React PWA 실제 구현용 시각 스타일 명세. [HTML 베이스라인](Overload_UI_Baseline_Wireframe_v0.9.html)은 밝은 무채색의 저충실도 자료다. 간단한 색조·아이콘과 기본 화면·상태 전환으로 현재 UI의 정보 위계를 검토한다.
 
@@ -118,7 +118,7 @@ linear-gradient(142deg, #28312C 0%, #222B26 50%, #1A231E 100%);
 
 | 표현 | 실제 PWA 재사용 기준 |
 |---|---|
-| 가로 일정 | 홈 `Home.module.css` 타일·선택 강조 재사용, 루틴 화면 날짜 생략. 작은 셀은 태그/실제 이름 말줄임 |
+| 가로 일정 | 7열 타일과 말줄임을 사용한다. 홈·루틴·통계의 최신 날짜 표시는 [22절](#front18-stage8-visual)을 따른다. |
 | 세로 일정 | 요일당 한 줄. 왼쪽 요일 / 중앙 태그·한 줄 이름 / 오른쪽 종목 수. `AchievementIcon` 공식 원형 아령·running.png18px, 수치 gap5px. 수행률로 바꾸지 않음 |
 | 배정 카드 | `--hero-gradient`의 블루그레이 배경, 미배정은 `--surface-card`. 양쪽 모두 `--border-subtle` 사용하며 선택형 블루 테두리 금지 |
 | 메타·요약 | 번호·태그/WEIGHT/CARDIO는 `--accent`, 요일은 `--text-muted`, 이름/계획은 `--text-primary`. 루틴명 말줄임과 전체 이름 접근성 유지 |
@@ -267,7 +267,7 @@ Onyx 셸의 탭바는 `#08090C` 바탕과 1px `#282C34` 테두리, 안쪽 4px �
 
 [버튼](../../src/components/common-ui/ActionButton.module.css) · [모달](../../src/components/common-ui/ActionDialog.module.css) · [스켈레톤·피드백](../../src/components/common-ui/ContentFeedback.module.css) · [검색](../../src/features/statistics/Activity.module.css) · [루틴 태그](../../src/components/common-ui/RoutineTagList.module.css) · [헤더](../../src/components/RecordSubpageHeader.module.css) · [OVERLOAD 투명 PNG](../../src/assets/OVERLOAD_white_transparent_4x.png) · [토스트](../../src/components/common-ui/Toast.module.css)
 
-서비스 화면에서는 기존 홈 왼쪽의 로고 규격을 유지한다. 기록 메인 `운동 분석` 오른쪽에 같은 PNG를 `width: clamp(108px, 32vw, 132px)`, `height: auto`로 수직 중앙 정렬한다. `운동 분석`과 `최근 운동` 제목은 20px·600·줄 높이 1.25·`--text-primary`다. 서비스 하위 페이지의 공통 헤더는 뒤로가기와 제목을 표시하며 화면에 따른 기존 액션을 유지한다. [홈 CSS](../../src/features/home/Home.module.css) · [기록 메인 CSS](../../src/features/statistics/RecordMain.module.css)
+서비스 화면에서는 기존 홈 왼쪽의 로고 규격을 유지한다. 기록 메인 `운동 분석` 오른쪽에 같은 PNG를 `width: clamp(108px, 32vw, 132px)`, `height: auto`로 수직 중앙 정렬한다. `운동 분석`과 `최근 운동` 제목은 18px·600·줄 높이 1.3·`--text-primary`다. 서비스 하위 페이지의 공통 헤더는 뒤로가기와 제목을 표시하며 화면에 따른 기존 액션을 유지한다. [홈 CSS](../../src/features/home/Home.module.css) · [기록 메인 CSS](../../src/features/statistics/RecordMain.module.css)
 
 ## 17. 홈 연결형 드롭다운 시각 규칙 — 2026-11-23
 
@@ -372,7 +372,7 @@ Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warni
 ### 설정·날짜 선택·일정
 
 - 설정 목록과 설치 카드 외곽은 5px, 상하 패딩 0px·좌우 12px이다. 행의 64px 조작 영역과 인접 행의 1px 구분선을 적용하며 유산소 거리 자동 추정과 운동 종목 보기 사이도 구분한다. 데이터 카드와 접이식 `앱 설치 · 오프라인 준비` 카드의 8px 간격은 상위 그룹에서 관리한다. [설정 메인 CSS](../../src/features/settings/SettingsMain.module.css) · [설치 카드 표면](../../src/pwa/PwaStatus.module.css)
-- 홈 날짜 선택을 기준으로 선택·오늘 표시의 2px 강조 테두리와 999px 캡슐 윤곽을 공유한다. 홈에서 다른 날짜를 포인터로 선택했거나 키보드로 강조 중이면 오늘 윤곽은 1px 중립 테두리다. 비선택 상태, 클릭 영역과 키보드 포커스 정책을 유지한다. 루틴의 가로와 세로 날짜 보기에 같은 선택 윤곽을 사용한다. [홈 날짜 CSS](../../src/features/home/Home.module.css) · [루틴 날짜 적용](../../src/features/workout-online/RoutineCards.tsx)
+- 홈·루틴·운동 현황의 날짜 배치는 [22절](#front18-stage8-visual)을 따른다. 각 화면의 선택·오늘 강조·클릭 영역과 키보드 포커스는 해당 조작에 맞게 사용한다. [홈 날짜 CSS](../../src/features/home/Home.module.css) · [루틴 날짜 적용](../../src/features/workout-online/RoutineCards.tsx)
 - 일정 번호와 추가 버튼은 44×44px 원형이다. 번호와 추가 아이콘을 중심에 두고 기존 선택·비선택 색을 사용한다. 프리셋 보기와 활성 전환, 순환 설정 및 빈 프리셋 생성은 각각 기존 동작을 따른다. [프리셋 CSS](../../src/features/workout-online/Presets.module.css) · [일정 화면 동작](ui-ux.md#32-루틴-목록--routinelist)
 
 <a id="front18-controls-visual"></a>
@@ -421,12 +421,42 @@ Onyx 기본값은 `--accent: #6C93C6`, `--status-done: #74A68A`, `--status-warni
 | 용도 | 시각·조작 규격 |
 | --- | --- |
 | 앱 셸·페이지 시작 | 최대 너비 520px, 좌우 20px. 374px 이하에서는 좌우 14px. Safe Area에 더하는 상단 시작 간격은 메인 탭 18px, 일반 하위 화면 20px이다. 여기의 시작 간격은 제목 글자 크기와 별개다. |
-| 공통 하위 헤더 | 22px 제목, 44×44px 뒤로가기, 24px 아이콘. 기존 적용 화면과 설정·검색에서 여는 운동 종목 상세에 사용한다. 일반 하위 제목 20px과의 통합은 후속 검토 범위다. |
+| 공통 하위 헤더 | 22px 제목, 44×44px 뒤로가기, 24px 아이콘. 기존 적용 화면과 설정·검색에서 여는 운동 종목 상세에 사용한다. 최종 하위 제목 타이포그래피는 [22절](#front18-stage8-visual)을 적용한다. |
 | 드롭다운 | 일반 값 48px, 소형 필터 36px, 홈 콘텐츠 56px. 검색 범위는 검색 행의 전용 규격을 적용한다. 옵션은 기본 48px, 두 줄 설명은 60px을 기준으로 내용이 길면 확장한다. |
 | 펼친 선택 목록 | 최대 340px 및 실제 화면에서 쓸 수 있는 높이 중 작은 값. 내부 스크롤과 기존 상·하 열림, 연결형 모서리·chevron을 유지한다. 홈 항목은 카드 외곽을 추가하지 않는다. 업무 메뉴는 독립 표면, 기존 선택·위험·포커스 색을 사용한다. |
 | 검색 닫기·지우기 | 기존 44px 검색 입력과 원형 42×42px 버튼을 함께 사용한다. |
-| 홈 일정 상세·기록 링크 | 기록 링크가 있는 대표 행 44px, 링크 최소 높이 24px 및 상하 2px·좌우 4px. 일반 캡슐 버튼 규격은 이 인라인 링크에 적용하지 않는다. 긴 내용은 필요한 만큼 줄바꿈한다. |
+| 주간 일정 상세 | 홈과 루틴은 같은 표면·여백·줄 높이를 사용한다. 긴 루틴명은 필요한 만큼 줄바꿈한다. 루틴의 필터 해제 버튼은 조작 영역을 별도로 확보한다. [상세 조작](ui-ux.md#front18-stage8-ux) |
 | 기능형 모달 | 기본 모서리 5px, 패딩 16px, 제목 아래 16px, 액션 간격 8px 및 높이 48px. 내부 일반 카드는 [19절](#front18-card-visual)의 외곽을 적용한다. 숫자 휠·정정 원본·승인 재확인·전체 화면 타이머의 전용 표면은 각 규격을 따른다. 메시지형의 340px 상한은 [18절](#front18-feedback-visual)에 속한다. |
 | 유산소 실제 완료 정보 | 활동 시간·거리·평균 속도·평균 심박수의 2×2 배치. 명시적으로 정정된 값은 기존 노란색 표시만 사용하고 원본 시각·측정 단위와 표시 정밀도를 보존한다. |
 
 [선택과 뒤로가기 동작](ui-ux.md#front18-common-ux) · [공통 헤더 CSS](../../src/components/RecordSubpageHeader.module.css) · [선택 CSS](../../src/components/common-ui/ConnectedDropdown.module.css) · [모달 CSS](../../src/components/Dialog.module.css)
+
+<a id="front18-stage8-visual"></a>
+
+## 22. FRONT 18 타이포그래피·아이콘·레이아웃
+
+### 글자와 숫자의 위계
+
+| 역할 | 시각 규격 |
+| --- | --- |
+| 메인 제목과 공통 하위 제목 | 18px와 22px, 굵기 600, 줄 높이 1.3. 제목 자리가 있는 화면에 적용하고 기존 워드마크와 홈 이번 주 일정의 14px 제목은 화면 규격을 유지한다. |
+| 일반 카드 제목·본문·보조 | 공통 카드 제목 16px·500·1.3. 본문은 역할에 따른 기존 크기와 기본 1.5 토큰을, 보조에는 1.4 토큰 및 기존 메타데이터 11px을 사용한다. 날짜·기록·입력의 전용 줄 높이는 현행 규격을 따른다. |
+| 일반 액션·입력 | 일반 텍스트 버튼 600, 홈 운동 시작과 운동 고정 푸터의 주요 액션 700. 소형 인라인·아이콘 등 기존 용도 치수는 유지한다. 기본 수치 입력 16px·500 및 줄 높이 1.2를 사용한다. |
+| 핵심 수치와 시간 | 주요 중량 30px·600, 큰 유산소 타이머 24px·600, 줄 높이 1.2. 상단 고정 3열의 시간은 기존 반응형 폭에 맞춘다. 수치·단위는 기준선과 중앙을 맞춘다. |
+
+시스템 스택은 `-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif`이며 `font-synthesis: none`과 `tabular-nums`를 유지한다. `--text-primary`, `--text-muted`, Onyx/디로딩의 `--accent`와 상태 토큰은 [테마](../../src/app/theme.module.css)를 기준으로 한다. 7단계 초기값·확정·변경·NULL의 색은 [값 상태](#front18-value-state-visual)를 따른다.
+
+숫자 휠은 52px 선택 행, 기기 폭과 자릿수에 따른 선택 수치 및 단위 위계를 사용한다. 휴식 디머의 대형 수치는 56~84px, 웨이트 운동명은 기본 반응형 크기에서 실제 글자 폭을 측정해 16px까지 맞춘다. 그 폭에서도 넘치면 한 줄 말줄임과 원래 이름을 유지한다. 페이지와 카드·입력·Dialog 외곽을 바꿔 조판을 맞추지 않는다. [루트 글자](../../src/index.css) · [수치 휠](../../src/components/NumberWheel.module.css) · [운동명 맞춤](../../src/features/workout-flow/useFitWorkoutTitle.ts)
+
+### 안정적인 정보 슬롯
+
+- 일반 웨이트 세트는 입력과 읽기 상태에서 동일한 16px 수치와 61px 행을 유지한다. 체크와 단위 슬롯은 제자리이며 다음 행의 문서상 위치를 보존한다. 한·두 자리와 소수의 숫자·단위 묶음은 열 중앙에 맞춘다. 맨몸은 추가 부하와 설명까지 포함한 기존 확장 행에서 완료 전후 높이·정렬을 유지한다. [세트 표](../../src/features/workout-flow/WeightFocus.tsx) · [고정 수치 슬롯](../../src/components/NumberWheel.module.css)
+- 루틴 상세의 좁은 유산소 목표 4열은 `18:08`, `59:59`, `1:00:00`을 한 줄로 표시한다. 상단 고정 타이머와 유산소 타이머는 정상 길이를 한 줄로 표시하고 계약상 긴 문자열은 영역 안에서 줄바꿈한다. 시간 표시 반올림과 저장 원본·정밀도는 독립적이다. [시간 표현](../../src/components/duration.ts) · [루틴 상세](../../src/features/workout-online/RoutineDetail.module.css)
+- 날짜의 가로 배치는 7열, 3px 간격, 78px 높이를 기준으로 한다. 홈의 원래 파란 오늘 캡슐과 다른 날짜 강조 중의 1px 중립 오늘 윤곽을 유지한다. 루틴은 14px 숫자 자리에 6px 채움점을 사용하며 기본 오늘 윤곽은 2px 회색, 선택 윤곽은 2px 강조색이다. 다른 날짜가 선택되면 오늘의 점은 보조 회색을 사용한다. 선택 요일 글자에만 강조색을 적용한다. 홈·루틴 날짜 상세는 패딩 10px, 5px 모서리, 입력 표면, 11px·1.5를 사용한다. 읽기 전용 운동 현황은 날짜 숫자와 오늘 강조 캡슐을 유지한다. 키보드 포커스와 포인터 선택을 구별한다. [홈 날짜 CSS](../../src/features/home/Home.module.css) · [공통 날짜 CSS](../../src/components/common-ui/WeekDateGrid.module.css)
+- 기록 주간 요약은 같은 폭의 3열·세로 구분선·중앙 정렬을 쓴다. 시계·아령·발은 16px다. 주간/월간, 세트/총중량 및 성장 기간은 2개 또는 4개가 같은 캡슐과 48px 터치 높이를 공유한다. [정보 열](../../src/components/common-ui/MetricColumns.module.css) · [분할 선택](../../src/components/common-ui/SegmentedControl.module.css)
+
+### 중앙 SVG 관리
+
+- 도형은 [기능별 정의](../../src/components/icons/)에 의미 기반 이름으로 등록하고 [Icon](../../src/components/icons/Icon.tsx)에서 렌더링한다. 수정 전에 동일 path를 확인한다. 기본 폭 20px, 정사각 viewBox 기본 24, 선 굵기 기본 2이며 원본에 맞는 크기·viewBox·선 끝·모서리·채움을 정의에서 지정한다. 호출부의 크기 변경은 버튼의 외곽과 터치 영역을 유지한다. 색은 `currentColor`와 역할 토큰으로 전달한다.
+- 장식 SVG는 접근성 트리에서 숨긴다. 의미는 부모 버튼·상태의 레이블을 우선 사용하고, 독립적인 의미가 필요한 SVG에는 레이블을 준다. 새로고침·저장처럼 동작으로 전달하는 상태의 모션 감소 표현을 유지한다. 차트, 워드마크, 운동 분류 원본 6종, 디로딩 달, 복합 그래픽 및 기존 문자 표기는 역할별 예외다.
+- [발 원본 PNG](../../src/assets/record-footprints.png)의 채움 윤곽을 [기록 아이콘 정의](../../src/components/icons/record.tsx)에 경로로 보존한다. 마스크 로딩에 의존하지 않으며 같은 경로가 운영과 Preview에 사용된다. 카탈로그 소스는 [IconCatalogPreview](../../tests/fixtures/review/IconCatalogPreview.tsx)이고 4174의 `/common-ui-preview.html?icons=1`에서 테마·색·표시 크기를 확인한다. 실제 집계 기준은 [Frontend 8단계 현황](../engineering/frontend.md#front18-stage8)을 따른다.
