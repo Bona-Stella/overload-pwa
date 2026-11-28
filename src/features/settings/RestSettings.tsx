@@ -1,3 +1,5 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { restBandDelete, restBandInfo } from '../../components/icons/settings.tsx'
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { CSSProperties } from 'react'
@@ -144,16 +146,12 @@ export function RestSettings({ settings, onBack, onRequest, onExitGuard, busy = 
                 if (invalid === field) { setInvalid(null); feedback.clear() }
               }} />
             <Button shape="control" variant="quiet" className={styles.remove} aria-label={`${label} 구간 삭제`} aria-describedby={hint} disabled>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 7h14M9 7V4h6v3m2 0-1 13H8L7 7m3 4v5m4-5v5" />
-              </svg>
+              <Icon icon={restBandDelete} />
             </Button>
           </div>)}
           <Button className={styles.add} aria-describedby={hint} disabled>+ 구간 추가</Button>
           <p className={styles.hint} id={hint}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" /><path d="M12 11v5m0-8h.01" />
-            </svg>
+            <Icon icon={restBandInfo} />
             <span>반복 구간은 1회부터 이어지며, 마지막은 ‘이상’으로 표시돼요. 각 구간의 휴식 시간만 수정할 수 있어요.</span>
           </p>
         </> : <RestTimeColumns entries={bands.map(({ field, label }) => ({ label, seconds: settings[field] }))} />}

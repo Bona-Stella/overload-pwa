@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { networkInterfaces } from 'node:os'
+import { isIPv4 } from 'node:net'
 import { resolve } from 'node:path'
 import { build, preview } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -26,13 +27,12 @@ assert.equal(evidence.sourceRun, state.sourceRun)
 assert.deepEqual(evidence.actualMigrations, Array.from({ length: 37 }, (_, i) => String(i + 1)))
 await verifyV22Ownership(evidence)
 
-const prepareOtpRequest = await restoredReviewOtp(evidence)
 const lanIp = process.env.OVERLOAD_REVIEW_LAN_IP
+assert(lanIp && isIPv4(lanIp) && /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(lanIp))
+// Build-only can refresh an existing gateway while its configured Wi-Fi address is offline.
 const lan = Object.values(networkInterfaces()).flat().find(item => item?.family === 'IPv4' && item.address === lanIp && !item.internal)
-assert(lan && /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(lan.address))
-const origins = [`http://127.0.0.1:${port}`, `http://localhost:${port}`, `http://${lan.address}:${port}`]
-const access = reviewAccess(evidence, origins, lan, prepareOtpRequest)
-const media = approvedCatalogMedia('4181', origins, lan)
+assert(action === 'build-only' || lan)
+const origins = [`http://127.0.0.1:${port}`, `http://localhost:${port}`, `http://${lanIp}:${port}`]
 const outDir = resolve(directory, 'frontend')
 
 if (action !== 'serve-built') await build({
@@ -62,6 +62,8 @@ if (action !== 'serve-built') await build({
 })
 
 if (action !== 'build-only') {
+  const access = reviewAccess(evidence, origins, lan, await restoredReviewOtp(evidence))
+  const media = approvedCatalogMedia('4181', origins, lan)
   const server = await preview({
     envDir: false,
     mode: 'ui-review',

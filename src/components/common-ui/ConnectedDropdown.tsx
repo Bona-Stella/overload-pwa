@@ -1,3 +1,6 @@
+import { iconGlyphs } from '../icons/glyphs.ts'
+import { Icon } from '../icons/Icon.tsx'
+import { dropdownChevron } from '../icons/controls.tsx'
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { placeDropdown } from './dropdown-placement.ts'
@@ -109,9 +112,9 @@ export function ConnectedDropdown({ label, value, selectedValue, variant = 'cont
       aria-haspopup={role} aria-pressed={selected} aria-controls={open ? id : undefined} data-dropdown-label={label} data-value={selectedValue} data-selected={selected}
       onClick={() => { if (open) close(); else show() }}>
       <span className={styles.surface}>
-        {variant === 'action' ? <span aria-hidden="true">{value ?? '⋯'}</span> : <>
+        {variant === 'action' ? <span aria-hidden="true">{value ?? iconGlyphs.more}</span> : <>
           <span className={styles.value} title={value}>{value ?? label}</span>
-          <svg className={styles.indicator} viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
+          <Icon icon={dropdownChevron} className={styles.indicator} />
         </>}
       </span>
     </button>

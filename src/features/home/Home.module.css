@@ -28,7 +28,8 @@
 .planSection li > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .planSection li > strong { font-size: 12px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .emptyPlan { font-size: 11px; color: var(--text-muted); line-height: 1.55; margin: 11px 0; }
-.home :is(.start, .resume) { min-height: 48px; padding: 8px 16px; font-size: 15px; border: 1.5px solid var(--accent); font-weight: 700; }
+.home :is(.start, .resume) { min-height: 48px; padding: 8px 16px; font-size: 15px; border: 1.5px solid var(--accent); font-weight: var(--type-button-weight); }
+.home .start { font-weight: var(--type-primary-action-weight); }
 .home .resume { width: 100%; margin-top: 14px; }
 .chooserContent { display: flex; flex-direction: column; min-block-size: 0; }
 .chooserContent > p { margin: 8px 10px; font-size: 12px; color: var(--text-muted); }
@@ -38,7 +39,8 @@
 .choiceTitle + small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .choiceTitle > span { flex: none; }
 .home .week { display: block; }
-.sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+.sectionTitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.home .week .sectionTitle { gap: 9px; }
 .sectionTitle > span { font-size: 11px; color: var(--text-muted); }
 .sectionTitle > button { font-size: 11px; }
 .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-top: var(--card-gap); }
@@ -78,8 +80,7 @@
 .days:is(:has(> button[data-pointer-highlight]), :not([data-pointer-input]):has(> button:not([aria-current='date']):focus-visible)) button[aria-current='date'] > :is(strong, span) {
   color: var(--text-muted);
 }
-.dayDetail { margin: var(--card-gap-dense) 0 0; padding: 10px; border-radius: var(--radius-card-compact); background: var(--surface-input); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
-.home button.dayLink { display: inline; min-height: 24px; padding: 2px 4px; font-size: 11px; color: var(--accent); }
+.dayDetail { composes: detail from '../../components/common-ui/WeekDateGrid.module.css'; margin: var(--card-gap-dense) 0 0; }
 .recent { display: grid; gap: var(--card-gap-dense); }
 .home .record { display:grid; grid-template-columns:minmax(0,1fr) max-content 18px 6px; align-items:center; gap: 6px; width: 100%; min-width: 0; min-height: 44px; text-align: left; padding: var(--card-padding-compact); background: var(--surface-card); color: var(--text-primary); border: var(--border-card); border-radius: var(--radius-card-compact); }
 .recordDate { grid-column:1 / -1; font-size:11px; white-space:nowrap; color: var(--accent); }
@@ -90,7 +91,8 @@
 .recordState { flex:0 0 18px; width:18px; height:18px; font-size:16px; color:var(--text-muted); }
 .recordState[data-state='complete'] { color: var(--status-done); }
 .recordState[data-state='incomplete'] { color: var(--status-missed); }
-.home .sectionTitle h2 { font-size: 14px; }
+.home .week .sectionTitle h2 { font-size: 14px; }
+.home .recent .sectionTitle h2 { font-size: var(--type-heading-size); font-weight: var(--type-heading-weight); line-height: var(--type-heading-line); }
 .tools { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
 .tools > button { font-size: 11px; padding: 6px; min-height: 32px; }
 .tools > span { font-size: 10px; }

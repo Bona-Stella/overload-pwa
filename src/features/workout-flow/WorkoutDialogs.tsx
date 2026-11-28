@@ -42,7 +42,7 @@ export function WeightChange({ weight, progressionAllowed, onSave, onClose, prog
     <div className="stack">
       {saveIssue}
       <p>현재 승인 중량 {weight.approved === null ? '없음' : weight.approved + ' kg'}</p>
-      <KgWheel label="변경 중량" required valueState={confirmed ? 'confirmed' : 'initial'}
+      <KgWheel label="변경 중량" required prominent valueState={confirmed ? 'confirmed' : 'initial'}
         step={weight.loadType === 'PLATE' || weight.loadType === 'STACK' ? 2.5 : 1} value={value}
         onChange={next => { setValue(next); setConfirmed(true); setIssue('') }} />
       <fieldset className="stack online-fieldset">

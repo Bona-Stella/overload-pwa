@@ -1,3 +1,6 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
+import { Icon } from '../../components/icons/Icon.tsx'
+import { approvalChevron } from '../../components/icons/workout.tsx'
 import {compactRecordTime} from '../../components/record-time.ts'
 import {recordDuration,recordKg} from '../workout-online/record-summary.ts'
 import type {RecordSummary} from '../workout-online/record-summary.ts'
@@ -36,7 +39,7 @@ const formatKg = (value: bigint) => {
 
 export function WeightApprovalHistory({ children }: { children: ReactNode }) {
   return <Card className={detailStyles.review}>
-    <details open><summary><h2 className={detailStyles.reviewTitle}>중량 변경 승인 이력</h2><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+    <details open><summary><h2 className={detailStyles.reviewTitle}>중량 변경 승인 이력</h2><Icon icon={approvalChevron} /></summary>
       <div>{children}</div>
     </details>
   </Card>
@@ -75,7 +78,7 @@ export function WorkoutSummary({ routine, date, recordTime, elapsed, deload, wei
         <div className={detailStyles.summaryTop}>
           <p className={`${styles.recordDate} ${detailStyles.date}`}>{dateLabel}</p>
           {detail && recordFacts && <span className={detailStyles.status} data-state={recordFacts.status.kind}><b aria-hidden="true">{recordFacts.status.mark}</b>{recordFacts.status.kind==='complete'?'전체 완료':recordFacts.status.kind==='partial'?'부분 완료':recordFacts.status.label}</span>}
-          {!detail && whole && <span className={detailStyles.status} data-state="complete"><b aria-hidden="true">✓</b>전체 루틴 완료</span>}
+          {!detail && whole && <span className={detailStyles.status} data-state="complete"><b aria-hidden="true">{iconGlyphs.check}</b>전체 루틴 완료</span>}
           {recordMenu && <div className={detailStyles.menu}>{recordMenu}</div>}
         </div>
         <h2 className={`${styles.recordRoutine} ${detailStyles.routine}`} title={routine}>{routine}</h2>

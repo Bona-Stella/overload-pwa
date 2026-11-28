@@ -1,4 +1,4 @@
-.button { min-height: 44px; padding: 11px 16px; transition: background-color .15s, border-color .15s; }
+.button { font-weight: var(--type-button-weight); line-height: var(--type-control-line); min-height: 44px; padding: 11px 16px; transition: background-color .15s, border-color .15s; }
 .button[data-modal-neutral] { border-width: 2px; padding: 10px 15px; }
 .button[data-action-shape='pill']:where(:not([data-button-size])) {
   min-height: 48px;
@@ -58,7 +58,7 @@
 .heading h1 { font-size: 24px; margin: 4px 0 0; }
 .eyebrow { font-size: 10px; color: var(--text-muted); letter-spacing: .14em; }
 .field { display: grid; gap: 4px; color: var(--text-muted); }
-.input.input { min-height: 48px; height: auto; min-width: 0; padding: 8px 12px; border-radius: 5px; font-size: 16px; text-align: start; }
+.input.input { min-height: 48px; height: auto; min-width: 0; padding: 8px 12px; border-radius: 5px; font-size: var(--type-input-size); font-weight: var(--type-control-weight); line-height: var(--type-control-line); text-align: start; }
 textarea.input.input { height: auto; }
 .metadata { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }
 .help { position: relative; display: inline-flex; flex: 0 0 auto; }

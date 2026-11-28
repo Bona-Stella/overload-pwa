@@ -6,7 +6,7 @@
 .cardTitle { display: grid; gap: var(--card-gap-title); }
 .cardHeading h2, .cardHeading p, .readRow dd, .page > p { margin: 0; }
 .times { margin-block: 12px 0; }
-.cardHeading h2 { font-size: 15px; }
+.cardHeading h2 { font-size: var(--type-card-title-size); font-weight: var(--type-control-weight); line-height: var(--type-heading-line); }
 .cardHeading p, .labels, .hint { color: var(--text-muted); font-size: 12px; }
 .editRow + .editRow { border-top: 1px solid var(--border-subtle); }
 .readRow { justify-content: center; min-height: 52px; font-size: 12px; text-align: center; }

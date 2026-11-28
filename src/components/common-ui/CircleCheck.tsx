@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../icons/glyphs.ts'
 import { Button } from '../ui.tsx'
 import styles from './CircleCheck.module.css'
 
@@ -8,7 +9,7 @@ export function CircleCheck({ label, checked, disabled, onClick, onCheckedChange
   onClick?: () => void
   onCheckedChange?: (checked: boolean) => void
 }) {
-  const mark = <span className={styles.mark} aria-hidden="true">{checked ? '✓' : ''}</span>
+  const mark = <span className={styles.mark} aria-hidden="true">{checked ? iconGlyphs.check : ''}</span>
 
   if (onCheckedChange) {
     return <label className={`${styles.control} ${styles.choice}`} data-done={checked || undefined}>

@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 
 import { suggestedApproval } from '../workout-online/approval-weight.ts'
 import type { LoadType } from '../workout-online/types.ts'
@@ -55,6 +56,8 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
   }, [actions])
   const timeBar = clockRef ?? ownClock
   const currentExercise = swipe?.currentId
+  const elapsedText = formatDuration(elapsed)
+  const timerText = timer === undefined ? timerLabel : formatDuration(timer)
   useLayoutEffect(() => {
     const frame = root.current, dock = timeBar.current, actionBar = footer.current
     if (!frame || !dock) return
@@ -83,22 +86,23 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
     data-weight-focus={!!navigation || undefined} data-cardio-focus={cardioFocus || undefined}>
     <div className={styles.clockDock} ref={timeBar} data-keyboard-header>
       <div className={`${styles.clock} ${styles.restFlash}`} data-flash={flash || undefined} aria-label="운동 시간">
-        <div><small>전체 운동 시간</small><strong>{formatDuration(elapsed)}</strong></div>
+        <div><small>전체 운동 시간</small><strong data-long-time={elapsedText.length > 8 || undefined}>{elapsedText}</strong></div>
         <div className={styles.clockProgress}>{dataStatus ? <WorkoutSaveLabel status={dataStatus} syncing={syncing} onDetails={onDataStatusDetails} /> : <small>운동 진행</small>}
           <strong>{position ? `현재 ${position} / ${count}종목` : '준비운동'}</strong>
           <div className={styles.segments} aria-hidden="true">{Array.from({ length: count }, (_, i) =>
             <span key={i} data-filled={i < position || undefined} />)}</div>
         </div>
-        <div><small>{timerHeading}</small><strong data-time={timer !== undefined || undefined}>{timer === undefined ? timerLabel : formatDuration(timer)}</strong></div>
+        <div><small>{timerHeading}</small><strong data-time={timer !== undefined || undefined}
+          data-long-time={timer !== undefined && timerText.length > 8 || undefined}>{timerText}</strong></div>
       </div>
     </div>
     <header className={styles.topNav} data-exercise-navigation={!!navigation || undefined} aria-label={navigation ? '운동 종목 이동' : undefined}>
       {navigation ? <Button shape="control" variant="quiet" aria-label={navigation.previous ? '이전 운동 · ' + navigation.previous.name : '이전 운동'} disabled={!navigation.previous} onClick={() => navigation.previous && navigation.onGo(navigation.previous.id)}>
-        ‹ 이전<small title={navigation.previous?.name}>{navigation.previous?.name ?? '첫 종목'}</small>
-      </Button> : <Button shape="control" variant="quiet" onClick={onHome}>‹ {backLabel}</Button>}
+        {iconGlyphs.previous} 이전<small title={navigation.previous?.name}>{navigation.previous?.name ?? '첫 종목'}</small>
+      </Button> : <Button shape="control" variant="quiet" onClick={onHome}>{iconGlyphs.previous} {backLabel}</Button>}
       <strong title={routine} aria-label={routine}>{deload && <small className={styles.eyebrow}>DELOAD</small>}<span>{routine}</span></strong>
       {navigation ? <Button shape="control" variant="quiet" aria-label={navigation.next ? '다음 운동 · ' + navigation.next.name : '다음 운동'} disabled={!navigation.next} onClick={() => navigation.next && navigation.onGo(navigation.next.id)}>
-        다음 ›<small title={navigation.next?.name}>{navigation.next?.name ?? '마지막 종목'}</small>
+        다음 {iconGlyphs.next}<small title={navigation.next?.name}>{navigation.next?.name ?? '마지막 종목'}</small>
       </Button> : <Button shape="control" variant="quiet" onClick={onEnd}>종료</Button>}
     </header>
     {reviewNote}
@@ -129,11 +133,10 @@ export function WorkoutFrame({ routine, deload, elapsed, position, count, timerH
 export function Warmup({ next }: { next: { name: string; target: string; equipment?: string } }) {
   return <>
     <Card hero className={styles.warmup}>
-      <span aria-hidden="true" className={styles.warmupMark}>↗</span>
+      <span aria-hidden="true" className={styles.warmupMark}>{iconGlyphs.diagonal}</span>
       <p className={styles.eyebrow}>준비운동</p>
       <h1>몸을 깨우는 시간.</h1>
       <p className="muted">스트레칭과 워밍업으로<br />자유롭게 준비하세요.</p>
-      <small>세트 기록 없음</small>
     </Card>
     <Card>
       <p className={styles.eyebrow}>다음 운동</p><strong>{next.name}</strong>
@@ -147,9 +150,9 @@ export function ExerciseNavigation({ previous, next, onList, onGo, preview = fal
   previous?: Step; next?: Step; onList: () => void; onGo: (id: string) => void; preview?: boolean
 }) {
   return <nav className={styles.exerciseNav} aria-label="운동 종목 이동">
-    <Button shape="control" variant="quiet" disabled={!previous} onClick={preview ? undefined : () => previous && onGo(previous.id)}>‹ 이전{previous && <small title={previous.name}>{previous.name}</small>}</Button>
+    <Button shape="control" variant="quiet" disabled={!previous} onClick={preview ? undefined : () => previous && onGo(previous.id)}>{iconGlyphs.previous} 이전{previous && <small title={previous.name}>{previous.name}</small>}</Button>
     <Button compact onClick={preview ? undefined : onList}>종목 목록</Button>
-    <Button shape="control" variant="quiet" disabled={!next} onClick={preview ? undefined : () => next && onGo(next.id)}>다음 ›{next && <small title={next.name}>{next.name}</small>}</Button>
+    <Button shape="control" variant="quiet" disabled={!next} onClick={preview ? undefined : () => next && onGo(next.id)}>다음 {iconGlyphs.next}{next && <small title={next.name}>{next.name}</small>}</Button>
   </nav>
 }
 
@@ -160,7 +163,7 @@ export function WeightRecommendation({ direction, kg, provisional = false, loadT
     title={provisional ? '현재 종목의 서버 저장 수행 기준 잠정 안내입니다. 공식 평가는 운동 종료 후 전체 계획을 기준으로 다시 계산합니다.' : undefined}>
     <div><b>{direction === 'increase' ? '증량 가능' : '감량 검토'}{kg && ` · ${kg}kg → ${suggestedApproval(kg, direction, loadType)}kg`}</b>
     <small>{source === 'benchmark' ? '이전 유효 기준 기록' : direction === 'increase' ? '중량 증가를 고려해 보세요.' : '중량 감소를 고려해 보세요.'}</small></div>
-    {onDismiss && <Button shape="control" variant="quiet" aria-label="중량 안내 숨기기" onClick={onDismiss}>×</Button>}
+    {onDismiss && <Button shape="control" variant="quiet" aria-label="중량 안내 숨기기" onClick={onDismiss}>{iconGlyphs.close}</Button>}
   </div>
 }
 
@@ -179,7 +182,7 @@ export function RestActions({ remaining, flash, onEnd, onExtend, disabled }: {
     </div>}
     <div className={styles.actions}>
       <Button shape="control" variant="primary" pending={disabled} onClick={onEnd}>휴식 종료</Button>
-      <Button shape="control" pending={disabled} onClick={onExtend}>+30초</Button>
+      <Button shape="control" pending={disabled} onClick={onExtend}>{iconGlyphs.add}30초</Button>
     </div>
   </>
 }

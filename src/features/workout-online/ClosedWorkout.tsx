@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { ActionMenu } from '../../components/common-ui/ActionMenu.tsx'
 import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import {SavedWeightReview} from './SavedWeightReview.tsx'
@@ -209,7 +210,7 @@ export function ClosedWorkoutView({ state, controller, accountReady = true, manu
     {!server.deletedAt && finishCopies.map((copy, i) => <Button key={i} pending={state.busy} disabled={!canConfirmFinish(copy)}
       onClick={() => void controller.confirmFinish(copy)}>종료 결과 확인</Button>)}
   </>
-  const menu = <ActionMenu label="운동 기록 메뉴" className={styles.recordMenu} icon="⋮" actions={[
+  const menu = <ActionMenu label="운동 기록 메뉴" className={styles.recordMenu} icon={iconGlyphs.moreVertical} actions={[
     { label: '기록 정정', disabled, run: () => setMode('correction') },
     { label: '누락 수행 복구', disabled: disabled || !state.copies.length || !state.changes, run: () => setDialog('recovery') },
     { label: '평가 변경 이력', run: () => setMode('history') },
@@ -222,7 +223,7 @@ export function ClosedWorkoutView({ state, controller, accountReady = true, manu
     {dialog && typeof dialog==='object' && <CorrectionDialog target={dialog} server={server} controller={controller} busy={state.busy} manufacturers={manufacturers} definitions={definitions} onClose={()=>setDialog(null)}/>}
   </>
   if(!summary && mode) return <section className={styles.summary + ' closed-workout'}>
-    <Button variant="quiet" onClick={()=>setMode(null)}>‹ 운동 기록 상세</Button>
+    <Button variant="quiet" onClick={()=>setMode(null)}>{iconGlyphs.previous} 운동 기록 상세</Button>
     <Card hero><p>{server.workoutDate} · {new Date(server.workoutDate+'T12:00:00Z').toLocaleDateString('ko-KR',{weekday:'long',timeZone:'UTC'})}</p>
       <h1>{server.deletedAt?'삭제된 운동':server.status==='FINISHED'?'운동 완료':'운동 자동 마감'}</h1><p>{server.initialPlan.routineName}</p>
       <dl className={styles.recordTimes}><div><dt>운동 시작</dt><dd>{clockTime(server.startedAt,server.startedTimeZone)}</dd></div><div><dt>운동 종료</dt><dd>{clockTime(server.endedAt,server.startedTimeZone)}</dd></div></dl>

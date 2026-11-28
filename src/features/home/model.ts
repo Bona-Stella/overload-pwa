@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { cardioGoalValues } from '../workout-online/cardio-draft.ts'
 import type { PlannedDay } from '../statistics/api.ts'
 import type { CardioPlan, Routine } from '../workout-online/types.ts'
@@ -22,16 +23,16 @@ export function dayStatus(day: PlannedDay | undefined, date: string, today: stri
   if (date > today) return { mark: weekday, label: '예정', kind: 'planned' }
   if (day.status === 'REST') return { mark: '–', label: '휴식', kind: 'rest' }
   if (day.reviewStatus === 'PENDING' || day.reviewStatus === 'PENDING_ACTIVE' || day.reviewStatus === 'UNKNOWN') return { mark:weekday, label:day.reviewStatus === 'PENDING_ACTIVE' ? '운동 진행 중 · 판정 대기' : '검사 대기', kind:'unknown' }
-  if (day.effectiveDay === '1') return { mark: '✓', label: '완료', kind: 'complete' }
+  if (day.effectiveDay === '1') return { mark: iconGlyphs.check, label: '완료', kind: 'complete' }
   if (day.effectiveDay === null) {
     const scheduledToday = date === today && day.plan && day.reviewStatus === null && day.selectedSessionId === null
     return { mark: weekday, label: scheduledToday ? '오늘 예정' : '달성 확인 불가', kind: 'unknown' }
   }
-  if (partial === 'met') return { mark: '△', label: '부분 달성', kind: 'partial' }
-  if (partial === 'below') return { mark: '×', label: '부분 달성 기준 미달', kind: 'missed' }
+  if (partial === 'met') return { mark: iconGlyphs.partial, label: '부분 달성', kind: 'partial' }
+  if (partial === 'below') return { mark: iconGlyphs.close, label: '부분 달성 기준 미달', kind: 'missed' }
   if (day.reviewStatus !== 'PERFORMED' && day.reviewStatus !== 'MISSED') return { mark: weekday, label: date === today ? '오늘 예정' : '검사 대기', kind: 'unknown' }
   // Zero achievement can include performed sets below the plan's threshold.
-  return day.reviewStatus === 'MISSED' && !day.selectedSessionId ? { mark: '×', label: '미수행', kind: 'missed' } : { mark: weekday, label: '부분 달성 근거 확인 필요', kind: 'unknown' }
+  return day.reviewStatus === 'MISSED' && !day.selectedSessionId ? { mark: iconGlyphs.close, label: '미수행', kind: 'missed' } : { mark: weekday, label: '부분 달성 근거 확인 필요', kind: 'unknown' }
 }
 export const activeWeights = (routine: Routine) => routine.weightPlacements.filter(p => p.deletedAt === null)
 export const activeCardio = (routine: Routine) => routine.cardioPlacements.filter(p => p.deletedAt === null)

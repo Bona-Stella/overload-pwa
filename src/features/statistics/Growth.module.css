@@ -13,14 +13,6 @@
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .heading > span { flex: none; color: var(--text-muted); font-size: 11px; }
 
-.periods { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-page); }
-.periods::before { content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 20px) / 4); border-radius: 7px; background: var(--accent); pointer-events: none; transform: translateX(calc((100% + 4px) * var(--period-index, 0))); transition: transform 200ms ease; }
-.periods[data-period='3'] { --period-index: 1; }
-.periods[data-period='6'] { --period-index: 2; }
-.periods[data-period='all'] { --period-index: 3; }
-.screen .periods > button { position: relative; min-width: 0; min-height: 40px; padding: 8px 2px; border: 0; border-radius: 7px; background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 600; }
-.screen .periods > button[aria-pressed='true'] { color: var(--on-accent); }
-@media (prefers-reduced-motion: reduce) { .periods::before { transition: none; } }
 
 .placement { min-width: 0; font-size: 12px; }
 .placement select { min-width: 0; width: 100%; }
@@ -62,5 +54,4 @@
 @media (max-width: 350px) {
   .screen :global(.app-card) { padding-inline: 10px; }
   .screen h2 { font-size: 16px; }
-  .screen .periods > button { font-size: 12px; }
 }

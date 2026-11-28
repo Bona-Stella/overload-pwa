@@ -1,3 +1,6 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
+import { Icon } from '../../components/icons/Icon.tsx'
+import { recordIcons } from '../../components/icons/record.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
 import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
@@ -37,6 +40,8 @@ import './statistics.css'
 import { GrowthPanel } from './GrowthPanel.tsx'
 import styles from './RecordMain.module.css'
 import activityStyles from './Activity.module.css'
+import { WeekDateGrid } from '../../components/common-ui/WeekDateGrid.tsx'
+import segmented from '../../components/common-ui/SegmentedControl.module.css'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { SearchScopePopover } from './SearchScopePopover.tsx'
 import { boundaryError, readAccessDenied } from '../home/load.ts'
@@ -44,17 +49,8 @@ import { StatisticsWait } from './StatisticsWait.tsx'
 
 const wordmark = new URL('../../assets/OVERLOAD_white_transparent_4x.png', import.meta.url).href
 
-function RecordMainIcon({ kind }: { kind: 'activity' | 'growth' | 'plan' | 'muscles' | 'clock' | 'weight' | 'footprints' }) {
-  const paths = {
-    activity: 'M4 20V10h3v10M10.5 20V4h3v16M17 20V7h3v13',
-    growth: 'M3 18l6-6 4 3 8-10M15 5h6v6',
-    plan: 'M8 3v4m8-4v4M4 10h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M8 14h1m6 0h1m-8 3h1m6 0h1',
-    muscles: 'M12 3v9h9M9 3.5a9 9 0 1 0 11.5 11.5M15 3.5a9 9 0 0 1 5.5 5.5H15z',
-    clock: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0',
-    weight: 'M3 9v6m3-8v10m0-5h12m0-5v10m3-8v6',
-    footprints: 'M7 2c-2 0-3 2-3 5v3c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2V7c0-3-1-5-3-5ZM5 15h4v3a2 2 0 0 1-4 0ZM17 5c-2 0-3 2-3 5v3c0 1.1.9 2 2 2h2c1.1 0 2-.9 2-2v-3c0-3-1-5-3-5ZM15 18h4v3a2 2 0 0 1-4 0Z',
-  }
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[kind]} /></svg>
+function RecordMainIcon({ kind }: { kind: keyof typeof recordIcons }) {
+  return <Icon icon={recordIcons[kind]} />
 }
 
 const cardioKinds: Record<string, string> = { TREADMILL: '러닝머신', BIKE: '자전거', OUTDOOR: '야외 운동', STAIRS: '계단', OTHER: '기타', UNCLASSIFIED: '미분류' }
@@ -93,7 +89,7 @@ function RecordSummary({ data, planning, onScreen }: { data: Statistics | null; 
       <div className={styles.achievement}><strong>{data && format(data.routineAchievementPercent,0)}{data && data.routineAchievementPercent!==null?'%':''}</strong><span>루틴 달성률{data?.routineAchievementPercent===null&&' · 확인 불가'}</span></div>
       <div className={styles.progress} role="progressbar" aria-label="루틴 달성률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={data?.routineAchievementPercent == null ? undefined : Number(data.routineAchievementPercent)} aria-valuetext={data ? data.routineAchievementPercent===null?'확인 불가':format(data.routineAchievementPercent,0)+'%' : undefined}><span style={{width:(data?.routineAchievementPercent??'0')+'%'}} /></div>
       <p className={styles.completion}>{data && planning && ('계획한 ' + (data.plannedWorkoutDays??'—') + '일 중 ' + format(planning.effectiveWorkoutDays) + '일 운동 완료')}</p>
-      <div className={styles.metrics}>
+      <div className={styles.metrics} role="group" aria-label="주간 운동 요약">
         <div><RecordMainIcon kind="clock" /><strong>{data && '미확인'}</strong><small>총 운동 시간</small></div>
         <div><RecordMainIcon kind="weight" /><strong>{data && format(data.summary.completedSets) + '세트'}</strong><small>웨이트 세트</small></div>
         <div><RecordMainIcon kind="footprints" /><strong>{data && durationMinutesLabel(data.cardioActiveMs)}</strong><small>유산소 시간</small></div>
@@ -105,7 +101,7 @@ function RecordSummary({ data, planning, onScreen }: { data: Statistics | null; 
         <img className={styles.wordmark} src={wordmark} alt="OVERLOAD" width={3624} height={428} />
       </div>
       <div className={styles.analysisGrid} aria-label="운동 분석 메뉴">
-        {([['activity','운동 현황','운동량과 추이'],['growth','성장 추적','중량과 기록 변화'],['plan','주간 근육 계획','운동 부위별 계획'],['muscles','주간 근육 통계','근육별 운동 분석']] as const).map(([id,label,description])=><button type="button" className={styles.analysisCard} aria-label={label} key={id} onClick={()=>onScreen(id)}><span className={styles.analysisTop}><RecordMainIcon kind={id} /><span aria-hidden="true">↗</span></span><span className={styles.analysisText}><strong>{label}</strong><small>{description}</small></span></button>)}
+        {([['activity','운동 현황','운동량과 추이'],['growth','성장 추적','중량과 기록 변화'],['plan','주간 근육 계획','운동 부위별 계획'],['muscles','주간 근육 통계','근육별 운동 분석']] as const).map(([id,label,description])=><button type="button" className={styles.analysisCard} aria-label={label} key={id} onClick={()=>onScreen(id)}><span className={styles.analysisTop}><RecordMainIcon kind={id} /><span aria-hidden="true">{iconGlyphs.diagonal}</span></span><span className={styles.analysisText}><strong>{label}</strong><small>{description}</small></span></button>)}
       </div>
     </section>
   </>
@@ -117,20 +113,34 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
 }) {
   const preview = useRecordPreview()
   const [cardioDetail,setCardioDetail] = useState(false)
-  const [search, setSearch] = useScreenHistory('trend:' + (identity ?? (data?.userId + ':' + data?.dataGeneration)), { scope: 'exercise', query: '', selected: '',tag:'ALL' })
+  const [search, setSearch] = useScreenHistory('trend:' + (identity ?? (data?.userId + ':' + data?.dataGeneration)), { scope: 'exercise', query: '', selected: '', selectedName: '', tag:'ALL' })
   const [metric, setMetric] = useState<'sets' | 'volume'>('sets')
   if (screen === 'summary') return <RecordSummary data={data} planning={planning} onScreen={onScreen} />
   if (screen === 'muscles') return data ? <WeeklyMuscleStatistics data={data} /> : null
-  const muscles = [...new Map([...definitions.flatMap(e => e.muscles ?? []), ...(data?.muscles ?? [])].map(m => [m.id, m])).values()]
+  const recordedExercises = (data?.exercises ?? []).filter(e => e.weights.completedSets !== '0')
+  const definitionsById = new Map(definitions.map(e => [e.id, e]))
+  const groups = new Set((data?.groupActuals ?? []).filter(g => g.completedSets !== '0').map(g => g.groupCode))
+  const muscles = [...new Map((data?.muscles ?? []).filter(m => m.weights.completedSets !== '0').map(m => [m.id, m])).values()]
   const candidates = [
-    ...[...new Map([...definitions, ...(data?.exercises ?? []).map(e => ({id:e.standardExerciseId,name:e.name,aliases:[]}))].map(e => [e.id,e])).values()].map(e => ({ id: 'exercise:' + e.id, exerciseId:e.id, kind: 'exercise', name: e.name, description: e.aliases.join(' · ') || '운동', aliases: e.aliases.join(' '), icon: <ExerciseIcon kind={(definitions.find(d=>d.id===e.id)?.muscles?.[0]?.groupCode.toLowerCase() ?? 'other') as 'chest'} /> })),
-    ...Object.entries(muscleGroups).map(([id,name]) => ({ id: 'group:' + id, kind: 'group', name, description: '부위 분류', aliases: '', icon:<ExerciseIcon kind={id.toLowerCase() as 'chest'} /> })),
-    ...muscles.map(m => ({ id: 'muscle:' + m.id, kind: 'muscle', name: m.name, description: muscleGroups[m.groupCode] + ' · 세부 근육', aliases: '', icon:<ExerciseIcon kind={m.groupCode.toLowerCase() as 'chest'} /> }))
+    ...recordedExercises.map(e => {
+      const definition = definitionsById.get(e.standardExerciseId)
+      const aliases = definition?.aliases.join(' ') ?? ''
+      const kind = (definition?.muscles?.[0]?.groupCode.toLowerCase() ?? 'other') as 'chest'
+      return { id: 'exercise:' + e.standardExerciseId, exerciseId: e.standardExerciseId, kind: 'exercise', name: e.name,
+        description: definition?.aliases.join(' · ') || '완료 웨이트 수행 기록', aliases, icon: <ExerciseIcon kind={kind} /> }
+    }),
+    ...Object.entries(muscleGroups).filter(([id]) => groups.has(id)).map(([id, name]) => ({
+      id: 'group:' + id, kind: 'group', name, description: '부위 분류', aliases: '', icon: <ExerciseIcon kind={id.toLowerCase() as 'chest'} />
+    })),
+    ...muscles.map(m => ({ id: 'muscle:' + m.id, kind: 'muscle', name: m.name, description: muscleGroups[m.groupCode] + ' · 세부 근육', aliases: '', icon: <ExerciseIcon kind={m.groupCode.toLowerCase() as 'chest'} /> }))
   ]
   const tag=search.tag??'ALL'
   const matchingExercises=new Set(browseExercises(definitions,'',tag as CatalogGroup|'ALL').map(e=>e.id))
   const options = candidates.filter(c => (search.scope === 'all' || c.kind === search.scope) && (tag==='ALL'||search.scope==='exercise'&&matchingExercises.has(c.id.slice(9))||search.scope==='muscle'&&muscles.some(m=>'muscle:'+m.id===c.id&&m.groupCode===tag)) && (c.name + ' ' + c.aliases).toLocaleLowerCase().includes(search.query.trim().toLocaleLowerCase()))
-  const selected = candidates.find(c => c.id === search.selected)
+  const selected = search.selected && (candidates.find(c => c.id === search.selected)?.name ?? search.selectedName)
+  const eligibleGroups = Object.entries(catalogGroups).filter(([id]) =>
+    browseExercises(definitions, '', id as CatalogGroup).some(e => recordedExercises.some(row => row.standardExerciseId === e.id)))
+  const today = preview?.today ?? localToday()
   const plannedMs = planning ? plannedCardioMs(planning) : null
   const format = displayDecimal
   const range = data && {fromDate:data.fromDate,toDateExclusive:data.toDateExclusive}
@@ -162,18 +172,20 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
       </div>
     </section>
     <Card className={activityStyles.trend}><div className={activityStyles.sectionHeading}><h2>운동량 추이</h2><span>완료 기록 기준</span></div>
-      <div className={`record-tabs ${activityStyles.segment}`}><Button aria-pressed={metric==='sets'} onClick={()=>setMetric('sets')}>세트</Button><Button aria-pressed={metric==='volume'} onClick={()=>setMetric('volume')}>총중량</Button></div>
+      <div className={segmented.segment} role="group" aria-label="운동량 지표"><Button aria-pressed={metric==='sets'} onClick={()=>setMetric('sets')}>세트</Button><Button aria-pressed={metric==='volume'} onClick={()=>setMetric('volume')}>총중량</Button></div>
       <SearchList scopes={[{id:'all',name:'전체'},{id:'exercise',name:'운동별'},{id:'group',name:'분류별'},{id:'muscle',name:'근육별'}]} scope={search.scope}
         renderScope={control=><SearchScopePopover {...control} />}
-        onScope={scope=>setSearch({...search,scope,query:'',selected:'',tag:'ALL'},true)} query={search.query} onQuery={query=>setSearch({...search,query},true)}
-        tags={search.scope==='exercise'?{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:search.scope==='muscle'?{label:'근육 분류',options:[{id:'ALL',name:'전체'},...[...new Set(muscles.map(m=>m.groupCode))].map(id=>({id,name:muscleGroups[id]??id}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:undefined}
-        options={options} onSelect={id=>setSearch({...search,selected:id,query:''},true)} selected={selected?.name}
-        onClear={()=>setSearch({...search,tag:'ALL',query:'',selected:''},true)} label="운동·분류·근육 검색" />{preview&&<p className="muted small">준비된 합성 마스터 검색 · 후보 검색과 선택 후 통계 조회는 별개입니다.</p>}
-      <div className={`record-pair ${activityStyles.chartHeading}`}><span>{selected?.name??'전체 운동'} · 선택한 기간</span><b>{data && (!selected || preview) && format(values.some(v=>v===null)?null:sumDecimals(values as string[])) + (metric==='sets'?'세트':'kg')}</b></div>
+        onScope={scope=>setSearch({...search,scope,query:'',selected:'', selectedName:'', tag:'ALL'},true)} query={search.query} onQuery={query=>setSearch({...search,query},true)}
+        tags={search.scope==='exercise'?{label:'운동 부위',options:[{id:'ALL',name:'전체'},...eligibleGroups.map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:search.scope==='muscle'?{label:'근육 분류',options:[{id:'ALL',name:'전체'},...[...new Set(muscles.map(m=>m.groupCode))].map(id=>({id,name:muscleGroups[id]??id}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:undefined}
+        options={options} onSelect={id=>setSearch({...search,selected:id,selectedName:options.find(option=>option.id===id)?.name ?? '',query:''},true)} selected={selected || undefined}
+        loading={!data && periodLoading} issue={!data && activityState === 'error' ? '선택 기간의 운동 기록을 불러오지 못했어요.' : undefined}
+        emptyTitle="선택 기간에 일치하는 수행 기록이 없어요" resultsLabel="선택 기간의 수행 기록 검색 결과"
+        onClear={()=>setSearch({...search,tag:'ALL',query:'',selected:''},true)} label="운동·분류·근육 검색" />
+      <div className={`record-pair ${activityStyles.chartHeading}`}><span>{selected||'전체 운동'} · 선택한 기간</span><b>{data && (!selected || preview) && format(values.some(v=>v===null)?null:sumDecimals(values as string[])) + (metric==='sets'?'세트':'kg')}</b></div>
       {!preview&&selected ? <p role="status" className="muted small">선택 항목의 날짜별 집계 API 연결이 필요합니다. 전체 추이는 선택 해제 후 확인할 수 있습니다.</p>
         : <div className={activityStyles.chartContent} aria-busy={periodLoading}>
           {data && <ActivityTrendChart data={values.map((value, index) => ({ id: `${data.fromDate}:${data.toDateExclusive}:${index}`, label: labels[index], value }))}
-            unit={metric === 'sets' ? '세트' : 'kg'} label={(selected?.name ?? '전체 운동') + ' ' + (metric === 'sets' ? '완료 세트' : '총중량') + ' 추이'} />}
+            unit={metric === 'sets' ? '세트' : 'kg'} label={(selected || '전체 운동') + ' ' + (metric === 'sets' ? '완료 세트' : '총중량') + ' 추이'} />}
         </div>}
       <p className="muted small">{metric==='sets'?'세부 근육만 기여 세트 · 분류/전체는 원본 세트':'실제 중량 × 실제 반복 합계 · 기여 계수 미적용'}</p>
     </Card>
@@ -187,12 +199,15 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
         </div>)}
         {plannedDays!==null&&achievementRate===null&&<p className="muted small">유산소 목표 달성 확인 필요</p>}
       </div>
-      <div className="record-days" data-period="week">{weekDays.map((day,index)=>{
-        const session=(sampleAchievement?.evidence??preview?.evidence??evidence).find(s=>s.id===day.selectedSessionId)
-        const result=dayStatus(day,day.date,preview?.today??localToday(),session?partialAchievement(session):'unknown')
-        const mark=result.kind==='unknown'?(sampleAchievement&&day.reviewStatus!=='PENDING'?'?':'·'):result.kind==='planned'?'·':result.mark
-        return <div className="record-day" style={index===0?{gridColumnStart:(dayOfWeek(day.date)+6)%7+1}:undefined} key={day.date} title={weeklyPlanning ? day.date+' '+result.label : undefined}><span className={activityStyles.weekday}>{weekdays[index]}</span><time>{Number(day.date.slice(8))}</time><strong aria-label={weeklyPlanning ? day.date+' '+result.label : undefined} data-state={weeklyPlanning ? result.kind : undefined}>{weeklyPlanning && mark}</strong></div>
-      })}</div>
+      <WeekDateGrid days={weekDays.map(day => {
+        const session = (sampleAchievement?.evidence ?? preview?.evidence ?? evidence).find(s => s.id === day.selectedSessionId)
+        const result = dayStatus(day, day.date, today, session ? partialAchievement(session) : 'unknown')
+        const mark = result.kind === 'unknown' ? (sampleAchievement && day.reviewStatus !== 'PENDING' ? '?' : '·')
+          : result.kind === 'planned' ? '·' : result.mark
+        return { date: day.date, weekday: weekdays[dayOfWeek(day.date) - 1],
+          label: weeklyPlanning ? day.date + ' ' + result.label : day.date,
+          info: weeklyPlanning ? mark : '', infoLabel: weeklyPlanning ? result.label : undefined, infoStatus: weeklyPlanning ? result.kind : undefined }
+      })} today={today} label="주간 루틴 달성 날짜" />
       <p className={`muted small ${activityStyles.legend}`}><span>– 휴식</span><span>· 미수행</span><span>? 미확인</span></p>
     </Card>
     <Card className={activityStyles.cardio} aria-busy={periodLoading}><div className={activityStyles.sectionHeading}><h2>유산소 현황</h2><Button variant="quiet" compact onClick={()=>setCardioDetail(!cardioDetail)} aria-expanded={cardioDetail}>{cardioDetail?'상세 닫기':'상세 보기 ›'}</Button></div>
@@ -426,7 +441,7 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
           <StatisticsView achievementPlanning={achievement} achievementAnchor={activityPeriod.anchor} evidence={currentEvidence?.rows} data={displayed?.statistics ?? null} planning={displayed} identity={identity} screen={shown} onScreen={openScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions} activityState={activityState}/>
         </div> : !issue && !refreshing && <StatisticsWait pending skeleton label="운동 통계를 불러오는 중입니다." />}
         {(issue || refreshing) && (displayed ? retryOverview : <ContentError title={readIssue} action={retryOverview} />)}
-        {shown === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={openRecent} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>openScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button compact variant="quiet" onClick={() => openScreen('history')}>전체 보기 ›</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
+        {shown === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={openRecent} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>openScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button compact variant="quiet" onClick={() => openScreen('history')}>전체 보기 {iconGlyphs.next}</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
     {retainPlan && workoutApi && <div hidden={shown !== 'plan'} className="statistics-plan">
       <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} active={enabled && (screen === 'plan' || requestedScreen === 'plan')} onReadSettled={settlePlan} />
     </div>}

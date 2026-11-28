@@ -14,6 +14,7 @@ export type ExitGuardRegistration = (guard: (() => Promise<boolean>) | null) => 
 export type LocalWorkout = LocalKey & {
   schemaVersion: 2
   startedAt: string
+  sessionClock?: { waitingMs: number; pausedAt?: number }
   initialPlan: InitialPlan
   snapshot: Snapshot
   // editVersion serializes every local write; localRevision changes only with snapshot meaning.

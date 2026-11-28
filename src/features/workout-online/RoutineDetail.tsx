@@ -1,3 +1,5 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { routineDelete } from '../../components/icons/common.tsx'
 import type { ReactNode } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card } from '../../components/ui.tsx'
@@ -12,13 +14,13 @@ import { dayNames } from './routine-schedule.ts'
 import type { CardioActivity, Manufacturer, Routine, StandardExercise } from './types.ts'
 import styles from './RoutineDetail.module.css'
 
-type Metric = { label: string; value: string | number | null; unit?: string }
+type Metric = { label: string; value: string | number | null; unit?: string; duration?: boolean }
 
 function Metrics({ values }: { values: Metric[] }) {
   return <dl className={styles.metrics} style={{ gridTemplateColumns: `repeat(${values.length}, minmax(0, 1fr))` }}>
-    {values.map(({ label, value, unit }) => <div key={label}>
+    {values.map(({ label, value, unit, duration }) => <div key={label}>
       <dt>{label}</dt>
-      <dd data-missing={value == null || undefined}>{value ?? '—'}{value != null && unit && <> <small>{unit}</small></>}</dd>
+      <dd data-duration={duration || undefined} data-missing={value == null || undefined}>{value ?? '—'}{value != null && unit && <> <small>{unit}</small></>}</dd>
     </div>)}
   </dl>
 }
@@ -91,7 +93,7 @@ export function RoutineDetail({ routine, exercises, activities, manufacturers, p
           <ExerciseHeading index={index} name={plan.name} />
           <div className={styles.metadata}><span title={description}>{description}</span></div>
           <Metrics values={[
-            ...cardioGoalValues(plan),
+            ...cardioGoalValues(plan, true),
             plan.kind === 'BIKE' ? { label: '저항', value: plan.resistance } : { label: '경사도', value: plan.inclinePercent, unit: '%' },
           ]} />
         </Card>
@@ -112,7 +114,7 @@ export function RoutineDetail({ routine, exercises, activities, manufacturers, p
     <div className={styles.actions}>
       {start}
       <Button variant="danger" className={styles.delete} disabled={managementBlocked && !deleting} loading={deleting} onClick={onDelete}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 7h14m-9 0V4h4v3m-7 0 1 13h8l1-13m-6 3v7m3-7v7" /></svg>
+        <Icon icon={routineDelete} size={16} />
         루틴 삭제
       </Button>
     </div>

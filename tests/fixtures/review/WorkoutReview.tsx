@@ -1,3 +1,4 @@
+import { revealWorkingWeight } from '../../../src/features/workout-flow/revealWorkingWeight.ts'
 import { CombinationMemo } from '../../../src/features/workout-online/CombinationMemo.tsx'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -40,19 +41,8 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   const [issue, setIssue] = useState('')
   const [now, setNow] = useReviewClock()
   const clockRef = useRef<HTMLDivElement>(null)
-  const workingRef = useRef<HTMLElement>(null)
-  const [completedScroll, setCompletedScroll] = useState(0)
+  const [completedScroll, setCompletedScroll] = useState<{ exerciseId: string; top: number } | null>(null)
   const [exerciseScroll, setExerciseScroll] = useState<ExerciseScrollPosition | null>(null)
-  useLayoutEffect(() => {
-    if (!completedScroll) return
-    const frame = requestAnimationFrame(() => {
-      if (!workingRef.current || !clockRef.current) return
-      const headerHeight = clockRef.current.getBoundingClientRect().height
-      const top = window.scrollY + workingRef.current.getBoundingClientRect().top - headerHeight - 8
-      window.scrollTo({ top, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
-    })
-    return () => cancelAnimationFrame(frame)
-  }, [completedScroll])
   const issueRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (issue) issueRef.current?.scrollIntoView({ block: 'nearest' })
@@ -70,6 +60,14 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
   const weightsDone = weights.every(weightDone)
   const currentDone = !!weight && weightDone(weight)
   const nextSet = weight?.sets.find(s => !s.result)
+  useLayoutEffect(() => {
+    if (!completedScroll || completedScroll.exerciseId !== currentId) return
+    const frame = requestAnimationFrame(() => {
+      revealWorkingWeight(clockRef.current, completedScroll.top)
+      setCompletedScroll(null)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [completedScroll, currentId])
   const rest = weight?.rest
   const restStarted = weight?.sets.find(set => set.id === rest?.slot)?.result?.at
   useRestTimerAudio(audio, {
@@ -106,7 +104,7 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
       const updated = finishSet(session, weight, set, at, shortRest || alerts.testMode, alerts.middleAt)
       audio.unlock()
       onChange(updated); setNow(at); setIssue('')
-      setCompletedScroll(value => value + 1)
+      if (updated.currentId === weight.id) setCompletedScroll({ exerciseId: weight.id, top: window.scrollY })
     } catch (error) {
       setIssue((error instanceof Error ? error.message : '입력값을 확인해 주세요.') + ' 중량과 반복 횟수를 확인해 주세요.')
     }
@@ -220,9 +218,8 @@ export function WorkoutReview({ session, onChange, onHome, onEnd, history, alert
     const source = session.initialPlan.weightExercises.find(p => p.sessionExerciseId === exercise.id)
     const original = weight && session.deload ? recoveryOriginal.weightPlacements.find(p => p.id === source?.sourcePlacementId) : undefined
     return <>
-      {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
       {weight && <WeightFocus preview={preview} weight={weight} position={at + 1}
-        memoContent={<CombinationMemo preview={preview} exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />} workingRef={preview ? undefined : workingRef} onAddSet={() => updateWeight(addSet(weight))}
+        memoContent={<CombinationMemo preview={preview} exerciseId={weight.standardId} equipment={weight} initialText={weight.memo} />} onAddSet={() => updateWeight(addSet(weight))}
         description={exerciseDescription(sessionExercises.find(e => e.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
         manufacturers={manufacturers} progressNote={original ? `디로딩 목표 ${source?.approvedWeightKg}kg · 원본 목표 ${original.approvedWeightKg}kg × ${original.setCount}세트` : undefined}
         issue={preview ? null : issueView} resting={restRemaining(weight, now) > 0} editing={!preview && editing}

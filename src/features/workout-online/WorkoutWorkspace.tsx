@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { usePageRead } from '../../app/usePageRead.ts'
 import { useDetailReturn } from '../history/useRecordDetailHistory.ts'
 import ui from '../../components/ui.module.css'
@@ -332,7 +333,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     {protection && <p className="notice" role="status">{protection === 'ACTIVE' ? '디로딩 진행 중' : '디로딩 완료 당일'} · 일반 루틴과 주간 일정은 조회 전용입니다.</p>}
       <div hidden={focused || !!planPreset}>
         {created && <RoutineCreatedNotice name={created.name} onLater={() => setCreated(null)} onAssign={() => openSchedule(created.id)} blocked={scheduleBlocked} />}
-        <RoutineCards week={viewed} summaries={state.data?.routines ?? []} details={cards} busy={busy} managementBlocked={managementBlocked}
+        <RoutineCards week={viewed} timeZone={schedule?.timeZone ?? undefined} summaries={state.data?.routines ?? []} details={cards} busy={busy} managementBlocked={managementBlocked}
           listState={!state.data && (state.issue ? <ContentError embedded title="루틴을 불러오지 못했어요." action={retryRoutines} />
             : <LoadingSkeleton layout="list" label="루틴 목록을 확인하는 중입니다." />) || undefined}
           listRetry={state.data && state.readIssue && state.issue && retryRoutines}
@@ -361,7 +362,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             }} /> : !training.issue && <PresetLoadingNavigation />}
           presetAssignments={schedule ? membership : undefined} />
       </div>
-    {planPreset && <button type="button" className="quiet" onClick={() => navigateBack(() => setPlanPreset(null, true))}>‹ 루틴으로</button>}
+    {planPreset && <button type="button" className="quiet" onClick={() => navigateBack(() => setPlanPreset(null, true))}>{iconGlyphs.previous} 루틴으로</button>}
     {scheduleRoute && (!scheduleEditor || !state.data) && <><RecordSubpageHeader title={scheduleRoute.type === 'order' ? '주간 일정 전체 편집' : '주간 일정 편집'} onBack={() => navigateBack(closeScheduleEditor)} />
       {unavailableSchedule || (state.issue && !state.data ? <ContentError embedded title="루틴을 불러오지 못했어요." action={retryRoutines} />
         : training.loading || !state.data ? <LoadingSkeleton layout="detail" label="주간 일정을 확인하는 중입니다." /> : <StatusNotice>주간 일정을 찾을 수 없어요.</StatusNotice>)}</>}

@@ -1,0 +1,7 @@
+.columns {display:grid;grid-template-columns:repeat(var(--record-columns,3),minmax(0,1fr));margin-block:8px;}
+.columns > :is(section,div) {display:flex;flex-direction:column;align-items:center;min-width:0;padding-inline:5px;gap:3px;}
+.columns > * + * {border-inline-start:1px solid var(--line);}
+.columns h3 {font-size:12px;margin:0 0 5px;}
+.columns strong {max-inline-size:100%;font-size:clamp(14px,4vw,18px);overflow-wrap:anywhere;text-align:center;}
+.columns strong:nth-of-type(2) {margin-top:12px;}
+.columns small {font-size:10px;color:var(--text-muted);text-align:center;}

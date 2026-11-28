@@ -73,7 +73,7 @@ export async function verifyFourthUi({go,title,click,set,evaluate,send,wait,widt
  assert.equal(await evaluate('document.querySelector(`[aria-label="운동량 요약"] strong`).textContent'),displayedSets)
  assert.equal(await evaluate('!!document.querySelector("[data-fourth-stable]") && !document.querySelector("[data-loading-skeleton=activity]")'),true)
  await wait(()=>evaluate(`document.querySelector('${pendingPeriod} button[aria-pressed="true"]').textContent === '월간'`),'monthly statistics loaded')
- assert.equal(await evaluate('document.querySelectorAll(".record-day").length'),7);assert.equal(await evaluate('document.querySelectorAll(".record-day > span:first-child").length'),7);assert.equal(await evaluate('document.querySelector(".record-data-range")'),null);assert.equal(await evaluate('document.querySelector(".record-search input").value'),filter)
+ assert.equal(await evaluate('document.querySelectorAll("[data-week-day]").length'),7);assert.equal(await evaluate('document.querySelectorAll("[data-week-day] > time:first-child").length'),7);assert.equal(await evaluate('document.querySelector(".record-data-range")'),null);assert.equal(await evaluate('document.querySelector(".record-search input").value'),filter)
  await byLabel('달력 열기')
  const calendar=await evaluate('(()=>{const b=document.querySelector(".record-calendar-trigger"),c=[...document.querySelectorAll(".record-calendar button")].find(b=>b.textContent==="닫기");return{active:getComputedStyle(b,"::before").backgroundColor,close:getComputedStyle(c).color,background:getComputedStyle(c).backgroundColor}})()')
  assert.equal(calendar.active,'rgb(108, 147, 198)');assert.equal(calendar.close,'rgb(240, 183, 191)');assert.equal(calendar.background,'rgba(0, 0, 0, 0)')

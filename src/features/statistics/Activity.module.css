@@ -1,7 +1,6 @@
 .page:global(.stack), .page :global(.record-statistics-body) { gap: var(--card-gap-independent); }
 .page :global(.app-card) { padding: var(--card-padding-statistics); }
 .page :global(.record-period[data-layout='activity']) { display: grid; margin: 0; }
-.segment { composes: segment from '../../components/common-ui/SegmentedControl.module.css'; }
 .page :global(.record-period[data-layout='activity'] > .record-tabs > button[data-wait='true'])::after { content: ''; position: absolute; inset-inline-end: 14px; inset-block: 0; margin-block: auto; width: 10px; height: 10px; border: 1px solid currentColor; border-inline-end-color: transparent; border-radius: 50%; pointer-events: none; animation: period-spin .8s linear infinite; }
 @keyframes period-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) {
@@ -16,7 +15,7 @@
 .page :global(.record-period-row b) { min-width: 0; font-size: 14px; line-height: 1.5; white-space: nowrap; }
 .summary { display: grid; gap: 10px; min-width: 0; }
 .sectionHeading { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-width: 0; }
-.page .sectionHeading h2 { margin: 0; font-size: 18px; font-weight: 600; line-height: 1.4; }
+.page .sectionHeading h2 { margin: 0; font-size: var(--type-heading-size); font-weight: var(--type-heading-weight); line-height: var(--type-heading-line); }
 .sectionHeading > span { flex: none; color: var(--text-muted); font-size: 11px; }
 .sectionHeading > strong { font-size: 19px; }
 .summaryGrid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--card-gap-dense); }
@@ -44,7 +43,7 @@
 .activityTrendPlot:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 2px; border-radius: var(--radius-control); }
 .activityTrendHit { fill: transparent; }
 .activityTrendPoint[data-active='true'] .activityTrendHit { fill: var(--accent-soft); }
-.activityTrendTooltip { position: absolute; inset-block-start: 0; inset-inline-end: 0; pointer-events: none; }
+.activityTrendTooltip { position: absolute; inset-block-start: 0; inset-inline-end: 0; max-inline-size: 100%; overflow-wrap: anywhere; white-space: normal; pointer-events: none; }
 .progress { height: 6px; background: var(--border-subtle); border-radius: 4px; overflow: hidden; }
 .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .achievementSummary { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--text-muted); }
@@ -52,11 +51,6 @@
 .achievementSummarySlot { display: grid; align-content: start; gap: 12px; min-block-size: 46px; }
 .achievementSummary > span:last-child { flex: none; white-space: nowrap; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.page .achievement :global(.record-days) { gap: 4px; margin: 0; }
-.page .achievement :global(.record-day) { border-radius: 5px; gap: 5px; padding: 8px 1px; background: var(--surface-input); }
-.weekday { color: var(--text-muted); font-size: 11px; }
-.page .achievement :global(.record-day time) { font-size: 12px; }
-.page .achievement :global(.record-day strong) { font-size: 18px; line-height: 1.5; min-height: 1.5em; margin: 0; }
 .page .sectionHeading > button { flex: none; color: var(--accent); font-size: 12px; }
 .cardioMetrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
 .cardioMetrics > div { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-width: 0; min-height: 82px; padding: 8px 10px 8px 0; }
@@ -75,10 +69,14 @@
 .page .cardioDetails[hidden] { display: none; }
 .cardioDetails > :global(.record-pair) > button { flex: none; }
 @media(max-width:350px) {
-  .page :global(.app-card):where(:not(.trend, :global(.record-period))) { padding-inline: 10px; }
+  .page { --activity-card-narrow-padding: 10px; }
+  .page :global(.app-card):where(:not(.trend, :global(.record-period))) { padding-inline: var(--activity-card-narrow-padding); }
+  .page .achievement :global([data-week-grid]) { margin-inline: calc(var(--card-padding) - var(--activity-card-narrow-padding)); }
   .page .sectionHeading h2 { font-size: 16px; }
   .page .sectionHeading > span { font-size: 10px; }
   .summaryGrid strong { font-size: 22px; }
   .achievementSummary { flex-wrap: wrap; }
   .cardioMetrics strong { font-size: 17px; }
 }
+
+@media (max-width: 374px) { .activityTrendValue { font-size: 9px; } }

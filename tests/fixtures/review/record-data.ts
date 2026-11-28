@@ -64,7 +64,21 @@ export function recordPreviewData(routines: Routine[], schedule: PresetSchedule,
    const percent=plannedDays&&effective!==null?(Number(effective)/plannedDays*100).toFixed(6).replace(/\.?0+$/,''):null
    const cardios=sessions.filter(s=>inRange(s.workoutDate,range)).flatMap(s=>s.snapshot.state.cardioResults.filter(c=>c.status==='COMPLETED').map(c=>({...c,kind:s.initialPlan.cardioActivities.find(a=>a.sessionActivityId===c.sessionActivityId)?.plan.kind??'OTHER'})))
    const cardioMs=cardios.reduce((n,c)=>n+(c.status==='COMPLETED'?c.result.activeMs:0),0)
-   return {statistics:{...scope,...range,planCoverage:unknown?'PARTIAL_SCHEDULE_HISTORY':'FULL_SCHEDULE_HISTORY',plannedWorkoutDays:plannedDays,routineAchievementPercent:percent,summary:weightStats(rows),cardioActiveMs:String(cardioMs),unmappedCompletedSets:'0',days:dates.map(date=>({date,weights:weightStats(rows.filter(r=>r.date===date)),cardioActiveMs:'0'})),exercises:definitions.map(e=>({standardExerciseId:e.id,name:e.name,weights:weightStats(rows.filter(r=>r.id===e.id))})),muscles:[],groups:[],groupActuals:[],cardio:[],recentSessions:[]},effectiveWorkoutDays:effective,unknownPlanDays:unknown,unverifiableDays:0,plannedDays:dates.map(date=>days.find(d=>d.date===date)??{date,status:'UNKNOWN',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}),
+   const muscleStats = definitions.flatMap(definition => definition.muscles ?? [])
+   const links = [...new Map(muscleStats.map(m => [m.id + ':' + m.role, m])).values()]
+   const touches = (row: typeof facts[number], id: string, role: 'PRIMARY' | 'SECONDARY') =>
+    definitions.find(d => d.id === row.id)?.muscles?.some(m => m.id === id && m.role === role)
+   const muscleRows = links.map(m => {
+    const weights = weightStats(rows.filter(row => touches(row, m.id, m.role)))
+    return {...m, weights, contributionSets: (Number(weights.completedSets) * (m.role === 'PRIMARY' ? 1 : .5)).toFixed(1)}
+   })
+   const groupRows = [...new Map(links.map(m => [m.groupCode + ':' + m.role, m])).values()].map(({groupCode, role}) => ({
+    groupCode, role, weights: weightStats(rows.filter(row => links.some(m => m.groupCode === groupCode && m.role === role && touches(row, m.id, role)))),
+   }))
+   const groupActuals = [...new Set(links.map(m => m.groupCode))].map(groupCode => ({
+    groupCode, completedSets: weightStats(rows.filter(row => links.some(m => m.groupCode === groupCode && touches(row, m.id, m.role)))).completedSets,
+   }))
+   return {statistics:{...scope,...range,planCoverage:unknown?'PARTIAL_SCHEDULE_HISTORY':'FULL_SCHEDULE_HISTORY',plannedWorkoutDays:plannedDays,routineAchievementPercent:percent,summary:weightStats(rows),cardioActiveMs:String(cardioMs),unmappedCompletedSets:'0',days:dates.map(date=>({date,weights:weightStats(rows.filter(r=>r.date===date)),cardioActiveMs:'0'})),exercises:definitions.map(e=>({standardExerciseId:e.id,name:e.name,weights:weightStats(rows.filter(r=>r.id===e.id))})),muscles:muscleRows,groups:groupRows,groupActuals,cardio:[],recentSessions:[]},effectiveWorkoutDays:effective,unknownPlanDays:unknown,unverifiableDays:0,plannedDays:dates.map(date=>days.find(d=>d.date===date)??{date,status:'UNKNOWN',scheduleVersion:null,plan:null,plannedExercises:null,completedExercises:null,effectiveDay:null,selectedSessionId:null,reviewStatus:null,reviewRevision:null}),
     cardioByKind:[...new Set(cardios.map(c=>c.kind))].map(kind=>{
      const records=cardios.filter(c=>c.kind===kind),source=(value:string|null)=>records.filter(c=>(c.result.measurement?.distanceSource??null)===value),distance=(rows:typeof records)=>{const values=rows.flatMap(c=>c.result.distanceKm!==null?[c.result.distanceKm]:[]);return values.length?String(values.reduce((n,v)=>n+Number(v),0)):null}
      return {kind,activeMs:String(records.reduce((n,c)=>n+c.result.activeMs,0)),distanceKm:distance(records),manualDistanceKm:distance(source('MANUAL')),calculatedDistanceKm:distance(source('CALCULATED')),unknownSourceDistanceKm:distance(source(null)),manualRecords:String(source('MANUAL').length),calculatedRecords:String(source('CALCULATED').length),unknownSourceRecords:String(source(null).length),recordsWithoutDistance:String(records.filter(c=>c.result.distanceKm===null).length)}

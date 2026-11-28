@@ -1,3 +1,7 @@
+import segmented from '../../components/common-ui/SegmentedControl.module.css'
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
+import { Icon } from '../../components/icons/Icon.tsx'
+import { weightHistory } from '../../components/icons/record.tsx'
 import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
@@ -28,7 +32,7 @@ const amount = (text: string) => { const [whole, part = ''] = text.split('.'); r
 const periods = ['1', '3', '6', 'all'] as const
 
 function GrowthPeriods({ period, onChange }: { period: GrowthPeriod; onChange: (value: GrowthPeriod) => void }) {
-  return <div className={styles.periods} data-period={period} role="group" aria-label="성장 추적 기간">
+  return <div className={segmented.segment} data-options="four" data-period={period} role="group" aria-label="성장 추적 기간">
     {periods.map(value=><Button aria-pressed={period===value} key={value} onClick={()=>onChange(value)}>{value==='all'?'전체':value+'개월'}</Button>)}
   </div>
 }
@@ -65,7 +69,7 @@ function GrowthAnalysis({ controls, latest, count, partial, zone, children }: {
         {latest&&<GrowthDelta point={latest} comparison />}
       </div>
       <div className={styles.countRow}>
-        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5m4-1v5l3 2" /></svg>승인 중량 변경</span>
+        <span><Icon icon={weightHistory} />승인 중량 변경</span>
         <GrowthCount count={count} partial={partial} />
       </div>
     </div>
@@ -124,15 +128,19 @@ function SearchResults({ query, onQuery, selected, onClear, onSelect, ...context
     finally { if (!abort.signal.aborted) setBusy(false) }
   }
   const pending = loadedQuery !== queryKey
-  const feedback = useReadErrorToast(searchOpen && rows.length && !busy ? issue : null)
+  const recorded = rows.filter(exercise => exercise.lastPerformedAt !== null)
+  // The server orders performed exercises first. Approval-only rows mark the end of the performed list.
+  const hasMoreRecords = next !== null && recorded.length === rows.length
+  const feedback = useReadErrorToast(searchOpen && recorded.length && !busy ? issue : null)
   return <div className="stack"><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:setTag}}
     onSearchOpenChange={setSearchOpen} query={query} onQuery={onQuery} selected={selected} onClear={onClear} label="과거 운동 검색" issue={issue}
     loading={pending} resultsPending={pending && rows.length > 0}
-    options={rows.map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:e.lastPerformedAt?'완료 웨이트 수행 기록':'공식 승인 중량 변경 이력',icon:<ExerciseIcon kind="other" />}))}
-    onSelect={id=>{const row=rows.find(e=>e.standardExerciseId===id);if(row&&!pending)onSelect(row)}}
+    options={recorded.map(e=>({id:e.standardExerciseId,exerciseId:e.standardExerciseId,name:e.name,description:'완료 웨이트 수행 기록',icon:<ExerciseIcon kind="other" />}))}
+    emptyTitle="선택 기간에 일치하는 수행 기록이 없어요"
+    onSelect={id=>{const row=recorded.find(e=>e.standardExerciseId===id);if(row&&!pending)onSelect(row)}}
     resultsFooter={issue
-      ? <RefreshButton loading={busy} failure={!rows.length ? issue : null} onRefresh={() => { if (pending || next === null) retrySearch(value => value + 1); else void more() }} />
-      : next !== null && <Button disabled={busy || pending} onClick={() => void more()}>운동 더 보기</Button>} />
+      ? <RefreshButton loading={busy} failure={!recorded.length ? issue : null} onRefresh={() => { if (pending || next === null) retrySearch(value => value + 1); else void more() }} />
+      : hasMoreRecords && <Button disabled={busy || pending} onClick={() => void more()}>운동 더 보기</Button>} />
     <Toast toast={feedback.toast} onDismiss={feedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
   </div>
 }
@@ -248,8 +256,7 @@ export function GrowthPanel({ api, scope, refreshKey, onInvalid, onOpen, onBack,
 
 function PreviewGrowth({ data, onOpen }: { data:RecordPreviewData; onOpen:(id:string)=>void }) {
  const [tag,setTag]=useState('ALL')
- const [period,setPeriod]=useState<GrowthPeriod>('3'),[query,setQuery]=useState(''),[selected,setSelected]=useState(data.definitions[0]?.id??'')
- const exercise=data.definitions.find(e=>e.id===selected)
+ const [period,setPeriod]=useState<GrowthPeriod>('3'),[query,setQuery]=useState('')
  const from=(()=>{
   if(period==='all')return '0000-01-01'
   const d=new Date(data.today+'T12:00:00Z'),day=d.getUTCDate()
@@ -257,9 +264,16 @@ function PreviewGrowth({ data, onOpen }: { data:RecordPreviewData; onOpen:(id:st
   d.setUTCDate(Math.min(day,new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,0)).getUTCDate()))
   return d.toISOString().slice(0,10)
  })()
+ const recordedIds = new Set(data.sessions.filter(s => s.status !== 'ACTIVE' && !s.deletedAt && s.workoutDate >= from).flatMap(s => {
+  const snapshot = s.snapshot.state
+  const performed = new Set(snapshot.performedSets.filter(set => !snapshot.deletedPerformedSetIds.includes(set.id)).map(set => set.sessionExerciseId))
+  return snapshot.sessionExercises.filter(e => performed.has(e.id)).map(e => e.standardExerciseId)
+ }))
+ const [selected,setSelected]=useState(data.definitions.find(e=>recordedIds.has(e.id))?.id??'')
+ const exercise=data.definitions.find(e=>e.id===selected)
  const rows=data.growth.filter(p=>p.exerciseId===selected&&p.date>=from)
  const points:GrowthPoint[]=rows.map((p,i)=>({id:p.exerciseId+':'+p.date,approvedWeightKg:p.kg,previousWeightKg:p.previousKg,occurredAt:p.date+'T10:00:00Z',recordedAt:p.date+'T10:00:00Z',source:'WORKOUT',sessionId:p.sessionId,connectFromPrevious:i>0,previousPointId:i?rows[i-1].exerciseId+':'+rows[i-1].date:null}))
- const candidates=browseExercises(data.definitions,query,tag as CatalogGroup|'ALL').filter(e=>data.sessions.some(s=>s.initialPlan.weightExercises.some(w=>w.standardExerciseId===e.id))&&(e.name+' '+e.aliases.join(' ')).toLocaleLowerCase().includes(query.toLocaleLowerCase()))
+ const candidates=browseExercises(data.definitions,query,tag as CatalogGroup|'ALL').filter(e=>recordedIds.has(e.id))
  return <>
   <Card className={styles.searchCard}><h2>분석할 운동</h2><SearchList tags={{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>{setTag(tag);setSelected('');setQuery('')}}} query={query} onQuery={setQuery} selected={exercise?.name} label="과거 운동 검색" options={candidates.map(e=>({id:e.id,exerciseId:e.id,name:e.name,description:(e.muscles??[]).filter(m=>m.role==='PRIMARY').map(m=>m.name).join(' · '),icon:<ExerciseIcon kind={(e.muscles?.[0]?.groupCode.toLowerCase()??'other') as 'chest'} />}))} onSelect={id=>{setSelected(id);setQuery('')}} onClear={()=>{setQuery('');setSelected('')}} /></Card>
   <GrowthAnalysis controls={<GrowthPeriods period={period} onChange={setPeriod} />} latest={points.at(-1)} count={points.length} zone="Asia/Seoul">
@@ -278,8 +292,8 @@ function GrowthEvent({point,name,zone,onOpen}:{point:GrowthPoint;name:string;zon
   title={name+' · 서버 기록 '+point.recordedAt+' · '+(point.source==='WORKOUT'?'운동 중 승인':'루틴에서 승인')+(point.sessionId?'':' · 연결 운동 기록 없음')}>
   <span className={styles.eventBody}>
     <time dateTime={point.occurredAt}>{part('year')}.{part('month')}.{part('day')} · {part('hour')}시</time>
-    <span className={styles.eventValues}><span className={styles.weights}>{point.previousWeightKg}kg → <b>{point.approvedWeightKg}kg</b></span><GrowthDelta point={point} /></span>
+    <span className={styles.eventValues}><span className={styles.weights}>{point.previousWeightKg}kg {iconGlyphs.forward} <b>{point.approvedWeightKg}kg</b></span><GrowthDelta point={point} /></span>
   </span>
-  <span className={styles.detail} aria-label={point.sessionId?'운동 기록 상세':'연결 운동 기록 없음'}>{point.sessionId?'›':'–'}</span>
+  <span className={styles.detail} aria-label={point.sessionId?'운동 기록 상세':'연결 운동 기록 없음'}>{point.sessionId?iconGlyphs.next:'–'}</span>
  </Tag>
 }

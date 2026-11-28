@@ -1,3 +1,4 @@
+import { NavigationIcon } from '../components/icons/NavigationIcon.tsx'
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import type { AppTab, DisplayTheme } from './types'
@@ -6,11 +7,11 @@ import theme from './theme.module.css'
 import { EditorViewportOccluded, useEditorKeyboard } from '../components/useEditorKeyboard.ts'
 import { createRepeatPointerGuard } from '../components/repeatPointerGuard.ts'
 
-const tabs: { id: AppTab; label: string; path: string }[] = [
-  { id: 'home', label: '홈', path: 'm3 10 9-7 9 7v11h-6v-7H9v7H3Z' },
-  { id: 'routines', label: '루틴', path: 'M8 5h13M8 12h13M8 19h13M3 5h.01M3 12h.01M3 19h.01' },
-  { id: 'history', label: '기록', path: 'M3 12a9 9 0 1 0 3-6.7M3 3v5h5M12 7v5l3 2' },
-  { id: 'settings', label: '설정', path: 'M9.5 3h5l.7 2.6 1.4.8 2.6-.7 2.5 4.3-1.9 1.9v1.6l1.9 1.9-2.5 4.3-2.6-.7-1.4.8-.7 2.2h-5l-.7-2.2-1.4-.8-2.6.7-2.5-4.3 1.9-1.9v-1.6L2.3 10l2.5-4.3 2.6.7 1.4-.8Z M14.6 12.5a2.6 2.6 0 1 0-5.2 0 2.6 2.6 0 1 0 5.2 0Z' },
+const tabs: { id: AppTab; label: string }[] = [
+  { id: 'home', label: '홈' },
+  { id: 'routines', label: '루틴' },
+  { id: 'history', label: '기록' },
+  { id: 'settings', label: '설정' },
 ]
 
 const tabScrollThreshold = 24
@@ -136,7 +137,6 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
         <span className={styles.tabIndicator} data-tab-indicator aria-hidden="true" />
         {tabs.map((item, index) => {
           const active = tab === item.id
-          const filled = active && (item.id === 'home' || item.id === 'settings')
           const expandsMenu = collapsed && active
           const hidden = collapsed && !active
           return <div className={styles.tabSlot} key={item.id} style={{ '--item-index': index } as CSSProperties}>
@@ -151,9 +151,7 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
                   expand()
                 } else if (!expandedTabGuard.blocksClick(event)) onNavigate(item.id)
               }}>
-              <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} fillRule="evenodd" stroke={filled ? 'none' : 'currentColor'} strokeWidth={active && !filled ? 3 : 1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d={item.path} />
-              </svg>
+              <NavigationIcon tab={item.id} active={active} />
             </button>
           </div>
         })}

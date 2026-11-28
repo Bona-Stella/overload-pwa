@@ -10,21 +10,18 @@
 .progress { height: 7px; margin-top: 9px; border-radius: 4px; overflow: hidden; background: var(--border-subtle); }
 .progress > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 .main .completion { margin-top: 8px; min-block-size: 1.5em; font-size: 12px; }
-.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--card-gap-dense); margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
-.metrics > div { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: 76px; padding: 9px 8px; border-radius: 5px; background: var(--surface-input); }
-.metrics svg { width: 16px; height: 16px; color: var(--accent); flex: none; margin-bottom: 10px; }
-.metrics strong { max-width: 100%; min-block-size: 1lh; font-size: 16px; line-height: 1.3; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.metrics small { margin-top: 4px; font-size: 10px; color: var(--text-muted); }
+.metrics { composes: columns from '../../components/common-ui/MetricColumns.module.css'; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+.metrics svg { width: 16px; height: 16px; color: var(--accent); margin-bottom: 3px; }
 .analysis, .recent { min-width: 0; display: grid; gap: 10px; }
 .analysisHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
-.main .analysisHeading h2, .main .recentHeading h2 { color: var(--text-primary); font-size: 20px; font-weight: 600; line-height: 1.25; }
+.main .analysisHeading h2, .main .recentHeading h2 { color: var(--text-primary); font-size: var(--type-heading-size); font-weight: var(--type-heading-weight); line-height: var(--type-heading-line); }
 .wordmark { display: block; width: clamp(108px, 32vw, 132px); height: auto; }
 .analysisGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .main .analysisCard { display: flex; flex-direction: column; justify-content: space-between; gap: 16px; min-width: 0; min-height: 107px; padding: 12px; border: 1px solid transparent; border-radius: 5px; background: var(--surface-card); color: var(--accent); text-align: left; font-weight: 400; }
 .analysisTop { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 8px; }
 .analysisTop > span { font-size: 12px; color: var(--text-muted); }
 .analysisText { display: grid; gap: var(--card-gap-title); }
-.analysisText strong { font-size: 15px; font-weight: 600; line-height: 1.4; color: var(--text-primary); }
+.analysisText strong { font-size: var(--type-card-title-size); font-weight: var(--type-control-weight); line-height: var(--type-heading-line); color: var(--text-primary); }
 .analysisText small { font-size: 12px; font-weight: 400; line-height: 1.4; color: var(--text-muted); }
 .recentHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
 .recentRange { font-size: var(--font-metadata); color: var(--text-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -41,7 +38,7 @@
 .recentCardHeading .recentStatus { display: inline-flex; align-items: center; gap: 4px; width: auto; height: auto; margin: 0; font-size: 11px; line-height: 1.5; white-space: nowrap; }
 .recentStatus b { display: inline-grid; place-items: center; width: 14px; font-size: 14px; font-weight: 400; }
 .recentCardHeading > span:last-child { color: var(--text-muted); }
-.recentCard h4 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; font-size: 14px; font-weight: 650; line-height: 1.45; }
+.recentCard h4 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; font-size: 14px; font-weight: 600; line-height: var(--type-caption-line); }
 .recentFacts { min-block-size: 1lh; font-size: 11px; line-height: 1.5; color: var(--text-muted); overflow-wrap: anywhere; }
 .analysisCard:focus-visible, .recentCard:focus-visible { outline: 2px solid var(--border-focus); outline-offset: 3px; }
 @media (max-width: 350px) {
@@ -50,8 +47,6 @@
   .main .recentHeading > button { margin-block: 0; }
   .recentRange { grid-column: 1 / -1; grid-row: 2; justify-self: end; }
   .main .weeklySummary { padding-inline: 12px; }
-  .metrics > div { padding-inline: 6px; }
-  .metrics strong { font-size: 14px; }
   .main .analysisCard { padding: 10px; }
   .recentCard .recentCardHeading { gap: 4px; }
   .recentCard .recentCardHeading time, .recentCardHeading .recentStatus { font-size: 10px; }

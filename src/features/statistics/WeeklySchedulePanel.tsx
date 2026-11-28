@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { DropdownField, SelectDropdown } from '../../components/common-ui/SelectDropdown.tsx'
 import filterTags from '../../components/common-ui/FilterTags.module.css'
 import { Button } from '../../components/ui.tsx'
@@ -81,7 +82,7 @@ export function ScheduleEditor({ state, routines, busy, readOnly = false, readRe
       const before = state.assignments.find(a => a.dayOfWeek === index + 1)?.routineId
       const after = draft.find(a => a.dayOfWeek === index + 1)?.routineId
       const nameFor = (id?: string) => id ? routines.find(r => r.id === id)?.name ?? '사용할 수 없는 루틴' : '휴식'
-      return before === after ? null : <li key={name}>{name}요일 · {nameFor(before)} → {nameFor(after)}</li>
+      return before === after ? null : <li key={name}>{name}요일 · {nameFor(before)} {iconGlyphs.forward} {nameFor(after)}</li>
     })}</ul><div className="row"><Button type="button" variant="neutral" onClick={() => setConfirm(false)}>취소</Button><Button type="button" variant="primary" onClick={async () => {
       setConfirm(false)
       if (await onSave(draft) && navigationKey) { saved.current = true; navigateBack(onCancel) }

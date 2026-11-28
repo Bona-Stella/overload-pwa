@@ -1,0 +1,55 @@
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+.grid > .day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  min-height: 78px;
+  padding: 8px 1px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 650;
+  line-height: normal;
+  text-align: center;
+}
+.date { font-size: 11px; color: var(--text-muted); line-height: 14px; }
+.dateSlot { display: grid; place-items: center; height: 14px; }
+.dateSlot[data-week-dot]::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.grid:has(> [aria-pressed='true']) > [aria-current='date'][aria-pressed='false'] .dateSlot::before { background: var(--text-muted); }
+.mark { display: block; min-height: 17px; line-height: 17px; margin-top: 5px; font-size: 13px; font-weight: 700; }
+.info { display: block; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 7px; font-size: 8px; }
+.day > [data-past='true'] { color: #858A94; }
+.mark:is([data-status='complete'], [data-status='missed']) { font-size: 17px; }
+.day > [data-status='complete'] { color: var(--status-done); }
+.day > [data-status='missed'] { color: var(--status-missed); }
+.info[data-status='partial'] { color: var(--status-warning); }
+
+.day:is([aria-current='date'], [aria-pressed='true'])::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--border-subtle);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.day[aria-pressed='true']::after,
+.day[aria-current='date']:not([aria-pressed])::after { border-color: var(--accent); }
+.day[aria-current='date']:not([aria-pressed]) > .date { color: var(--accent); }
+.day[aria-pressed='true'] > .mark { color: var(--accent); }
+.grid > button.day:focus-visible { outline-offset: 2px; }
+
+.grid[data-vertical] { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+.grid[data-vertical] > .day {
+  display: grid;
+  grid-template-columns: 22px 24px minmax(0, 1fr) max-content;
+  gap: 6px;
+  min-height: 44px;
+  padding: 6px 9px;
+}
+.grid[data-vertical] .mark, .grid[data-vertical] .info { margin-top: 0; }
+.grid[data-vertical] .info { font-size: 13px; text-align: start; }
+
+.detail { padding: 10px; border-radius: var(--radius-card-compact); background: var(--surface-input); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }

@@ -1,3 +1,7 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
+import { Icon } from '../../components/icons/Icon.tsx'
+import { routineDelete } from '../../components/icons/common.tsx'
+import { emptyWeight, emptyCardio as emptyCardioIcon } from '../../components/icons/routine.tsx'
 import { KgWheel } from '../workout-flow/WeightFocus.tsx'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
@@ -51,10 +55,10 @@ function ExerciseActions({ index, count, onMove, onRemove }: {
   index: number; count: number; onMove: (delta: number) => void; onRemove: () => void
 }) {
   return <div className={editStyles.exerciseActions}>
-    <button type="button" disabled={index === 0} onClick={() => onMove(-1)}>↑ 위로</button>
-    <button type="button" disabled={index === count - 1} onClick={() => onMove(1)}>↓ 아래로</button>
+    <button type="button" disabled={index === 0} onClick={() => onMove(-1)}>{iconGlyphs.up} 위로</button>
+    <button type="button" disabled={index === count - 1} onClick={() => onMove(1)}>{iconGlyphs.down} 아래로</button>
     <button type="button" className={`danger ${editStyles.cardAction}`} onClick={onRemove}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 7h14m-9 0V4h4v3m-7 0 1 13h8l1-13m-6 3v7m3-7v7" /></svg>
+      <Icon icon={routineDelete} />
       삭제
     </button>
   </div>
@@ -62,9 +66,7 @@ function ExerciseActions({ index, count, onMove, onRemove }: {
 
 function EmptyExerciseList({ weight = false }: { weight?: boolean }) {
   return <Card className={editStyles.emptyList}>
-    <svg width="28" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {weight ? <path d="M2 9v6m4-9v12m12-12v12m4-9v6M2 12h20" /> : <><ellipse cx="6.5" cy="9" rx="3.2" ry="5.7" transform="rotate(12 6.5 9)" /><ellipse cx="17.5" cy="13" rx="3.2" ry="5.7" transform="rotate(12 17.5 13)" /></>}
-    </svg>
+    <Icon icon={weight ? emptyWeight : emptyCardioIcon} />
     <p>등록된 {weight ? '웨이트' : '유산소'} 운동이 없어요</p>
   </Card>
 }

@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { partialAchievement } from '../statistics/display-achievement.ts'
 import type { ReactNode } from 'react'
 import { useContext, useEffect, useRef, useState } from 'react'
@@ -309,8 +310,6 @@ export function HomeView(props: HomeViewProps) {
   }, [pointerDateSelected])
   const evidence = props.week?.evidence ?? data?.recent
   const day = overview?.plannedDays.find(d => d.date === selected)
-  const selectedEvidence=day?.selectedSessionId?evidence?.get(day.selectedSessionId):undefined
-  const status = dayStatus(day, selected, today, selectedEvidence ? partialAchievement(selectedEvidence) : 'unknown')
   const unconfirmed = !!props.issue && (props.startUnconfirmed ?? props.attempt)
   const feedback = useReadErrorToast(props.feedbackVisible !== false
     ? unconfirmed ? '운동이 시작됐는지 확인하지 못했어요.' : props.issue ?? (data && (!routineReadIssue ? props.startReadIssue ?? props.refreshIssue ?? (routineRefresh?.failed ? '최신 루틴을 불러오지 못했어요.' : null) : null))
@@ -387,14 +386,14 @@ export function HomeView(props: HomeViewProps) {
             <small data-past={date < today}>{date.slice(8)}</small><strong data-status={state.mark === 'X' ? 'missed' : state.kind}>{state.mark}</strong><span data-past={date < today}>{planned?.plan ? scheduleRoutineLabel(planned.plan.name, planned.plan.tag??undefined) : planned?.status === 'REST' ? '휴식' : '미확인'}</span>
           </button>
         })}</div>
-        <p className={styles.dayDetail}>{selected.slice(5).replace('-', '.')} · {day?.plan
-          ? day.plan.name + ' · ' + (day.status === 'UNVERIFIABLE' || day.status === 'UNKNOWN' ? '수행 확인 불가' : status.label)
-          : day?.status === 'REST' || day?.status === 'BEFORE_REGISTRATION' ? status.label
-            : '당일 배정 확인 불가' + (day?.status === 'PENDING' ? ' · ' + status.label : '')}
-          {day?.selectedSessionId && <Button className={styles.dayLink} variant="quiet" onClick={() => props.onOpen(day.selectedSessionId!)}>기록 ›</Button>}</p>
+        <p className={styles.dayDetail}>{[
+          `${selected.slice(5).replace('-', '.')} ${weekdays[dayOfWeek(selected) - 1]}요일`,
+          day?.plan?.tag,
+          day?.status === 'REST' ? '휴식' : day?.plan?.name ?? '일정 미확인',
+        ].filter(Boolean).join(' - ')}</p>
         </>}
       </Card>
-      <section aria-label="최근 운동" className={styles.recent} aria-busy={!(props.recent?.recentRows ?? data?.recentRows) && !props.recentFailed}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button compact variant="quiet" onClick={() => props.onHistory?props.onHistory():props.onNavigate('history')}>전체 보기 ›</Button></div>
+      <section aria-label="최근 운동" className={styles.recent} aria-busy={!(props.recent?.recentRows ?? data?.recentRows) && !props.recentFailed}><div className={styles.sectionTitle}><h2>최근 운동</h2><Button compact variant="quiet" onClick={() => props.onHistory?props.onHistory():props.onNavigate('history')}>전체 보기 {iconGlyphs.next}</Button></div>
         {!(props.recent?.recentRows ?? data?.recentRows) && !props.recentFailed && <HomePlaceholder area="recent" />}
         {(props.recent?.recentRows ?? data?.recentRows)?.length === 0 && <EmptyState icon={<FeedbackIcon name="record" size={24} />} title="아직 운동 기록이 없어요" />}
         {(props.recent?.recentRows ?? data?.recentRows)?.map(item => <RecentWorkout key={item.id} row={item} detail={(props.recent ?? data)?.recent?.get(item.id)} onOpen={props.onOpen} />)}

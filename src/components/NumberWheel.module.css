@@ -9,6 +9,27 @@
 .hideSteps { grid-template-columns: minmax(0,1fr); }
 .plainSteps { grid-template-columns: 44px minmax(0, 1fr) 44px; }
 .weightControl { grid-template-columns: minmax(0, 48px) minmax(0, 104px) minmax(0, 48px); max-width: 220px; margin-inline: auto; justify-content: center; }
+.control.stable > [data-wheel-value] {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 2px;
+  font-size: var(--type-input-size);
+  font-weight: var(--type-control-weight);
+  line-height: var(--type-control-line);
+}
+.valuePair { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; max-width: 100%; }
+.valuePair > span { min-inline-size: 0; text-align: center; overflow-wrap: anywhere; }
+.valuePair > small { flex: none; color: var(--text-muted); }
+.control.prominent { grid-template-columns: 48px minmax(0, 1fr) 48px; max-width: 270px; gap: 8px; }
+.control.prominent > button:not([data-wheel-value]) { border: var(--border-card); border-radius: var(--radius-control); }
+.control.prominent > [data-wheel-value] { font-size: var(--type-metric-size); font-weight: var(--type-heading-weight); }
+.prominent .valuePair > span { min-inline-size: min(3ch, 100%); }
+.prominent .valuePair > small { font-size: 13px; }
+.stable .readout { color: var(--text-primary); }
 .compactStepper { grid-template-columns: 48px minmax(0, 140px) 48px; gap: 8px; justify-content: center; align-items: center; }
 .compactStepper > button.valueButton[aria-label] {
   padding: 4px; font-size: 20px;

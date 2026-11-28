@@ -1,3 +1,4 @@
+import { iconGlyphs } from './icons/glyphs.ts'
 import { useCallback, useEffect, useId, useLayoutEffect, useRef } from 'react'
 import { useDialogHistory } from '../app/navigation.ts'
 import type { ReactNode, RefObject } from 'react'
@@ -47,7 +48,7 @@ export function Dialog({ title, tone, surface, onClose, children, initialFocus, 
       <h2 id={titleId} ref={titleRef} tabIndex={-1} data-dialog-heading>{title}</h2>
       <button type="button" className="icon-button" data-close-text aria-label="닫기" disabled={dismissBlocked} data-button-pending={dismissBlocked || undefined}
         onPointerDown={closePointerGuard?.pointerDown} onPointerCancel={closePointerGuard?.pointerCancel}
-        onClick={event => { if (!closePointerGuard?.blocksClick(event)) requestClose() }}>×</button></div>
+        onClick={event => { if (!closePointerGuard?.blocksClick(event)) requestClose() }}>{iconGlyphs.close}</button></div>
     {children}
   </dialog>
 }

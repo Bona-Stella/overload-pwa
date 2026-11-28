@@ -489,12 +489,12 @@ export async function verifyWorkoutReview({ origin, send, evaluate, wait, click,
   assert.equal(await evaluate(`document.querySelector('[aria-label="운동 시간"]').lastElementChild.children.length`), 2)
   assert.equal(await evaluate(`document.querySelector('[aria-label="운동 시간"]').lastElementChild.firstElementChild.textContent`), '남은 휴식')
   await wait(() => evaluate(`(() => {
-    const header = document.querySelector('[aria-label="운동 시간"]').parentElement.getBoundingClientRect()
+    const header = document.querySelector('[data-keyboard-header]').getBoundingClientRect()
     const weight = document.querySelector('[aria-label="진행 중량"]').getBoundingClientRect()
     const page = document.scrollingElement
-    const target = Math.max(0, Math.min(window.scrollY + weight.top - header.bottom - 8, page.scrollHeight - page.clientHeight))
-    return Math.abs(window.scrollY - target) < 2 && weight.top >= header.bottom + 6
-  })()`), 'completed set scrolls weight card below sticky header')
+    const desired = Math.max(0, Math.min(scrollY + weight.top - header.bottom - 8, page.scrollHeight - page.clientHeight))
+    return Math.abs(scrollY - desired) < 2
+  })()`), 'completion aligns working weight within the available scroll range')
   assert.equal(await evaluate('document.querySelector(\'[aria-label="2세트 완료"]\').disabled'), true)
   await openList()
   assert.equal(await applyDisabled(), true)

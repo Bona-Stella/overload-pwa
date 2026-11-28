@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import type { CardioPlan, Session } from '../workout-online/types.ts'
 import { cardioComplete, sessionAchievement } from '../home/achievement.ts'
 
@@ -6,13 +7,13 @@ export type PartialResult = 'met' | 'below' | 'unknown'
 /** Existing completion and partial predicates, expressed as a shared card status. */
 export function sessionDisplayStatus(session: Session) {
   const whole=sessionAchievement(session)
-  if(whole.state==='complete')return {kind:'complete',mark:'✓',label:'전체 달성'}
+  if(whole.state==='complete')return {kind:'complete',mark:iconGlyphs.check,label:'전체 달성'}
   if(whole.state!=='unknown'){
     const partial=partialAchievement(session)
-    if(partial==='met')return {kind:'partial',mark:'△',label:'부분 달성'}
-    if(partial==='below')return {kind:'missed',mark:'×',label:'기준 미달'}
+    if(partial==='met')return {kind:'partial',mark:iconGlyphs.partial,label:'부분 달성'}
+    if(partial==='below')return {kind:'missed',mark:iconGlyphs.close,label:'기준 미달'}
   }
-  return {kind:'unknown',mark:'?',label:'달성 확인 불가'}
+  return {kind:'unknown',mark:iconGlyphs.unknown,label:'달성 확인 불가'}
 }
 /** UI classification only; never sent as effectiveDay, completion or an approval result. */
 export function partialAchievement(session: Session): PartialResult {

@@ -1,3 +1,5 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { musclePeriod } from '../../components/icons/record.tsx'
 import { LoadingSkeleton } from '../../components/LoadingSkeleton.tsx'
 import { DropdownField } from '../../components/common-ui/SelectDropdown.tsx'
 import { RecordChart } from './RecordChart.tsx'
@@ -73,7 +75,7 @@ export function MuscleAnalysisView({ data, plan, presets = [], selected, onSelec
   if (!data) return null
   return <section className={`stack muscle-analysis ${planStyles.page} ${statisticsStyles.page}`} aria-label="주간 근육 통계">
     <div className={statisticsStyles.period} aria-label="이번 주 조회 기간">
-      <span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>{period ? <><time dateTime={period.fromDate}>{period.fromDate.slice(5).replace('-','.')}</time><span aria-hidden="true">–</span><time dateTime={addDays(period.toDateExclusive,-1)}>{addDays(period.toDateExclusive,-1).slice(5).replace('-','.')}</time></> : '기간 미확인'}</span>
+      <span><Icon icon={musclePeriod} />{period ? <><time dateTime={period.fromDate}>{period.fromDate.slice(5).replace('-','.')}</time><span aria-hidden="true">–</span><time dateTime={addDays(period.toDateExclusive,-1)}>{addDays(period.toDateExclusive,-1).slice(5).replace('-','.')}</time></> : '기간 미확인'}</span>
       <small>이번 주</small>
     </div>
     <Card className={statisticsStyles.controls}>

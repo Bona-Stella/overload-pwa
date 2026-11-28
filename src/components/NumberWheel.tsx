@@ -1,3 +1,4 @@
+import { iconGlyphs } from './icons/glyphs.ts'
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
@@ -20,6 +21,8 @@ type Props = {
   showEmptyUnit?: boolean
   valueState?: NumericValueState
   valueNote?: string
+  stableValue?: boolean
+  prominent?: boolean
   renderTrigger?: (open: (() => void) | undefined, disabled: boolean | undefined) => React.ReactNode
 }
 
@@ -35,7 +38,20 @@ function EditableNumberWheel(props: Props) {
   </NumberWheelControls>
 }
 
-function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, stepLabel = '', plainSteps, hideSteps, compactStepper, displayValue, describeBlank, showEmptyUnit, valueState, valueNote, renderTrigger, open, children }:
+function WheelValue({ value, unit, state, stable }: { value: string; unit?: string; state?: NumericValueState; stable?: boolean }) {
+  const content = <><span data-numeric-value={state}>{value}</span>{unit && <small>{stable ? unit : ' ' + unit}</small>}</>
+  return stable ? <span className={styles.valuePair}>{content}</span> : content
+}
+
+export function NumberWheelReadout({ value, unit, plainSteps, label }: { value: string; unit: string; plainSteps?: boolean; label?: string }) {
+  return <div className={`${styles.control} ${plainSteps ? styles.plainSteps : styles.weightControl} ${styles.stable}`} data-wheel-readout>
+    <div className={styles.readout} role={label ? 'group' : undefined} aria-label={label} data-wheel-value>
+      <WheelValue stable value={value} unit={unit} state={value === '—' ? 'empty' : 'confirmed'} />
+    </div>
+  </div>
+}
+
+function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, stepLabel = '', plainSteps, hideSteps, compactStepper, displayValue, describeBlank, showEmptyUnit, valueState, valueNote, stableValue, prominent, renderTrigger, open, children }:
   Omit<Props, 'onChange' | 'validate' | 'start'> & { onChange?: Props['onChange']; open?: () => void; children?: React.ReactNode }) {
   const change = (direction: -1 | 1) => {
     const next = adjust(value, direction)
@@ -47,13 +63,13 @@ function NumberWheelControls({ label, value, onChange, disabled, unit, adjust, s
   const description = state === 'empty' ? numericStateDescription.empty
     : [shownValue === '—' ? numericStateDescription.empty : shownValue, showUnit, numericStateDescription[state], valueNote].filter(Boolean).join(' ')
   if (renderTrigger) return <>{renderTrigger(open, disabled)}{children}</>
-  return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''} ${hideSteps ? styles.hideSteps : ''} ${compactStepper ? styles.compactStepper : ''}`} role="group" aria-label={label}>
-    {!hideSteps&&<Button shape="control" aria-label={label + ' 감소'} disabled={disabled || adjust(value, -1) === null} onClick={onChange && (() => change(-1))}>−{stepLabel}</Button>}
+  return <div className={`${styles.control} ${stepLabel ? styles.weightControl : ''} ${plainSteps ? styles.plainSteps : ''} ${hideSteps ? styles.hideSteps : ''} ${compactStepper ? styles.compactStepper : ''} ${stableValue || prominent ? styles.stable : ''} ${prominent ? styles.prominent : ''}`} role="group" aria-label={label}>
+    {!hideSteps&&<Button shape="control" aria-label={label + ' 감소'} disabled={disabled || adjust(value, -1) === null} onClick={onChange && (() => change(-1))}>{iconGlyphs.subtract}{stepLabel}</Button>}
     <Button shape="control" className={compactStepper ? styles.valueButton : undefined} aria-label={label} aria-description={description}
-      data-wheel-empty={state === 'empty' || undefined} disabled={disabled} onClick={open}>
-      <span data-numeric-value={valueState}>{shownValue}</span>{showUnit && <small> {unit}</small>}
+      data-wheel-value data-wheel-empty={state === 'empty' || undefined} disabled={disabled} onClick={open}>
+      <WheelValue stable={stableValue || prominent} value={shownValue} unit={showUnit || undefined} state={valueState} />
     </Button>
-    {!hideSteps&&<Button shape="control" aria-label={label + ' 증가'} disabled={disabled || adjust(value, 1) === null} onClick={onChange && (() => change(1))}>+{stepLabel}</Button>}
+    {!hideSteps&&<Button shape="control" aria-label={label + ' 증가'} disabled={disabled || adjust(value, 1) === null} onClick={onChange && (() => change(1))}>{iconGlyphs.add}{stepLabel}</Button>}
     {children}
   </div>
 }

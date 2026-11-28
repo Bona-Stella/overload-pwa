@@ -14,7 +14,7 @@
 .actions { display:flex; gap:8px; flex-wrap:wrap; }
 .list { display:grid; gap:var(--card-gap); min-width:0; }
 .hero { padding:var(--card-padding-hero); border:var(--border-card); border-radius:var(--radius-card-compact); background:var(--hero-gradient); }
-.hero h2 { font-size:24px; margin:6px 0; }
+.hero h2 { font-size:var(--type-heading-size); font-weight:var(--type-heading-weight); line-height:var(--type-heading-line); margin:6px 0; }
 .hero .title > button { flex-shrink:0; }
 .eyebrow { color:var(--accent); font-size:12px; font-weight:700; }
 .title { display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -23,28 +23,20 @@
 .days [aria-pressed='true'] { color:var(--accent); border-color:var(--accent); background:var(--accent-soft); }
 .editor > button:last-child { position:sticky; bottom:env(safe-area-inset-bottom); z-index:1; }
 
-.week {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.week button{min-width:0;padding:9px 2px;display:grid;gap:7px;font-size:12px}.week span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}.week [aria-pressed='true']{border-color:var(--accent);color:var(--accent)}.filters{display:flex;align-items:end;gap:8px}.filters label{display:grid;gap:5px;font-size:12px}.filters select{min-height:40px}.targets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.weightAdjust{display:grid;grid-template-columns:58px minmax(0,1fr) 58px;gap:8px;align-items:end}.weightAdjust button{min-height:44px;padding:6px}.categories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.categories button{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:8px 3px}.categories [aria-pressed='true']{border-color:var(--accent);color:var(--accent)}
+.filters{display:flex;align-items:end;gap:8px}.filters label{display:grid;gap:5px;font-size:12px}.filters select{min-height:40px}.targets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.weightAdjust{display:grid;grid-template-columns:58px minmax(0,1fr) 58px;gap:8px;align-items:end}.weightAdjust button{min-height:44px;padding:6px}.categories{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.categories button{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;padding:8px 3px}.categories [aria-pressed='true']{border-color:var(--accent);color:var(--accent)}
 
 .cardSummary{display:block;margin-top:5px}
 
 .list .weekSection { display:flex; flex-direction:column; }
 .weekContent { display:grid; gap:var(--card-gap-dense); }
-.list .weekSection .weekTiles { margin-top:0; }
 .weekSection [hidden],.list [hidden] { display:none; }
 .viewToggle { display:grid; place-items:center; padding:7px; min-width:36px; min-height:36px; }
-.list .weekSection .weekTiles button { min-height:64px; }
-.weekTiles .weekName { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
-.weekRows { display:grid; gap:5px; }
-.weekRows .weekRow { display:grid; grid-template-columns:24px minmax(0,1fr) max-content; align-items:center; gap:6px; min-width:0; min-height:44px; padding:6px 7px; text-align:left; background:transparent; border:1px solid var(--border-subtle); border-radius:5px; font-size:13px; }
-.weekDay { display:grid; align-self:stretch; place-items:center; border-right:1px solid var(--border-subtle); color:var(--accent); }
-.weekInfo { display:flex; align-items:center; gap:6px; min-width:0; padding-inline-start:4px; white-space:nowrap; }
-.weekInfo > strong { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
 .planCounts { display:flex; align-items:center; gap:8px; white-space:nowrap; font-size:12px; }
 .planCounts > span { display:inline-flex; align-items:center; gap:5px; }
 .planCounts img { width:18px; height:18px; flex:none; object-fit:contain; }
-.weekRows .weekRow[aria-pressed='true'] { border-color:transparent; }
-.selectedDay { display:flex; align-items:center; justify-content:space-between; gap:var(--card-gap-dense); margin:0; font-size:13px; overflow-wrap:anywhere; }
-.selectedDay button { flex:none; }
+.selectedDay { composes: detail from '../../components/common-ui/WeekDateGrid.module.css'; position: relative; margin: 0; }
+.weekContent > .selectedDay { padding-inline-end: 44px; }
+.selectedDay > button { position: absolute; inset-inline-end: 0; inset-block-start: 50%; translate: 0 -50%; min-width: 44px; }
 .listHeading { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; font-size:14px; }
 .listHeading strong { min-width:0; }
 .listFilter { margin-inline-start: auto; }
@@ -60,7 +52,7 @@
 .tag { flex:none; font-size:11px; color:var(--accent); }
 .cardMenu { position:relative; margin-left:auto; flex:none; }
 .compactCard .cardBody { display:grid; gap:4px; padding:0; width:100%; min-width:0; text-align:left; background:transparent; border:0; border-radius:0; color:var(--text-primary); font-weight:400; line-height:1.4; }
-.cardName { font-size:18px; font-weight:650; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.cardName { font-size:var(--type-card-title-size); font-weight:var(--type-control-weight); line-height:var(--type-heading-line); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .cardDays { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-muted); font-size:12px; }
 .exerciseLine { display:flex; gap:8px; min-width:0; align-items:baseline; font-size:13px; }
 .exerciseLine b { flex:none; width:51px; color:var(--accent); font-size:11px; }

@@ -1,3 +1,5 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { settingsIcons } from '../../components/icons/settings.tsx'
 import { useId } from 'react'
 import type { MouseEventHandler, ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
@@ -102,26 +104,8 @@ function RowContent({ icon, title, description, titleId, descriptionId, status }
   </>
 }
 
-const icons = {
-  forward: 'm9 6 6 6-6 6',
-  down: 'm6 9 6 6 6-6',
-  shield: 'M12 22s7-3 7-9V6l-7-3-7 3v7c0 6 7 9 7 9Zm-3-10 2 2 4-4',
-  devices: 'M10 17H3V5h14v3M7 21h3m3-3h6m-6-7h8v10h-8z',
-  timer: 'M9 2h6m-3 8v4m8-10-2 2M20 14a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z',
-  bell: 'M10 21h4M6 9a6 6 0 0 1 12 0v4l2 4H4l2-4V9ZM2 9a10 10 0 0 1 3-6m17 6a10 10 0 0 0-3-6',
-  weight: 'M2 10v4m3-7v10m3-12v14m0-7h8m0-7v14m3-12v10m3-7v4',
-  sliders: 'M4 6h7m4 0h5m-9-2v4m-7 4h3m4 0h9m-9-2v4m-7 4h11m4 0h1m-5-2v4',
-  database: 'M5 6c0-2 3-3 7-3s7 1 7 3-3 3-7 3-7-1-7-3Zm0 0v12c0 2 3 3 7 3s7-1 7-3V6M5 12c0 2 3 3 7 3s7-1 7-3',
-  download: 'M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4',
-  phone: 'M8 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm4 16h.01',
-  reset: 'M4 11a8 8 0 1 1 2 7M4 5v6h6',
-  withdraw: 'M14 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM3 21v-2a4 4 0 0 1 4-4h6m4 1 4 4m0-4-4 4',
-  logout: 'M10 17v3H4V4h6v3m-2 5h12m-4-4 4 4-4 4',
-}
-type IconName = keyof typeof icons
+type IconName = keyof typeof settingsIcons
 
 function SettingsIcon({ name }: { name: IconName }) {
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d={icons[name]} />
-  </svg>
+  return <Icon icon={settingsIcons[name]} />
 }

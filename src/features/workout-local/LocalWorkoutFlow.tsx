@@ -1,3 +1,5 @@
+import { allExercisesResolved, sessionElapsed } from './session-clock.ts'
+import { revealWorkingWeight } from '../workout-flow/revealWorkingWeight.ts'
 import { referenceIncrease } from '../workout-online/reference-reminder.ts'
 import type { ReferenceRecord } from '../workout-online/reference-reminder.ts'
 import type { Routine } from '../workout-online/types.ts'
@@ -75,7 +77,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const completionGuard = useRef<string | null>(null)
   const guardTimer = useRef<number | undefined>(undefined)
   const manualEndPending = useRef(false)
-  const action = useRef(false), clock = useRef<HTMLDivElement>(null), working = useRef<HTMLElement>(null)
+  const action = useRef(false), clock = useRef<HTMLDivElement>(null)
   const [alerts] = useRestAlertPreferences(state.workout?.userId ?? null)
   const [estimateCardio] = useCardioEstimate(state.workout?.userId ?? null)
   const audio = useRestAudio(alerts.sound || alerts.middle, alerts.volume)
@@ -179,10 +181,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   useLayoutEffect(() => {
     if (!completedScroll || completedScroll.exerciseId !== workout?.currentExerciseId || !visible || awaitingReview) return
     const frame = requestAnimationFrame(() => {
-      if (working.current && clock.current && Math.abs(window.scrollY - completedScroll.top) <= 1) {
-        window.scrollTo({ top: window.scrollY + working.current.getBoundingClientRect().top - clock.current.getBoundingClientRect().height - 8,
-          behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
-      }
+      revealWorkingWeight(clock.current, completedScroll.top)
       setCompletedScroll(null)
     })
     return () => cancelAnimationFrame(frame)
@@ -200,7 +199,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
   const preparingWeight = !!weight && !completeWeight && !model.weightStarted(workout, id)
   const preparing = !warmup && (preparingWeight || activity?.phase === 'ready')
   const allWeights = weights.every(isWeightDone)
-  const allDone = allWeights && cardio.every(c => c.phase === 'completed' || c.phase === 'skipped')
+  const allDone = allExercisesResolved(workout)
   const pending = items.slice(index + 1).concat(items.slice(0, index + 1)).find(item => {
     const w = weights.find(e => e.id === item.id), c = cardio.find(e => e.id === item.id)
     return w ? !isWeightDone(w) : c?.phase !== 'completed' && c?.phase !== 'skipped'
@@ -322,13 +321,14 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     if (!validate(() => setCompletionInput(draft, weight.loadType))) return
     feedback.clearError()
     if (event && weight.sets.filter(set => !set.result).length === 1) footerRepeatGuard.arm(event)
+    const completionTop = window.scrollY
     void unlock()
     void completeExercise((w, at) => {
       if (!model.weightStarted(w, id) || model.restRemaining(w, at, id) > 0) throw new WorkoutActionError('운동을 시작하고 휴식을 마친 뒤 완료해 주세요.')
       model.editDraft(w, id, ordinal, { ...draft, ...w.drafts[slotKey(id, ordinal)] })
       model.completeSet(w, id, ordinal, at, createSetId, alerts)
     }, ordinal).then(saved => {
-      if (saved && controller.getSnapshot().workout?.currentExerciseId === id) setCompletedScroll({ exerciseId: id, top: window.scrollY })
+      if (saved && controller.getSnapshot().workout?.currentExerciseId === id) setCompletedScroll({ exerciseId: id, top: completionTop })
     })
   }
   const startExercise = () => {
@@ -457,8 +457,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     const resting = model.restRemaining(workout, now, id) > 0
     const open = memoOpen[id] ?? !started
     return <>
-      {allDone && <StatusNotice>모든 종목을 완료했습니다. 기록을 확인하고 운동을 종료할 수 있습니다.</StatusNotice>}
-      {weight && <WeightFocus preview={preview} additionalInput weight={weight} position={at + 1} workingRef={preview ? undefined : working} manufacturers={manufacturers}
+      {weight && <WeightFocus preview={preview} additionalInput weight={weight} position={at + 1} manufacturers={manufacturers}
         description={exerciseDescription(definitions.find(d => d.id === weight.standardId) ?? { id: weight.standardId, name: weight.name, aliases: [] })}
         preparing={!started && !resting && !isWeightDone(weight)}
         resting={!started || resting || id === workout.currentExerciseId && endingRest}
@@ -508,7 +507,7 @@ export function LocalWorkoutView({ state, controller, definitions, manufacturers
     <WorkoutFrame hidden={!visible} routine={workout.initialPlan.routineName} deload={false} exerciseScroll={exerciseScroll}
       feedback={<Toast toast={feedback.toast} onDismiss={feedback.dismiss} passThrough
         bottomClearance="max(0px, calc(var(--workout-footer-height, 0px) - env(safe-area-inset-bottom)))" />}
-      elapsed={Math.max(0, (workout.finish ? Date.parse(workout.finish.endedAt) : now) - Date.parse(workout.startedAt))} position={warmup ? 0 : index + 1} count={items.length}
+      elapsed={sessionElapsed(workout, now)} position={warmup ? 0 : index + 1} count={items.length}
       flash={visual.top} dim={visual.dim && !editing && !blocked && !modal ? remaining : undefined}
       timerHeading={timerHeading} timerLabel={timerLabel} timer={timer} clockRef={clock}
       navigation={weight && !warmup ? { previous: items[index - 1], next: items[index + 1], onGo: go } : undefined}

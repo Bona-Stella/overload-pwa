@@ -1,3 +1,6 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
+import { Icon } from '../../components/icons/Icon.tsx'
+import { scheduleView, scheduleSwitch, scheduleRotate } from '../../components/icons/routine.tsx'
 import { ActionMenu } from '../../components/common-ui/ActionMenu.tsx'
 import type { ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
@@ -16,17 +19,17 @@ export function PresetHeader({ schedule, viewed, busy, readOnly, viewToggle, onA
   return <>
     <div className={styles.titleRow}>
       <span className={styles.kicker}>주간 루틴 일정</span>
-      {active ? <span className={styles.status} data-mode="active" title="현재 적용된 주간 일정"><span aria-hidden="true">✓</span>진행중</span>
+      {active ? <span className={styles.status} data-mode="active" title="현재 적용된 주간 일정"><span aria-hidden="true">{iconGlyphs.check}</span>진행중</span>
         : schedule.autoEnabled ? <span className={styles.status} data-mode="preview" role="status" aria-label="보기 · 조회 전용" title="자동 순환 중 · 조회 전용">
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.7"/></svg>보기</span>
+          <Icon icon={scheduleView} />보기</span>
           : <button type="button" className={styles.status} disabled={busy || readOnly} onClick={onActivate} aria-label={number + '번 주간 일정으로 즉시 전환'}>
-            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 7h14m0 0-4-4m4 4-4 4M17 17H3m0 0 4-4m-4 4 4 4"/></svg>전환</button>}
+            <Icon icon={scheduleSwitch} />전환</button>}
     </div>
     <div className={styles.header}>
       <div className={styles.presetIdentity}><span className={styles.number} aria-label={number + '번 일정'}>{number}</span><strong title={viewed.name}>{viewed.name}</strong></div>
       <div className={styles.tools}>
         <button type="button" className={styles.icon} aria-label="자동 순환" title={schedule.autoEnabled ? '자동 순환 ON' : '자동 순환 OFF'} aria-pressed={schedule.autoEnabled} disabled={busy || readOnly} onClick={onToggle}>
-          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 8a8 8 0 0 0-14-2L4 9m0-5v5h5m-5 7a8 8 0 0 0 14 2l2-3m0 5v-5h-5"/></svg>
+          <Icon icon={scheduleRotate} />
         </button>
         {viewToggle}
         <ActionMenu label="주간 루틴 일정 메뉴" actions={[
@@ -74,7 +77,7 @@ export function PresetNavigation({ schedule, viewed, busy, readOnly, onView, onA
   return <div className={styles.navigation} role="group" aria-label="주간 일정 프리셋">
       {schedule.presets.map((preset, index) => <button type="button" key={preset.id} aria-label={(index + 1) + '번 프리셋 보기'}
         title={preset.name} aria-pressed={viewed.id === preset.id} onClick={() => onView(preset.id)}>{index + 1}</button>)}
-      {schedule.presets.length < presetLimit && !readOnly && <button type="button" aria-label="빈 프리셋 추가" disabled={busy} onClick={onAdd}>+</button>}
+      {schedule.presets.length < presetLimit && !readOnly && <button type="button" aria-label="빈 프리셋 추가" disabled={busy} onClick={onAdd}>{iconGlyphs.add}</button>}
   </div>
 }
 

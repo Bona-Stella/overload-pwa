@@ -1,3 +1,5 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { cardioEdit } from '../../components/icons/workout.tsx'
 import type { ReactNode, Ref } from 'react'
 import styles from './CardioFocus.module.css'
 
@@ -14,9 +16,7 @@ export function CardioValueRow({ label, value, editLabel, valueDescription, onEd
     <strong>{value}</strong>
     <button ref={buttonRef} type="button" className={`quiet ${styles.editTime}`} aria-label={editLabel}
       aria-description={valueDescription} aria-expanded={expanded} aria-controls={controls} disabled={disabled} onClick={onEdit}>
-      <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="m5 11.5-1 4.5 4.5-1L16 7.5 12.5 4zM11 5.5 14.5 9" />
-      </svg>
+      <Icon icon={cardioEdit} />
     </button>
   </div>
 }

@@ -1,3 +1,4 @@
+import { updateSessionClock } from './session-clock.ts'
 import {settleWeightClock,resumeWeightClock,weightVisibility,recoverWeightClock} from './weight-timing.ts'
 import { LocalStoreError, LocalWriteBlocked, WorkoutStore } from '../workout-online/storage.ts'
 import type { Session } from '../workout-online/types.ts'
@@ -130,7 +131,10 @@ export class LocalWorkoutController {
         next = applyLocalChange(previous, w => {
           if (!sync) settleWeightClock(w, now)
           transform(w, now)
-          if (!sync) resumeWeightClock(w, now)
+          if (!sync) {
+            resumeWeightClock(w, now)
+            updateSessionClock(previous, w, now)
+          }
         }, !sync)
       } catch (error) {
         const message = error instanceof WorkoutActionError ? error.message : '현재 운동 상태를 확인한 뒤 다시 시도해 주세요.'

@@ -6,6 +6,7 @@ import { localWorkout } from '../src/features/workout-local/validation.ts'
 import { LocalWorkoutController } from '../src/features/workout-local/controller.ts'
 import { activeWorkoutProgress } from '../src/features/home/active-workout.ts'
 import { observedWeightMs } from '../src/features/workout-local/weight-timing.ts'
+import { allExercisesResolved, sessionElapsed, updateSessionClock } from '../src/features/workout-local/session-clock.ts'
 import { intendFinish, sealFinish } from '../src/features/workout-local/sync-state.ts'
 import { acquireEditor, editorLockName } from '../src/features/workout-local/lock.ts'
 import { LocalStoreError, LocalWriteBlocked } from '../src/features/workout-online/storage.ts'
@@ -273,6 +274,40 @@ test('rest, drafts and observed weight checkpoints are independent of the browse
   e.c.stop()
 })
 
+test('elapsed time persists through full completion, resumes for added cardio, and preserves the FINISH timestamp', () => {
+  const timed = (previous, now, transform) => change(previous, next => {
+    transform(next)
+    updateSessionClock(previous, next, now)
+  })
+  let workout = timed(local(), at, next => {
+    m.updateTargets(next, E, 1, 8, 10)
+    m.completeWarmup(next, at - 1000)
+    m.startExercise(next, E, at - 1000)
+    m.editDraft(next, E, 1, { weight: '25', reps: '8' })
+    m.completeSet(next, E, 1, at)
+  })
+  assert.ok(allExercisesResolved(workout))
+  const stopped = sessionElapsed(workout, at)
+  workout = JSON.parse(JSON.stringify(workout))
+  assert.ok(localWorkout(workout))
+  assert.equal(sessionElapsed(workout, at + 5000), stopped)
+
+  const plan = { kind: 'TREADMILL', name: '러닝', targetSeconds: 600, targetDistanceKm: null, intensity: null, inclinePercent: null, resistance: null }
+  workout = timed(workout, at + 5000, next => {
+    m.addCardio(next, plan)
+    m.startExercise(next, next.currentExerciseId, at + 5000)
+  })
+  assert.equal(allExercisesResolved(workout), false)
+  assert.equal(sessionElapsed(workout, at + 7000), stopped + 2000)
+
+  workout = timed(workout, at + 8000, next => m.completeCardio(next, next.currentExerciseId, at + 8000))
+  assert.ok(allExercisesResolved(workout))
+  assert.equal(sessionElapsed(workout, at + 12000), stopped + 3000)
+  workout = timed(workout, at + 12000, next => intendFinish(next, at + 12000))
+  assert.equal(workout.finish.endedAt, new Date(at + 12000).toISOString())
+  assert.equal(sessionElapsed(workout, at + 15000), stopped + 3000)
+  assert.equal('sessionClock' in workout.snapshot, false)
+})
 test('completed cardio prepares the next activity without starting its clock or finishing the session',()=>{
   let w=cardio(), first=w.currentExerciseId
   w=change(w,x=>m.addCardio(x,{...x.snapshot.appliedPlan.cardioActivities[0].plan,name:'두 번째 유산소'}))

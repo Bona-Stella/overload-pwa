@@ -41,6 +41,20 @@
   --radius-control: 10px;
   --radius-action: 999px;
   --font-metadata: 11px;
+  --type-heading-size: 18px;
+  --type-subpage-size: 22px;
+  --type-card-title-size: 16px;
+  --type-input-size: 16px;
+  --type-metric-size: 30px;
+  --type-timer-size: 24px;
+  --type-heading-weight: 600;
+  --type-control-weight: 500;
+  --type-button-weight: 600;
+  --type-primary-action-weight: 700;
+  --type-heading-line: 1.3;
+  --type-control-line: 1.2;
+  --type-body-line: 1.5;
+  --type-caption-line: 1.4;
   --chart-primary: var(--accent);
   /* Existing feature panels consume these names while their UI moves to Modules. */
   --bg: var(--surface-page);
@@ -94,7 +108,7 @@
 .theme :global(.timer-bar) { background: var(--surface-card); border-color: var(--border-subtle); }
 .theme :global(.timer-bar span) { color: var(--text-muted); }
 .theme :global(.online-session-badge), .theme :global(.badge) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
-.theme :global(.workout-online [aria-pressed='true']) { border-color: var(--accent); }
+.theme :global(.workout-online [aria-pressed='true']:where(:not([data-week-day]))) { border-color: var(--accent); }
 .theme :global(dialog) { background: var(--surface-card); color: var(--text-primary); border: var(--border-card); border-radius: var(--radius-card); }
 .theme :global(dialog[data-message-tone]) { border-radius: var(--radius-card-compact); }
 .theme :global(.local-set-equipment) { color: var(--text-muted); font-size: var(--font-metadata); font-weight: 400; }

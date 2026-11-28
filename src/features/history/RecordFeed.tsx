@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { clearClosedRecords, readClosedRecord } from '../workout-online/closed-record-read.ts'
 import {recordSummary,recordDuration} from '../workout-online/record-summary.ts'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
@@ -37,7 +38,7 @@ function recentDuration(milliseconds: number | null) {
 
 function RecordCardPlaceholder() {
   return <article className={`session-record-card ${styles.recentCard}`} aria-busy="true" aria-label="운동 기록을 확인하는 중입니다.">
-   <div className={styles.recentCardHeading} aria-hidden="true"><time className={styles.recordPlaceholder}>00.00 · 월 · 00:00</time><span className={styles.recentStatus}><span className={styles.recordPlaceholder}>전체 완료</span></span><span>›</span></div>
+   <div className={styles.recentCardHeading} aria-hidden="true"><time className={styles.recordPlaceholder}>00.00 · 월 · 00:00</time><span className={styles.recentStatus}><span className={styles.recordPlaceholder}>전체 완료</span></span><span>{iconGlyphs.next}</span></div>
    <h4 aria-hidden="true"><span className={styles.recordPlaceholder}>운동 루틴</span></h4>
    <div className={styles.recentFacts} aria-hidden="true"><span className={styles.recordPlaceholder}>웨이트 0/0종목 · 총 0분</span></div>
   </article>
@@ -52,7 +53,7 @@ export function SessionRecordCard({row,session,pending=false,onOpen,timeZone=Int
  const label=status?.kind==='complete'?'전체 완료':status?.kind==='partial'?'부분 완료':status?.label
   if (pending) return <RecordCardPlaceholder />
   return <button type="button" className={`session-record-card ${styles.recentCard}`} data-session-id={row.id} data-session-version={summary?.version} onClick={()=>onOpen(row.id)}>
-   <div className={styles.recentCardHeading}><time>{session ? date : row.workoutDate.slice(5).replace('-', '.')}</time><span className={`record-card-status ${styles.recentStatus}`} data-state={status?.kind}>{status&&<b aria-hidden="true">{status.mark}</b>}{label}</span><span aria-hidden="true">›</span></div>
+   <div className={styles.recentCardHeading}><time>{session ? date : row.workoutDate.slice(5).replace('-', '.')}</time><span className={`record-card-status ${styles.recentStatus}`} data-state={status?.kind}>{status&&<b aria-hidden="true">{status.mark}</b>}{label}</span><span aria-hidden="true">{iconGlyphs.next}</span></div>
    <h4>{row.routineName}</h4>
    <div className={styles.recentFacts}>{session && <>{counts}{counts&&' · '}<span className="record-durations">총 {recentDuration(elapsed)}</span></>}</div>
   </button>
@@ -101,8 +102,21 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const searching = !recent && !!appliedTerm
   const exerciseSearch = searching && search.scope === 'exercise'
   const source=preview?preview.sessions.map(s=>({...s,routineName:s.initialPlan.routineName,status:s.status==='AUTO_CLOSED'?'AUTO_CLOSED' as const:'FINISHED' as const,closedAt:s.closedAt!})):page?.sessions??[]
-  const rows = recent?recentRecordRows(source,today,zone):exerciseSearch && !preview ? [] : recordRows(source, searching ? '0000-01-01' : range.fromDate, searching ? '9999-12-31' : range.toDateExclusive, searching && !exerciseSearch ? appliedTerm : '').filter(row=>!exerciseSearch || !!preview?.sessions.find(s=>s.id===row.id && [...s.initialPlan.weightExercises.map(e=>e.exerciseName),...s.initialPlan.cardioActivities.map(c=>c.plan.name)].some(name=>name.toLocaleLowerCase().includes(appliedTerm.toLocaleLowerCase()))))
-  const options = search.scope === 'exercise' ? (preview ? [...new Set(preview.sessions.flatMap(s=>[...s.initialPlan.weightExercises.map(e=>e.exerciseName),...s.initialPlan.cardioActivities.map(c=>c.plan.name)]))].map(name=>({id:name,exerciseId:preview.definitions.find(e=>e.name===name)?.id,name,description:'실제 세션 포함 운동 · 합성 기록'})) : definitions.map(e => ({ id: e.id, exerciseId:e.id, name: e.name, description: '실제 포함 운동 검색 · 서버 연결 대기' })))
+  const previewExercises = new Map(preview?.sessions.filter(s => !s.deletedAt).map(s => {
+    const snapshot = s.snapshot.state
+    const performed = new Set(snapshot.performedSets.filter(set => !snapshot.deletedPerformedSetIds.includes(set.id)).map(set => set.sessionExerciseId))
+    const weights = snapshot.sessionExercises.filter(e => performed.has(e.id)).flatMap(e => {
+      const name = s.initialPlan.weightExercises.find(w => w.sessionExerciseId === e.id)?.exerciseName
+        ?? preview.definitions.find(d => d.id === e.standardExerciseId)?.name
+      return name ? [name] : []
+    })
+    const measured = new Set(snapshot.cardioResults.filter(r => r.status !== 'SKIPPED' && !snapshot.deletedCardioResultIds.includes(r.id)).map(r => r.sessionActivityId))
+    const cardio = snapshot.appliedPlan.cardioActivities.filter(a => measured.has(a.sessionActivityId)).map(a => a.plan.name)
+    return [s.id, [...weights, ...cardio]]
+  }))
+  const rows = recent?recentRecordRows(source,today,zone):exerciseSearch && !preview ? [] : recordRows(source, searching ? '0000-01-01' : range.fromDate, searching ? '9999-12-31' : range.toDateExclusive, searching && !exerciseSearch ? appliedTerm : '').filter(row=>!exerciseSearch || previewExercises.get(row.id)?.some(name=>name.toLocaleLowerCase().includes(appliedTerm.toLocaleLowerCase())))
+  const options = search.scope === 'exercise'
+    ? [...new Set([...previewExercises.values()].flat())].map(name=>({id:name,exerciseId:preview?.definitions.find(e=>e.name===name)?.id,name,description:'실제 수행 운동 · 합성 기록'}))
     : [...new Set(source.map(s => s.routineName))].map(name => ({ id: name, name, description: '루틴명 · 불러온 종료 기록' }))
   const [details, setDetails] = useState(() => new Map<string, Session>())
   const [unavailable, setUnavailable] = useState(() => new Set<string>())
@@ -159,12 +173,13 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
   const candidates = options.filter(o => (search.scope!=='exercise'||tag==='ALL'||matchingNames.has(o.name))&&o.name.toLocaleLowerCase().includes(search.query.trim().toLocaleLowerCase()))
   const retry = <RefreshButton disabled={!enabled} loading={busy} failure={!page ? issue : null} onRefresh={() => void load(retryCursor)} />
   return <section className={`stack record-feed ${recent?'':activityStyles.page}`} aria-label={recent ? '최근 7일 운동 기록' : '전체 운동 이력'}>
-    {recent && <div className={styles.recentHeading}><h2>최근 운동</h2><span className={styles.recentRange}>{range.fromDate.slice(2)} ~ {today.slice(2)}</span>{onViewAll&&<Button compact variant="quiet" onClick={onViewAll}>전체 보기 ›</Button>}</div>}
+    {recent && <div className={styles.recentHeading}><h2>최근 운동</h2><span className={styles.recentRange}>{range.fromDate.slice(2)} ~ {today.slice(2)}</span>{onViewAll&&<Button compact variant="quiet" onClick={onViewAll}>전체 보기 {iconGlyphs.next}</Button>}</div>}
     {!recent && <><Card className={activityStyles.trend}><PeriodControls variant="activity" value={period} onChange={value => setPeriod(value, true)} monthOnly compact />
       <SearchList scopes={[{ id: 'routine', name: '루틴별' }, { id: 'exercise', name: '운동별' }]} scope={search.scope}
         renderScope={control=><SearchScopePopover {...control} />}
         onScope={value => setSearch({ ...search, scope: value, selected: '',query:'',tag:'ALL' }, true)} loading={!page && !preview && !issue}
-        tags={search.scope==='exercise'?{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:undefined} query={search.query} onQuery={query => setSearch({ ...search, query }, true)} onCloseSearch={()=>{if(search.query!==search.selected)setSearch({...search,query:search.selected},true)}} options={candidates}
+        issue={search.scope === 'exercise' && !preview ? '운동별 이력 검색은 서버 연결이 필요해요. 루틴 이름으로 검색해 보세요.' : undefined}
+        tags={search.scope==='exercise'&&preview?{label:'운동 부위',options:[{id:'ALL',name:'전체'},...Object.entries(catalogGroups).map(([id,g])=>({id,name:g.label}))],selected:tag,onSelect:tag=>setSearch({...search,tag,selected:'',query:''},true)}:undefined} query={search.query} onQuery={query => setSearch({ ...search, query }, true)} onCloseSearch={()=>{if(search.query!==search.selected)setSearch({...search,query:search.selected},true)}} options={candidates}
         onSelect={id => { const chosen = candidates.find(o => o.id === id); if (chosen) setSearch({ ...search, query: chosen.name, selected: chosen.name },true) }} selected={search.selected}
         onClear={() => setSearch({ ...search, query: '', selected: '' }, true)} /></Card></>}
     {searching && <p role="status" className="muted small">전체 과거 기간 검색 · 월 필터를 적용하지 않습니다.</p>}

@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { useState } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import ui from '../../components/ui.module.css'
@@ -14,7 +15,7 @@ export function LoginScreens({ state, controller, now, onLegal }: Props) {
   const verifyWait = Math.max(0, Math.ceil(((state.verifyAt ?? 0) - clock) / 1000))
   const remaining = challenge ? Math.max(0, Math.ceil((challenge.expiresAt - clock) / 1000)) : 0
   if (challenge) return <Card className="auth-panel" aria-busy={busy}>
-    <button className="quiet auth-back" disabled={busy} onClick={() => { setCode(''); controller.cancelOtp() }}>‹ 이메일 주소 변경</button>
+    <button className="quiet auth-back" disabled={busy} onClick={() => { setCode(''); controller.cancelOtp() }}>{iconGlyphs.previous} 이메일 주소 변경</button>
     <p className="eyebrow">CHECK YOUR EMAIL</p><h1>6자리 코드를<br />입력해 주세요</h1>
     <p className="muted auth-address">{challenge.email}</p>
     <p role="status">{state.pending === 'request' ? '인증코드를 보내는 중…' : state.notice || '메일함과 발송 결과를 확인해 주세요.'}</p>

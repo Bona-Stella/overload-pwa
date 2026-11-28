@@ -1,3 +1,5 @@
+import { Icon } from './icons/Icon.tsx'
+import { searchOpen, searchClear } from './icons/controls.tsx'
 import {useEffect,useId,useRef,useState} from 'react'
 import type {MouseEvent,ReactNode} from 'react'
 import {ContentError,EmptyState} from './common-ui/ContentFeedback.tsx'
@@ -50,7 +52,7 @@ export function SearchList({scopes=[],scope='exercise',onScope,renderScope,tags,
     :<label hidden={state.hideScope}><span className="sr-only">검색 범위</span><select aria-label="검색 범위" value={scope} disabled={disabled} onFocus={openScope} onPointerDown={openScope} onChange={e=>changeScope(e.target.value)}>{scopes.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>)}
    <div className="search-input-wrap"><label htmlFor={id}><span className="sr-only">{label}</span><input id={id} type="search" placeholder={label} autoComplete="off" autoFocus={autoFocus} value={mode==='SELECTED'?selected??query:query} disabled={disabled} onFocus={edit} onPointerDown={edit} onClick={edit} onChange={e=>{setState({mode:'EDITING',hideScope:true});onQuery(e.target.value)}}/></label></div>
    <button type="button" className={'quiet search-disclosure '+searchStyles.disclosure} disabled={disabled} aria-label={actionLabel} aria-expanded={open} onPointerDown={e=>{e.preventDefault();e.currentTarget.blur()}} onClick={action}>
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">{mode==='IDLE'?<><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></>:<path d="m6 6 12 12M18 6 6 18"/>}</svg>
+    <Icon icon={mode==='IDLE' ? searchOpen : searchClear} />
    </button>
   </div>
   {tags&&open&&<div className={styles.filters}>{!tags.hideLabel&&<p className={styles.filterLabel}>{tags.label}</p>}<div className={`${filterStyles.strip} ${styles.filterStrip}`} role="group" aria-label={tags.label+' 필터'}>{tags.options.map(tag=><button type="button" key={tag.id} disabled={disabled} aria-pressed={tags.selected===tag.id} onClick={()=>{tags.onSelect(tag.id);setState({mode:'EDITING',hideScope:false})}}><span>{tag.name}</span></button>)}</div></div>}

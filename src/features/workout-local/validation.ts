@@ -36,7 +36,10 @@ function replacementSlots(value: unknown, plan: unknown, snapshot: unknown) {
 }
 export function localWorkout(value: unknown): value is LocalWorkout {
   return v.object(value) && value.schemaVersion === 2 && v.uuid(value.userId) && v.counter(value.dataGeneration) && v.uuid(value.sessionId)
-    && v.uuid(value.editorDeviceId) && v.counter(value.writerEpoch) && v.instant(value.startedAt) && v.initialPlan(value.initialPlan) && v.snapshot(value.snapshot)
+    && v.uuid(value.editorDeviceId) && v.counter(value.writerEpoch) && v.instant(value.startedAt)
+    && (value.sessionClock === undefined || v.object(value.sessionClock) && ms(value.sessionClock.waitingMs)
+      && (value.sessionClock.pausedAt === undefined || ms(value.sessionClock.pausedAt)))
+    && v.initialPlan(value.initialPlan) && v.snapshot(value.snapshot)
     && (value.weightClock===undefined||v.object(value.weightClock)&&typeof value.weightClock.visible==='boolean'&&v.nullable(value.weightClock.runningSince,v.instant)&&v.instant(value.weightClock.observedAt))
     && v.counter(value.editVersion) && v.counter(value.localRevision) && v.counter(value.serverRevision) && v.counter(value.serverVersion)
     && frozen(value.pendingSnapshot, 'snapshot', value) && frozen(value.pendingResolution, 'resolution', value)

@@ -24,6 +24,7 @@
 .flow:is([data-weight-focus], [data-cardio-focus]) { display: flex; flex-direction: column; min-block-size: 100dvh; }
 .flow h1, .summary h1 { font-size: clamp(22px, 6.5vw, 29px); line-height: 1.2; }
 .flow h2, .summary h2 { font-size: 16px; }
+.actions > :global(button[data-modal-neutral]) { font-weight: var(--type-button-weight); }
 .summary h4 { margin: 0; font-size: 14px; }
 .eyebrow { color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .11em; }
 .clockDock { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: min(100%, 520px); z-index: 15; padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); background: var(--surface-card); }
@@ -39,10 +40,11 @@
 .saveLabel[data-workout-save-status='failed'] svg { color: var(--status-danger-text); }
 .clock .saveDetails { position: absolute; inset: 0; width: 100%; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; }
 .clock .saveDetails:focus-visible { outline-offset: -3px; }
-.clock strong { font-size: clamp(17px, 4.6vw, 22px); line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.clock strong { max-inline-size: 100%; font-weight: var(--type-heading-weight); font-size: clamp(17px, 4.6vw, 22px); line-height: 1.3; white-space: var(--timer-white-space, nowrap); font-variant-numeric: tabular-nums; }
 .clock > div:nth-child(2) strong { font-size: 11px; }
 .clock > div:last-child strong { white-space: normal; font-size: 12px; }
-.clock > div:last-child strong[data-time] { white-space: nowrap; font-size: clamp(13px, 4.6vw, 22px); }
+.clock > div:last-child strong[data-time] { white-space: var(--timer-white-space, nowrap); font-size: clamp(13px, 4.6vw, 22px); }
+.clock strong[data-long-time] { --timer-white-space: normal; overflow-wrap: anywhere; }
 .restFlash { --rest-flash-on: var(--text-primary); --rest-flash-off: var(--surface-card); --rest-text-off: var(--text-primary); }
 .restFlashBar { --rest-flash-on: var(--status-warning); --rest-flash-off: var(--surface-warning); --rest-text-off: var(--status-warning); }
 :is(.restFlash, .restFlashBar)[data-flash] { animation: rest-alert 1s step-end infinite; }
@@ -63,13 +65,14 @@
   width: min(100%, 520px); margin-inline: auto; display: grid; place-items: center;
   background: rgb(8 9 12 / 91%); pointer-events: none;
 }
-.restCountdown { display: grid; justify-items: center; gap: 4px; color: var(--text-primary); text-align: center; }
+.restCountdown { min-width: 0; max-width: 100%; display: grid; justify-items: center; gap: 4px; color: var(--text-primary); text-align: center; }
 .restCountdown > span { font-size: 15px; }
-.restCountdown > strong { font-size: clamp(56px, 17vw, 84px); line-height: 1.15; font-variant-numeric: tabular-nums; }
+.restCountdown > strong { max-inline-size: 100%; overflow-wrap: anywhere; font-size: clamp(56px, 17vw, 84px); line-height: 1.15; font-variant-numeric: tabular-nums; }
 .restCountdown small { margin-inline-start: .25em; font-size: .27em; }
 .restCountdown[data-warning] > strong { color: var(--status-warning); }
 .topNav { display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px; align-items: center; text-align: center; gap: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
-.topNav button, .topNav strong { font-size: 13px; font-weight: 650; line-height: 1.35; }
+.topNav button, .topNav strong { font-size: 13px; line-height: 1.35; }
+.topNav strong { font-weight: var(--type-heading-weight); }
 .topNav button { padding-inline: 0; width: 100%; }
 .topNav button:first-child { text-align: left; }
 .topNav button:last-child { text-align: right; }
@@ -101,10 +104,11 @@
 .working:has(.plateSide) .workingValues > p { grid-area: 3 / 1 / 4 / 3; }
 .working:has(.plateSide) .equipment { grid-area: 2 / 3 / 4; overflow-wrap: anywhere; }
 .workingValues { min-width: 0; display: grid; gap: 4px; }
-.workingValues > strong { font-size: 30px; line-height: 1.2; }
-.workingValues > strong small { font-size: 13px; }
+.workingValues > strong { display: flex; align-items: baseline; gap: 4px; min-width: 0; font-size: var(--type-metric-size); font-weight: var(--type-heading-weight); line-height: var(--type-control-line); }
+.workingValues > strong span { min-width: 0; overflow-wrap: anywhere; }
+.workingValues > strong small { flex: none; font-size: 13px; color: var(--text-muted); }
 .plateLabel, .plateSide > strong { text-align: center; }
-.plateSide > strong { font-size: clamp(24px, 6.5vw, 30px); }
+.plateSide > strong { justify-content: center; font-size: clamp(24px, 6.5vw, 30px); }
 .workingHead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 5px; min-height: 28px; }
 .workingLabel { font-size: 10px; color: var(--text-muted); }
 .workingHead .weightChange[data-button-size='compact'] { flex: none; width: max-content; margin-block: -10px; font-size: 11px; }
@@ -115,8 +119,9 @@
 .sets { padding: 12px 8px; gap: 7px; }
 .setsHeading { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; }
 .setsHeading h2 { font-size: 13px; }
-.setsHeading > span { text-align: center; font-size: 13px; font-weight: 650; white-space: nowrap; }
-.setsHeading > b { text-align: right; font-size: 13px; white-space: nowrap; }
+.setsHeading > span { max-inline-size: min(42vw, 200px); text-align: center; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.setsHeading > b { text-align: right; font-size: 13px; overflow-wrap: anywhere; }
+.setCompletion { display: inline-block; min-inline-size: 2em; text-align: end; }
 .sets > :is(div, progress) { margin-inline: 3px; }
 .setProgress { width: calc(100% - 6px); margin-block: 0; }
 .setHead, .setRow { display: grid; grid-template-columns: minmax(var(--set-number-min, 26px), .5fr) minmax(44px, .85fr) minmax(176px, 2fr) 44px; gap: 3px; align-items: center; text-align: center; }
@@ -147,6 +152,8 @@
   height: var(--workout-action-height); min-height: var(--workout-action-height); padding: 0 12px;
 }
 .flow[data-workout-frame] footer.footer button { border-radius: var(--radius-control); }
+.flow[data-workout-frame] .footer :global(button.primary),
+.flow[data-workout-frame] .footer button[data-click-action$=':finish'] { font-weight: var(--type-primary-action-weight); }
 .footer > * { width: 100%; min-width: 0; margin: 0; }
 :global([data-keyboard-open]) .flow .footer,
 .flow:has([data-workout-memo]:focus) :is(.footer, .restDimmer) { display: none; }
@@ -281,13 +288,7 @@
 .achievementTag[data-state='complete'] {color:var(--status-done);}
 .achievementTag[data-state='partial'] {color:var(--status-warning);}
 .achievementTag[data-state='missed'] {color:var(--status-missed);}
-.recordColumns {display:grid;grid-template-columns:repeat(var(--record-columns,3),minmax(0,1fr));margin-block:8px;}
-.recordColumns > :is(section,div) {display:flex;flex-direction:column;align-items:center;min-width:0;padding-inline:5px;gap:3px;}
-.recordColumns > * + * {border-inline-start:1px solid var(--line);}
-.recordColumns h3 {font-size:12px;margin:0 0 5px;}
-.recordColumns strong {font-size:clamp(14px,4vw,18px);white-space:nowrap;}
-.recordColumns strong:nth-of-type(2) {margin-top:12px;}
-.recordColumns small {font-size:10px;color:var(--text-muted);text-align:center;}
+.recordColumns { composes: columns from '../../components/common-ui/MetricColumns.module.css'; }
 .performanceHeading {display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap;}
 .performanceHeading b {font-size:12px;text-align:right;margin-left:auto;}
 .recordItem[data-achievement='partial'] {--achievement-color:var(--status-warning);}

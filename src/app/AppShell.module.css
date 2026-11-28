@@ -19,6 +19,7 @@
   min-width: 0;
 }
 .content > * { min-width: 0; }
+:where(.content p) { line-height: var(--type-body-line); }
 .shell .homeContent,
 .shell .content:has([data-tab-overview]:not([hidden], [hidden] *)) {
   --page-top-inset: calc(18px + env(safe-area-inset-top));

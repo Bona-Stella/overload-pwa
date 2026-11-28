@@ -1,15 +1,24 @@
 .segment {
-  position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  --segment-count: 2;
+  --segment-index: 0;
+  position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(var(--segment-count), minmax(0, 1fr));
   gap: 4px; padding-inline: 4px; border-radius: 999px; background: var(--surface-page);
 }
+.segment[data-options="four"] { --segment-count: 4; }
+.segment:has(> button:nth-child(2)[aria-pressed="true"]) { --segment-index: 1; }
+.segment:has(> button:nth-child(3)[aria-pressed="true"]) { --segment-index: 2; }
+.segment:has(> button:nth-child(4)[aria-pressed="true"]) { --segment-index: 3; }
 .segment::before {
-  content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 12px) / 2); border-radius: 999px;
-  background: var(--accent); pointer-events: none; transform: translateX(0); transition: transform 200ms ease;
+  content: ''; position: absolute; inset: 4px auto 4px 4px; width: calc((100% - 4px * (var(--segment-count) + 1)) / var(--segment-count)); border-radius: 999px;
+  background: var(--accent); pointer-events: none; transform: translateX(calc((100% + 4px) * var(--segment-index))); transition: transform 200ms ease;
 }
-.segment:has(> button:nth-child(2)[aria-pressed='true'])::before { transform: translateX(calc(100% + 4px)); }
 .segment > button[aria-pressed] {
   position: relative; min-width: 0; min-height: 48px; height: auto; padding: 8px 4px; border: 0;
   border-radius: 999px; background: transparent; color: var(--text-primary); font-size: 14px; font-weight: 600;
 }
 .segment > button[aria-pressed='true'] { background: transparent; color: var(--on-accent); }
-@media (prefers-reduced-motion: reduce) { .segment::before { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .segment[data-options="four"] { --segment-count: 4; }
+.segment:has(> button:nth-child(2)[aria-pressed="true"]) { --segment-index: 1; }
+.segment:has(> button:nth-child(3)[aria-pressed="true"]) { --segment-index: 2; }
+.segment:has(> button:nth-child(4)[aria-pressed="true"]) { --segment-index: 3; }
+.segment::before { transition: none; } }

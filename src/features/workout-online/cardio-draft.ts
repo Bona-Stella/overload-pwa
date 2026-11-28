@@ -1,3 +1,4 @@
+import { compactDuration } from '../../components/duration.ts'
 import type { CardioActivity, CardioPlan } from './types.ts';
 import { countDraft, decimalDraft, name as validName } from './validation.ts';
 import { formatDuration } from '../workout/model.ts'
@@ -47,10 +48,10 @@ export function paceLabel(seconds: number) {
     return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-export function cardioGoalValues(plan: CardioPlan) {
+export function cardioGoalValues(plan: CardioPlan, compactTime = false) {
     const pace = plan.intensity?.mode === 'PACE'
     return [
-        { label: '목표 시간', value: formatDuration(plan.targetSeconds * 1000) },
+        { label: '목표 시간', value: compactTime ? compactDuration(plan.targetSeconds * 1000) : formatDuration(plan.targetSeconds * 1000), duration: compactTime },
         { label: '목표 거리', value: plan.targetDistanceKm === null ? null : cardioMotionValue(plan.targetDistanceKm), unit: 'km' },
         { label: pace ? '목표 페이스' : '목표 속도', value: !plan.intensity ? null
             : pace ? paceLabel(Math.round(Number(plan.intensity.value) * 60)) : cardioMotionValue(plan.intensity.value), unit: pace ? '분/km' : 'km/h' },

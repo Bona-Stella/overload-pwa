@@ -1,3 +1,4 @@
+import { iconGlyphs } from './icons/glyphs.ts'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { ComponentPropsWithRef, ReactNode } from 'react'
 import { useDelayedPending } from './useDelayedPending.ts'
@@ -56,7 +57,7 @@ export function Help({ label, children }: { label: string; children: ReactNode }
     return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape) }
   }, [open])
   return <span className={styles.help} ref={root}>
-    <button type="button" className={styles.helpTrigger} aria-label={label} aria-expanded={open} aria-controls={id} ref={trigger} onClick={() => setOpen(value => !value)}><span aria-hidden="true">?</span></button>
+    <button type="button" className={styles.helpTrigger} aria-label={label} aria-expanded={open} aria-controls={id} ref={trigger} onClick={() => setOpen(value => !value)}><span aria-hidden="true">{iconGlyphs.help}</span></button>
     {open && <span id={id} className={styles.popover} role="note">{children}</span>}
   </span>
 }

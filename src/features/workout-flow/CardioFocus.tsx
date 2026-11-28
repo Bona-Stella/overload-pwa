@@ -1,3 +1,5 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { cardioReview, cardioStopwatch } from '../../components/icons/workout.tsx'
 
 import type { ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
@@ -56,10 +58,7 @@ function CardioReview({ draft, activeMs, plan, previous, estimate, issue, onDraf
   return <Card className={cardioStyles.card}>
     <div className={cardioStyles.reviewHeading}>
       <h2>완료 기록 확인</h2>
-      <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M7 4H5a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-2M8 11l1.5 1.5L13 9" />
-        <rect x="7" y="2.5" width="6" height="4" rx="1" />
-      </svg>
+      <Icon icon={cardioReview} />
     </div>
     <CardioActualFields draft={draft} activeMs={recordMs} bpm={draft.bpm} bpmConfirmed={draft.bpmConfirmed} initial={initial}
       motion={motion} incline={plan.kind === 'TREADMILL'} disabled={preview} onChange={onDraft} onBpm={bpm => onDraft({ bpm, bpmConfirmed: true })}
@@ -82,6 +81,7 @@ export function CardioFocus({ cardio, activeMs, estimate = false, navigation, is
   onCancelReview: () => void; onUndo: () => void; preview?: boolean; estimate?: boolean
 }) {
   const { plan, phase, draft, result } = cardio
+  const activityTime = phase === 'skipped' ? '—' : formatDuration(result?.activeMs ?? activeMs)
   const measurementStatus = {
     ready: '시작하면 측정이 진행돼요', running: '측정 중', paused: '측정 일시정지',
     review: '측정 종료', completed: '측정 종료', skipped: '미수행 · 명시적으로 건너뜀',
@@ -104,12 +104,10 @@ export function CardioFocus({ cardio, activeMs, estimate = false, navigation, is
     </Card>
     <Card className={`${cardioStyles.card} ${cardioStyles.timer}`}>
       <p>
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-          <circle cx="10" cy="11.5" r="5.5" /><path d="M8 3h4m-2 5v4m4-5 1-1" />
-        </svg>
+        <Icon icon={cardioStopwatch} />
         {phase === 'ready' || phase === 'skipped' ? '실제 활동 시간' : '실제 활동 시간 · 일시정지 제외'}
       </p>
-      <strong>{phase === 'skipped' ? '—' : formatDuration(result?.activeMs ?? activeMs)}</strong>
+      <strong data-long-time={activityTime.length > 8 || undefined}>{activityTime}</strong>
       <small className={cardioStyles.timerStatus} data-phase={phase}>{measurementStatus}</small>
     </Card>
     {phase === 'review' && <CardioReview key={cardio.id} draft={draft} activeMs={activeMs} plan={plan} previous={cardio.previous} estimate={estimate}

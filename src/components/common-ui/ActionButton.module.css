@@ -11,8 +11,8 @@ button.button[data-appearance] {
   background: var(--surface-input);
   color: var(--text-primary);
   font-size: 14px;
-  line-height: 1.35;
-  font-weight: 650;
+  line-height: var(--type-control-line);
+  font-weight: var(--type-button-weight);
   transition: background-color 150ms, border-color 150ms, color 150ms;
 }
 

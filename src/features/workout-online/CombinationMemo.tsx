@@ -1,3 +1,5 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { equipmentMemoEdit } from '../../components/icons/routine.tsx'
 import { createContext, useContext, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { Equipment } from './types.ts'
@@ -21,7 +23,7 @@ function useCombinationMemo(exerciseId: string, equipment: Equipment, initialTex
 export function CombinationMemo({ exerciseId, equipment, readOnly = false, initialText = '', className, draftNotice, hiddenLabel, preview = false }: { exerciseId: string; equipment: Equipment; readOnly?: boolean; initialText?: string; className?: string; draftNotice?: string; hiddenLabel?: boolean; preview?: boolean }) {
   const memo = useCombinationMemo(exerciseId, equipment, initialText)
   if (readOnly) return memo.text.trim() ? <p className={className} aria-label="기구 세팅 메모">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 20H5V4h14v7M8 8h8m-8 4h4m2 7 5-5 2 2-5 5h-2z" /></svg>
+    <Icon icon={equipmentMemoEdit} />
     <span>{memo.text}</span><small>미저장</small>
   </p> : null
   return <div className="stack"><label className={ui.field}><span className={hiddenLabel ? 'sr-only' : undefined}>기구 세팅 메모</span><textarea className={ui.input} data-workout-memo={preview ? undefined : ''} rows={2} value={memo.text} readOnly={preview} placeholder="예: 의자 높이 3" onChange={preview ? undefined : e => memo.change(e.target.value)} /></label>

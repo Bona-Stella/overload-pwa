@@ -391,6 +391,45 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     const original=await evaluate('JSON.stringify(window.listUi.calendar())')
     assert.equal(await evaluate(`document.querySelectorAll('[aria-label="가로 주간 일정"] button').length`),7)
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('[aria-label="가로 주간 일정"]')).gridTemplateColumns.split(' ').length`),7)
+
+    const horizontalDay = '[aria-label="가로 주간 일정"] > button'
+    const todayTile = horizontalDay + '[aria-current="date"]'
+    const otherTile = horizontalDay + ':not([aria-current])'
+    const dateDisplay = selector => evaluate(`(() => {
+      const day = document.querySelector(${JSON.stringify(selector)})
+      const cap = getComputedStyle(day, '::after')
+      const slot = getComputedStyle(day.firstElementChild, '::before')
+      return { date: day.firstElementChild.textContent, dot: slot.content !== 'none', dotColor: slot.backgroundColor,
+        border: cap.borderTopColor, weekday: getComputedStyle(day.children[1]).color, info: getComputedStyle(day.children[2]).color }
+    })()`)
+    const todayBase = await dateDisplay(todayTile)
+    const otherBase = await dateDisplay(otherTile)
+    assert.equal(todayBase.date, '')
+    assert.equal(otherBase.date, '')
+    assert.equal(todayBase.dot, true)
+    assert.equal(otherBase.dot, false)
+    assert.notEqual(todayBase.dotColor, todayBase.border)
+    await tap(todayTile)
+    assert.deepEqual(await dateDisplay(todayTile), { ...todayBase, border: todayBase.dotColor, weekday: todayBase.dotColor })
+    const detailStyle = selector => evaluate(`(() => {
+      const detail = document.querySelector(${JSON.stringify(selector)})
+      const style = getComputedStyle(detail)
+      return [style.backgroundColor, style.borderRadius, style.paddingBlockStart, style.paddingInlineStart, style.fontSize, style.lineHeight]
+    })()`)
+    const routineDetailStyle = await detailStyle('p:has(> button[aria-label="요일 필터 해제"])')
+    await tap(otherTile)
+    assert.deepEqual(await dateDisplay(otherTile), {
+      ...otherBase, dot: true, dotColor: todayBase.dotColor, border: todayBase.dotColor, weekday: todayBase.dotColor,
+    })
+    assert.deepEqual(await dateDisplay(todayTile), { ...todayBase, dotColor: 'rgb(169, 173, 183)' })
+    await tap(otherTile)
+    assert.deepEqual(await dateDisplay(todayTile), todayBase)
+    assert.deepEqual(await dateDisplay(otherTile), otherBase)
+    assert.equal(await evaluate(`document.querySelector('[data-dropdown-label="저장된 루틴 필터"]').dataset.value`), 'all')
+    await tap(todayTile)
+    await tap(todayTile)
+    assert.deepEqual(await dateDisplay(todayTile), todayBase)
+
     const positions=await evaluate(`Array.from(document.querySelectorAll('[aria-label="가로 주간 일정"] > button')).map(b=>b.getBoundingClientRect().top)`)
     assert(positions.every(top=>top===positions[0]),'horizontal mode consists of seven tiles in one row')
     assert.doesNotMatch(await evaluate(`document.querySelector('[aria-label="가로 주간 일정"]').textContent`),/WEIGHT|CARDIO.*외|벤치프레스|러닝머신|외 \d|\d+\/\d+/)
@@ -861,6 +900,16 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     assert.deepEqual(await evaluate('window.listUi.calendar().assignments'),[{dayOfWeek:1,routineId:third},{dayOfWeek:2,routineId:third},{dayOfWeek:5,routineId:first}])
     await evaluate('window.listUi.showHome()');await wait(()=>evaluate(`!!document.querySelector('[aria-label="홈"] [aria-label="이번 주 일정"] button')`))
     assert.match(await evaluate(`document.querySelectorAll('[aria-label="홈"] [aria-label="이번 주 일정"] button')[1].getAttribute('aria-label')`),/태그 없는/)
+    const homeWeek = '[aria-label="홈"] [aria-label="이번 주 일정"]'
+    const homeDate = homeWeek + ' button:nth-child(2)'
+    const homeDayDetail = () => evaluate(`document.querySelector('${homeWeek} > p').textContent`)
+    await tap(homeDate)
+    const selectedHomeDetail = await homeDayDetail()
+    assert.deepEqual(await detailStyle(homeWeek + ' > p'), routineDetailStyle)
+    assert.match(selectedHomeDetail, /^\d{2}\.\d{2} 화요일 - 태그 없는/)
+    assert.doesNotMatch(selectedHomeDetail, /기록 ›|검사 대기/)
+    await tap(homeDate)
+    assert.equal(await homeDayDetail(), selectedHomeDetail, 'the Home date keeps its detail when tapped again')
     assert.doesNotMatch(await evaluate(`document.querySelector('[aria-label="홈"] [aria-label="이번 주 일정"]').textContent`),/\?/)
     assert.doesNotMatch(await evaluate(`Array.from(document.querySelectorAll('[aria-label="홈"] [aria-label="이번 주 일정"] button > strong')).map(e=>e.textContent).join('')`),/[?·△×]/)
     await verifyLayout('home-week-393',393);await verifyLayout('home-week-320',320)
@@ -906,7 +955,7 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await evaluate("window.listUi.deloadPeriod={status:'ACTIVE',method:'REST',currentMethod:'KEEP'};window.listUi.refresh()")
     await wait(() => evaluate(`!!document.querySelector('${homeStart}:disabled')`))
     await evaluate(`window.listUi.deloadPeriod=null;window.listUi.setHomeSchedule(${JSON.stringify(assignments)})`)
-    await evaluate('window.listUi.showRoutines()');await wait(()=>evaluate(`document.querySelector('[aria-label="가로 주간 일정"] button:nth-child(2) > span').title.includes('태그 없는')`))
+    await evaluate('window.listUi.showRoutines()');await wait(()=>evaluate(`document.querySelector('[aria-label="가로 주간 일정"] button:nth-child(2) > [data-week-info]').title.includes('태그 없는')`))
     await evaluate('window.listUi.setActive(true)');await new Promise(r=>setTimeout(r,80))
     assert.equal(await evaluate(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='주간 일정 편집').disabled`),true)
     await evaluate('window.listUi.setActive(false);window.listUi.setAttempt(true)');await new Promise(r=>setTimeout(r,80))

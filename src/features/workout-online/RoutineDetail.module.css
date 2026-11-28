@@ -18,8 +18,9 @@
   margin: 0;
   overflow: hidden;
   overflow-wrap: anywhere;
-  font-size: 20px;
-  line-height: 1.25;
+  font-size: var(--type-card-title-size);
+  font-weight: var(--type-control-weight);
+  line-height: var(--type-heading-line);
 }
 .tag, .weekdays > span {
   border-radius: 6px;
@@ -52,6 +53,7 @@
 .summary dt { font-size: 12px; }
 .metrics dd { margin: 0; overflow-wrap: anywhere; font-size: 18px; font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .metrics dd small { color: var(--text-muted); font-size: 10px; font-weight: 400; white-space: nowrap; }
+.metrics dd[data-duration] { font-size: clamp(13px, 4vw, 18px); white-space: nowrap; }
 .metrics dd[data-missing] { color: var(--text-muted); }
 .summary dd { padding-block: 5px; }
 .memo { display: flex; align-items: baseline; gap: 8px; margin: 0; padding: 8px; border-radius: 8px; background: var(--surface-input); font-size: 12px; }

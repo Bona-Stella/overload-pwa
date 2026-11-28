@@ -1,9 +1,11 @@
+import { Icon } from '../../components/icons/Icon.tsx'
+import { memoChevron } from '../../components/icons/workout.tsx'
 
 import { useId, useState } from 'react'
-import type { ReactNode, RefObject } from 'react'
+import type { ReactNode } from 'react'
 import { Button, Card, Help } from '../../components/ui.tsx'
 import { CircleCheck } from '../../components/common-ui/CircleCheck.tsx'
-import { NumberWheel } from '../../components/NumberWheel.tsx'
+import { NumberWheel, NumberWheelReadout } from '../../components/NumberWheel.tsx'
 import type { NumericValueState } from '../../components/wheel-options.ts'
 import { adjustRepsDraft } from '../workout/reps.ts'
 import { halfWeight } from '../workout/weight.ts'
@@ -27,22 +29,22 @@ function adjustReps(value: string, direction: -1 | 1) {
   const next = adjustRepsDraft(value, direction)
   return next !== null && Number(next) <= 2147483647 ? next : null
 }
-export function KgWheel({ label, value, onChange, step = 2.5, compact = false, preview, disabled, required = false, valueState }: {
-  label: string; value: string; onChange: (value: string) => void; step?: 1 | 2.5; compact?: boolean; preview?: boolean; disabled?: boolean; required?: boolean; valueState?: NumericValueState
+export function KgWheel({ label, value, onChange, step = 2.5, compact = false, preview, disabled, required = false, valueState, stableValue, prominent }: {
+  label: string; value: string; onChange: (value: string) => void; step?: 1 | 2.5; compact?: boolean; preview?: boolean; disabled?: boolean; required?: boolean; valueState?: NumericValueState; stableValue?: boolean; prominent?: boolean
 }) {
   return <NumberWheel preview={preview} disabled={disabled} label={label} value={value} onChange={onChange} unit="kg" start="0"
     displayValue={!value && !required ? '—' : undefined} valueState={valueState ?? (!value && !required ? 'empty' : undefined)}
     adjust={(value, direction) => adjustKg(value, direction, step)} validate={value => required || value.trim() ? decimalDraft(value) : ''}
-    stepLabel={compact ? '' : String(step)} compactStepper={compact} />
+    stepLabel={compact ? '' : String(step)} compactStepper={compact} stableValue={stableValue} prominent={prominent} />
 }
 
 export function WeightFocus({ weight, position, description, manufacturers, progressNote, issue, preparing, resting, completionProtected, editing, editTools,
-  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, workingRef, memoNote, approvalNote, additionalInput = false, memoContent, memoOpen = true, onMemoToggle, preview = false }: {
+  onDraft, onComplete, onUndo, onExcludeSet, onAddSet, onWeight, onEdit, onMemo, onList, onEnd, memoNote, approvalNote, additionalInput = false, memoContent, memoOpen = true, onMemoToggle, preview = false }: {
   weight: WeightFocusData; position: number; description: string; manufacturers: Manufacturer[]; progressNote?: string
   issue?: ReactNode; preparing?: boolean; resting: boolean; completionProtected?: boolean; editing: boolean; editTools: ReactNode
   onDraft: (id: number, draft: Partial<SetDraft>) => void; onComplete: (id: number) => void
   onUndo: (id: number) => void; onExcludeSet: (id: number) => void
-  onAddSet: () => void; workingRef?: RefObject<HTMLElement | null>
+  onAddSet: () => void
   onWeight: () => void; onEdit: () => void; onMemo: (memo: string) => void
   onList: () => void; onEnd: () => void
   memoContent?: ReactNode; memoNote?: string; approvalNote?: string; additionalInput?: boolean; preview?: boolean
@@ -69,7 +71,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       <p className="muted small">{description}</p>
       {progressNote && <p className="muted small">{progressNote}</p>}
     </section>
-    <Card hero className={styles.working} ref={workingRef} aria-label="진행 중량">
+    <Card hero className={styles.working} aria-label="진행 중량">
       <div className={styles.workingHead}>
         <span className={styles.workingLabel}>진행 중량 · 잠금</span>
         {plateWeight !== null && <span className={`${styles.workingLabel} ${styles.plateLabel}`}>한쪽 원판</span>}
@@ -77,18 +79,19 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
       </div>
       <div className={styles.workingValues}>
         <strong><span data-numeric-value={workingInitial ? 'initial' : undefined}
-          aria-label={workingInitial ? `${weight.working || '0'} kg 초기값` : undefined}>{weight.working || '0'}</span> <small>kg</small></strong>
+          aria-label={workingInitial ? `${weight.working || '0'} kg 초기값` : undefined}>{weight.working || '0'}</span><small>kg</small></strong>
         <p className="muted small">승인 중량 {weight.approved === null ? '없음' : weight.approved + ' kg'}
           {weight.mode === 'today' && weight.working && ' · 오늘만 적용'}
           {weight.mode === 'progression' && (' · ' + (approvalNote ?? '진행 중량 변경 시연'))}</p>
       </div>
       {plateWeight !== null && <div className={`${styles.workingValues} ${styles.plateSide}`}>
-        <strong>{plateWeight} <small>kg</small></strong>
+        <strong><span>{plateWeight}</span><small>kg</small></strong>
       </div>}
       <div className={styles.equipment} aria-label="현재 장비"><span>{manufacturer?.name ?? '제조사 미지정'}</span><span>{weight.loadType ? LOAD_LABELS[weight.loadType] : '부하 미지정'}</span></div>
     </Card>
     <Card className={styles.sets}>
-      <div className={styles.setsHeading}><h2>세트 기록</h2><span>{weight.min}–{weight.max}회 × {count}세트</span><b>{completed}/{count}{completed >= count ? ' 완료' : ''}</b></div>
+      <div className={styles.setsHeading}><h2>세트 기록</h2><span>{weight.min}–{weight.max}회 × {count}세트</span>
+        <b><span>{completed}/{count}</span>{' '}<span className={styles.setCompletion}>{completed >= count && '완료'}</span></b></div>
       <progress className={styles.setProgress} aria-label="현재 종목 세트 진행률" value={completed} max={count} />
       {issue}
       <div role="table" aria-label="세트별 기존 기록과 이번 기록">
@@ -101,15 +104,16 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
           return <div key={set.id} role="row" className={styles.setRow} data-done={!!result || undefined}>
             <b role="cell">{String(ordinal).padStart(2, '0')}</b>
             <span role="cell" className={styles.prior}>{set.previous ? set.previous.reps + '회' : '—'}</span>
-            <div role="cell" className={styles.setValues}>{result ? <strong>{result.reps}회</strong> :
+            <div role="cell" className={styles.setValues} data-set-input={ordinal}>{result ? <NumberWheelReadout value={String(result.reps)} unit="회" plainSteps /> :
               <NumberWheel preview={preview} label={`${ordinal}세트 이번 반복 횟수`} value={set.draft.reps || '0'}
-                onChange={reps => onDraft(set.id, { reps })} unit="회" start="0" valueState={set.repsInitial || !set.draft.reps ? 'initial' : 'confirmed'} plainSteps
+                onChange={reps => onDraft(set.id, { reps })} unit="회" start="0" valueState={set.repsInitial || !set.draft.reps ? 'initial' : 'confirmed'} plainSteps stableValue
                 valueNote={set.repsPending ? '이전 기록 확인 중' : undefined}
                 adjust={adjustReps} validate={value => String(countDraft(value))} />
             }
               {additionalInput && weight.loadType === 'BODYWEIGHT' && (result
-                ? <small>{result.additionalKg === null ? '추가 부하 미기록' : `추가 ${result.additionalKg}kg`}</small>
-                : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} step={1} required value={set.draft.additional || '0'}
+                ? <><NumberWheelReadout label="추가 중량" value={result.additionalKg ?? '—'} unit="kg" />
+                  <small className="muted">{result.additionalKg === null ? '추가 부하 미기록' : '체중은 포함하지 않습니다.'}</small></>
+                : <><KgWheel preview={preview} label={`${ordinal}세트 추가 중량 kg`} step={1} required stableValue value={set.draft.additional || '0'}
                   valueState={set.additionalInitial ? 'initial' : 'confirmed'} onChange={additional => onDraft(set.id, { additional })} />
                   <small className="muted">체중은 포함하지 않습니다.</small></>)}
             </div>
@@ -132,7 +136,7 @@ export function WeightFocus({ weight, position, description, manufacturers, prog
     <section className={styles.memoSection} data-workout-memo-card={weight.id}>
       {onMemoToggle && <Button shape="control" variant="quiet" className={styles.memoToggle} aria-expanded={memoOpen} aria-controls={memoId} onClick={preview ? undefined : onMemoToggle}>
         기구 세팅 메모
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m3 6 5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
+        <Icon icon={memoChevron} />
       </Button>}
       {onMemoToggle ? <div id={memoId} hidden={!memoOpen}>{memo}</div> : memo}
     </section>

@@ -1,3 +1,5 @@
+import { Icon } from './icons/Icon.tsx'
+import { chevronLeft } from './icons/common.tsx'
 import type { ReactNode, Ref } from 'react'
 import { Button } from './ui.tsx'
 import styles from './RecordSubpageHeader.module.css'
@@ -8,7 +10,7 @@ export function RecordSubpageHeader({ title, onBack, backLabel = '기록으로',
 }) {
   return <header className={styles.header}>
     {onBack&&<Button shape="control" variant="quiet" className={styles.back} aria-label={backLabel} onClick={onBack} pending={backDisabled}>
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6" /></svg>
+      <Icon icon={chevronLeft} size={24} strokeLinecap="round" strokeLinejoin="round" />
     </Button>}
     <h1 className={styles.title} ref={headingRef} tabIndex={headingRef ? -1 : undefined}>{title}</h1>
     {action ? <div className={styles.action}>{action}</div>

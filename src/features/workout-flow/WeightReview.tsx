@@ -1,3 +1,4 @@
+import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigationGuard } from '../../app/navigation.ts'
 import { useConfirmation } from '../../components/useConfirmation.tsx'
@@ -20,10 +21,10 @@ export function ReviewWeightChange({ previous, next, confirmed = false }: { prev
   const directionLabel = (direction === 'increase' ? '증량' : '감량') + (confirmed ? '' : ' 검토')
   return <span className={`${styles.reviewChange} approval-values`}>
     <span>{previous}kg</span>
-    {next !== undefined && <>{' '}<span>→</span>{' '}
+    {next !== undefined && <>{' '}<span>{iconGlyphs.forward}</span>{' '}
       <span className={styles.reviewResult} data-approval-direction={direction}>
         <strong>{next}kg</strong>
-        {direction !== 'same' && <>{' '}<b role="img" aria-label={directionLabel}>{direction === 'increase' ? '↑' : '↓'}</b></>}
+        {direction !== 'same' && <>{' '}<b role="img" aria-label={directionLabel}>{direction === 'increase' ? iconGlyphs.up : iconGlyphs.down}</b></>}
       </span>
     </>}
   </span>

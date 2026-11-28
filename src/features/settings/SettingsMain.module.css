@@ -34,9 +34,9 @@
 .rows .row[data-unavailable] { color: #b0b5bf; opacity: 1; }
 .text { display: grid; gap: var(--card-gap-title); min-width: 0; line-height: 1.4; }
 .text strong, .text small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.text strong { font-weight: 650; }
+.text strong { font-weight: var(--type-control-weight); }
 .row .text strong, .install .text strong { font-size: 14px; }
-.text small { color: var(--text-muted); font-size: 12px; font-weight: 400; }
+.text small { color: var(--text-muted); font-size: 12px; font-weight: 400; line-height: var(--type-caption-line); }
 .iconBox {
   display: grid; place-items: center; width: 36px; height: 36px;
   background: var(--surface-input); border-radius: 10px; color: #9fbce3;

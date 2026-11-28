@@ -23,3 +23,11 @@ export function durationLabel(milliseconds: number | string) {
 }
 
 export function durationMinutesLabel(milliseconds:number|string){const minutes=roundedDurationMs(milliseconds)/60n,hours=minutes/60n;return (hours?hours+'시간 ':'')+(minutes%60n)+'분'}
+
+export function compactDuration(milliseconds: number | string) {
+  const seconds = roundedDurationMs(milliseconds)
+  const hours = seconds / 3600n
+  const minutes = String(seconds % 3600n / 60n).padStart(2, '0')
+  const remainder = String(seconds % 60n).padStart(2, '0')
+  return (hours ? hours + ':' : '') + minutes + ':' + remainder
+}
