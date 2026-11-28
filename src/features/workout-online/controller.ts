@@ -17,7 +17,7 @@ export type OnlineState = { userId: string | null; scope: Scope | null; data: Bo
   active: Session | null; detail: Session | null; deviceId: string | null; attempt: StartAttempt | null;
   routineRefreshes: ReadonlyMap<string, RoutineRefresh>;
   revalidatingScope?: boolean; readIssue?: boolean; issueCode?: string; startUnconfirmed?: boolean; routineSaveRejected?: boolean;
-  status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string; recordsRevision: number }
+  status: 'idle' | 'loading' | 'ready'; busy: boolean; localReady: boolean; copySaved: boolean; issue: string | null; notice: string; recordsRevision: number; overviewRevision?: number }
 const empty = (): OnlineState => ({ userId: null, scope: null, data: null, selected: null, active: null, detail: null, deviceId: null, attempt: null,
   routineRefreshes: new Map(), status: 'idle', busy: false, localReady: false, copySaved: false, issue: null, notice: '', recordsRevision: 0 })
 const eligible = (state: AuthState) => state.status === 'authenticated' && state.pending === null ? state.userId : null
@@ -108,14 +108,17 @@ export class WorkoutOnlineController {
     const issue = readIssue ? readFailure(error, onlineIssue(error)) : onlineIssue(error)
     this.set({ issue, issueCode: code, readIssue: readIssue && status !== 401 && status !== 403, ...outcome })
   }
-  refresh = async (keepDraftScope = false) => {
+  refresh = async (keepDraftScope = false, mode?: 'overview') => {
+    const overviewOnly = mode === 'overview'
     const context = this.context(); if (!context) return
     this.cancelRoutineRead()
     const previous = this.state
     this.set({ userId: context.userId, status: 'loading', busy: true, revalidatingScope: keepDraftScope && !!previous.scope })
     try {
       const { data, active } = await readWithDeadline(context.signal, async signal => {
-        const data = await this.api.bootstrap(context.userId, signal)
+        const existing = overviewOnly && previous.data ? previous.data : null
+        const data = existing ? { ...existing, routines: (await this.api.routines(existing.scope, signal)).routines }
+          : await this.api.bootstrap(context.userId, signal)
         signal.throwIfAborted()
         if (context.current() && previous.scope && (previous.scope.userId !== data.scope.userId || previous.scope.dataGeneration !== data.scope.dataGeneration)) {
           this.set({ ...empty(), userId: context.userId, status: 'loading', busy: true })
@@ -130,7 +133,8 @@ export class WorkoutOnlineController {
       const selected = sameScope && data.routines.some(r => r.id === previous.selected?.id && r.version === previous.selected.version) ? previous.selected : null
       this.set({ scope: sameScope ? previous.scope : data.scope, data, active, detail, copySaved, selected, issue: null, revalidatingScope: false,
         routineRefreshes: this.remainingRoutineRefreshes(data.routines),
-        recordsRevision: sameScope ? previous.recordsRevision + 1 : 0 })
+        recordsRevision: sameScope ? previous.recordsRevision + Number(!overviewOnly) : 0,
+        overviewRevision: sameScope ? (previous.overviewRevision ?? 0) + Number(overviewOnly) : 0 })
       let deviceId: string | null = null, attempt: StartAttempt | null = null, copies: SessionCopy[] = []
       try {
         deviceId = await this.store.deviceId()
@@ -157,6 +161,11 @@ export class WorkoutOnlineController {
     } catch (error) {
       if (context.current()) {
         // Recovery after an outage must verify the prior scope before showing it again.
+        if (overviewOnly && (error as { code?: string } | null)?.code === 'DATA_GENERATION_MISMATCH') {
+          this.failure(error, true)
+          if (context.current()) await this.refresh()
+          return
+        }
         if (keepDraftScope && previous.detail?.status !== 'ACTIVE') this.set({ ...empty(), userId: context.userId })
         this.failure(error, true)
       }

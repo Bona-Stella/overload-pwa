@@ -4,7 +4,8 @@ import {recordSummary,recordDuration} from '../workout-online/record-summary.ts'
 import {browseExercises,catalogGroups} from '../workout-online/catalog-browse.ts'
 import type {CatalogGroup} from '../workout-online/catalog-browse.ts'
 import {recordTime} from '../../components/record-time.ts'
-import { Fragment, useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useEffectEvent, useImperativeHandle, useRef, useState } from 'react'
+import type { Ref } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { RefreshButton } from '../../components/common-ui/RefreshButton.tsx'
 import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
@@ -59,7 +60,7 @@ export function SessionRecordCard({row,session,pending=false,onOpen,timeZone=Int
   </button>
 }
 
-export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true, onViewAll }: { enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage|null)=>void;details?:Map<string,Session>}; onViewAll?:()=>void }) {
+export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent = false, definitions = [], timeZone, cache, enabled=true, onViewAll, refreshRef }: { refreshRef?: Ref<() => Promise<void>>; enabled?:boolean;api: WorkoutApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; recent?: boolean; definitions?: StandardExercise[]; timeZone?: string|null; cache?:{page:ClosedPage|null;set:(page:ClosedPage|null)=>void;details?:Map<string,Session>}; onViewAll?:()=>void }) {
   const preview=useRecordPreview()
   const zone=timeZone??Intl.DateTimeFormat().resolvedOptions().timeZone
   const today = preview?.today??new Intl.DateTimeFormat('sv-SE',{timeZone:zone}).format(new Date()), { userId, dataGeneration } = scope
@@ -96,6 +97,7 @@ export function RecordFeed({ api, scope, refreshKey, onOpen, onInvalid, recent =
     }
     finally { if (flight.current === abort) { flight.current = null; if (!abort.signal.aborted) { setBusy(false); setLoadingMore(false) } } }
   }, [api, userId, dataGeneration, enabled])
+  useImperativeHandle(refreshRef, () => () => load(), [load])
   useEffect(() => { let cancelled = false; void Promise.resolve().then(() => { if (!cancelled) void load() }); return () => { cancelled = true; flight.current?.abort() } }, [load, refreshKey])
   const range = recent ? { fromDate: addDays(today, -6), toDateExclusive: addDays(today, 1) } : selectedPeriod(period)
   const appliedTerm=search.selected||search.query.trim()

@@ -29,6 +29,7 @@
   --radius-card: 18px;
   --radius-card-compact: 5px;
   --card-padding: 12px;
+  --type-week-date-weight: 650;
   --card-padding-compact: 10px var(--card-padding);
   --card-padding-hero: 16px var(--card-padding);
   --card-padding-statistics: 14px var(--card-padding);

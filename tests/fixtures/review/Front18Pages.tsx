@@ -50,7 +50,7 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
   const [homeIssue, setHomeIssue] = useState<string | null>(null)
   const [homeAttempt, setHomeAttempt] = useState(false)
   const homeFlight = useRef(false)
-  const [homeFault, setHomeFault] = useState<'none' | 'fail' | 'unknown'>('none')
+  const [homeFault, setHomeFault] = useState<'none' | 'fail' | 'unknown' | 'version'>('none')
   useEffect(() => controller.connect({ getSnapshot: () => authenticated, subscribe: () => ignore }), [controller, readsCleared])
 
   function read(key: string, mode: ReadExample, initial = false) {
@@ -76,7 +76,8 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
     if (homeAttempt) { setHomeAttempt(false); return }
     if (homeFault === 'none') { openWorkout(); return }
     if (homeFault === 'unknown') setHomeAttempt(true)
-    setHomeIssue(onlineIssue(new WorkoutApiError(homeFault === 'unknown' ? 'RESPONSE_INVALID' : 'CLOCK_CONTEXT_INVALID')))
+    setHomeIssue(homeFault === 'version' ? '루틴이 변경됐어요. 다시 확인해 주세요.'
+      : onlineIssue(new WorkoutApiError(homeFault === 'unknown' ? 'RESPONSE_INVALID' : 'CLOCK_CONTEXT_INVALID')))
     setHomeFault('none')
   }
   if (page === 'catalog') return <>
@@ -103,6 +104,7 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
           <Button onClick={() => read('schedule', 'delayed')}>홈 조회 3.6초 지연</Button>
           <Button onClick={() => read('schedule', 'failed')}>기존 홈 데이터 조회 실패</Button>
           <Button onClick={() => setHomeFault('fail')}>다음 운동 시작 실패</Button>
+          <Button onClick={() => setHomeFault('version')}>다음 운동 시작에서 루틴 버전 변경</Button>
           <Button onClick={() => setHomeFault('unknown')}>다음 운동 시작 결과 미확인</Button>
         </>}
         {page === 'routine' && <>
@@ -118,7 +120,6 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
           <Button onClick={() => routes.setEditorRoute({ id: fixture.first.id, readOnly: true })}>루틴 상세 · 삭제 확인</Button>
           <Button onClick={() => fixture.setWrite('routines', 'failed')}>다음 루틴 쓰기 실패</Button>
         <Button onClick={() => fixture.setWrite('routines', 'unknown')}>다음 루틴 저장 결과 미확인</Button>
-        <Button disabled={!routes.editorRoute?.readOnly} onClick={fixture.versionChanged}>다음 운동 시작에서 루틴 버전 변경</Button>
         </>}
         {page === 'schedule' && <>
           <Button onClick={() => scheduleEditor('assign')}>주간 일정 배정·편집</Button>
@@ -160,7 +161,7 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
         <Button onClick={onBack}>검수 분류로 돌아가기</Button>
       </div>
       {page === 'home' && <p>시작 상태를 선택한 뒤 홈에서 ‘운동 시작’을 눌러 보세요.</p>}
-      {page === 'routine' && <p>저장 오류는 편집 화면에서 이름을 바꾸고 저장해 확인해요. 루틴 변경은 ‘루틴 상세’를 열고 상태를 선택한 뒤 ‘운동 시작’을 누르세요.</p>}
+      {page === 'routine' && <p>저장 오류는 편집 화면에서 이름을 바꾸고 저장해 확인해요.</p>}
       {page === 'schedule' && <p>저장 상태를 선택한 뒤 일정 편집 화면에서 요일 배정을 바꾸고 저장하세요. 최신 일정 확인 전 변경사항을 버릴지 선택할 수 있어요.</p>}
       {page === 'growth' && <p>검색 오류는 검색창을 열고, 기간 오류는 운동을 선택한 뒤 기간을 바꿔 확인하세요.</p>}
       {page === 'records' && <p>기록 조회 실패를 선택한 다음 원하는 새로고침 상태를 예약하고 화면의 ‘새로고침’을 누르세요.</p>}
@@ -171,7 +172,7 @@ function PageExampleView({ page, openWorkout, onBack, initialSchedule, reset }: 
       localReady issue={homeIssue} action={homeBusy ? homeAttempt ? 'retry' : 'start' : null} onStart={start} onResume={openWorkout} onRetry={() => void start()}
       onNavigate={ignore} onOpen={ignore} onInvalid={ignore} />}
     {(page === 'routine' || page === 'schedule') && <SearchExerciseDetails preview={catalogSamples}>
-      <WorkspaceView state={state} controller={controller} api={fixture.api} training={training} enabled activities={activities} routes={routes} onStart={openWorkout} />
+      <WorkspaceView state={state} controller={controller} api={fixture.api} training={training} enabled activities={activities} routes={routes} />
     </SearchExerciseDetails>}
     {page === 'records' && <RecordFeed key={readsCleared} api={fixture.api} scope={scope} recent={recent} definitions={exercises}
       refreshKey={String(revision)} onOpen={ignore} onInvalid={ignore} onViewAll={() => setRecent(false)} />}

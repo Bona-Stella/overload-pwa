@@ -12,7 +12,7 @@ const count = (value: Achievement) => `${value.unknown ? value.completed ? value
 const explanation = (label: string, value: Achievement) => `${label} ${value.completed}/${value.planned}종목 완료${value.unknown ? ` · ${value.unknown}종목 미확인` : ''}`
 export function RecentWorkout({ row, detail, onOpen }: { row: RecentRow; detail?: Session; onOpen: (id: string) => void }) {
   const result = detail ? sessionAchievement(detail) : null
-  const status=detail?sessionDisplayStatus(detail):{kind:'unknown',mark:iconGlyphs.unknown,label:'달성 확인 불가'}
+  const status=detail?sessionDisplayStatus(detail):{kind:'unknown',mark:iconGlyphs.unknown,label:'확인 불가'}
   const state = status.kind, mark = status.mark
   const title = [row.workoutDate,row.routineName,result ? [result.weight.planned && explanation('웨이트',result.weight),result.cardio.planned && explanation('유산소',result.cardio)].filter(Boolean).join(' · ') || '최초 계획 없음' : '수행 상세 확인 불가',status.label,row.status === 'AUTO_CLOSED' ? '자동 종료' : ''].filter(Boolean).join(' · ')
   return <button type="button" className={styles.record} data-session-id={row.id} data-session-version={detail?.version} title={title} aria-label={title} onClick={() => onOpen(row.id)}>

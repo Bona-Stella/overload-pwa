@@ -200,6 +200,22 @@ export class WorkoutStore {
       return values as SessionCopy[]
     })
   }
+  hasPendingWorkoutWrites(scope: Scope) {
+    return this.run(['localWorkouts', 'meta'], 'readonly', async tx => {
+      const account = scopeKey(scope)
+      const range = (prefix: string[]) => IDBKeyRange.bound(prefix, [...prefix, []])
+      const [workouts, writes]: [unknown[], unknown[]] = await Promise.all([
+        request(tx.objectStore('localWorkouts').getAll(range(account))),
+        request(tx.objectStore('meta').getAll(range(['closedWrite', ...account]))),
+      ])
+      if (!workouts.every(localWorkout) || !writes.every(object)
+        || workouts.some(workout => workout.userId !== scope.userId || workout.dataGeneration !== scope.dataGeneration)
+        || writes.some(write => write.userId !== scope.userId || write.dataGeneration !== scope.dataGeneration
+          || !['PENDING', 'CONFIRMED', 'REVIEWED'].includes(String(write.status)))) throw new LocalStoreError()
+      return workouts.some(workout => workout.syncState !== 'CLEAN' || !!workout.pendingSnapshot || !!workout.pendingResolution || !!workout.finish && !workout.finish.ack)
+        || writes.some(write => write.status === 'PENDING')
+    })
+  }
   readLocal(key: LocalKey) {
     return this.run(['localWorkouts'], 'readonly', async tx => {
       const value: unknown = await request(tx.objectStore('localWorkouts').get(localKey(key)))

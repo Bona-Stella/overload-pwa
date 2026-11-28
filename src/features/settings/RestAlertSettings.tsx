@@ -1,12 +1,12 @@
 import { Icon } from '../../components/icons/Icon.tsx'
 import { restAlertIcons } from '../../components/icons/rest-alert.tsx'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Dialog } from '../../components/Dialog.tsx'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
 import { Button, Card, StatusNotice } from '../../components/ui.tsx'
 import { RestCountdown } from '../workout-flow/WorkoutFrame.tsx'
-import { REST_MIDDLE_OPTIONS, restAlertVisual, restPreviewSeconds } from '../workout-flow/rest-alerts.ts'
+import { REST_MIDDLE_OPTIONS, REST_PREVIEW_SECONDS, restAlertVisual } from '../workout-flow/rest-alerts.ts'
 import type { RestAlerts } from '../workout-flow/rest-alerts.ts'
 import { useRestAudio, useRestTimerAudio } from '../workout-flow/useRestAudio.ts'
 import flow from '../workout-flow/WorkoutFlow.module.css'
@@ -82,11 +82,15 @@ function FlashPreview({ alerts, seconds, running }: { alerts: RestAlerts; second
 export function RestAlertSettings({ alerts, onChange, onBack, review = false }: {
   alerts: RestAlerts; onChange: (next: RestAlerts) => boolean | void; onBack: () => void; review?: boolean
 }) {
-  const [run, setRun] = useState<{ ends: number; alerts: RestAlerts } | null>(null)
+  const [run, setRun] = useState<{ id: string; ends: number; alerts: RestAlerts } | null>(null)
   const previewAlerts = run?.alerts ?? alerts
   const audio = useRestAudio(previewAlerts.sound || previewAlerts.middle, previewAlerts.volume)
   const { stop, unlock, sample } = audio
   const title = useRef<HTMLHeadingElement>(null)
+  const previewSequence = useRef(0)
+  const previewTrigger = useRef<HTMLButtonElement>(null)
+  const restorePreviewFocus = useCallback(() => previewTrigger.current?.focus({ preventScroll: true }), [])
+  const dimPreviewButton = useRef<HTMLButtonElement>(null)
   const preview = useRef<HTMLElement>(null)
   const [seconds, setSeconds] = useState(0)
   const [completed, setCompleted] = useState(false)
@@ -99,7 +103,7 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
   const flash = alerts.visual === 'flash'
   const previewDim = previewAlerts.visual === 'dim'
   const previewFlash = previewAlerts.visual === 'flash'
-  useRestTimerAudio(audio, { id: running ? 'preview' : null, ends: run?.ends, remaining: seconds, countdown: previewAlerts.sound })
+  useRestTimerAudio(audio, { id: run?.id ?? null, ends: run?.ends, remaining: seconds, countdown: previewAlerts.sound, middleAt: previewAlerts.middle ? 10 : undefined })
 
   useLayoutEffect(() => { title.current?.focus({ preventScroll: true }); window.scrollTo(0, 0) }, [])
   useEffect(() => () => { sampleRequest.current = null }, [])
@@ -109,7 +113,7 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
     const tick = () => {
       const left = ends - Date.now()
       setSeconds(Math.max(0, Math.ceil(left / 1000)))
-      if (left < -400) { stop(); setCompleted(true); setRun(null) }
+      if (left <= 0) { stop(); setCompleted(true); setRun(null) }
     }
     const timer = window.setInterval(tick, 80)
     document.addEventListener('visibilitychange', tick)
@@ -152,11 +156,13 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
   const start = () => {
     if (running) return
     stopSample()
-    if (alerts.sound && alerts.volume) void unlock()
-    const duration = restPreviewSeconds(alerts)
-    setPlayIssue(false); setCompleted(false); setSeconds(duration); setRun({ ends: Date.now() + duration * 1000, alerts })
+    if ((alerts.sound || alerts.middle) && alerts.volume) void unlock()
+    setPlayIssue(false); setCompleted(false); setSeconds(REST_PREVIEW_SECONDS)
+    setRun({ id: `preview:${++previewSequence.current}`, ends: Date.now() + REST_PREVIEW_SECONDS * 1000, alerts })
   }
-  const close = () => { stop(); setRun(null); setCompleted(false) }
+  const close = () => { stop(); setRun(null); setSeconds(0); setCompleted(false) }
+  const previewButton = <Button ref={running && previewDim ? dimPreviewButton : previewTrigger} className={styles.previewButton}
+    aria-pressed={running} onClick={running ? close : start}><RestAlertIcon name={running ? 'pause' : 'play'} />알림 미리보기</Button>
   const text = running ? `종료까지 ${seconds}초` : completed ? '시연 완료' : '시연 준비'
 
   return <section className={styles.page} aria-label="휴식 타이머 알림">
@@ -199,17 +205,18 @@ export function RestAlertSettings({ alerts, onChange, onBack, review = false }: 
       </AlertSection>
     </Card>
     {saveIssue && <StatusNotice error>이 브라우저에 알림 설정을 저장하지 못했어요.</StatusNotice>}
-    <Button className={styles.previewButton} aria-disabled={running} onClick={start}><RestAlertIcon name="play" />알림 미리보기</Button>
+    {running && previewDim ? <div className={styles.previewButtonSpace} /> : previewButton}
     {playIssue && <StatusNotice>이 브라우저에서 효과음을 재생하지 못했어요.</StatusNotice>}
     {(previewFlash || running && !previewDim || completed) && <Card ref={preview} className={styles.preview} aria-label="미리보기">
       <div className={styles.previewHeading}><h2>미리보기</h2><span>{text}</span></div>
       {previewFlash && <FlashPreview alerts={previewAlerts} seconds={running || completed ? seconds : previewAlerts.threshold} running={running} />}
-      {running && !previewDim && <Button shape="control" onClick={close}>미리보기 종료</Button>}
     </Card>}
     <p className={styles.note}>실제 효과음 크기는 기기 음량과 브라우저 환경의 영향을 받을 수 있어요.</p>
     <p className={styles.note}>{review ? 'UI 검토용 설정입니다.' : '알림 설정은 이 브라우저에 저장돼요.'}</p>
     {running && previewDim && <div className={styles.dimPreview}>
-      <Dialog title="화면 어둡게 미리보기" surface="fullscreen" onClose={close}><RestCountdown seconds={seconds} /></Dialog>
+      <Dialog title="화면 어둡게 미리보기" surface="fullscreen" onClose={close} initialFocus={dimPreviewButton} onDismissed={restorePreviewFocus}>
+        {previewButton}<RestCountdown seconds={seconds} />
+      </Dialog>
     </div>}
   </section>
 }

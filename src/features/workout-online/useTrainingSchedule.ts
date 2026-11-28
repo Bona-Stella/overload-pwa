@@ -23,7 +23,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [analysis, setAnalysis] = useState<{ owner: string; value: HomeAnalysis } | null>(null)
   const [reload, setReload] = useState(0)
-  const [saving, setSaving] = useState<{ owner: string; abort: AbortController } | null>(null)
+  const [saving, setSaving] = useState<{ owner: string; abort: AbortController; type: ScheduleCommand['type'] } | null>(null)
   const [writeIssue, setWriteIssue] = useState<{ owner: string; text: string; tone: 'error' | 'warning' } | null>(null)
   const readFlight = useRef<AbortController | null>(null)
   const writeFlight = useRef<AbortController | null>(null)
@@ -97,7 +97,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
     const abort = new AbortController()
     writeFlight.current = abort
     readFlight.current?.abort()
-    setSaving({ owner, abort })
+    setSaving({ owner, abort, type: command.type })
     try {
       const saved = await api.write(scope, base, command, abort.signal)
       if (abort.signal.aborted) return null
@@ -122,7 +122,7 @@ export function useTrainingSchedule(transport: WorkoutTransport, scope: Scope | 
       }
     }
   }
-  return { schedule: current?.schedule, protection: current?.protection, completeRest: current?.completeRest, analysis: analysis?.owner === owner ? analysis.value : undefined, loading, busy,
+  return { schedule: current?.schedule, protection: current?.protection, completeRest: current?.completeRest, rotating: busy && saving?.type === 'rotate', analysis: analysis?.owner === owner ? analysis.value : undefined, loading, busy,
     canWrite, issue: current?.issue, writeIssue: writeIssue?.owner === owner ? writeIssue.text : null,
     writeIssueTone: writeIssue?.owner === owner ? writeIssue.tone : undefined,
     clearWriteIssue: () => setWriteIssue(null), refresh, write }

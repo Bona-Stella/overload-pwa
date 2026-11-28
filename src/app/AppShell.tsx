@@ -74,8 +74,8 @@ function useTabBarCollapse(tab: AppTab, visible: boolean) {
 const routineReturnWindow = 275
 const modifierKeys = new Set(['Alt', 'AltGraph', 'Control', 'Meta', 'Shift'])
 
-export function AppShell({ children, tab, onNavigate, authenticated, focused = false, routineEditor = false, busy = false, displayTheme = 'normal' }: {
-  children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; authenticated: boolean; focused?: boolean; routineEditor?: boolean; busy?: boolean; displayTheme?: DisplayTheme
+export function AppShell({ children, tab, onNavigate, onRetap, authenticated, focused = false, routineEditor = false, busy = false, displayTheme = 'normal' }: {
+  children: ReactNode; tab: AppTab; onNavigate: (tab: AppTab) => void; onRetap?: () => void; authenticated: boolean; focused?: boolean; routineEditor?: boolean; busy?: boolean; displayTheme?: DisplayTheme
 }) {
   const shell = useRef<HTMLDivElement>(null)
   const pressed = useRef<{ button: HTMLButtonElement | null; pointerId: number; action?: string } | null>(null)
@@ -149,7 +149,10 @@ export function AppShell({ children, tab, onNavigate, authenticated, focused = f
                 if (expandsMenu) {
                   expandedTabGuard.arm(event)
                   expand()
-                } else if (!expandedTabGuard.blocksClick(event)) onNavigate(item.id)
+                } else if (!expandedTabGuard.blocksClick(event)) {
+                  if (active && onRetap && shell.current?.querySelector('main [data-tab-overview]:not([hidden], [hidden] *)')) onRetap()
+                  else onNavigate(item.id)
+                }
               }}>
               <NavigationIcon tab={item.id} active={active} />
             </button>

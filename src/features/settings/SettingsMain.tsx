@@ -1,4 +1,5 @@
 import { Icon } from '../../components/icons/Icon.tsx'
+import { feedbackIcons } from '../../components/icons/feedback.tsx'
 import { settingsIcons } from '../../components/icons/settings.tsx'
 import { useId } from 'react'
 import type { MouseEventHandler, ReactNode } from 'react'
@@ -16,9 +17,9 @@ type Click = MouseEventHandler<HTMLButtonElement>
 type LoginMethod = 'email' | 'google'
 type AccountSummary = { email?: string; loginMethod?: LoginMethod; loginMethods?: LoginMethod[]; deviceCount?: number }
 
-export function SettingsMain({ hidden = false, busy = false, review = false, account, accountLoading = false, accountIssue, onRetryAccount, onAccount, onRest, onRestAlerts, onCatalog, onLogout, userId, reviewEstimate }: {
+export function SettingsMain({ hidden = false, busy = false, review = false, account, accountLoading = false, accountIssue, onRetryAccount, onAccount, onRest, onRestAlerts, onCatalog, onReload, reloadPending = false, onLogout, userId, reviewEstimate }: {
   hidden?: boolean; busy?: boolean; review?: boolean; account?: AccountSummary; accountLoading?: boolean; accountIssue?: string; onRetryAccount?: () => void
-  onAccount: Click; onRest: Click; onRestAlerts?: Click; onCatalog: Click; onLogout: () => void
+  onAccount: Click; onRest: Click; onRestAlerts?: Click; onCatalog: Click; onReload?: Click; reloadPending?: boolean; onLogout: () => void
   userId?: string | null
   reviewEstimate?: { value: boolean; onChange: (value: boolean) => void }
 }) {
@@ -68,6 +69,7 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
       <Card className={styles.rows} aria-label="데이터 및 앱">
         <SettingsRow icon="database" title="운동 데이터 상태" description="서버 저장 · 이 기기의 미전송 기록" />
         <SettingsRow icon="download" title="운동 데이터 내보내기" description="운동 기록 다운로드" />
+        {onReload && <SettingsRow icon="refresh" title="앱 새로고침" description="현재 페이지 다시 열기" onClick={onReload} busy={busy} pending={reloadPending} />}
       </Card>
       <PwaStatus review={review} className={styles.install} summary={<>
         <RowContent icon="phone" title="앱 설치 · 오프라인 준비" description="홈 화면 설치 및 오프라인 사용 안내" />
@@ -83,12 +85,12 @@ export function SettingsMain({ hidden = false, busy = false, review = false, acc
   </section>
 }
 
-function SettingsRow({ icon, title, description, onClick, busy = false, danger = false }: {
-  icon: IconName; title: string; description: string; onClick?: Click; busy?: boolean; danger?: boolean
+function SettingsRow({ icon, title, description, onClick, busy = false, pending = false, danger = false }: {
+  icon: IconName; title: string; description: string; onClick?: Click; busy?: boolean; pending?: boolean; danger?: boolean
 }) {
   const titleId = useId(), descriptionId = useId()
   return <button type="button" className={styles.row} aria-labelledby={titleId} aria-describedby={descriptionId}
-    data-unavailable={!onClick || undefined} data-danger={danger || undefined} onClick={onClick} disabled={busy || !onClick}>
+    data-unavailable={!onClick || undefined} data-danger={danger || undefined} onClick={onClick} disabled={busy || pending || !onClick} data-button-pending={pending || undefined}>
     <RowContent icon={icon} title={title} description={description} titleId={titleId} descriptionId={descriptionId}
       status={!onClick && <span className="sr-only"> · 미구현</span>} />
     {onClick ? <SettingsIcon name="forward" /> : <span className={styles.status} aria-hidden="true">미구현</span>}
@@ -104,8 +106,8 @@ function RowContent({ icon, title, description, titleId, descriptionId, status }
   </>
 }
 
-type IconName = keyof typeof settingsIcons
+type IconName = keyof typeof settingsIcons | 'refresh'
 
 function SettingsIcon({ name }: { name: IconName }) {
-  return <Icon icon={settingsIcons[name]} />
+  return <Icon icon={name === 'refresh' ? feedbackIcons.syncing : settingsIcons[name]} />
 }

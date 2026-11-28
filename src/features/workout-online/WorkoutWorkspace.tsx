@@ -1,4 +1,3 @@
-import { iconGlyphs } from '../../components/icons/glyphs.ts'
 import { usePageRead } from '../../app/usePageRead.ts'
 import { useDetailReturn } from '../history/useRecordDetailHistory.ts'
 import ui from '../../components/ui.module.css'
@@ -16,12 +15,13 @@ import { useTrainingSchedule } from './useTrainingSchedule.ts'
 import type { TrainingSchedule } from './useTrainingSchedule.ts'
 import { Dialog } from '../../components/Dialog.tsx'
 import { ActionDialog } from '../../components/common-ui/ActionDialog.tsx'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { ReactNode } from 'react'
+import { useCallback, useEffect, useEffectEvent, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { useAuth } from '../auth/context.ts'
 import { PublicCatalog } from './PublicCatalog.tsx'
 import { WorkoutApi } from './api.ts'
 import { WorkoutOnlineController } from './controller.ts'
+import { WorkoutStore } from './storage.ts'
 import type { OnlineState } from './controller.ts'
 import type { CardioActivity, CatalogExercise, Manufacturer, Routine, Scope, Session, StandardExercise } from './types.ts'
 import { equipmentLabel } from './equipment.ts'
@@ -30,7 +30,6 @@ import { RoutineDetail } from './RoutineDetail.tsx'
 import detailStyles from './RoutineDetail.module.css'
 import { RoutineForm } from './RoutineForm.tsx'
 import { LocalWorkoutScreen } from '../workout-local/LocalWorkoutScreen.tsx'
-import { supportsWorkoutEditing } from '../workout-local/lock.ts'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import './online.css'
 import { ClosedWorkout } from './ClosedWorkout.tsx'
@@ -97,9 +96,9 @@ type ScheduleEditorState = { type: 'assign'; id: string; base: LiveSchedule; pri
 type RenameDraft = { id: string; version: string; base: LiveSchedule; value: string; issue?: string }
 const editorIdentity = (session: Session) => [session.userId, session.dataGeneration, session.id, session.editorDeviceId, session.writerEpoch].join(':')
 
-export function WorkspaceView({ state, controller, api, training, enabled, activities = [], routes, onStart, openingWorkout = false, visible = true, history, historyStatus }: {
+export function WorkspaceView({ state, controller, api, training, enabled, activities = [], routes, visible = true, history, historyStatus }: {
   state: OnlineState; controller: WorkoutOnlineController; api: WorkoutApi; training: TrainingSchedule
-  enabled: boolean; activities?: CardioActivity[]; routes: ReturnType<typeof useRoutineEditorRoutes>; onStart?: () => void | Promise<void>; openingWorkout?: boolean; visible?: boolean
+  enabled: boolean; activities?: CardioActivity[]; routes: ReturnType<typeof useRoutineEditorRoutes>; visible?: boolean
   history?: Session[]; historyStatus?: 'pending' | 'ready' | 'failed'
 }) {
   const { schedule, protection } = training
@@ -109,12 +108,9 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const { editorKey, scheduleKey, editorRoute, setEditorRoute, scheduleRoute, setScheduleRoute, focused } = routes
   const [editorIssue, setEditorIssue] = useState<{ target: string; attempt: number; message: string; denied?: boolean } | null>(null)
   const [editorRetry, setEditorRetry] = useState(0)
-  const [startingRoutine, setStartingRoutine] = useState<string | null>(null)
-  const startWaiting = !!startingRoutine || openingWorkout
   const [deletingRoutine, setDeletingRoutine] = useState<string | null>(null)
   const [confirm, confirmation] = useConfirmation()
   const feedback = useSuccessToast(visible ? 'routines' : null)
-  const startPending = useRef(false)
   const setEditor = (next: RoutineEditorState | null, fromDetail = false) => {
     if (next) feedback.clear()
     setEditorData(next)
@@ -145,14 +141,21 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const [previews, setPreviews] = useState(() => new Map<string, Routine>())
   const routineList = state.data?.routines
   const previewKey = JSON.stringify([state.scope, routineList?.map(r => [r.id, r.version])])
+  const cachedPreviews = useEffectEvent(() => previews)
   useEffect(() => {
     if (!enabled || !state.scope || !routineList) return
     const abort = new AbortController(), scope = state.scope, list = routineList
+    const cached = cachedPreviews()
+    const missing = list.filter(routine => {
+      const detail = cached.get(routine.id)
+      return detail?.userId !== scope.userId || detail.dataGeneration !== scope.dataGeneration || detail.version !== routine.version
+    })
+    if (!missing.length) return
     const values = new Map<string, Routine>()
     let index = 0
-    void Promise.all(Array.from({ length: Math.min(4, list.length) }, async () => {
-      while (index < list.length && !abort.signal.aborted) {
-        const routine = list[index++]
+    void Promise.all(Array.from({ length: Math.min(4, missing.length) }, async () => {
+      while (index < missing.length && !abort.signal.aborted) {
+        const routine = missing[index++]
         try {
           const detail = await api.routine(scope, routine.id, abort.signal)
           if (detail.version === routine.version) values.set(routine.id, detail)
@@ -200,7 +203,10 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
 
   const viewed = schedule?.presets.find(p => p.id === viewedId) ?? schedule?.presets.find(p => p.id === schedule.activeId)
   const busy = state.busy || training.busy
-  const managementBlocked = !enabled || !state.data || busy || !!state.active || !!state.attempt || protection !== null || training.loading
+  const managementReadOnly = !enabled || !state.data || !!state.active || !!state.attempt || protection !== null
+  const managementPending = !managementReadOnly && (busy || training.loading)
+  const managementBlocked = managementReadOnly || managementPending
+  const scheduleReadOnly = managementReadOnly || !training.canWrite && !training.loading && !training.busy
   const scheduleBlocked = managementBlocked || !training.canWrite
   const rememberRoutineReturn = useDetailReturn(focused ? editorRoute?.id ?? 'schedule' : planPreset ? 'plan' : undefined, scope?.userId + ':' + scope?.dataGeneration)
   const pageRead = usePageRead(visible && !focused && !planPreset && !!scope)
@@ -262,27 +268,6 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
       else openFeedback.show(readFailure(error, '루틴을 불러오지 못했어요.'), 'error')
     })
   }
-  async function startRoutine(routine: Routine) {
-    if (!supportsWorkoutEditing() || managementBlocked || startPending.current || state.routineRefreshes?.has(routine.id)) return
-    startPending.current = true
-    setStartingRoutine(routine.id)
-    const origin = window.history.state?.overloadNavigation
-    try {
-      await controller.select(routine.id)
-      const latest = controller.getSnapshot()
-      if (window.history.state?.overloadNavigation !== origin || latest.selected?.id !== routine.id || latest.scope !== scope) return
-      if (latest.selected.version !== routine.version) {
-        setEditorData({ routine: latest.selected, readOnly: true })
-        feedback.show('루틴이 변경됐어요. 다시 확인해 주세요.', 'warning')
-        return
-      }
-      if (onStart) await onStart()
-      else await controller.start()
-    } finally {
-      startPending.current = false
-      setStartingRoutine(null)
-    }
-  }
   async function deleteRoutine(id: string) {
     const target = editor?.routine?.id === id ? editor.routine : routineList?.find(routine => routine.id === id)
     if (managementBlocked || deletingRoutine || !target) return
@@ -325,7 +310,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
   const workspaceIssue = visible && !renaming && !deleting ? scheduleReadIssue ?? writeIssue
     ?? (editor && editorFailure?.attempt === editorRetry ? editorFailure.message : undefined)
     ?? (state.data && state.readIssue && state.status !== 'loading' ? '루틴을 불러오지 못했어요.' : undefined)
-    ?? (state.data && (!editor || editor.readOnly) && !startWaiting ? state.startUnconfirmed ? '운동이 시작됐는지 확인하지 못했어요.' : state.issue : null) : null
+    ?? (state.data && (!editor || editor.readOnly) && state.status !== 'loading' ? state.startUnconfirmed ? '운동이 시작됐는지 확인하지 못했어요.' : state.issue : null) : null
   const readFeedback = useReadErrorToast(workspaceIssue, scheduleReadIssue ? 'error' : writeIssue ? training.writeIssueTone ?? 'error' : state.startUnconfirmed ? 'warning' : 'error')
   return <section className={`stack workout-online ${editor ? detailStyles.workspace : ''}`}
     aria-label="루틴"
@@ -333,7 +318,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
     {protection && <p className="notice" role="status">{protection === 'ACTIVE' ? '디로딩 진행 중' : '디로딩 완료 당일'} · 일반 루틴과 주간 일정은 조회 전용입니다.</p>}
       <div hidden={focused || !!planPreset}>
         {created && <RoutineCreatedNotice name={created.name} onLater={() => setCreated(null)} onAssign={() => openSchedule(created.id)} blocked={scheduleBlocked} />}
-        <RoutineCards week={viewed} timeZone={schedule?.timeZone ?? undefined} summaries={state.data?.routines ?? []} details={cards} busy={busy} managementBlocked={managementBlocked}
+        <RoutineCards week={viewed} timeZone={schedule?.timeZone ?? undefined} summaries={state.data?.routines ?? []} details={cards} busy={busy} managementBlocked={managementBlocked} managementPending={managementPending}
           listState={!state.data && (state.issue ? <ContentError embedded title="루틴을 불러오지 못했어요." action={retryRoutines} />
             : <LoadingSkeleton layout="list" label="루틴 목록을 확인하는 중입니다." />) || undefined}
           listRetry={state.data && state.readIssue && state.issue && retryRoutines}
@@ -341,7 +326,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           scheduleState={!schedule && training.issue ? unavailableSchedule : undefined}
           onNew={trigger => { pageRead.cancel(); rememberRoutineReturn(trigger); setCreated(null); setEditor({ routine: null, readOnly: false }) }}
           onEdit={id => void openRoutine(id, false)} onSelect={(id, trigger) => openRoutine(id, true, trigger)} onDelete={id => void deleteRoutine(id)}
-          presetHeader={schedule && viewed ? viewToggle => <PresetHeader schedule={schedule} viewed={viewed} busy={busy} readOnly={scheduleBlocked} viewToggle={viewToggle}
+          presetHeader={schedule && viewed ? viewToggle => <PresetHeader schedule={schedule} viewed={viewed} busy={busy || training.loading} readOnly={scheduleReadOnly} rotating={training.rotating} viewToggle={viewToggle}
             onPlan={() => { pageRead.cancel(); openFeedback.clear(); feedback.clear(); rememberRoutineReturn(); setRequestedPlan(viewed.id) }}
             onActivate={() => void training.write({ type: 'activate', id: viewed.id })}
             onToggle={() => void training.write({ type: 'rotate', enabled: !schedule.autoEnabled, entries: schedule.presets })}
@@ -351,10 +336,10 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             } : undefined}
             onOrganize={() => { rememberRoutineReturn(); setScheduleEditor({ type: 'order', base: schedule }) }}
             onDelete={() => setDeleting({ id: viewed.id, base: schedule })} /> : !training.issue ? () => <PresetLoadingHeader /> : undefined}
-          schedule={schedule ? retrySchedule || <button type="button" className="outline full action-pill" disabled={scheduleBlocked} onClick={() => openSchedule()}>주간 일정 편집</button>
+          schedule={schedule ? retrySchedule || <button type="button" className="outline full action-pill" disabled={scheduleBlocked} data-button-pending={managementPending && !scheduleReadOnly || undefined} onClick={() => openSchedule()}>주간 일정 편집</button>
             : !training.issue && <button type="button" className="outline full action-pill" disabled>주간 일정 편집</button>}
           presetNavigation={schedule && viewed ? <PresetNavigation schedule={schedule} viewed={viewed} busy={busy || scheduleBlocked}
-            readOnly={scheduleBlocked && !training.loading && !training.issue}
+            readOnly={scheduleReadOnly && !training.issue}
             onView={setViewedId} onAdd={async () => {
               const saved = await training.write({ type: 'add' })
               const added = saved?.presets.find(p => !schedule.presets.some(old => old.id === p.id))
@@ -362,7 +347,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
             }} /> : !training.issue && <PresetLoadingNavigation />}
           presetAssignments={schedule ? membership : undefined} />
       </div>
-    {planPreset && <button type="button" className="quiet" onClick={() => navigateBack(() => setPlanPreset(null, true))}>{iconGlyphs.previous} 루틴으로</button>}
+    {planPreset && <RecordSubpageHeader title="주간 근육 계획" backLabel="루틴으로" onBack={() => navigateBack(() => setPlanPreset(null, true))} />}
     {scheduleRoute && (!scheduleEditor || !state.data) && <><RecordSubpageHeader title={scheduleRoute.type === 'order' ? '주간 일정 전체 편집' : '주간 일정 편집'} onBack={() => navigateBack(closeScheduleEditor)} />
       {unavailableSchedule || (state.issue && !state.data ? <ContentError embedded title="루틴을 불러오지 못했어요." action={retryRoutines} />
         : training.loading || !state.data ? <LoadingSkeleton layout="detail" label="주간 일정을 확인하는 중입니다." /> : <StatusNotice>주간 일정을 찾을 수 없어요.</StatusNotice>)}</>}
@@ -389,7 +374,7 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
           return true
         }} />}
       {scheduleEditor?.type === 'order' && <PresetOrderEditor key={scheduleEditor.base.version} schedule={scheduleEditor.base} busy={busy}
-        stale={!!schedule && scheduleEditor.base.version !== schedule.version} readOnly={scheduleBlocked && !training.loading && !training.issue}
+        stale={!!schedule && scheduleEditor.base.version !== schedule.version} readOnly={scheduleReadOnly && !training.issue}
         locked={scheduleBlocked} readRetry={retrySchedule || confirmSchedule} routineName={routineName}
         navigationKey={scheduleKey} onClose={closeScheduleEditor} onReload={() => { if (schedule) { training.clearWriteIssue(); setScheduleEditor({ type: 'order', base: schedule }, true) } }}
         onSave={async entries => !!await training.write({ type: 'rotate', enabled: scheduleEditor.base.autoEnabled, entries }, scheduleEditor.base)} />}
@@ -397,16 +382,9 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
         presets={schedule?.presets} scheduleLoading={training.loading} timeZone={schedule?.timeZone ?? undefined} managementBlocked={managementBlocked} deleting={deletingRoutine === editor.routine.id}
         onBack={backFromEditor} onEdit={() => { if (!managementBlocked) setEditor({ ...editor, readOnly: false }, true) }}
         onDelete={() => { if (editor.routine) void deleteRoutine(editor.routine.id) }}
-        start={<>
-          {state.attempt?.request.routineId === editor.routine.id && !state.active ?
-            <Button variant="primary" loading={startWaiting} disabled={!state.localReady || busy} onClick={() => { if (onStart) void onStart(); else void controller.start() }}>운동 시작</Button> : <>
-          {editorRefresh && (editorRefresh.failed || editorRefresh.retrying) &&
-            <RefreshButton loading={!editorRefresh.failed} failure={editorRefresh.failed ? '최신 루틴을 불러오지 못했어요.' : null}
-              onRefresh={() => controller.retryRoutineRefresh(editor.routine!.id)} />}
-          <Button variant="primary" loading={startWaiting || !!editorRefresh && !editorRefresh.failed && !editorRefresh.retrying}
-            disabled={!startWaiting && (!supportsWorkoutEditing() || managementBlocked || !state.localReady || !!editorRefresh)}
-            onClick={() => void startRoutine(editor.routine!)}>운동 시작</Button></>}
-        </>} />}
+        retry={editorRefresh && (editorRefresh.failed || editorRefresh.retrying) &&
+          <RefreshButton loading={!editorRefresh.failed} failure={editorRefresh.failed ? '최신 루틴을 불러오지 못했어요.' : null}
+            onRefresh={() => controller.retryRoutineRefresh(editor.routine!.id)} />} />}
       {editor && !editor.readOnly && <RoutineForm key={editor.routine?.id ?? 'new'} routine={editor.routine} activities={activities} history={history} historyStatus={historyStatus}
         onSaved={(id, name) => {
           if (!editor.routine) setCreated({ id, name })
@@ -465,16 +443,20 @@ export function WorkspaceView({ state, controller, api, training, enabled, activ
       onDismiss={openFeedback.toast ? openFeedback.dismiss : readFeedback.toast ? readFeedback.dismiss : feedback.dismiss} bottomClearance={focused ? '0px' : 'var(--tabs-height, 56px)'} />
   </section>
 }
-export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, renderShell, catalogOpen = false, restOpen = false, onSettingsBack, onRestExitGuard }: {
+export type WorkspaceActions = { refreshTab: () => void; canReload: () => Promise<boolean> }
+
+export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, renderShell, actionsRef, catalogOpen = false, restOpen = false, onSettingsBack, onRestExitGuard }: {
   onExitGuard?: ExitGuardRegistration; tab?: AppTab; onNavigate?: (tab: AppTab, replace?: boolean, children?: Record<string, unknown>, resetScroll?: boolean) => Promise<boolean>
   renderShell?: (content: ReactNode, focused: boolean, routineEditor: boolean, prepareCatalog: (open: () => void) => void) => ReactNode
+  actionsRef?: Ref<WorkspaceActions>
   catalogOpen?: boolean; restOpen?: boolean; onSettingsBack?: (canLeave?: RestExitGuard) => void
   onRestExitGuard?: (guard: RestExitGuard | null) => void
 } = {}) {
   const { state: auth, controller: authentication } = useAuth()
   const [api] = useState(() => new WorkoutApi(authentication))
   const [statistics] = useState(() => new StatisticsApi(authentication))
-  const [controller] = useState(() => new WorkoutOnlineController(api, undefined, () => authentication.invalidateLocalWorkoutAccess()))
+  const [store] = useState(() => new WorkoutStore())
+  const [controller] = useState(() => new WorkoutOnlineController(api, store, () => authentication.invalidateLocalWorkoutAccess()))
   const exitGuard = useRef<(() => Promise<boolean>) | null>(null)
   const registerExit = useCallback<ExitGuardRegistration>(guard => { exitGuard.current = guard; onExitGuard?.(guard) }, [onExitGuard])
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
@@ -497,7 +479,13 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
   if (visit.tab !== tab) setVisit({ tab, home: visit.home + Number(tab === 'home'),
     routines: visit.routines || tab === 'routines', history: visit.history || tab === 'history' })
   const dataRevision = [state.recordsRevision, state.data?.routines.map(r => r.id + ':' + r.version).join(',')].join('|')
-  const training = useTrainingSchedule(authentication, cardioScope, dataRevision, controller.invalidateScope, accountReady)
+  const overviewRevision = [dataRevision, state.overviewRevision].join(':')
+  const training = useTrainingSchedule(authentication, cardioScope, overviewRevision, controller.invalidateScope, accountReady)
+  const historyRefresh = useRef<(() => void) | null>(null)
+  const [homeReadPending, setHomeReadPending] = useState(false)
+  const [tabRefresh, setTabRefresh] = useState<{ scope: Scope | null; tab: 'home' | 'routines' } | null>(null)
+  if (tabRefresh && (!accountReady || tabRefresh.scope !== state.scope ||
+    !state.busy && !training.loading && (tabRefresh.tab !== 'home' || !state.data || !homeReadPending))) setTabRefresh(null)
   const canStartFromHome = useRef(training.canWrite)
   useLayoutEffect(() => { canStartFromHome.current = training.canWrite }, [training.canWrite])
   const [permissionIssue, setPermissionIssue] = useState(false)
@@ -699,6 +687,23 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
       else catalogFeedback.show(readFailure(error, '운동 목록을 불러오지 못했어요.'), 'error')
     })
   }
+  const refreshTab = () => {
+    if (tab === 'history' && historyRefresh.current) { historyRefresh.current(); return }
+    if (tab !== 'home' && tab !== 'routines' && tab !== 'history') return
+    const latest = controller.getSnapshot()
+    if (tabRefresh || latest.busy || training.busy || training.loading || homeActionPending.current) return
+    if ((tab === 'home' || tab === 'routines') && latest.scope) setTabRefresh({ scope: latest.scope, tab })
+    void controller.refresh(false, 'overview')
+  }
+  const canReload = async () => {
+    const before = controller.getSnapshot()
+    const idle = (current: OnlineState) => current.scope === before.scope && current.status === 'ready' && !current.busy
+      && current.localReady && !current.active && !current.attempt && current.detail?.status !== 'ACTIVE' && !exitGuard.current
+    if (!before.scope || !idle(before) || training.busy || homeActionPending.current) return false
+    if (await store.attempt(before.scope) || await store.hasPendingWorkoutWrites(before.scope)) return false
+    return idle(controller.getSnapshot()) && !homeActionPending.current
+  }
+  useImperativeHandle(actionsRef, () => ({ refreshTab, canReload }))
   const present = (content: ReactNode) => renderShell ? renderShell(content, shellFocused, routineEditor, prepareCatalog) : content
   useStartupReveal(auth.status === 'authenticated' && tab === 'home' && (
     visible && (focused || workoutLoading || recordFocused) || state.userId === auth.userId && !!state.issue && !state.data
@@ -791,11 +796,11 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
   return present(<CombinationMemoProvider key={state.scope?.userId + ':' + state.scope?.dataGeneration}><SearchExerciseDetails api={api} userId={state.scope?.userId} enabled={accountReady} onInvalid={controller.invalidateScope}>
     {state.revalidatingScope && state.issue && <ContentError title="운동 정보를 불러오지 못했어요." action={<RefreshButton loading={state.status === 'loading'} failure={state.issue} onRefresh={() => void controller.refresh(true)} />} />}
     {visible && !localSession && workoutNavigationIssue && <StatusNotice error>{workoutNavigationIssue}</StatusNotice>}
-    <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'home'}>{retainOnlineViews && !localOnly && (state.scope && state.data ? <HomePanel
+    <div data-tab-overview hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'home'}>{retainOnlineViews && !localOnly && (state.scope && state.data ? <HomePanel
       key={'home:' + state.scope.userId + ':' + state.scope.dataGeneration} scope={state.scope} routines={state.data.routines} api={api} training={training} statistics={statistics} visit={visit.home}
       enabled={accountReady} startupHome={visible && tab === 'home' && !focused && !workoutLoading && !recordFocused}
-      refreshKey={dataRevision} active={starting ? null : state.active} progress={!starting && state.active ? activeWorkoutProgress(state.active, homeWorkout, state.data.exercises) : undefined}
-      onRefreshRoutines={() => void controller.refresh()}
+      refreshKey={overviewRevision} active={starting ? null : state.active} progress={!starting && state.active ? activeWorkoutProgress(state.active, homeWorkout, state.data.exercises) : undefined}
+      onReadPending={setHomeReadPending} tabRefreshing={tabRefresh?.tab === 'home'} onRefreshRoutines={() => void controller.refresh()}
       routineRefreshes={state.routineRefreshes} onRetryRoutineRefresh={controller.retryRoutineRefresh}
       attempt={starting ? opening.action === 'retry' : state.attempt !== null} busy={state.busy} localReady={state.localReady} action={opening?.action ?? homeAction}
       startUnconfirmed={state.startUnconfirmed}
@@ -815,7 +820,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
           await startWorkout()
       })} /> : state.issue ? <ContentError title="홈을 불러오지 못했어요." action={<RefreshButton loading={state.status === 'loading'} failure={state.issue} onRefresh={() => void controller.refresh()} />} /> : <HomeStartup />)}</div>
     {(!localOnly || preserveDrafts) && <div hidden={!visible || localOnly || focused || workoutLoading || recordFocused || tab !== 'routines'}>
-      <WorkspaceView activities={activities} training={training} enabled={accountReady && visit.routines} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} routes={routineRoutes} onStart={startWorkout} openingWorkout={starting}
+      <WorkspaceView activities={activities} training={training} enabled={accountReady && visit.routines} api={api} key={state.userId + ':' + (state.scope?.dataGeneration ?? 'checking')} state={state} controller={controller} routes={routineRoutes}
         history={currentHistory?.sessions} historyStatus={historyReady ? 'ready' : !currentHistory || currentHistory.pending || currentHistory.attempt !== historyRetry ? 'pending' : 'failed'}
         visible={visible && !localOnly && !focused && !workoutLoading && !recordFocused && tab === 'routines'} />
     </div>}
@@ -823,7 +828,7 @@ export function WorkoutWorkspace({ onExitGuard, tab = 'home', onNavigate, render
     <div hidden={!visible || focused || workoutLoading || recordFocused || tab !== 'history'}
       data-tab-overview={(!state.scope || session?.status === 'ACTIVE') || undefined}>{retainOnlineViews && !localOnly &&
       (session?.status === 'ACTIVE' ? <StatusNotice>진행 중인 운동을 마치면 기록을 확인할 수 있습니다.</StatusNotice>
-        : state.scope ? <StatisticsPanel enabled={accountReady && visit.history} key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope}
+        : state.scope ? <StatisticsPanel enabled={accountReady && visit.history} key={'statistics:' + state.scope.userId + ':' + state.scope.dataGeneration} api={statistics} scope={state.scope} refreshRef={historyRefresh}
           workoutApi={api} schedule={training.schedule} scheduleLoading={training.loading} scheduleIssue={training.issue} onRetrySchedule={training.refresh}
           definitions={state.data?.exercises} dataRevision={dataRevision} refreshKey={[dataRevision,training.schedule?.appliedVersion].join(':')} onInvalid={controller.invalidateScope} onOpen={id => void openRecord(id)} />
           : state.issue ? <ContentError title="운동 기록을 불러오지 못했어요."

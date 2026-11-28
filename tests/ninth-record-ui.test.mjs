@@ -68,7 +68,7 @@ test('recent cards retain existing completion counts and unknown judgments witho
  assert.match(html,/유산소 1\/1종목/);assert.match(html,/전체 완료/);assert.doesNotMatch(html,/웨이트|총중량|세트|2.5km/)
  s.snapshot.state.cardioResults[0].result.distanceKm=null
  html=render(SessionRecordCard,{row:{...s,routineName:'러닝'},session:s,recent:true,onOpen:()=>{}})
- assert.match(html,/달성 확인 불가/);assert.match(html,/일부 확인 불가/);assert.doesNotMatch(html,/2.5km|기준 미달/)
+ assert.match(html,/확인 불가/);assert.match(html,/일부 확인 불가/);assert.doesNotMatch(html,/2.5km|기준 미달/)
  const partial=mixedRecord();partial.snapshot.state.cardioResults[0].result.distanceKm='1.5'
  html=render(SessionRecordCard,{row:{...partial,routineName:'혼합'},session:partial,recent:true,onOpen:()=>{}})
  assert.match(html,/부분 완료/);assert.equal(recordSummary(partial).status.kind,'partial')
@@ -142,7 +142,7 @@ test('detail keeps one common title, distinguishes unknown timing from zero, and
  const historicalWeights=[{id:E,name:'미승인 검토',results:[],review:{direction:'decrease',referenceKg:'25',recommendedKg:'20',planned:3,completed:3,incomplete:false,sets:[{id:'set',reps:4,contributes:true}]}}]
  const html=render(WorkoutSummary,{...data,recordFacts:facts,historicalWeights,detail:true,manufacturers:[],onBack(){}})
  assert.equal((html.match(/<h1\b/g)||[]).length,1);assert.match(html,/<h1[^>]*>운동 기록 상세<\/h1>/)
- assert.match(html,/aria-label="기록으로"/);assert.match(html,/전체 완료|부분 완료|기준 미달|달성 확인 불가/)
+ assert.match(html,/aria-label="기록으로"/);assert.match(html,/전체 완료|부분 완료|기준 미달|확인 불가/)
  assert.match(html,/>–<\/strong><small>수행 시간/);assert.match(html,/>0:00<\/strong><small>수행 시간/)
  assert.match(html,/<details open=""><summary>/);assert.match(html,/미승인/);assert.match(html,/감량 검토/)
  assert.match(html,/중량 변경 승인 이력/);assert.match(html,/기록 보존 안내/);assert.match(html,/기록으로 돌아가기/)

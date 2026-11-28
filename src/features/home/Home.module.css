@@ -45,7 +45,7 @@
 .sectionTitle > button { font-size: 11px; }
 .days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-top: var(--card-gap); }
 .home .days button { display: flex; flex-direction: column; align-items: center; min-height: 78px; min-width: 0; padding: 8px 1px; border: 1px solid transparent; border-radius: 0; background: transparent; color: var(--text-primary); }
-.days small { font-size: 11px; color: var(--text-muted); line-height: 14px; }
+.days small { font-size: 11px; font-weight: var(--type-week-date-weight); color: var(--text-muted); line-height: 14px; }
 .days strong { display: block; min-height: 17px; line-height: 17px; margin-top: 5px; font-size: 13px; font-weight: 700; }
 .days strong[data-status='complete'] { color: var(--status-done); font-size: 17px; }
 .days strong[data-status='missed'] { color: var(--status-missed); font-size: 17px; }
@@ -93,9 +93,6 @@
 .recordState[data-state='incomplete'] { color: var(--status-missed); }
 .home .week .sectionTitle h2 { font-size: 14px; }
 .home .recent .sectionTitle h2 { font-size: var(--type-heading-size); font-weight: var(--type-heading-weight); line-height: var(--type-heading-line); }
-.tools { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
-.tools > button { font-size: 11px; padding: 6px; min-height: 32px; }
-.tools > span { font-size: 10px; }
 .httpNote { margin: 0; font-size: 11px; line-height: 1.5; color: var(--text-muted); }
 .choiceFilters { flex: none; margin: 0 0 1px; }
 .routineTag { display:inline-block; margin-bottom:8px; color:var(--accent); font-size:11px; }

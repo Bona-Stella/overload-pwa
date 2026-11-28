@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { defaultRestAlerts, readRestAlerts, restAlertVisual, restPreviewSeconds } from '../src/features/workout-flow/rest-alerts.ts'
+import { defaultRestAlerts, readRestAlerts, restAlertVisual, REST_PREVIEW_SECONDS } from '../src/features/workout-flow/rest-alerts.ts'
 
 test('rest alerts keep independent choices and only restore supported browser settings', () => {
   assert.deepEqual(readRestAlerts(null), defaultRestAlerts)
@@ -17,14 +17,12 @@ test('rest alert visuals use the current time, do not overlap and exclude unsele
   for (const threshold of [3, 5, 10]) {
     for (const [top, bottom] of [[true, true], [true, false], [false, true], [false, false]]) {
       const alerts = { ...defaultRestAlerts, threshold, top, bottom }
-      assert.equal(restPreviewSeconds(alerts), threshold + 2)
-      assert.equal(restPreviewSeconds({ ...alerts, testMode: true }), threshold + 2)
       assert.deepEqual(restAlertVisual(alerts, threshold), { dim: false, top, bottom })
       for (const seconds of [threshold + 1, 0]) assert.deepEqual(restAlertVisual(alerts, seconds), { dim: false, top: false, bottom: false })
     }
   }
   const dim = { ...defaultRestAlerts, visual: 'dim' }
-  assert.equal(restPreviewSeconds(dim), 12)
+  assert.equal(REST_PREVIEW_SECONDS, 12)
   assert.deepEqual(restAlertVisual(dim, 12), { dim: true, top: false, bottom: false })
   for (const seconds of [0, 13, 38]) assert.deepEqual(restAlertVisual(dim, seconds), { dim: false, top: false, bottom: false })
   assert.deepEqual(restAlertVisual({ ...dim, visual: 'off' }, 5), { dim: false, top: false, bottom: false })

@@ -1,4 +1,5 @@
 import type { IconDefinition } from './definition.ts'
+import { feedbackIcons } from './feedback.tsx'
 
 export const equipmentMemoEdit = { path: "M13 20H5V4h14v7M8 8h8m-8 4h4m2 7 5-5 2 2-5 5h-2z", width: 14, strokeWidth: 1.7, lineCap: "round", lineJoin: "round" } satisfies IconDefinition
 
@@ -14,4 +15,4 @@ export const scheduleView = { path: () => <><path d="M2 12s3.5-6 10-6 10 6 10 6-
 
 export const scheduleSwitch = { path: "M7 7h14m0 0-4-4m4 4-4 4M17 17H3m0 0 4-4m-4 4 4 4", width: 15, strokeWidth: 1.8, lineCap: "round", lineJoin: "round" } satisfies IconDefinition
 
-export const scheduleRotate = { path: "M20 8a8 8 0 0 0-14-2L4 9m0-5v5h5m-5 7a8 8 0 0 0 14 2l2-3m0 5v-5h-5", width: 15, strokeWidth: 1.8, lineCap: "round", lineJoin: "round" } satisfies IconDefinition
+export const scheduleRotate = { ...feedbackIcons.syncing, width: 15 } satisfies IconDefinition

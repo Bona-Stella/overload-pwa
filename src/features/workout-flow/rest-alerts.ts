@@ -15,6 +15,7 @@ export type RestAlerts = {
 }
 
 export const REST_TEST_SECONDS = 12
+export const REST_PREVIEW_SECONDS = 12
 
 export const defaultRestAlerts: RestAlerts = {
   visual: 'flash', top: true, bottom: true, threshold: 5, sound: true, volume: 70, middle: false, middleAt: 30, testMode: false,
@@ -45,8 +46,4 @@ export function readRestAlerts(raw: string | null): RestAlerts {
 export function restAlertVisual(alerts: RestAlerts, seconds: number) {
   const flashing = alerts.visual === 'flash' && seconds > 0 && seconds <= alerts.threshold
   return { dim: alerts.visual === 'dim' && seconds > 0 && seconds <= 12, top: flashing && alerts.top, bottom: flashing && alerts.bottom }
-}
-
-export function restPreviewSeconds(alerts: RestAlerts) {
-  return alerts.visual === 'dim' ? 12 : alerts.visual === 'flash' ? alerts.threshold + 2 : 5
 }

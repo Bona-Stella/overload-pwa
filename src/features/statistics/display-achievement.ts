@@ -13,7 +13,7 @@ export function sessionDisplayStatus(session: Session) {
     if(partial==='met')return {kind:'partial',mark:iconGlyphs.partial,label:'부분 달성'}
     if(partial==='below')return {kind:'missed',mark:iconGlyphs.close,label:'기준 미달'}
   }
-  return {kind:'unknown',mark:iconGlyphs.unknown,label:'달성 확인 불가'}
+  return {kind:'unknown',mark:iconGlyphs.unknown,label:'확인 불가'}
 }
 /** UI classification only; never sent as effectiveDay, completion or an approval result. */
 export function partialAchievement(session: Session): PartialResult {

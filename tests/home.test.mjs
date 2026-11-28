@@ -190,7 +190,7 @@ test('rest day, unavailable routine details and recovered home plans expose cons
   assert.match(start(render(today)), /data-click-action/)
   assert.doesNotMatch(start(render(today)), / disabled=/)
   assert.match(start(render(today, { protectedView: true })), / disabled=/)
-  assert.match(start(render(today, { verifiedRoutines: null, startChecking: true })), / disabled=/)
+  assert.match(start(render(today, { verifiedRoutines: null })), / disabled=/)
   assert.match(start(render(today, { canStart: false, startReadIssue: '일정을 불러오지 못했어요.' })), / disabled=/)
   const emptyRoutine = { ...routine, weightPlacements: [], cardioPlacements: [] }
   const empty = render({ ...today, routines: new Map([[routine.id, emptyRoutine]]) })

@@ -661,13 +661,12 @@ test('routine UI preserves individual edits and supports weekly views, compact c
     await evaluate(`document.querySelector('${detail}').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))`)
     assert.equal(await evaluate('window.listUi.routineWrites.length'),beforeReadonly,'detail cannot save even on explicit submit')
     await evaluate('window.listUi.setActive(true)');await new Promise(r=>setTimeout(r,80))
-    assert.equal(await evaluate(`Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='운동 시작').disabled`),true)
+    assert.equal(await evaluate(`[...document.querySelectorAll('${detail} button')].some(b=>b.textContent.trim()==='운동 시작')`),false)
     assert.deepEqual(await evaluate(`[...document.querySelectorAll('${detail} button')].filter(b=>['편집','루틴 삭제'].includes(b.textContent.trim())).map(b=>b.disabled)`),[true,true])
     await evaluate('window.listUi.setActive(false);window.listUi.setAttempt(true)');await new Promise(r=>setTimeout(r,80))
-    assert.equal(await evaluate(`[...document.querySelectorAll('button')].some(b=>b.textContent==='운동 시작'&&!b.disabled)`),true)
+    assert.equal(await evaluate(`[...document.querySelectorAll('${detail} button')].some(b=>b.textContent.trim()==='운동 시작')`),false)
     await evaluate('window.listUi.setAttempt(false)');await new Promise(r=>setTimeout(r,80))
-    await click('운동 시작')
-    assert.deepEqual(await evaluate('window.listUi.started'),[await evaluate('window.listUi.ids[0]')])
+    assert.equal(await evaluate(`[...document.querySelectorAll('${detail} button')].some(b=>b.textContent.trim()==='운동 시작')`),false)
     await click('편집');await wait(()=>evaluate(`!!document.querySelector('form[aria-label="루틴 편집"]')`))
     assert.match(await evaluate(`document.querySelector('input[placeholder="나의 루틴"]').value`),/상체 PUSH/)
     assert.equal(await evaluate(`document.querySelector('input[placeholder="나의 루틴"]').matches(':disabled')`),false)
@@ -750,9 +749,12 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       const point = await evaluate(`(()=>{
         const card=document.querySelector('${routineMenuCard}')
         const action=card.querySelector('[role=menu] button:last-child').getBoundingClientRect()
-        const link=card.querySelector('button[aria-label$="상세"]').getBoundingClientRect()
+        const detailBoxes=[...document.querySelectorAll('button[data-routine-detail]')].map(b=>b.getBoundingClientRect())
+        const overlap=detailBoxes.find(link=>Math.min(action.right,link.right)-Math.max(action.left,link.left)>2 &&
+          Math.min(action.bottom,link.bottom)-Math.max(action.top,link.top)>2)
+        const link=overlap ?? action
         return {x:Math.round((Math.max(action.left,link.left)+Math.min(action.right,link.right))/2),
-          y:Math.round((Math.max(action.top,link.top)+Math.min(action.bottom,link.bottom))/2)}
+          y:Math.round((Math.max(action.top,link.top)+Math.min(action.bottom,link.bottom))/2),overlapsDetail:!!overlap}
       })()`)
       const tapAt = async ({x,y}) => {
         if (mobile) {
@@ -767,6 +769,10 @@ test('routine UI preserves individual edits and supports weekly views, compact c
       await tapAt(point)
       await wait(()=>evaluate(`document.querySelector('${routineMenuCard} button[aria-haspopup=menu]').ariaExpanded==='false'`))
       await click('취소')
+      if (!point.overlapsDetail) {
+        assert.equal(await evaluate('window.listUi.deleted.length'),count)
+        continue
+      }
       assert.equal(await evaluate(`document.elementFromPoint(${point.x},${point.y})?.closest('button')?.matches('[aria-label$="상세"]')`),true)
       await new Promise(resolve=>setTimeout(resolve,55))
       await tapAt(point)

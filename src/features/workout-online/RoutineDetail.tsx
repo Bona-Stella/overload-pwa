@@ -1,7 +1,7 @@
 import { Icon } from '../../components/icons/Icon.tsx'
 import { routineDelete } from '../../components/icons/common.tsx'
-import type { ReactNode } from 'react'
 import { RecordSubpageHeader } from '../../components/RecordSubpageHeader.tsx'
+import type { ReactNode } from 'react'
 import { Button, Card } from '../../components/ui.tsx'
 import { activeCardio, activeWeights, dateInZone } from '../home/model.ts'
 import { cardioDescription, exerciseDescription } from './catalog-label.ts'
@@ -32,10 +32,10 @@ function ExerciseHeading({ index, name }: { index: number; name: string }) {
   </h3>
 }
 
-export function RoutineDetail({ routine, exercises, activities, manufacturers, presets, scheduleLoading, timeZone, managementBlocked, deleting, onBack, onEdit, onDelete, start }: {
+export function RoutineDetail({ routine, exercises, activities, manufacturers, presets, scheduleLoading, timeZone, managementBlocked, deleting, onBack, onEdit, onDelete, retry }: {
   routine: Routine; exercises: StandardExercise[]; activities: CardioActivity[]; manufacturers: Manufacturer[]; presets?: SchedulePreset[]
   scheduleLoading?: boolean; timeZone?: string; managementBlocked: boolean
-  onBack: () => void; onEdit: () => void; onDelete: () => void; start?: ReactNode; deleting?: boolean
+  onBack: () => void; onEdit: () => void; onDelete: () => void; deleting?: boolean; retry?: ReactNode
 }) {
   const weights = activeWeights(routine)
   const cardio = activeCardio(routine)
@@ -112,7 +112,7 @@ export function RoutineDetail({ routine, exercises, activities, manufacturers, p
       </Card> : <p className={styles.empty} aria-busy={!entries && scheduleLoading}>{entries ? '배정된 주간 일정 없음' : scheduleLoading ? '' : '주간 일정을 확인하지 못했습니다.'}</p>}
     </section>
     <div className={styles.actions}>
-      {start}
+      {retry}
       <Button variant="danger" className={styles.delete} disabled={managementBlocked && !deleting} loading={deleting} onClick={onDelete}>
         <Icon icon={routineDelete} size={16} />
         루틴 삭제

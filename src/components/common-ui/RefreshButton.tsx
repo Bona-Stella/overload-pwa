@@ -17,7 +17,7 @@ export function RefreshButton({ onRefresh, loading = false, disabled = false, cl
   useEffect(() => () => cancelAnimationFrame(frame.current), [])
   return <>
     <button type="button" className={`${styles.refresh} quiet ${className ?? ''}`} data-refresh
-      disabled={pending || disabled} aria-busy={pending || undefined} onClick={() => {
+      disabled={pending || disabled} data-button-pending={pending && !disabled || undefined} aria-busy={pending || undefined} onClick={() => {
         if (pending || disabled || guard.current) return
         guard.current = true
         setAttempt('requested')

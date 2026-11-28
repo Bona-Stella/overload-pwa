@@ -27,13 +27,13 @@ function composition(routine: Routine | undefined) {
   return routine ? { weight: exerciseSummary(activeWeights(routine).map(p => p.exerciseName)), cardio: exerciseSummary(activeCardio(routine).map(p => p.plan.name)) }
     : null
 }
-export function RoutineCards({ summaries, details, busy, managementBlocked = false, onSelect, onNew, onEdit, onDelete, schedule, scheduleEditing = false, week, presetHeader, presetNavigation, presetAssignments, scheduleState, scheduleLoading = false, listState, listRetry, timeZone }: {
+export function RoutineCards({ summaries, details, busy, managementBlocked = false, managementPending = false, onSelect, onNew, onEdit, onDelete, schedule, scheduleEditing = false, week, presetHeader, presetNavigation, presetAssignments, scheduleState, scheduleLoading = false, listState, listRetry, timeZone }: {
   timeZone?: string;
   week?: Pick<SchedulePreset, 'assignments' | 'version'>;
   presetHeader?: (viewToggle: ReactNode) => ReactNode; presetNavigation?: ReactNode; presetAssignments?: (id: string) => ReactNode; schedule?: ReactNode; scheduleEditing?: boolean;
   scheduleState?: ReactNode; scheduleLoading?: boolean; listState?: ReactNode; listRetry?: ReactNode;
   onEdit?: (id: string) => void; onDelete?: (id: string) => void;
-  summaries: RoutineList['routines']; details: Map<string, Routine>; busy: boolean; managementBlocked?: boolean;
+  summaries: RoutineList['routines']; details: Map<string, Routine>; busy: boolean; managementBlocked?: boolean; managementPending?: boolean;
   onSelect: (id: string, trigger: HTMLButtonElement) => void; onNew: (trigger: HTMLButtonElement) => void;
 }) {
   const [day, setDay] = useState<number | null>(null)
@@ -71,7 +71,7 @@ export function RoutineCards({ summaries, details, busy, managementBlocked = fal
       <div className={styles.eyebrow}>YOUR TRAINING PLAN</div>
       <div className={styles.title}>
         <div><h2>나의 루틴</h2><p className="muted small">다음 운동을 위한 준비. 나에게 맞는 순서로.</p></div>
-        <Button type="button" disabled={busy || managementBlocked} onClick={event => onNew(event.currentTarget)}>+ 새 루틴</Button>
+        <Button type="button" disabled={(busy || managementBlocked) && !managementPending} pending={managementPending} onClick={event => onNew(event.currentTarget)}>+ 새 루틴</Button>
       </div>
     </header>
     <Card className={styles.weekSection} aria-label="루틴 주간 일정" aria-busy={scheduleLoading || undefined}>

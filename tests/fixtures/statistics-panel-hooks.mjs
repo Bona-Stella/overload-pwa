@@ -36,6 +36,13 @@ export function useEffect(effect, deps) {
   }
 }
 export const useLayoutEffect = useEffect
+export function useImperativeHandle(ref, create) {
+  useLayoutEffect(() => {
+    if (!ref) return
+    ref.current = create()
+    return () => { ref.current = null }
+  }, [ref, create])
+}
 export function mountPanel(Component, props) {
   const host = { slots: [], effects: [], index: 0, mounted: true, lateUpdates: 0 }
   return {

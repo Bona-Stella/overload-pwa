@@ -46,6 +46,43 @@ test('a pending or failed same-account bootstrap retains the verified exercise w
     assert.ok(s.controller.getSnapshot().issue)
   } finally { s.disconnect() }
 })
+test('overview refresh deduplicates routine reads, reuses the catalog and verifies a generation change', async t => {
+  const s = setup()
+  t.after(s.disconnect)
+  await settle()
+  const before = s.controller.getSnapshot()
+  const response = gate()
+  let reads = 0
+  s.api.routines = async owner => {
+    assert.equal(owner, before.scope)
+    reads++
+    await response.promise
+    return { ...scope, routines: [{ ...bootstrap.routines[0], version: '2' }] }
+  }
+  const pending = s.controller.refresh(false, 'overview')
+  await s.controller.refresh(false, 'overview')
+  assert.equal(reads, 1)
+  assert.equal(s.controller.getSnapshot().data, before.data)
+  response.resolve()
+  await pending
+  const updated = s.controller.getSnapshot()
+  assert.equal(updated.data.exercises, before.data.exercises)
+  assert.equal(updated.data.routines[0].version, '2')
+  assert.equal(updated.recordsRevision, before.recordsRevision)
+  assert.equal(updated.overviewRevision, before.overviewRevision + 1)
+
+  const nextScope = { ...scope, dataGeneration: String(BigInt(scope.dataGeneration) + 1n) }
+  s.api.routines = async () => { throw new WorkoutApiError('DATA_GENERATION_MISMATCH', 409) }
+  s.api.bootstrap = async () => {
+    assert.equal(s.controller.getSnapshot().data, null)
+    return { ...structuredClone(bootstrap), scope: nextScope }
+  }
+  s.api.active = async () => ({ ...nextScope, session: null })
+  await s.controller.refresh(false, 'overview')
+  assert.deepEqual(s.controller.getSnapshot().scope, nextScope)
+  assert.notEqual(s.controller.getSnapshot().data.exercises, before.data.exercises)
+})
+
 test('opening a different closed record does not invalidate summary data; observing a saved revision does', async () => {
   const s = setup({detail: async (_scope, id) => session({id, status:'FINISHED'})})
   try {

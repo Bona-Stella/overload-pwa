@@ -46,7 +46,6 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
       return result(mode)
     }, { slow: mode === 'delayed' })
   }
-  let changedVersion = false
   const listed = (mode = modes.routines) => (mode === 'empty' ? [] : routines).map(routine => ({ ...routine, createdAt: routine.createdAt }))
   const update = (body: CreateRoutine | UpdateRoutine, id?: string) => {
     const fault = writes.routines
@@ -61,12 +60,9 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
     bootstrap: (_userId: string, signal: AbortSignal) => read('routines', signal, mode => ({ scope, routines: listed(mode), exercises, manufacturers, settings: { ...scope, ...rest } })),
     active: async () => ({ ...scope, session: null }),
     routine: (_scope: unknown, id: string, signal: AbortSignal) => {
-      const bumpedVersion = changedVersion
-      if (bumpedVersion) changedVersion = false
       return read('details', signal, () => {
         const result = routines.find(routine => routine.id === id)
         if (!result) throw new WorkoutApiError('ROUTINE_NOT_FOUND', 404)
-        if (bumpedVersion) result.version = String(BigInt(result.version) + 1n)
         return structuredClone(result)
       }, true)
     },
@@ -162,7 +158,7 @@ export function createPageExample(initialSchedule: ReadExample = 'normal') {
   return { api: api as WorkoutApi, transport, statistics, growth: growth as GrowthApi,
     setRecordRefresh: (mode: RecordRefresh) => { nextRecordRefresh = mode },
     setRead: (key: string, mode: ReadExample) => { modes[key] = mode }, setWrite: (key: string, mode: WriteExample) => { writes[key] = mode },
-    routines: listed, first, presetId: schedule.activeId, versionChanged: () => { changedVersion = true },
+    routines: listed, first, presetId: schedule.activeId,
     updateRoutineVersion: () => { routines = routines.map(value => value.id === first.id ? { ...value, version: String(BigInt(value.version) + 1n) } : value) },
     store: { deviceId: async () => recent.editorDeviceId, attempt: async () => null, copies: async () => [],
       prepareStart: async () => { throw netError() }, saveSession: async () => {} } }

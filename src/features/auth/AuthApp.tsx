@@ -1,3 +1,4 @@
+import { useSuccessToast } from '../../components/common-ui/useSuccessToast.ts'
 import { useReadErrorToast } from '../../components/common-ui/useReadErrorToast.ts'
 import { Toast } from '../../components/common-ui/Toast.tsx'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
@@ -11,6 +12,7 @@ import { AccountSettings } from './AccountSettings'
 import { readFailure, readWithDeadline } from '../../app/read-deadline.ts'
 import { AuthFeedback } from './AuthFeedback.tsx'
 import { WorkoutWorkspace } from '../workout-online/WorkoutWorkspace'
+import type { WorkspaceActions } from '../workout-online/WorkoutWorkspace'
 import { HomeStartup } from '../home/HomePanel.tsx'
 import type { ExitGuardRegistration } from '../workout-local/types.ts'
 import { OfflineResume } from '../workout-local/OfflineResume.tsx'
@@ -35,6 +37,9 @@ export function AuthApp() {
   const [selection, setSelection] = useScreenHistory<{ userId: string; tab: AppTab; settingsView?: 'main' | 'rest' | 'catalog' | 'alerts' } | null>('app:' + state.userId, null)
   const [restAlerts, saveRestAlerts] = useRestAlertPreferences(state.status === 'authenticated' ? state.userId : null)
   const [navigating, setNavigating] = useState(false)
+  const [reloadPending, setReloadPending] = useState(false)
+  const reloading = useRef(false)
+  const workspaceActions = useRef<WorkspaceActions>(null)
   const [settingsAccount, setSettingsAccount] = useState<{ userId: string; data: Awaited<ReturnType<AuthController['readSettingsAccount']>> | null; failed?: boolean; request: number; message?: string } | null>(null)
   if (settingsAccount && (state.status !== 'authenticated' || state.userId !== settingsAccount.userId || state.pending === 'logout')) setSettingsAccount(null)
   const [settingsAccountRetry, setSettingsAccountRetry] = useState(0)
@@ -112,6 +117,7 @@ export function AuthApp() {
   const restAlertsOpen = settingsVisible && selection?.settingsView === 'alerts'
   const restOpen = tab === 'settings' && !state.accountOpen && (authenticated || state.offlineNetworkFailure) && selection?.settingsView === 'rest'
   const settingsMain = settingsVisible && !catalogOpen && !restOpen && !restAlertsOpen
+  const reloadFeedback = useSuccessToast(settingsMain ? 'reload:' + state.userId : null)
   const settingsFeedback = useReadErrorToast(settingsMain && !busy ? state.issue?.message : null)
   const settingsUser = settingsMain && !busy ? state.userId : null
   useEffect(() => {
@@ -126,6 +132,26 @@ export function AuthApp() {
     })
     return () => abort.abort()
   }, [controller, settingsUser, settingsAccountRetry])
+  async function reloadApp() {
+    if (reloading.current) return
+    const before = controller.getSnapshot(), origin = window.history.state?.overloadNavigation
+    const canLeave = () => {
+      const current = controller.getSnapshot()
+      return current.status === 'authenticated' && current.userId === before.userId && current.pending === null
+        && !current.accountOpen && !navigationPending.current && !restExitGuard.current && !localExitGuard.current
+        && window.history.state?.overloadNavigation === origin
+    }
+    reloading.current = true
+    setReloadPending(true)
+    try {
+      if (canLeave() && await workspaceActions.current?.canReload() && canLeave()) { window.location.reload(); return }
+    } catch { /* An unreadable local store cannot confirm that reloading is safe. */ }
+    reloading.current = false
+    setReloadPending(false)
+    if (controller.getSnapshot().userId === before.userId && window.history.state?.overloadNavigation === origin) {
+      reloadFeedback.show('진행 중인 운동이나 저장 상태를 확인한 뒤 앱을 새로고침해 주세요.', 'warning')
+    }
+  }
   const settingsSummary = settingsAccount?.userId === state.userId ? settingsAccount : null
   useLayoutEffect(() => {
     if (settingsMain && settingsTrigger.current?.isConnected) {
@@ -140,11 +166,15 @@ export function AuthApp() {
     controller.closeAccount(false)
     navigateTabRoot('app:' + state.userId, { userId: state.userId, tab: 'settings' }, {}, '/', true)
   })
-  return <WorkoutWorkspace onExitGuard={registerExitGuard} tab={tab} onNavigate={navigate}
+  return <WorkoutWorkspace actionsRef={workspaceActions} onExitGuard={registerExitGuard} tab={tab} onNavigate={navigate}
     catalogOpen={catalogOpen} restOpen={restOpen} onSettingsBack={settingsBack} onRestExitGuard={registerRestExit}
     renderShell={(workspace, focused, routineEditor, prepareCatalog) => {
       const showingOfflineWorkout = state.status === 'unavailable' && (offlineWorkoutOpen || focused && !!state.localWorkoutUserId)
-      return <AppShell authenticated={authenticated} tab={tab} onNavigate={navigateFromTabs}
+      return <AppShell authenticated={authenticated} tab={tab} onNavigate={navigateFromTabs} onRetap={() => {
+        if (tab === 'settings') {
+          setSettingsAccountRetry(value => settingsSummary?.request === value ? value + 1 : value)
+        } else workspaceActions.current?.refreshTab()
+      }}
       focused={focused && !state.accountOpen} routineEditor={routineEditor} busy={busy || navigating}>
     {!showingOfflineWorkout && !state.accountOpen && <AuthFeedback state={settingsMain ? { ...state, issue: null } : state} />}
     {state.status === 'checking' ? checkingHome
@@ -158,10 +188,10 @@ export function AuthApp() {
       onRest={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'rest' }) }}
       onRestAlerts={event => { rememberSettings(event.currentTarget); setSelection(current => current && { ...current, settingsView: 'alerts' }) }}
       onCatalog={event => { rememberSettings(event.currentTarget); prepareCatalog(() => setSelection(current => current && { ...current, settingsView: 'catalog' })) }}
-      onLogout={() => setDialog('logout')} />}
+      onReload={() => void reloadApp()} reloadPending={reloadPending} onLogout={() => setDialog('logout')} />}
     {restAlertsOpen && !focused && <RestAlertSettings alerts={restAlerts} onChange={saveRestAlerts} onBack={settingsBack} />}
     {workspace}
-    <Toast toast={settingsFeedback.toast} onDismiss={settingsFeedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
+    <Toast toast={reloadFeedback.toast ?? settingsFeedback.toast} onDismiss={reloadFeedback.toast ? reloadFeedback.dismiss : settingsFeedback.dismiss} bottomClearance="var(--tabs-height, 56px)" />
     {state.status === 'unavailable' && state.offlineNetworkFailure && !state.localWorkoutUserId && <OfflineResume onExitGuard={registerExitGuard}
       onActiveChange={setOfflineWorkoutOpen} onReconnect={async () => { if (await flushLocal()) void controller.restore() }} />}
     {localExitIssue && !showingOfflineWorkout && <p className="notice error" role="alert">입력 초안을 이 기기에 저장하지 못해 화면을 유지했습니다. 로컬 저장 오류를 해결한 뒤 다시 시도해 주세요.</p>}

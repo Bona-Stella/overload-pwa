@@ -14,8 +14,8 @@ import { durationLabel, durationMinutesLabel } from '../../components/duration.t
 import { RecordChart } from './RecordChart.tsx'
 import { ActivityTrendChart } from './ActivityTrendChart.tsx'
 import { displayDecimal, sumDecimals } from './display-decimal.ts'
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { useCallback, useEffect, useEffectEvent, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
+import type { ReactNode, Ref } from 'react'
 import type { Session, Scope, ClosedPage } from '../workout-online/types.ts'
 import type { Statistics, StatisticsApi, WeightStats, Overview } from './api.ts'
 import { periodFor } from './api.ts'
@@ -238,7 +238,7 @@ export function StatisticsView({ data, planning, screen, onScreen, onOpen, onHis
   </>
 }
 
-export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, onInvalid, workoutApi, schedule = null, scheduleLoading, scheduleIssue, onRetrySchedule, definitions = [], initialPreset, enabled=true }: { enabled?:boolean;
+export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, onInvalid, workoutApi, schedule = null, scheduleLoading, scheduleIssue, onRetrySchedule, definitions = [], initialPreset, enabled=true, refreshRef }: { enabled?:boolean; refreshRef?: Ref<() => void>;
   api: StatisticsApi; scope: Scope; refreshKey: string; onOpen: (id: string) => void; onInvalid: (error: unknown) => void; workoutApi?: WorkoutApi; schedule?: LiveSchedule | null; definitions?: StandardExercise[]
   recentContent?: ReactNode
   initialPreset?: string
@@ -373,6 +373,18 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
   }, [api, readMonth, monthFrom, monthTo, monthKey, monthRequest])
 
   const retry = (mode: Mode) => setRetryCount(previous => ({ ...previous, [mode]: previous[mode] + 1 }))
+  const recentRefresh = useRef<(() => Promise<void>) | null>(null)
+  const recentRefreshPending = useRef(false)
+  const weekSettled = !!overviews.find(item => item.request === weekRequest) || failures.week?.request === weekRequest
+  useImperativeHandle(refreshRef, () => () => {
+    if (!enabled || screen !== 'summary' || !weekSettled || recentRefreshPending.current) return
+    retry('week')
+    const refresh = recentRefresh.current
+    if (refresh) {
+      recentRefreshPending.current = true
+      void refresh().finally(() => { recentRefreshPending.current = false })
+    }
+  })
   function changePeriod(value: PeriodSelection) {
     if (!selectionKey) return
     const samePeriod = value.mode === activityPeriod.mode && value.anchor === activityPeriod.anchor
@@ -441,7 +453,7 @@ export function StatisticsPanel({ api, scope, refreshKey, dataRevision, onOpen, 
           <StatisticsView achievementPlanning={achievement} achievementAnchor={activityPeriod.anchor} evidence={currentEvidence?.rows} data={displayed?.statistics ?? null} planning={displayed} identity={identity} screen={shown} onScreen={openScreen} onOpen={onOpen} onHistory={()=>setScreen('history')} definitions={definitions} activityState={activityState}/>
         </div> : !issue && !refreshing && <StatisticsWait pending skeleton label="운동 통계를 불러오는 중입니다." />}
         {(issue || refreshing) && (displayed ? retryOverview : <ContentError title={readIssue} action={retryOverview} />)}
-        {shown === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={openRecent} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>openScreen('history')} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button compact variant="quiet" onClick={() => openScreen('history')}>전체 보기 {iconGlyphs.next}</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
+        {shown === 'summary' && <section className={`recent-records ${styles.recent}`}>{workoutApi ? <RecordFeed enabled={enabled} cache={recordCache} api={workoutApi} scope={scope} refreshKey={refreshKey} onOpen={openRecent} onInvalid={onInvalid} timeZone={schedule?.timeZone} onViewAll={()=>openScreen('history')} refreshRef={recentRefresh} recent /> : <><div className={styles.recentHeading}><h2>최근 운동</h2><Button compact variant="quiet" onClick={() => openScreen('history')}>전체 보기 {iconGlyphs.next}</Button></div><p>최근 7일 데이터 연결 필요</p></>}</section>}</>}
     {retainPlan && workoutApi && <div hidden={shown !== 'plan'} className="statistics-plan">
       <WeeklyMusclePlan initialPreset={initialPreset} definitions={definitions} api={workoutApi} scope={scope} schedule={schedule} refreshKey={refreshKey} onInvalid={onInvalid} active={enabled && (screen === 'plan' || requestedScreen === 'plan')} onReadSettled={settlePlan} />
     </div>}
